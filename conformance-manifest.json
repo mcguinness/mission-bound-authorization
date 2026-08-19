@@ -5850,6 +5850,28 @@
    "notes": "Cross-Domain is a disabled conditional for the Runtime-Enforced Baseline (notes/adoption-plan.md); profiles is empty for this cross-domain-only row even though the surrounding pdp-request rows are baseline."
   },
   {
+   "id": "authzen.pdp-request.subject-shape-and-issuer-presence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "`subject.type` is `user` unless the deployment profiles another value. `subject.id` is the token's authenticated `sub`. `subject.properties.iss` is REQUIRED when known",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "subject.type defaults to user unless the deployment profiles another value, subject.id is the token's authenticated sub, and subject.properties.iss is REQUIRED when known, carrying the issuer that authenticated the Subject so a sub is disambiguated across issuers; a PEP that cannot establish the issuer omits it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "authzen.clock-skew.leeway-bounded-and-published",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "clock-skew",
@@ -6019,7 +6041,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "context.mission always carries id, issuer, and authority_hash, the Mission's required identity and Authority Set integrity anchor"
+    "normative": "context.mission always carries id, issuer, and authority_hash, the Mission's required identity and Authority Set integrity anchor, and carries policy_version when known (a PEP not co-located with the Mission record omits it and relies on policy_view_id for view correlation)"
    },
    "level": "unit",
    "coverage": "partial",
@@ -6048,7 +6070,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PEP populates context.mission.subject (the cross-domain origin principal) only from a verified source, never from an unverified request value"
+    "normative": "context.mission.subject is OPTIONAL in general and REQUIRED for a request claiming the cross-domain Origin Principal profile; the PEP populates it only from a verified source, never from an unverified request value"
    },
    "level": "unit",
    "coverage": "todo",
@@ -6092,7 +6114,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "context.actor.act, when present, is the delegation chain projection ordered root to leaf, with exactly one member for a single actor"
+    "normative": "context.actor.client_id is REQUIRED when known (the authenticated client identity), and context.actor.act, when present, is the delegation chain projection ordered root to leaf, with exactly one member for a single actor"
    },
    "level": "unit",
    "coverage": "tested",
@@ -6121,7 +6143,7 @@
    "surface": "decision-request",
    "assertion": "privacy",
    "observation": {
-    "normative": "context.credential never carries a token-derived fact the PEP has not itself verified"
+    "normative": "context.credential carries issuer (REQUIRED when known) and expires_at (REQUIRED when the token carries an expiry), and never carries a token-derived fact the PEP has not itself verified"
    },
    "level": "unit",
    "coverage": "todo",
@@ -6218,6 +6240,116 @@
     "normative": "a constraint the PDP cannot evaluate from any of the digest, the privacy-preserving attributes, or local state fails the action closed"
    },
    "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.parameter-digest.action-scoped-members-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "parameter-digest",
+   "text": "When parameter binding is required for the requested action's class under {{I-D.draft-mcguinness-mission-runtime}}, the PEP supplies, in the AuthZEN `action` object's `properties` (`action.properties`), the following action-scoped members:",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "action.properties carries parameter_digest (string, REQUIRED for parameter-bound classes), parameters (object, CONDITIONAL, withheld only where the PDP can still enforce the applicable policy from the digest, parameter_attributes, or local state), idempotency_key (string, REQUIRED where the Operation Profile defines one for a non-idempotent high-consequence action), and parameter_attributes (object, OPTIONAL, supplied when parameters is withheld)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-audience-freshness.audience-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-audience-freshness",
+   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The PEP's audience or protected-resource identifier.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the request always carries audience (a string) at resource.properties.audience, the PEP's audience or protected-resource identifier"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-audience-freshness.state-observation-required-by-placement",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-audience-freshness",
+   "text": "REQUIRED where the deployment's declared state-source placement has the PEP supply state; absent where state establishment is placed with the PDP, whose obligation the PDP-side consistency checks state",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "context.mission_state_observation is REQUIRED when the deployment's declared state-source placement has the PEP supply state, and absent when state establishment is placed with the PDP instead"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-audience-freshness.state-observation-members-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-audience-freshness",
+   "text": "It consolidates the PEP's Mission-state observation and its freshness into one snapshot, conveying the runtime profile's state and freshness inputs on the wire.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when present, mission_state_observation carries state (string, REQUIRED) and mode (string, REQUIRED, one of fresh/cached/event_driven) and freshness_at (timestamp, REQUIRED in every mode); it also carries mission_status_issued_at and mission_status_expires_at (timestamps, REQUIRED for cached and event_driven modes, OPTIONAL for fresh), version (integer, OPTIONAL), and assertion (string, OPTIONAL)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-external-communication.required-for-pdp-enforced-taint-classes",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-external-communication",
+   "text": "REQUIRED for every action in a class for which the deployment declares PDP-enforced taint; OPTIONAL otherwise.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "action.properties.external_communication (a boolean) is REQUIRED for every action in a class for which the deployment declares PDP-enforced taint, and OPTIONAL otherwise; it is a harness-profile-owned extension point defining the predicate and how the PEP computes it"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": []
   },
@@ -6771,6 +6903,28 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a denial carrying next_action: request always carries a fresh context.access_request alongside it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.response-context.members-required-and-types",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "This profile defines the following AuthZEN response `context` members:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the response context carries evaluation_id (string) on every decision, reason (string) whenever decision is false, and conditions (object) whenever decision is true for a consequential action"
    },
    "level": "unit",
    "coverage": "todo",
@@ -9451,6 +9605,116 @@
    "tests": []
   },
   {
+   "id": "evidence.decision.subject-minimized-never-raw-claims",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "Subject identifiers and assurance metadata, never a raw claim set, minimized per the deployment's audit policy.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the record's subject member carries subject identifiers and assurance metadata only, never a raw claim set, minimized per the deployment's audit policy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.resource-properties-minimized",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "any further resource properties are minimized to what the deployment's audit policy declares",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the record's resource member carries the resource identifier and type, and any further resource properties are minimized to what the deployment's audit policy declares"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.object-required-members-and-types",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "The runtime profile requires a decision evidence record for every PDP decision on a consequential action and fixes the minimum content and local integrity requirements.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the emitted Decision Evidence Object carries evidence_id (string), evaluation_id (string), mission (object), subject (object), resource (object), action (object), audience (string), action_class (string), decision (string, permit or deny), sequence (integer), emitter (object), evaluated_at (timestamp), and evidence_envelope (object) on every record; it also carries class_source (string) whenever action_class is present, obligations (array of objects) whenever the decision response carried obligations, conditions (object) whenever the decision is permit for a consequential action, and contributing_constraints (array of strings) whenever the decision turned on one or more constraint or authority entries"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.actor-minimized-never-raw-claims",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "Actor-chain identifiers and assurance metadata, never a raw claim set, minimized per the deployment's audit policy.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "when present, the record's actor member carries actor-chain identifiers and assurance metadata only, never a raw claim set, minimized per the deployment's audit policy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.credential-minimized-never-raw-claims",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "Credential-derived identifiers and assurance metadata, never a raw claim set, minimized per the deployment's audit policy.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "when present, the record's credential member carries credential-derived identifiers and assurance metadata only, never a raw claim set, minimized per the deployment's audit policy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "evidence.refusal.refusal-id-entropy-and-format",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
@@ -9621,6 +9885,28 @@
    "assertion": "refusal",
    "observation": {
     "normative": "when the deployment establishes the Mission binding externally under the runtime profile's binding-establishment step, a missing mission claim is not itself a pre-decision refusal condition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.record-required-members-and-types",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "The runtime profile also requires an evidence record for a refusal that occurs before any PDP decision, whether the refusing component is the PEP or the PDP",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the emitted Refusal Record carries refusal_id (string), audience (string), action (object), decision (string, always deny), denial_reason (string), evaluated_at (timestamp), emitter (object), and evidence_envelope (object) on every record"
    },
    "level": "unit",
    "coverage": "todo",
@@ -10158,6 +10444,28 @@
    "tests": []
   },
   {
+   "id": "evidence.receipt.required-members-and-types",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "A Mission Receipt is the portable, tamper-evident projection of a Mission's runtime enforcement evidence: one signed object a holder can present to answer what was decided, and for an executed action what happened, without shipping a log.",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the emitted Mission Receipt carries evidence_envelope (object), kind (string), mission (object), emitter (object), evidence (array), and issued_at (timestamp) on every receipt, and carries outcome (string) whenever kind is execution"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "evidence.receipt.evidence-reference-digest-classification",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "receipt-evidence",
@@ -10196,6 +10504,28 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the evidence array carries exactly the reference combination fixed for the receipt's kind (decision: one Decision Evidence; execution: a permit Decision Evidence plus the final Execution Evidence of the same action; refusal: one Refusal Record); a reference to an unimplemented record type fails verification rather than being silently skipped"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.evidence-reference-required-members-and-types",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-evidence",
+   "text": "Each `evidence` entry is an object. All members REQUIRED:",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each evidence array entry carries type (string, the referenced record's registered media type), digest (string), evidence_id (string), and emitter (object), all REQUIRED"
    },
    "level": "unit",
    "coverage": "todo",
@@ -10813,6 +11143,28 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.object-required-members-and-types",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The PEP or executor emits an Execution Evidence Object once the authorized action's final outcome is determined: whether it completed, failed, or was suppressed, linked to the Decision Evidence by `evaluation_id`.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the emitted Execution Evidence Object carries execution_id (string), evaluation_id (string), mission_id (string), audience (string), outcome (string, completed/failed/suppressed), outcome_at (timestamp), sequence (integer), emitter (object), and evidence_envelope (object) on every record"
    },
    "level": "unit",
    "coverage": "todo",
