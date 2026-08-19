@@ -3669,7 +3669,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: both MUSTs govern what the PEP does BEFORE ever calling the PDP (verify the token; refuse without calling the PDP at all on failure, or on a missing mission claim absent external establishment). Conformant behavior here means evaluate() is never invoked, so there is no decision-request event for a PDP test to observe; unlike action-approval.refusal-without-fresh-approval (where the PEP's refusal is a mechanical 1:1 consequence of an observed PDP deny), there is no PDP-side proxy for a call that never happens."
   },
   {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
@@ -3691,7 +3692,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path in this deployment: mcp-payments/src/pep.ts calls evaluate() as a direct in-process function call (grep confirms no HTTP/RPC hop, no signed decision-request envelope, no channel-authentication check anywhere in src/services/pdp). PEP and PDP are the same component here, so there is no decision-request channel to integrity-protect or mutually authenticate, and evaluate() performs no caller-provenance check on its EvaluationRequest argument. Testing this meaningfully needs a genuinely separated PEP/PDP topology, which this reference deployment does not have."
   },
   {
    "id": "runtime.token-validation.minimize-claims-sent-should",
@@ -4245,7 +4247,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: this deployment implements only the credential-carried Mission-binding mode (mcp-payments/src/pep.ts takes the Mission id from the validated token's mission claim before calling loadView); there is no externally-established mode, no binding-profile join, and no credential material evaluate() checks a supplied Mission reference against. The existing view_inconsistent check (req.context.mission.id/authority_hash vs. the already-loaded view) only compares two server-held values for the credential-carried mode; it is not \"verify that reference against the acting credential under a join a binding profile defines,\" so mapping it here would be a neighboring-clause reuse rather than a real assertion of this row's clause."
   },
   {
    "id": "runtime.state-freshness.must-define-state-source",
@@ -4936,7 +4939,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: AuthorityEntry.constraints is a closed type (max_amount, vendors, requires_action_approval only) in both policy-view.ts and the AS kernel's own AuthorityEntry, and MissionView carries no controls or cumulative-consumption member at all; evaluateInner has no metering/cumulative-consumption logic to fail closed from. The experimental metering companion (draft-mcguinness-mission-metering) that would define the bound machinery is not implemented in this codebase."
   },
   {
    "id": "runtime.metering.no-advertising-unperformed-enforcement",
@@ -5293,8 +5297,22 @@
     "normative": "under the agent-compromise-resistant claim, every high-consequence action requires an action-bound approval"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compromise-resistant.test.ts",
+     "name": "action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant) > each of the three high-consequence classes is denied action_approval_required with no approval presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compromise-resistant.test.ts",
+     "name": "action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant) > each of the three high-consequence classes permits once a valid fresh action-bound approval matching the parameters is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the PDP's enforcement mechanism for exactly the three high-consequence class labels, one at a time: denied action_approval_required with no approval, permitted with a valid fresh one, for irreversible_action, external_commitment, and privileged_administration. NOT tested: whether a real deployment's requiresActionApproval predicate is in fact wired to cover every action it actually assigns to these three classes (deployment-wide policy completeness is a configuration-audit matter, outside evaluate()'s pure-function boundary)."
   },
   {
    "id": "runtime.compromise-resistant.independent-rendering-condition",
@@ -5340,7 +5358,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: this MUST binds which state-source mechanism a deployment wires up (an AS/deployment architecture choice, role AS), not evaluate()'s own behavior; context.freshness is an opaque optional input evaluate() neither requires nor characterizes as \"active\" vs. \"token-lifetime\". Separately worth flagging: evaluateInner skips the freshness check entirely when context.freshness is absent (\"if (req.context.freshness)\", evaluate.ts step 3), so a PEP that simply omits it gets no staleness enforcement at all for a high-consequence action, not even a token-lifetime fallback; that is a live gap worth a follow-up, not something this row's todo status should paper over."
   },
   {
    "id": "runtime.compromise-resistant.unmet-condition-blocks-claim",
