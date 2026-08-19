@@ -292,6 +292,49 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
   });
 });
 
+// The Controller's Basic Governance Gate (@spec mission-substrate#basic-gate)
+// is realized here, not by the resource-side PDP: gateActive and
+// gateDerivation are the AS's state-gated issuance and derivation paths. The
+// active predicate is a whitelist (`state === "active"`), so any persisted
+// value outside the recognized MissionState set fails closed by construction,
+// never by an explicit blocklist entry.
+describe("basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate)", () => {
+  it("active predicate true -> gateActive and gateDerivation proceed", () => {
+    const r = approve(intent(), 400);
+    expect(kernel.gateActive(r.id).state).toBe("active");
+    expect(kernel.gateDerivation(r.id).state).toBe("active");
+  });
+
+  it("active predicate false -> gateActive and gateDerivation refuse, for every recognized non-active state", () => {
+    const nonActive = ["suspended", "revoked", "expired", "completed", "superseded", "cascaded"] as const;
+    nonActive.forEach((state, i) => {
+      const r = approve(intent(), 401 + i);
+      kernel.db.prepare("UPDATE missions SET state = ? WHERE id = ?").run(state, r.id);
+      expect(() => kernel.gateActive(r.id), state).toThrow(GateError);
+      expect(() => kernel.gateDerivation(r.id), state).toThrow(GateError);
+    });
+  });
+
+  it("a persisted state value outside the recognized lifecycle set fails closed, never treated as active", () => {
+    const r = approve(intent(), 410);
+    kernel.db.prepare("UPDATE missions SET state = ? WHERE id = ?").run("quantum_supervened", r.id);
+    try {
+      kernel.gateActive(r.id);
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(GateError);
+      expect((e as GateError).reason).toBe("mission_not_active");
+    }
+    try {
+      kernel.gateDerivation(r.id);
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(GateError);
+      expect((e as GateError).reason).toBe("mission_not_active");
+    }
+  });
+});
+
 describe("signed status (@spec status#mission-status-response)", () => {
   it("emits a JWS with the mission object and audience-scoped authority", async () => {
     const r = approve(intent(), 6);

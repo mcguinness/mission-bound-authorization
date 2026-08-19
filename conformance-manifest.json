@@ -3806,8 +3806,15 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "The two endpoint-level tests need live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too."
   },
   {
    "id": "runtime.decision-inputs.discharge-excludes-authority",
@@ -4080,8 +4087,21 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > revoked mission -> deny mission_inactive within the bound",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate true -> the gate proceeds to a decision (never the non-active outcome)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "The endpoint-level cited test needs live OpenFGA and sandbox-skips locally; the two unit-level tests run unconditionally against a stub Fga and prove the same active/non-active refusal on the PDP's own decision path without it, so this row has non-skipping local coverage too."
   },
   {
    "id": "runtime.decision-inputs.history-no-expand-authority",
@@ -5785,8 +5805,15 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > a supplied mission reference that mismatches the loaded view is refused, never silently accepted",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "The endpoint-level test needs live OpenFGA and sandbox-skips locally; the unit-level test runs unconditionally against a stub Fga and proves the same authority_hash-mismatch -> view_inconsistent rule without it, so this row has non-skipping local coverage too."
   },
   {
    "id": "authzen.pdp-request.consistency-policy-view-id-equal",
@@ -8030,19 +8057,19 @@
    "coverage": "tested",
    "tests": [
     {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate true -> the gate proceeds to a decision (never the non-active outcome)",
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate) > active predicate true -> gateActive and gateDerivation proceed",
      "level": "unit",
      "surface": "governance-decision"
     },
     {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision",
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate) > active predicate false -> gateActive and gateDerivation refuse, for every recognized non-active state",
      "level": "unit",
      "surface": "governance-decision"
     }
    ],
-   "notes": "src/services/pdp/src/evaluate.ts (tagged @spec runtime abstract decision contract) is the concrete Basic Governance Gate: step 2 defines the active predicate (view.state !== 'active') and its non-active outcome (deny mission_inactive); the permit path proceeds only when the predicate holds. Both cited tests run unconditionally (no live OpenFGA needed; the permit case supplies a stub Fga), so this coverage never sandbox-skips. Cross-mapped from the same code already tested under the runtime#decision-inputs and authzen#pdp-request document tags (runtime.decision-inputs.active-state-required and others)."
+   "notes": "The Controller is the Mission Issuer/AS ({{mission-substrate#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-view-id-and-authority-hash-equal), not this Controller-role row."
   },
   {
    "id": "substrate.basic-gate.decision-only-while-active",
@@ -8066,13 +8093,13 @@
    "coverage": "tested",
    "tests": [
     {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision",
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate) > active predicate false -> gateActive and gateDerivation refuse, for every recognized non-active state",
      "level": "unit",
      "surface": "governance-decision"
     }
    ],
-   "notes": "Same evaluate.ts predicate as active-predicate-and-outcome above; the cited test sweeps every recognized non-active state (revoked, expired, suspended, superseded) and asserts none ever yields decision:true."
+   "notes": "Same gateActiveLineage predicate as active-predicate-and-outcome above, on the Controller (AS kernel), not the resource-side PDP. The cited test sweeps every recognized non-active MissionState (suspended, revoked, expired, completed, superseded, cascaded), persisting each directly on the record before asserting both gateActive and gateDerivation throw GateError, never a positive decision."
   },
   {
    "id": "substrate.basic-gate.unrecognized-fails-closed",
@@ -8096,13 +8123,13 @@
    "coverage": "tested",
    "tests": [
     {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check",
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate) > a persisted state value outside the recognized lifecycle set fails closed, never treated as active",
      "level": "unit",
      "surface": "governance-decision"
     }
    ],
-   "notes": "evaluate.ts's relationForAction lookup returning null for an action the policy does not map denies out_of_authority before the FGA check ever runs; the cited test uses an action name absent from the policy's map entirely, distinct from the existing 'never-granted action' tests (which use a recognized, mapped action that is simply outside the Authority Set)."
+   "notes": "This row's 'unrecognized' is a lifecycle value or condition, not an unknown action; an unmapped action is out_of_authority on the resource-side PDP, a different failure mode on a different actor (see runtime.decision-inputs.authority-entry-and-subset-required, which the PDP's unmapped-action test now backs instead). The cited kernel test writes a state string outside the MissionState set directly onto the persisted record (bypassing the type system, simulating a corrupted or future-versioned value) and asserts both gateActive and gateDerivation throw GateError with reason mission_not_active: the active predicate is a whitelist (state === \"active\"), so any unrecognized value fails closed by construction, never by an explicit blocklist entry that could omit a case."
   },
   {
    "id": "substrate.basic-gate.non-active-transition-definition",
