@@ -186,7 +186,7 @@ describe("high-consequence actions are always gated by a PDP permit, never left 
 
 describe("an action-bound approval is reverified against the concrete parameters, and a parameter change after approval invalidates it (@spec runtime#action-approval)", () => {
   it("an approval whose digest matched the parameters at approval time no longer satisfies the gate once the record changes underneath it", async () => {
-    const { pep, payments } = buildStack(
+    const { pep, payments, connectors } = buildStack(
       view(["payments:payment.schedule"], { constraints: { requires_action_approval: true } }),
       alwaysAllowFga,
     );
@@ -207,11 +207,18 @@ describe("an action-bound approval is reverified against the concrete parameters
     // Reparameterization: the record changes after approval. The SAME
     // approval object is presented again, unchanged -- it is its OWN digest,
     // now stale against the freshly recomputed parameters, that invalidates
-    // it, not a generic parameter-binding mismatch at a later execute step.
+    // it on this re-decide. (This is the re-decide arm only: pep.enforce()
+    // never executes anything by itself, so this does not exercise
+    // pep.reverify()'s TOCTOU-at-time-of-use check against the approval --
+    // no public server API drives an approval-gated action through that
+    // two-phase path; see the manifest row's notes.)
     payments.bumpInvoiceAmount("inv-1", "999.00");
     const after = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, TOKEN, approval);
     expect(after.permitted).toBe(false);
     expect(after.denial_reason).toBe("action_approval_required");
+    // Nothing executed on either call: enforce() alone never commits an
+    // effect, on a permit or a deny.
+    expect(connectors.ledgerEntries()).toHaveLength(0);
   });
 });
 

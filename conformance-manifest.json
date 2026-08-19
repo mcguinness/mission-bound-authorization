@@ -3174,7 +3174,7 @@
     "normative": "an action-bound approval is reverified against the concrete parameters at execution, and a parameter change after approval invalidates it"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
@@ -3183,7 +3183,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "The approval's OWN parameter_digest, not a later generic parameter-binding reverify, is what invalidates it: an entry-constrained approval permits schedule_payment against the invoice's current parameters, the invoice is then mutated (reparameterization), and presenting the identical, unchanged approval object again denies action_approval_required, because evaluate()'s action-approval check recomputes parameter_digest fresh and compares it to the approval's stored digest."
+   "notes": "Asserted: the re-decide arm. An entry-constrained approval permits schedule_payment against the invoice's current parameters (via pep.enforce()); the invoice is then mutated (reparameterization); presenting the identical, unchanged approval object to a FRESH pep.enforce() call denies action_approval_required, because evaluate()'s action-approval check recomputes parameter_digest fresh and compares it to the approval's stored digest -- and nothing executes on either call. NOT asserted: the anchor's TOCTOU-at-time-of-use clause -- reverifying the SAME single permitted attempt via Pep.reverify() immediately before execution, the way parameter-binding.must-bind-and-reverify does for an ordinary permit. That path is not reachable through any public server API for an approval-gated action: callWriteTool/callTransactionTool take no actionApproval parameter (only Pep.enforce() does, and it has no execution step of its own), and Pep.reverify() itself has no approval parameter at all -- it only re-checks the generic parameter_digest, with no notion of the approval object. Two calls to enforce() is the only approval-specific reverification this codebase's public surface offers."
   },
   {
    "id": "runtime.action-approval.approval-not-bearer-grant",
@@ -3670,7 +3670,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Both arms: an operation with no matching authority denies with zero connector side effects (and FGA never consulted, ruling out a PEP that merely rubber-stamps), and an operation WITH authority is preceded by an actual recorded PDP decision rather than executing on a bypass -- so 'a PEP that can refuse... after token validation and before execution' is genuinely in the path both ways, not merely present when convenient."
+   "notes": "Both arms: an operation with no matching authority denies with zero connector side effects (and FGA never consulted, ruling out a PEP that merely rubber-stamps), and an operation WITH authority is preceded by an actual recorded PDP decision rather than executing on a bypass -- so 'a PEP that can refuse... before execution' is genuinely in the path both ways, not merely present when convenient. These two mappings pass already-validated TokenFacts straight in, so they do not themselves assert the 'after token validation' ordering; that half is covered separately by the token-validation.establish-validity-before-use and token-validation.audience-and-pop rows."
   },
   {
    "id": "runtime.token-validation.establish-validity-before-use",
