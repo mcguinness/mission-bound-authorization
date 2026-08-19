@@ -88,6 +88,18 @@ Two Lab documents are **floor-referenced**: containment and metering are named b
 in floor-document conditional text, so they receive active-tier responsiveness for exactly
 that property while staying experimental (this is also a freeze class below).
 
+**Reader-facing layer: the order menu.** The map's first reader test (the author, reading
+the shipped compact track table cold) failed it: zone/track rows answer "where does this
+document live", not "what do I order". The top layer is therefore a five-pick menu: read
+the architecture, pick your binding (OAuth, AAuth, standalone authority server, or a
+sketch), pick your runtime, pick your evidence, then compose add-ons, closing with the
+assurance menu (the conformance baselines as cumulative levels). Readiness markers
+(experimental, sketch) stay inline on every item. The two-layer principle is unchanged:
+the menu is presentation, the collapsed 41-row matrix remains the machine-validated layer
+carrying zone, track, group, and per-document triggers, and the validator's placement
+checks bind to the matrix. Zones and tracks stay authoritative in the manifest; the menu
+never regroups the catalog or the verb spine.
+
 **The adoption map is an overlay, never a regrouping.** The README's catalog keeps its
 group-keyed sections; the map is a compact table near the top of the README (zone, track,
 architectural group, documents, one-line trigger) carrying the five-minute path and linking
