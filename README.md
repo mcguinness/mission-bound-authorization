@@ -59,7 +59,7 @@ chapter by chapter, for readers who want the why before the wire.
 
 ## The adoption map
 
-Eight picks, in order. Each pick is one decision; within a pick,
+Ten picks, in order. Each pick is one decision; within a pick,
 options are ordered by growing capability, and each option is usable
 on its own rung. Maturity is one vocabulary everywhere on the menu,
 taken verbatim from the family manifest: **stable** (unmarked),
@@ -123,16 +123,27 @@ lets another trust domain's AS honor the Mission;
 [`oauth-mission-cross-org-delegation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) (experimental) carries a chain across
 organizations.
 
-**8. Pick your operations.** [`mission-harness`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html) is the agent's own
-session-continuity stop; the floor's status document covers observe
-and revoke. [`oauth-mission-signals`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) replaces polling with push
-notice, [`oauth-mission-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) adds fleet enumeration and
-bulk lifecycle, [`oauth-mission-expansion`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.html) widens mid-task via
-fresh approval. Then [`oauth-mission-containment`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) (experimental) floor-referenced*
-(narrow, do not end), [`oauth-mission-progressive`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html) (experimental) (policy-bounded
-drawdown), [`mission-discovery`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) (experimental) (open-world resources),
-[`mission-metering`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html) (experimental) floor-referenced* (cumulative caps), and
-[`mission-orchestration`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) (experimental) (safe unwind mid-workflow).
+**8. Run your agent.** What the agent itself does when the Mission
+changes under it. [`mission-harness`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html) is the session-continuity
+stop a restartable agent needs; [`mission-orchestration`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) (experimental) unwinds
+in-flight work safely when the Mission ends mid-workflow.
+
+**9. Adjust authority in flight.** How approved authority moves after
+approval; the floor's status document already covers observe and
+revoke.
+
+| Direction | Documents | What it adds | Maturity |
+|---|---|---|---|
+| Widen | [`oauth-mission-expansion`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.html) | Mid-task widening through fresh approval | stable |
+| Meet the unknown | [`mission-discovery`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) | An open-world agent reaches resources its approval never named | experimental |
+| Narrow | [`oauth-mission-containment`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) floor-referenced* | Narrow a live Mission on a protected event instead of ending it | experimental |
+| Draw down | [`oauth-mission-progressive`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html) | Policy-bounded drawdown when authority cannot be enumerated up front | experimental |
+| Cap | [`mission-metering`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html) floor-referenced* | Cumulative caps: budget, calls, duration, egress | experimental |
+
+**10. Operate the fleet.** [`oauth-mission-signals`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) replaces
+per-Mission polling with push notice of state changes;
+[`oauth-mission-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) adds fleet enumeration and bulk
+lifecycle for operators.
 
 **The closing shelf.** Portable proof for outside verifiers:
 [`mission-audit`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) and [`mission-mandate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html). The reviewer's guide:

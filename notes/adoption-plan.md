@@ -95,8 +95,10 @@ the architecture; pick your binding (OAuth, AAuth, standalone authority server, 
 sketch); pick your runtime; pick your evidence; shape your Mission and pick your approval
 complexity (each a table of named options ordered by growing capability, the two lanes
 every end-to-end deployment decides; rank adjectives are never used as option labels);
-pick your delegation and your operations (each a complexity progression); a closing shelf
-holds portable proof, the guide, and the remaining Lab items; the assurance menu closes
+pick your delegation (a complexity progression); run your agent (the agent-side stop and
+unwind); adjust authority in flight (a named-direction table: widen, meet the unknown,
+narrow, draw down, cap); operate the fleet (push notice and bulk lifecycle); a closing
+shelf holds portable proof, the guide, and the remaining Lab items; the assurance menu closes
 as the enforcement counterpart (the conformance baselines as cumulative levels). Maturity
 on the menu is one vocabulary, taken verbatim from the family manifest's maturity field
 (stable unmarked, informational, experimental, sketch); no menu-local readiness words are
