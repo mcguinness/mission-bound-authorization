@@ -3837,7 +3837,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: terminal_when / discharge is not implemented anywhere in this codebase (grep across src/services and src/packages finds only forward-looking comments in mission-signals noting \"No kernel funnel commits an entry discharge yet\"). evaluateInner has no discharge-state input or check."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",
@@ -3895,7 +3896,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit / antecedent unreachable at the PDP: AuthorityEntry.type is a closed TypeScript literal (\"mission_resource_access\") both in policy-view.ts (the PDP's own view) and in the AS kernel's own AuthorityEntry (src/services/authorization-server/src/kernel/types.ts); the transaction-authorization admission path separately refuses any other authorization_details type at admission (src/demo/src/stack.ts's operationProfiles comment: \"an entry naming any other type is refused at admission rather than read structurally\"). No entry of another type can ever reach MissionView.authority_set, so evaluate() never sees the case this row governs; the real enforcement locus is the AS/admission layer, out of this PDP-only slice. Worth flagging separately: evaluateInner's own entry-match predicate (step 5) matches on resource+actions shape alone and never inspects entry.type, so if this whitelist ever broke upstream, the PDP itself would not catch it; that is a structural observation for a follow-up, not something a passing test can honestly assert today."
   },
   {
    "id": "runtime.decision-inputs.capability-drift-refusal",
@@ -3918,7 +3920,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: no discovered-catalog capability digest concept (extracted-definition digest, whole-source digest) exists anywhere in src/services/pdp or src/services/mcp-payments; AuthorityEntry and MissionView carry no such member."
   },
   {
    "id": "runtime.decision-inputs.resource-policy-fail-closed",
@@ -3939,8 +3942,22 @@
     "normative": "an action proceeds only when both Mission authority and Resource policy permit it; either one refusing fails the action closed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
+     "name": "Resource policy is a fail-closed AND with Mission authority (@spec runtime#input-resource-policy) > authority and constraints permit, but the Resource-policy/FGA check denies -> the action still fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Both arms of the fail-closed AND are covered: Mission authority permitting while the Resource-policy/FGA check (fga.checkWithContext, the composed local authorization step this deployment uses) denies still fails closed (new unconditional test); Mission authority denying already fails closed regardless of Resource policy (existing, CI-only live-OpenFGA test, reused here rather than duplicated)."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
@@ -3991,8 +4008,16 @@
     "normative": "a decision under delegation evaluates the authenticated act chain and refuses a missing or malformed one; client_id alone is never treated as the immediate actor when an act chain is present"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
+     "name": "Actor context: a malformed act chain entry is refused (@spec runtime#input-actor) > a context.actor.act entry missing iss (or sub) is refused as actor_invalid, never silently accepted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the malformed-chain arm only. NOT tested: the missing-chain arm (evaluateInner only validates context.actor when the PEP supplies it at all, \"if (req.context.actor)\"; whether the PEP correctly builds context.actor.act from a token's act claim whenever delegation is genuinely in effect is a token-to-context construction duty of the PEP, outside evaluate()'s pure boundary) and \"client_id alone is never treated as the immediate actor\" (this deployment's FGA subject is the Mission itself, mission:<id>, never the actor or client_id, so there is no code path where client_id could be substituted for an actor to test against)."
   },
   {
    "id": "runtime.decision-inputs.no-authority-expansion-via-actor",
@@ -4036,7 +4061,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: EvaluationRequest's context (evaluate.ts) carries no token-expiry field of any kind; evaluateInner never reads or checks one. Token expiry is the PEP's pre-PDP token-validation duty ({{token-validation}}); nothing in the decision context represents it for the PDP to re-check."
   },
   {
    "id": "runtime.decision-inputs.mission-expires-at-refusal",
@@ -4058,8 +4084,16 @@
     "normative": "a Mission state source reporting expires_at passed, or the Mission expired, refuses the action independent of the token's own exp"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
+     "name": "Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time) > a Mission state of expired refuses the action; evaluate() has no token-exp input to depend on in the first place",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the \"or reports the Mission expired\" arm: a Mission state of \"expired\" refuses via the active-state gate, trivially independent of the token's own exp since evaluate() has no token-exp input in the first place. NOT tested (no code path): the other arm, \"where a Mission state source does expose it [expires_at]\"; MissionView carries no expires_at member and evaluateInner never reads one."
   },
   {
    "id": "runtime.decision-inputs.active-state-required",
@@ -4147,7 +4181,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: EvaluationRequest's context carries no history-predicate or evidence-store-reachability input of any kind; evaluateInner never reads or checks one. History evaluation ({{input-history}}) is not implemented in this PDP."
   },
   {
    "id": "runtime.mission-binding.externally-established-must-verify",
