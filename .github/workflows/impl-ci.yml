@@ -40,5 +40,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: node scripts/check-spec-versions.mjs
       - run: pnpm test
       - run: pnpm evals
