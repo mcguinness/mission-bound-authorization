@@ -66,7 +66,9 @@
    "runtime.semantic-evaluator",
    "runtime.history-input",
    "runtime.discovered-catalog",
-   "containment.narrowing"
+   "containment.narrowing",
+   "cross-domain.origin-principal",
+   "runtime.taint-enforcement"
   ]
  },
  "profiles": [
@@ -3344,6 +3346,29 @@
    "tests": []
   },
   {
+   "id": "runtime.evidence-emission.should-cover-every-high-consequence-emitter",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "A deployment SHOULD satisfy this condition for every emitter whose records cover the high-consequence classes.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.agent-isolated-evidence-emission"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming the agent-isolated evidence-emission condition applies it to every emitter whose records cover the high-consequence classes, not a subset"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "runtime.evidence-emission.no-fallback-on-signer-unavailability",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "agent-isolated-evidence-emission",
@@ -4997,7 +5022,7 @@
    "surface": "evidence-emission",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "runtime enforcement evidence is append-only and integrity-protected under a mechanism the enforcement scope names"
+    "normative": "runtime enforcement evidence is append-only and integrity-protected under a mechanism the enforcement scope names; an individually signed JSON record should use the evidence_envelope JWS convention rather than a record-specific signing scheme"
    },
    "level": "unit",
    "coverage": "todo",
@@ -5019,7 +5044,7 @@
    "surface": "evidence-emission",
    "assertion": "privacy",
    "observation": {
-    "normative": "an evidence record never carries raw action parameters; only the parameter_digest, with any forensic retention in separately access-controlled storage"
+    "normative": "an evidence record never carries raw action parameters; only the parameter_digest, with any forensic retention in separately access-controlled storage; a deployment should retain the normalized parameters of denied high-consequence attempts in that forensic store so a refusal is reconstructable"
    },
    "level": "unit",
    "coverage": "todo",
@@ -5519,6 +5544,1663 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.conventions.required-when-known-no-inference",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conventions-and-definitions",
+   "text": "The sender includes the member when it holds the member's value. A receiver MUST NOT infer meaning from the member's absence.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a receiver never infers a meaning from a REQUIRED-when-known member's absence; absence means the sender did not hold the value, not a substantive fact"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.pdp-request.audience-match-mandatory",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A PDP MUST perform the entry match against `resource.properties.audience`; matching it against `resource.type` or `resource.id` is non-conforming and will diverge across deployments.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP matches the approved Authority Set entry's resource against resource.properties.audience, never against the AuthZEN resource object's type/id identity"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A PDP that also serves non-Mission AuthZEN traffic MUST NOT downgrade: for an action within a runtime enforcement scope it mediates, a request whose `context` lacks the `mission` member ({{context-mission}}) is malformed under this binding, and the PDP MUST refuse it rather than evaluate it against non-Mission policy alone, and MUST record the refusal as a Refusal Record with `denial_reason` `mission_context_missing`",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP that also serves non-Mission AuthZEN traffic never evaluates an in-scope request missing context.mission against its non-Mission policy surface; it refuses the malformed request and records a Refusal Record with denial_reason mission_context_missing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.pdp-request.consistency-state-active-and-pdp-precedence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A PDP with direct access to a Mission state source MUST prefer its own fresher view over `context.mission_state_observation.state`, and MUST return `mission_inactive` when its view disagrees with the PEP-supplied state.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP treats context.mission_state_observation.state as exactly active or else non-active, prefers its own directly-consulted state view over a PEP-supplied one, and returns mission_inactive on disagreement"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > revoked mission -> deny mission_inactive within the bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.pdp-request.consistency-view-id-and-authority-hash-equal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "The `id` and `authority_hash` in `context.mission` equal the `mission_id` and `authority_hash` committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose context.mission id or authority_hash disagrees with the loaded materialized view's committed values is denied view_inconsistent"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.pdp-request.consistency-policy-view-id-equal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "When `context.mission.policy_view_id` is present, it MUST equal the loaded view's `policy_view_id`, and the PDP returns `view_inconsistent` on inequality.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a supplied context.mission.policy_view_id that disagrees with the PDP's loaded view is denied view_inconsistent"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > a request pinning a pre-containment policy_view_id denies view_inconsistent after contain",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.pdp-request.consistency-state-version-mismatch-is-staleness",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "the PDP compares it against its own tracked Mission state version, recorded in Decision Evidence rather than echoed on the response ({{I-D.draft-mcguinness-mission-runtime-evidence}}), never against `policy_view_id`, which commits to authority only ({{mission-to-policy-materialization}}), and treats a mismatch as staleness (`stale_state`)",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a supplied context.mission_state_observation.version that disagrees with the PDP's own tracked state version is treated as staleness (stale_state), and version is never compared against policy_view_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id` or `policy_version` was omitted; the view the PDP loaded is authoritative.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "omitting the optional policy_view_id or policy_version never by itself fails a decision; the PDP's own loaded view is authoritative"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.pdp-request.consistency-parameter-digest-presence-and-match",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A parameter-bound action MUST NOT be permitted without a verified `parameter_digest`.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a parameter-bound action's decision requires a present, and where parameters are also supplied, a matching parameter_digest; absence or mismatch denies parameter_violation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.pdp-request.origin-principal-mapping-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A deployment that instead places mapping at the PEP MUST convey it as a structured, integrity-protected mapping observation carrying its source, the mapping-policy identifier and version, the issuer-qualified input, the local output, the observation time, and a validity bound",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.origin-principal"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP-placed origin-principal mapping is conveyed as a structured, integrity-protected observation the PDP verifies; a failed, missing, ambiguous, or stale mapping or entitlement result denies principal_mapping_failed"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Cross-Domain is a disabled conditional for the Runtime-Enforced Baseline (notes/adoption-plan.md); profiles is empty for this cross-domain-only row even though the surrounding pdp-request rows are baseline."
+  },
+  {
+   "id": "authzen.clock-skew.leeway-bounded-and-published",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "clock-skew",
+   "text": "Any leeway MUST NOT exceed the deployment's maximum clock skew, and the deployment MUST publish that maximum-skew assumption in its Enforcement Scope Statement",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "any clock-skew leeway a component allows never exceeds the deployment's published maximum, and the deployment publishes that maximum in its Enforcement Scope Statement"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.clock-skew.exceeded-fails-closed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "clock-skew",
+   "text": "A value outside its window by more than the published maximum skew MUST fail closed: an expired permit, a stale freshness window, or an expired credential is refused",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a time comparison outside its window by more than the published maximum skew fails closed, and the leeway never extends a lease beyond its bound plus the published skew"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.batch-evaluations.execute-all-independent",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "batch-evaluations",
+   "text": "This profile requires `execute_all` semantics: every item MUST be evaluated independently, on the same terms as a single request, regardless of an earlier item's decision.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every boxcar item is evaluated independently on the same terms as a standalone request, regardless of any other item's decision in the same batch"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.batch-evaluations.reject-short-circuit-options",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "batch-evaluations",
+   "text": "A PDP MUST reject, as an AuthZEN request error rather than a silent downgrade, a request whose recognized `options` ask for `deny_on_first_deny`, `permit_on_first_permit`, or any other recognized short-circuit or fail-fast semantics.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a batch request whose recognized options ask for a short-circuit or fail-fast evaluation mode is rejected as a request error, never silently downgraded to execute_all"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.transport.pep-bounds-timeout-fail-closed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "transport-behavior",
+   "text": "A PEP MUST bound each evaluation call with a timeout inside the action class's staleness budget and treat expiry as `pdp_unreachable`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PEP bounds every evaluation call with a timeout inside the action class's staleness budget and treats an expired call as pdp_unreachable, failing closed rather than permitting"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.transport.no-double-charge-on-retry",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "transport-behavior",
+   "text": "metering MUST NOT charge the bound twice for the retried request",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a PEP retry of a lost-response evaluation, carrying the same normalized parameters and idempotency key, never causes a metered bound to be charged twice"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.transport.no-retry-before-retry-after",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "transport-behavior",
+   "text": "the PEP MUST NOT retry before `Retry-After` elapses, and when no decision is obtainable within its policy window it fails closed as `pdp_unreachable` under the runtime profile.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on an HTTP 429 overload response the PEP never retries before Retry-After elapses, and fails closed as pdp_unreachable if no decision is obtainable within its policy window"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-mission.identity-members-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-mission",
+   "text": "REQUIRED. A string. The Authority Set integrity anchor, in the integrity-anchor encoded form ({{I-D.draft-mcguinness-oauth-mission}}).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "context.mission always carries id, issuer, and authority_hash, the Mission's required identity and Authority Set integrity anchor"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested indirectly through authority_hash's consistency-check consequence; id/issuer presence itself is not separately asserted by a test."
+  },
+  {
+   "id": "authzen.context-mission.origin-principal-only-from-verified-source",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-mission",
+   "text": "The PEP populates it only from a verified token or delegation chain, or from trusted local token metadata, never from an unverified request value.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.origin-principal"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PEP populates context.mission.subject (the cross-domain origin principal) only from a verified source, never from an unverified request value"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-actor.provenance-not-in-act-chain",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-actor",
+   "text": "Provenance beyond the delegation chain (the tool a request invoked, a named workflow step, a human approver) MUST NOT be encoded inside the `act` chain",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the act chain carries the delegation chain only; provenance beyond it is never encoded inside act, and is instead recorded in dedicated evidence fields"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-actor.shape-and-ordering",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-actor",
+   "text": "OPTIONAL. An array of objects. The delegation chain projection, ordered root to leaf. For a single actor, the array has one member.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "context.actor.act, when present, is the delegation chain projection ordered root to leaf, with exactly one member for a single actor"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/actor-chain/test/actor-chain.test.ts",
+     "name": "buildContextActor / validateContextActor (@spec authzen#context-actor, D31) > produces the root-to-leaf array with client identity",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-credential.no-unverified-claims",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "The PEP MUST NOT include unverified credential claims in this member.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "context.credential never carries a token-derived fact the PEP has not itself verified"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "parameter-digest",
+   "text": "When present, it MUST be the operation-profile-normalized parameter object ({{I-D.draft-mcguinness-mission-runtime}}): the same bytes the `parameter_digest` is computed over, so the PDP's recomputation matches.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when action.properties.parameters is present, it is exactly the operation-profile-normalized parameter object, the same bytes the parameter_digest is computed over, so the PDP's own recomputation matches"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.parameter-digest.deny-on-insufficient-parameter-info",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "parameter-digest",
+   "text": "If the PDP needs raw parameter values to evaluate an applicable constraint and they are supplied through neither `parameters` nor the equivalent privacy-preserving `parameter_attributes`, it MUST deny with `parameter_violation`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the PDP needs raw parameter values to evaluate a constraint and neither parameters nor parameter_attributes supplies them, the PDP denies parameter_violation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed request amount is denied (fail closed), never silently permitted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.parameter-digest.idempotency-conflict-on-mismatched-operation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "parameter-digest",
+   "text": "When the same key instead matches a prior claim under a different operation identity, the reuse is a conflict, never a new execution: the PDP MUST deny with `idempotency_conflict` ({{runtime-denial-classification}}), terminal in every claim state.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an idempotency_key reused under a different operation identity than the claim it was made under always denies idempotency_conflict, terminal regardless of claim state"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.parameter-digest.constraint-unevaluable-fail-closed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "parameter-digest",
+   "text": "A constraint the PDP cannot evaluate from `parameter_digest`, `parameter_attributes`, or local state MUST fail closed",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a constraint the PDP cannot evaluate from any of the digest, the privacy-preserving attributes, or local state fails the action closed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-taint.fail-closed-when-missing",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-taint",
+   "text": "the fail-closed default applies: the PDP MUST deny with `taint_context_missing` ({{runtime-denial-classification}}) when `context.taint` is absent from an in-scope decision.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.taint-enforcement"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the Enforcement Scope Statement declares PDP-enforced taint for an action's class, a decision request missing context.taint is denied taint_context_missing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-approval.arap-object-verbatim",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The PEP returns here exactly the approval object the Access Request Service issued: ARAP's approval object {{ARAP}} unchanged, with all of ARAP's members. ARAP makes `approved_at` OPTIONAL and `approved_until` REQUIRED; this profile does not subset or rename either.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "context.approval carries ARAP's approval object verbatim, with every ARAP member present unchanged; this profile neither subsets nor renames any ARAP member"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/reevaluate.test.ts",
+     "name": "M6 ARAP reevaluate (scenario 5) > denies requestable, resolves via ARS approval, re-evaluates to a permit -- no token issued",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "ARAP is pinned in notes/external-pins.json (id ARAP, openid/authzen #515, commit 7327cb1bcea8cfc223e7b6816535f60149845468, status established); the reference implementation is verified against that commit."
+  },
+  {
+   "id": "authzen.context-approval.mission-checks-beyond-arap",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "before treating `context.approval` as satisfying `approval_required`, the PDP MUST additionally establish the Mission checks: that the approval binds to the request's `parameter_digest` (a mismatch means the approval does not cover these parameters), that its grant time is within the deployment's maximum approval age ({{I-D.draft-mcguinness-mission-runtime}}), and that `approved_until` has not passed.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented ARAP approval satisfies approval_required only after the PDP additionally verifies it binds to the request's parameter_digest, its grant time is within the maximum approval age, and approved_until has not passed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/reevaluate.test.ts",
+     "name": "M6 ARAP reevaluate (scenario 5) > rejects an approval bound to a different parameter_digest",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-approval.grant-time-establishment",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "otherwise the PDP MUST establish the grant time from the approval record it resolves by `id` or from verified signed `state`. An approval whose completion time cannot be established is treated as unverifiable.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when approved_at is absent, the PDP establishes the approval's grant time from the resolved approval record or verified signed state; an approval whose completion time cannot be established this way is unverifiable"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-approval.record-approval-id-in-evidence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The PDP MUST record the presented approval `id` in Decision Evidence.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the presented approval's id is always recorded in Decision Evidence for the decision it satisfied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-approval.deny-when-required-and-absent",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "When policy requires an action-bound approval and no `context.approval` is presented, the PDP MUST deny with `approval_required`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision requiring action-bound approval with no context.approval presented is denied approval_required"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "entry-driven action approval (@spec txn-authorization#applicability) > denies an action the matched entry gates even when deployment policy does not",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-history.no-caller-asserted-outcome",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "A caller-supplied `mission_history` value is never itself evidence of a predicate's outcome, and carries no result member; the PDP MUST NOT accept a predicate outcome asserted through any context member.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP never accepts a caller-asserted predicate outcome; mission_history only supplies facts the PDP itself evaluates against the policy-selected predicate"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-history.unrecognized-predicate-refusal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "The PDP MUST refuse the evaluation of a policy-selected predicate it does not recognize, treating the predicate as not establishable",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy-selected history predicate type the PDP does not recognize is refused, treated as not establishable rather than skipped"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-history.deny-when-unsatisfied-or-unestablishable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "Where deployment or Resource policy requires a history predicate that is unsatisfied or cannot be established, the PDP MUST deny with `history_not_satisfied`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a required history predicate that is false or cannot be established denies history_not_satisfied"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.context-history.record-predicates-and-outcomes",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "The PDP MUST record the evaluated predicates and their outcomes in Decision Evidence",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every policy-selected history predicate the PDP evaluates, and its outcome, is recorded in Decision Evidence"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.extension-naming.collision-resistant-or-coordinated",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "an extension value MUST be either a collision-resistant name (following the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within this document family, so values cannot collide.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a companion-defined extension identifier, whether a denial reason, a mission-context extension member, or a history predicate type, is a collision-resistant name or a family-coordinated name"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Covers the identical naming rule stated three times in this document (denial-reason extensions here, the mission context extension member at context-mission, and the history predicate type at context-history); those two are recorded as duplicate-of this row."
+  },
+  {
+   "id": "authzen.runtime-denial-classification.unrecognized-value-treated-as-deny",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "A consumer of a denial reason, wherever it is carried (the Decision Evidence `denial_reason`, {{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response `context.reason`, {{response-context}}), MUST treat an unrecognized value as a deny and MUST NOT attach any other semantics to it, mirroring the issuance profile's open lifecycle state space",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "any consumer of a denial-reason value, wherever carried, treats an unrecognized value as a deny and attaches it no other semantics"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.runtime-denial-classification.stale-state-marked-transient",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "While the condition is expected to clear on a fresh read, the PDP SHOULD mark the denial transient with `next_action: retry`",
+   "role": "PDP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a stale_state denial is marked transient with next_action: retry, since a fresh state read is expected to clear it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.runtime-denial-classification.terminal-refusal-carries-next-action-none",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "A terminal policy refusal SHOULD carry `next_action: none`, except a denial carrying the step-up obligation, which carries neither `next_action` value per above",
+   "role": "PDP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a terminal policy refusal carries next_action: none, except the step-up-obligation denial, which carries no next_action at all"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.requestable-denials.auto-approval-bounded",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "a deployment SHOULD rate-limit and anomaly-check synchronous auto-approval, and MUST NOT auto-approve a request for an `approval_required` denial in the irreversible, external-commitment, or privileged-administration classes without an independent approver",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "synchronous auto-approval of a requestable denial is rate-limited and anomaly-checked, and a high-consequence approval_required denial is never auto-approved without an independent approver"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.requestable-denials.fresh-decision-required-not-bearer",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "An ARAP approval is input context, not a bearer grant: the PDP remains authoritative at enforcement, so the PEP MUST obtain a fresh decision, and any resulting permit and evidence remain subject to this profile.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an ARAP-approved access request never itself authorizes the action; the PEP obtains a fresh PDP decision, which alone produces any permit"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/reevaluate.test.ts",
+     "name": "M6 ARAP reevaluate (scenario 5) > denies requestable, resolves via ARS approval, re-evaluates to a permit -- no token issued",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.lanes.no-residual-policy",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "lanes",
+   "text": "Composition with a future AuthZEN partial-evaluation profile is reserved, and a PDP MUST NOT return residual policy under this profile.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP response under this profile never carries executable residual policy; decisions and instructions are the only response forms"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.response-context.conditions-parameter-digest-binding",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "REQUIRED, and equal to the request's `action.properties.parameter_digest`, when the action was parameter-bound. The PEP MUST enforce the exact request binding.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a parameter-bound permit's conditions.parameter_digest equals the request's supplied digest, and the executing PEP enforces exactly that binding"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > a permit's context carries the entry_digest resolved-scope anchor",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Tested for entry_digest binding; parameter_digest condition equality itself is not separately asserted by a unit test in this file."
+  },
+  {
+   "id": "authzen.response-context.valid-until-required-and-bounded",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "`valid_until` MUST NOT exceed:",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit's valid_until never exceeds the minimum of the credential's expiry, any satisfied approval's approved_until, the state valid-through, and any policy-defined maximum lifetime for the class"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.response-context.use-limit-1-for-high-consequence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "The PDP MUST set `use_limit: 1` for a permit in the high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), and the PEP MUST treat a high-consequence permit lacking it as invalid.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every high-consequence-class permit carries use_limit: 1, and the PEP refuses a high-consequence permit lacking it, applying its own classification floor independent of the PDP's internal class label"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "authzen.response-context.honor-every-condition-or-refuse",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "A permit carrying a condition member the PEP does not recognize is invalid: the PEP MUST NOT release the action's effect under it.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit whose conditions include a member the PEP does not recognize is treated as invalid, and the PEP does not release the action's effect under it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.response-context.no-permit-conditions-to-unestablished-pep",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "a PDP MUST NOT return a permit carrying `conditions` to a PEP it has not established, through deployment configuration and the mutually authenticated channel, as conforming to this profile.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP never returns a conditions-bearing permit to a PEP it has not established, via configuration and the mutually authenticated channel, as conforming to this profile"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.response-context.next-action-request-needs-fresh-access-request",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "`request` MUST be accompanied by a fresh `context.access_request`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a denial carrying next_action: request always carries a fresh context.access_request alongside it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.obligations.permit-fulfillment-and-denial-execution",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligations",
+   "text": "on a permit the PEP MUST fulfill each obligation before releasing the action's effect; on a denial the PEP MUST still deny the action and MUST additionally execute every returned obligation. Failure to fulfill an obligation, or an unrecognized obligation type, makes the effective result deny.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect and treats an unfulfilled or unrecognized one as an effective deny; on a denial the PEP still denies and additionally executes every returned obligation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.obligations.no-authority-and-no-remediation-content",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligations",
+   "text": "An obligation MUST NOT carry human approval, role or relationship creation, Mission expansion, a task handle, residual policy, or retry instructions",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an obligation object never carries human approval, role or relationship creation, Mission expansion, a task handle, residual policy, or retry instructions"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.obligations.in-process-step-up-before-release",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligations",
+   "text": "The PEP MUST achieve the required context before releasing the action's effect, and the original permit continues.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for an in-process step-up obligation, the PEP achieves the required stronger authentication context before releasing the action's effect, continuing under the original permit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.obligations.no-advice-downgrade",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligations",
+   "text": "an obligation MUST NOT be marked optional or downgraded to advice, and permit request binding, permit expiry, use limits, evidence emission, step-up, and mandatory notification are never advice.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an obligation is never marked optional or downgraded to safely-ignorable advice; the listed mandatory duties are never carried as advice"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.failure-condition-coverage.exactly-one-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "Every runtime failure condition, whether named in the runtime profile's failure-mode table or in its other normative requirements ({{I-D.draft-mcguinness-mission-runtime}}), surfaces through exactly one of four carriers in this binding: a Refusal Record for a PEP or PDP refusal before any PDP decision ({{I-D.draft-mcguinness-mission-runtime-evidence}}), a PDP denial (`reason` in the decision context, `denial_reason` in Decision Evidence), a permit obligation ({{obligations}}), or an Execution Evidence `error` for a failure after a permit",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every runtime-profile failure condition maps to exactly one of the four evidence/response carriers this binding defines; none is left uncarried and none is carried by more than one"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.permit-binding-split.same-identity-no-relay",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "permit-binding-split",
+   "text": "The requesting component and the executing PEP MUST be the same enforcement identity, on the same mutually authenticated channel that requested the permit. A permit is valid only on that channel and identity, and MUST NOT be relayed to another component as a bearer grant.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit is valid only for the same enforcement identity, on the same mutually authenticated channel, that requested it, and is never relayed to another component as a bearer grant"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.permit-binding-split.no-evidence-as-authorization",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "permit-binding-split",
+   "text": "Signed Decision Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}) MUST NOT be accepted as authorization to act: it is retrospective evidence of what the PDP decided, never a live credential a distinct component presents to execute.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "signed Decision Evidence is never accepted as authorization to act; it is retrospective evidence, not a live executable credential"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.permit-binding-split.cache-key-requirement",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "permit-binding-split",
+   "text": "A PEP permit cache MUST key on the request's cache key ({{projections}}), which already excludes observation telemetry by definition, so a per-request timestamp cannot prevent a cache hit.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a PEP permit cache keys on the canonical cache key (the authorization binding plus state generation, excluding observation telemetry), so a cached permit is never reused for a request whose cache key differs"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-id-propagation",
+   "text": "The PEP SHOULD propagate the permit's `evaluation_id` to the resource request in the `Mission-Decision` request header field",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PEP propagates the permit's evaluation_id to the resource request in the Mission-Decision header, so a Resource Server that logs it joins its access log to the decision that permitted it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.decision-id-propagation.signature-must-cover-header",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-id-propagation",
+   "text": "where the deployment signs resource requests the signature MUST cover it.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a deployment signs resource requests, the signature covers the Mission-Decision header carrying evaluation_id"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.decision-id-propagation.no-treat-as-permit",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-id-propagation",
+   "text": "a Resource Server MUST NOT treat it as a permit; the permit-binding rules above govern.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Mission-Decision header's evaluation_id is a correlation aid only; a Resource Server never treats its presence or value as a permit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.execution-evidence.exactly-one-per-permit",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "execution-evidence-requirement",
+   "text": "Independent of anything the PDP returns, the PEP MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the executing PEP emits exactly one Execution Evidence Object for the final disposition of every consequential permit the transaction-assurance tier covers, including a suppressed permit whose action never released"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "authzen.execution-evidence.failure-durably-recorded",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "execution-evidence-requirement",
+   "text": "The PEP MUST record the emission failure durably and surface it on its operational alarm path",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "if Execution Evidence emission fails after an irreversible effect, the PEP durably records the emission failure and surfaces it on its operational alarm path rather than retroactively altering the effect"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.execution-evidence.reserve-capacity-and-fail-closed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "execution-evidence-requirement",
+   "text": "the PEP MUST durably reserve evidence capacity for the execution, an evidence reservation, before acting, and MUST fail closed when the reservation cannot be made.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where transaction assurance depends on later evidence, the PEP durably reserves evidence capacity before acting and fails closed when it cannot make the reservation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.mission-status-composition.refresh-on-bound-elapse",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "mission-status-composition",
+   "text": "when the bound elapses without a confirming event the PEP MUST refresh from a Mission state source rather than continue on the cache.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "in event_driven mode, once the staleness bound elapses without a confirming invalidation event, the PEP refreshes from a Mission state source rather than continuing to rely on cached state"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.conformance.pep-checklist",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conformance",
+   "text": "A PEP conforming to this binding MUST:",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming PEP carries validated-token-only decision inputs matched on resource.properties.audience, supplies parameter_digest where required, processes obligations correctly, honors every decision condition under its own classification floor, emits Execution Evidence for the transaction-assurance tier's classes, keeps requesting and executing identity the same, keys permit caches on the cache key, and emits a Refusal Record for a pre-decision refusal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.conformance.pdp-checklist",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conformance",
+   "text": "A PDP conforming to this binding MUST:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming PDP refuses an in-scope request lacking Mission decision context and performs the consistency checks, classifies every denial per the runtime-denial-classification, returns the full decision context, advertises the mission-runtime capability URN, and emits the runtime evidence companion's records including a Refusal Record for a pre-evaluation refusal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.conformance.pdp-should-advertise-supported-obligations",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conformance",
+   "text": "A PDP conforming to this binding SHOULD advertise in its metadata `supported_obligations` array each obligation type it supports",
+   "role": "PDP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming PDP advertises each obligation type it supports in its metadata supported_obligations array"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.security.access-request-service-must-be-trusted",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "security-considerations",
+   "text": "A compromised or misconfigured Access Request Service can auto-approve escalations, so it MUST be trusted, authenticated, and access-controlled like the PDP, and its auto-approval is bounded as above.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the Access Request Service is trusted, authenticated, and access-controlled to the same standard as the PDP"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.security.pdp-tls-and-mutual-auth",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "security-considerations",
+   "text": "The PDP endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED). PEP-to-PDP authentication MUST be mutual, satisfying the integrity and mutual-authentication requirement the runtime profile places on the PEP-PDP channel",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP endpoint is served over TLS 1.2 or later, and PEP-to-PDP authentication is mutual"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.security.minimize-denial-detail-and-bound-probing",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "security-considerations",
+   "text": "The PEP SHOULD minimize the denial detail it relays to the agent; a generic refusal suffices to stop the action, and the full reason and contributing constraints belong in evidence, not in the agent-facing response.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the PEP relays a minimized, generic denial to the agent-facing surface, keeping the full denial reason and contributing constraints in evidence rather than the agent response, and a deployment rate-limits access requests per Mission to bound denial-oracle probing"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.iana.pdp-must-advertise-full-urn",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "iana",
+   "text": "A PDP conforming to this binding MUST advertise the full URN, `urn:ietf:params:authzen:mission-runtime`, never the bare capability name, so a PEP can discover profile support in-band before it evaluates a Mission-bound request",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming PDP's metadata capabilities array advertises the full urn:ietf:params:authzen:mission-runtime URN, never the bare capability name"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The base AuthZEN Authorization API 1.0 and its PDP Capabilities registry are themselves pinned as \"pending\" in notes/external-pins.json (id AUTHZEN): no commit or digest is established yet, so this row's own upstream registry surface is unpinnable at this slice, not merely unpinned by oversight."
   }
  ]
 }
