@@ -156,8 +156,16 @@
     "normative": "authorization request carrying mission_intent without a PAR-issued request_uri fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authorization-endpoint.test.ts",
+     "name": "authorization endpoint: mission_intent requires a PAR-issued request_uri > rejects a front-channel mission_intent with invalid_request, delivered via the registered redirect_uri",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Enforcement is the AS's global oidc-provider requirePushedAuthorizationRequests setting, not a mission_intent-specific branch; a mission_intent can never reach the extraParams handler on any front-channel path, so the observable behavior this row names still holds."
   },
   {
    "id": "core.submission.duplicate-outside-request-object",
@@ -500,9 +508,16 @@
     "normative": "the committed Mission Record expires_at is never later than the submitted intent.expires_at"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > commits an effective expires_at never later than the Intent's requested ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "The AS currently copies intent.expires_at verbatim into the record (no independent AS-policy shortening path exists yet); the test asserts the MUST NOT ceiling as an ordering relation (<=) rather than equality, so it stays valid if shortening is added."
   },
   {
    "id": "core.record.applicable-shortening",
@@ -9899,8 +9914,16 @@
     "normative": "each refusal attempt yields its own signed, immutable record; a retried failure never amends or replaces a prior record in place, and a derived summary over a series of records is not itself a Refusal Record and adds no evidentiary standing beyond its inputs"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Tested: a sustained parameter_mismatch condition, retried twice, yields two distinct append-only records rather than one amended in place (EvidenceStore.record() only ever pushes). Not tested: 'signed' -- EvidenceStore retains plain objects; signing and SCITT registration are M10 future work per its own header comment."
   },
   {
    "id": "evidence.refusal.external-binding-exempts-missing-claim",

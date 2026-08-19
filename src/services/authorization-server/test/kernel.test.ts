@@ -197,6 +197,15 @@ describe("approval event and record (@spec mission#integrity-anchors)", () => {
   });
 });
 
+describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
+  it("commits an effective expires_at never later than the Intent's requested ceiling", () => {
+    const raw = intent({ expires_at: "2026-12-01T00:00:00Z" });
+    const requested = validateMissionIntent(raw);
+    const record = approve(raw, 200);
+    expect(Date.parse(record.expires_at)).toBeLessThanOrEqual(Date.parse(requested.expires_at));
+  });
+});
+
 describe("approval basis (@spec mission#approval-basis)", () => {
   it("records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor", () => {
     const record = approve(intent(), 100);
