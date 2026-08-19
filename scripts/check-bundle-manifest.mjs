@@ -128,6 +128,7 @@ function gitLastModifiedCommit(rootDir, commit, file) {
     const out = execFileSync("git", ["log", "-1", "--format=%H", commit, "--", file], {
       cwd: rootDir,
       encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
     });
     const sha = out.trim();
     return FULL_SHA_RE.test(sha) ? sha : null;
@@ -144,6 +145,7 @@ function gitShowBytes(rootDir, commit, file) {
     return execFileSync("git", ["show", `${commit}:${file}`], {
       cwd: rootDir,
       maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
     });
   } catch {
     return null;
