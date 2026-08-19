@@ -3189,6 +3189,12 @@
      "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > an action outside the entry's approved actions is denied out_of_authority identically, whether or not a valid fresh approval is presented",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > a valid approval permits once but is not a standing grant: the identical action, decided fresh without it, denies action_approval_required again",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ]
   },
@@ -3771,7 +3777,7 @@
     "normative": "a PDP deny is terminal for the attempted action, and each required gate (authority, metering, action-bound approval) is independently necessary; none grants, widens, or restores another"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
@@ -3792,7 +3798,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Gate independence is asserted directly for three pairs (approval present does not rescue a missing authority match; authority and FGA passing does not rescue a stale freshness failure; authority and FGA passing does not rescue a missing required approval, the CI-only live-OpenFGA test reused from evaluate.test.ts). The PEP-refuses-on-deny half is tested via the PDP's deny as proxy, on the same precedent as action-approval.refusal-without-fresh-approval already in this file: the PEP's refusal is a mechanical consequence of the observed deny, with no independent PEP judgment in between."
+   "notes": "Gate independence is asserted directly for three pairs (approval present does not rescue a missing authority match; authority and FGA passing does not rescue a stale freshness failure; authority and FGA passing does not rescue a missing required approval, the CI-only live-OpenFGA test reused from evaluate.test.ts), and each deny is additionally shown to carry no permit-shaped fields (permit_expires_at, entry_digest), so the PEP has nothing actionable to proceed on. NOT tested: the anchor's other sentence, \"the PEP MUST refuse the action; a deny is terminal for the attempted action\" -- terminality (no retry, no proceeding on a cached permit past this evaluation) is the PEPs own behavior on receiving a deny, which evaluate() has no PEP to exercise."
   },
   {
    "id": "runtime.decision.conditions-and-obligations-enforceable",
