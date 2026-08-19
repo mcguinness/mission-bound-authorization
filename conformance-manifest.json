@@ -17,6 +17,7 @@
    "MUST",
    "MUST NOT",
    "SHOULD",
+   "SHOULD NOT",
    "MAY",
    "stated"
   ],
@@ -39,7 +40,10 @@
    "lifecycle-endpoint",
    "signals",
    "challenge-endpoint",
-   "transaction-authorization-endpoint"
+   "transaction-authorization-endpoint",
+   "decision-request",
+   "resource-operation",
+   "evidence-emission"
   ],
   "levels": [
    "unit",
@@ -53,7 +57,16 @@
    "status.discharge",
    "signals.events",
    "cross-org.delegation",
-   "txn-authz.action"
+   "txn-authz.action",
+   "runtime.mediated-execution",
+   "runtime.agent-isolated-evidence-emission",
+   "runtime.transaction-assurance-tier",
+   "runtime.compromise-resistant",
+   "runtime.trifecta-containment",
+   "runtime.semantic-evaluator",
+   "runtime.history-input",
+   "runtime.discovered-catalog",
+   "containment.narrowing"
   ]
  },
  "profiles": [
@@ -1542,31 +1555,31 @@
    "tests": [
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
      "level": "unit",
      "surface": "signals"
     }
@@ -2763,6 +2776,2749 @@
      "surface": "verification"
     }
    ]
+  },
+  {
+   "id": "runtime.conformance.enforcement-scope-statement-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "A deployment that claims conformance to this profile MUST publish an **Enforcement Scope Statement**: the structured, referenceable declaration of its enforcement scope that auditors, procurement, and interop tests key on.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement naming its mediated resources, classes, PEP locations, custody mode, tiers, PDPs, supported detail types, state sources, failure posture, and evidence mechanism"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-scope.test.ts",
+     "name": "harness scope statement: compromise-resistant claim enumerates every channel class > emits a disposition for every channel class and marks the enumeration complete",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "The harness profile's execution-environment scope statement tests channel-enumeration completeness and containment-claim honesty; the remaining ESS fields (PDP identity, evidence mechanism, retention window, staleness bounds per class) are not exercised by a test."
+  },
+  {
+   "id": "runtime.conformance.no-claim-outside-declared-scope",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "A deployment MUST NOT claim runtime enforcement for a resource, action class, `authorization_details` type, or execution path outside that declared scope.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment's runtime-enforcement claim never extends past its declared enforcement scope"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.classification.high-consequence-must-be-gated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "Actions in the **irreversible**, **external commitment**, and **privileged administration** classes MUST be treated as consequential and gated.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an irreversible, external-commitment, or privileged-administration action is always gated by a PDP permit, never left ungated by classification"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.classification.no-lowering-below-resource-floor",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A Mission's `purpose` or deployment policy MUST NOT lower an action below any minimum classification the Resource policy ({{decision}}) sets for it, including a floor the resource owner publishes in its protected resource metadata ({{class-floors}}).",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "purpose or deployment policy cannot reclassify an action below the Resource-policy or resource-owner-published floor"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.classification.no-evasion-and-write-floor",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A deployment MUST NOT, however, use classification to evade the floor or a Resource-policy minimum, and once an action is a consequential write or higher it MUST be gated and bound as the table requires.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action classified consequential write or higher is gated and parameter-bound as the classification table requires, and classification cannot be used to escape that"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Duplicate observable of runtime.classification.high-consequence-must-be-gated for the top three classes; rowed separately because it additionally covers the consequential-write floor and the anti-evasion rule."
+  },
+  {
+   "id": "runtime.classification.unclassifiable-defaults-to-widest",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "An invocation the classifier cannot affirmatively place MUST be treated as the widest class the operation can reach",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an argument-dependent operation the deployment's classifier cannot affirmatively place defaults to the widest class that operation can reach, never a lighter one"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.classification.class-floor-metadata-not-lowered",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "class-floors",
+   "text": "A PDP with access to the resource's metadata MUST NOT classify a mapped action below its floor.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP that has the resource's mission_action_class_floors metadata never classifies a mapped action below the published floor"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.classification.unknown-floor-value-high-consequence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "class-floors",
+   "text": "A PDP that does not recognize a mapped value MUST treat it as naming a high-consequence class.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unrecognized mission_action_class_floors value fails closed to a high-consequence classification, never to a permissive default"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.action-approval.refusal-without-fresh-approval",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "A PEP MUST refuse an action for which the applicable entry's `constraints.requires_action_approval` is `true`, or deployment policy or Resource policy otherwise requires an action-bound approval, and for which a valid fresh approval bound to the action's parameters is not present.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action whose entry or policy requires action-bound approval, with no valid fresh parameter-bound approval present, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "entry-driven action approval (@spec txn-authorization#applicability) > denies an action the matched entry gates even when deployment policy does not",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "entry-driven action approval (@spec txn-authorization#applicability) > permits the same action once an approval bound to the parameters is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.action-approval.freshness-bound",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "past that bound the approval is not fresh and the PEP MUST refuse.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action-bound approval past its maximum age, or past a declared approved_until, is refused as not fresh"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny action_approval_required (ARAP)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.action-approval.high-consequence-should-require",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "A deployment SHOULD require an action-bound approval for the high-consequence classes, where a token-lifetime-wide standing authority is least appropriate.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment requires action-bound approval for the irreversible-action, external-commitment, and privileged-administration classes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.action-approval.reparameterization-invalidates",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "Because the approval is bound to the concrete parameters, it MUST be reverified under the time-of-check to time-of-use rules of {{parameter-binding}}. A parameter change after approval invalidates it.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action-bound approval is reverified against the concrete parameters at execution, and a parameter change after approval invalidates it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.action-approval.approval-not-bearer-grant",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "the approval is decision input, not a bearer grant: the runtime decision of {{decision}} remains authoritative, and a persisted grant beyond the single action is a governance state change the fresh decision observes",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "presenting an action-bound approval does not itself authorize the action; the fresh runtime decision remains authoritative and the approval carries no standing authority beyond the one action"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.pep-placement.last-controllable-boundary",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "pep-placement",
+   "text": "The PEP MUST sit at the last controllable boundary before the action.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PEP evaluating a consequential action sits at the last point before the action can still be stopped"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.pep-placement.catalog-filter-not-substitute",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "pep-placement",
+   "text": "every consequential tool call MUST still pass the runtime gate.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "filtering a tool catalog by the caller's authority does not exempt an invoked tool call from the per-call runtime gate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.pep-placement.no-pep-no-claim",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "pep-placement",
+   "text": "If no PEP can prevent the action for a given class, the deployment MUST NOT claim runtime enforcement for that class, and MUST name the action classes and execution paths it does mediate.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment never claims runtime enforcement for an action class no PEP can actually prevent, and names the classes and paths it does mediate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.custody.mediated-credential-sender-constrained",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "For any action class a deployment mediates, the acting credential MUST be sender-constrained",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.mediated-execution"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mediated action class always uses a sender-constrained credential, never a bearer token"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.custody.should-hold-key-in-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "For an action class it mediates, a deployment SHOULD hold the sender-constraint private key for the Mission-bound credential in the mediating PEP rather than in the agent component",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.mediated-execution"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the mediating PEP, not the agent component, holds the sender-constraint private key for a mediated class"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.custody.high-consequence-must-be-mediated-for-claim",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "A deployment that relies on this profile to protect against agent compromise therefore MUST include the high-consequence classes in its mediated set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment claiming protection against agent compromise mediates every high-consequence class, not a subset"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.custody.replica-topology-should-be-stated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "The Enforcement Scope Statement SHOULD state the custody replica topology",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.mediated-execution"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Enforcement Scope Statement states whether custody keys are per-replica or a shared HSM-held key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence-emission.signing-key-not-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "An evidence-signing key is not an authorization credential, and its signature MUST NOT be accepted as a grant or as widening the Authority Set.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evidence-signing key's signature is never treated as authorizing an action or widening the Authority Set"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence-emission.isolated-construction-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "the evidence-signing private key is generated inside the declared trusted holder boundary, or imported through a trusted procedure in which the agent never possesses plaintext key material, and is non-exportable to, and inaccessible from, the agent component",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.agent-isolated-evidence-emission"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a deployment claiming the agent-isolated evidence-emission condition holds the evidence-signing key non-exportable to and inaccessible from the agent component"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence-emission.no-caller-supplied-record-or-relabeling",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "the agent cannot submit a complete evidence object, or an arbitrary digest, for signature",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.agent-isolated-evidence-emission"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the trusted emission path refuses a caller-supplied complete evidence object or arbitrary digest presented for signature, and a signing result cannot be relabeled or reused for another emitter, role, scope, audience, or evidence type"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence-emission.key-separation-should-and-not-inferred",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "an evidence-signing key SHOULD be cryptographically distinct from every sender-constraint, token-issuance, approval, and other authority-bearing key",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the evidence-signing key is cryptographically distinct from every authority-bearing key the deployment holds, and isolation of one key plane is never inferred from separation or custody of another"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence-emission.no-fallback-on-signer-unavailability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "Signer unavailability MUST NOT fall back to an agent-held key, to an unsigned record represented as verified, or to an unconstrained signing path",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.agent-isolated-evidence-emission"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the isolated evidence signer is unavailable, the deployment does not fall back to an agent-held key, an unsigned record presented as verified, or an unconstrained signing path"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence-emission.no-misrepresenting-continuous-satisfaction",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "agent-isolated-evidence-emission",
+   "text": "otherwise the deployment is not conforming for the affected decision or refusal and MUST NOT represent the condition as continuously satisfied.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.agent-isolated-evidence-emission"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment that lapses the isolated emission path during an outage does not represent the condition as continuously satisfied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.least-exposure.minimize-context-exposure",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "least-exposure",
+   "text": "A Mission-aware runtime SHOULD minimize exposure of prompts, retrieved documents, memory, tool catalogs, schemas, credentials, and downstream responses to what the active Mission needs.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the context surfaced to the agent is scoped to what the active Mission needs"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > mission-scoped tools/list shows only in-authority tools (least exposure)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Tested for the tool catalog; the broader exposure surface (prompts, retrieved documents, memory, schemas, downstream responses) is not."
+  },
+  {
+   "id": "runtime.rs-profile.must-publish",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "rs-runtime-profile",
+   "text": "An OAuth Resource Server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Server claiming this runtime profile publishes a Resource Server runtime profile for its in-scope operations"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.rs-profile.must-define-content",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "rs-runtime-profile",
+   "text": "It MUST define:",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Server runtime profile defines the in-scope operations and classes, PEP location and channel authentication, Operation Profile, permit validity and replay controls, Resource-policy composition, evidence fields, and a profile identifier and version"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.rs-profile.no-claim-without-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "rs-runtime-profile",
+   "text": "A Resource Server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after token validation and before execution.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource Server that only validates the access token, with no PEP able to refuse before execution, does not claim this runtime profile for that operation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.token-validation.establish-validity-before-use",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "token-validation",
+   "text": "Before using a token's Mission, authority, subject, client, actor, or confirmation-key values as decision inputs, the PEP MUST establish that the access token is valid for the protected resource and request.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PEP validates the access token for the protected resource and request before using any of its claims as decision inputs"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.token-validation.audience-and-pop",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "token-validation",
+   "text": "a Resource Server PEP MUST refuse a token whose audience is not intended for that Resource Server, and MUST verify the proof-of-possession check for a sender-constrained token before treating its `cnf` binding as authenticated.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource Server PEP refuses a token whose audience does not name it, and verifies proof-of-possession before treating cnf as authenticated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.token-validation.no-unverified-claims-and-missing-mission-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "token-validation",
+   "text": "A PEP MUST NOT ask a PDP to authorize an action from unverified token claims. If token validation fails, the PEP MUST refuse before runtime Mission evaluation.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP never forwards unverified token claims to the PDP for a decision, refuses before runtime evaluation when token validation fails, and likewise refuses a token lacking a mission claim on an operation requiring Mission governance unless the deployment establishes the Mission binding externally"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "token-validation",
+   "text": "the decision request and response MUST be integrity-protected and the parties MUST authenticate each other. The PDP MUST accept token-derived inputs only from a PEP authorized for the declared enforcement scope.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a separate PEP and PDP mutually authenticate and integrity-protect the decision channel, the PDP accepts token-derived inputs only from an authorized PEP, and a PDP that receives the raw access token treats it as a credential it never uses outside the declared enforcement scope"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.token-validation.minimize-claims-sent-should",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "token-validation",
+   "text": "The PEP SHOULD send the PDP the minimum token-derived claims needed for the decision rather than the presented access token.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the PEP sends the PDP the minimum token-derived claims the decision needs, not the raw access token"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision.permit-required-before-action",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "decision",
+   "text": "Before a consequential action runs, its PEP MUST obtain a permit from a PDP that evaluates the action against the established Mission",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no consequential action runs before its PEP obtains a permit from a PDP evaluating it against the established Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority read -> permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.decision.deny-terminal-and-gates-independent",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "decision",
+   "text": "On a deny, the PEP MUST refuse the action; a deny is terminal for the attempted action.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP deny is terminal for the attempted action, and each required gate (authority, metering, action-bound approval) is independently necessary; none grants, widens, or restores another"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision.conditions-and-obligations-enforceable",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "decision-output",
+   "text": "a condition the enforcing component does not recognize makes the permit unusable, the reliance counterpart of the obligations rule",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unrecognized decision condition makes the permit unusable, and an unfulfilled or unrecognized obligation is an effective deny"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.authority-entry-and-subset-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "The action MUST be authorized by an applicable `authorization_details` entry the Mission-bound token carries, or that is otherwise available to the PEP or PDP for that token",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action with no applicable authorization_details entry, or whose resource and invoked identity fall outside the entry's resource and actions, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.decision-inputs.discharge-excludes-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "A PDP that recognizes `terminal_when` SHOULD refuse an action within a discharged entry at the point of use",
+   "role": "PDP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP that recognizes terminal_when refuses an action within an entry the Mission has discharged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.containment-excludes-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "The PDP MUST refuse an action within an entry that is currently contained even though a token issued before the contain transition still carries it",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a contained entry is refused at the point of use regardless of whether the presented token predates the contain transition"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > contained action -> deny authority_contained; never-granted action stays out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > entry-level containment (no actions member) denies ALL the entry's actions",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.decision-inputs.unknown-authorization-details-type-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "For any other `authorization_details` type, the PDP MUST evaluate the action under that type's documented runtime semantics and MUST refuse if it does not understand or cannot enforce those semantics.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization_details entry of a type the PDP does not understand or cannot enforce is refused, never passed through"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.capability-drift-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "capability-drift",
+   "text": "the PDP MUST refuse the action when the digest of the capability's current extracted definition differs from the recorded digest",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action sourced from a discovered capability whose current extracted-definition digest no longer matches the digest recorded at derivation is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.resource-policy-fail-closed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-resource-policy",
+   "text": "The action MUST fail closed unless both Mission authority and Resource policy permit it.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action proceeds only when both Mission authority and Resource policy permit it; either one refusing fails the action closed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-parameters",
+   "text": "A constraint the PDP does not understand, cannot supply the declared inputs for, or cannot enforce or meter MUST cause refusal; it MUST NOT be ignored or reduced to disclosure-only treatment.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an applicable entry constraint the PDP cannot understand, evaluate, or meter refuses the action rather than being ignored or degraded to a disclosure"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed cap in the Mission view is denied (fail closed), never treated as unbounded",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested for the numeric max_amount constraint; the general rule spans every constraint vocabulary the PDP may not understand."
+  },
+  {
+   "id": "runtime.decision-inputs.actor-context-required-and-not-shortcut",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-actor",
+   "text": "When delegation is in effect, the PDP MUST evaluate the authenticated `act` chain as part of the runtime actor context and refuse a chain that is missing or malformed.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision under delegation evaluates the authenticated act chain and refuses a missing or malformed one; client_id alone is never treated as the immediate actor when an act chain is present"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.no-authority-expansion-via-actor",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-actor",
+   "text": "The runtime decision MUST NOT expand authority beyond the issued `authorization_details`.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "actor-context evaluation never expands authority beyond what the issued authorization_details already grants"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.token-expiry-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-time",
+   "text": "The PDP MUST refuse if the decision context indicates the token is expired.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expired token's action is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.mission-expires-at-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-time",
+   "text": "where a Mission state source does expose it (or reports the Mission `expired`), the PDP MUST refuse on it independent of the token's own `exp`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission state source reporting expires_at passed, or the Mission expired, refuses the action independent of the token's own exp"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.active-state-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-state",
+   "text": "The PDP MUST refuse unless the Mission is `active`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a non-active Mission refuses every consequential action"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > revoked mission -> deny mission_inactive within the bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.decision-inputs.history-no-expand-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-history",
+   "text": "A history predicate MUST NOT expand authority beyond the issued `authorization_details`.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a satisfied history predicate never grants authority beyond the issued authorization_details; it can only narrow"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-inputs.history-fail-closed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-history",
+   "text": "the PDP MUST fail closed when the predicate cannot be established or the evidence store cannot be consulted.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a required history predicate that cannot be established, or an unreachable evidence store, fails the action closed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.mission-binding.externally-established-must-verify",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "The PDP MUST verify that reference against the acting credential under a join a binding profile defines; an unverified reference MUST NOT establish the Mission.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an externally supplied Mission reference is verified against the acting credential before it establishes the Mission; an unverified reference never does"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.state-freshness.must-define-state-source",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "A runtime deployment MUST define the Mission state source it trusts for each enforcement scope.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every enforcement scope names a trusted Mission state source"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.state-freshness.refuse-if-cannot-establish-active-within-bound",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "The PDP MUST refuse a consequential action when it cannot establish, within the deployment's published staleness bound, that the Mission is `active`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consequential action is refused whenever active Mission state cannot be established within the published staleness bound"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > stale freshness beyond the bound -> deny stale_state",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "A state source MUST either report the Mission state with an explicit expiry or lease end, or report only an observation time",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission state source reports either an explicit expiry or lease end, or an observation time the staleness bound extends"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.state-freshness.permit-expiry-bound-by-state-view",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "A permit issued from that state view MUST expire no later than this state valid-through: the reported expiry or lease end, or, absent one, the observation time plus the published staleness bound.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit's expiry never exceeds the state view's valid-through instant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.state-freshness.high-consequence-requires-active-source",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "For the high-consequence classes, the state source MUST be an active freshness mechanism that can reflect a revocation within the staleness bound",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an irreversible-action, external-commitment, or privileged-administration class relies on an active freshness source, never token-lifetime expiry alone"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness status-continuity: fresh-at-submission fail-closed > refuses the channel when the lease is stale, even though last state is active",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested for the harness's own status-lease freshness path; not tested for a PDP-embedded active source such as introspection or Mission Status."
+  },
+  {
+   "id": "runtime.state-freshness.containment-tightening-requires-containment-aware-source",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "A deployment adopting this tightening MUST name a containment-aware state source, not merely an active one",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment that tightens freshness posture under containment names a source that surfaces the containment overlay, not merely Mission activity"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.policy-view.three-properties",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "policy-view",
+   "text": "The materialized policy view MUST satisfy three properties:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a materialized policy view is reproducible from identical manifest inputs, carries an identifying policy_view_id, and never enlarges the Authority Set's semantic bounds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.policy-view.manifest-must-carry-fields",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "policy-view",
+   "text": "The committed manifest MUST carry:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the policy-view manifest carries mission_id, authority_hash, policy_version, the compiler identity and version, and either policy_ir or a digested engine-native artifact"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.policy-view.no-embedded-lifecycle-state",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "policy-view",
+   "text": "The manifest MUST NOT embed Mission lifecycle state: three independent values govern reliance, and conflating them is the common implementation error.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the policy-view manifest never embeds mutable Mission lifecycle state; policy_view_id, mission_state_version, and freshness stay independent"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > a request pinning a pre-containment policy_view_id denies view_inconsistent after contain",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested that policy_view_id equality gates reliance and does not silently track a post-issuance containment change; not tested that the manifest object itself omits a lifecycle-state field."
+  },
+  {
+   "id": "runtime.semantic-evaluators.no-widen-or-substitute",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "semantic-evaluators",
+   "text": "It MUST NOT widen authority and MUST NOT substitute for a structural check this profile requires.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.semantic-evaluator"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a semantic evaluator's verdict never widens authority and never substitutes for a structural check this profile requires"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.parameter-binding.operation-profile-must-fix",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "parameter-binding",
+   "text": "that MUST fix all of the following, so two implementers of the same operation bind the same bytes:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Operation Profile fixes the action identifier and mapping, parameter schema, normalization rules, digest field selection, digest test vectors, and the operation's single-use, lease, and evidence requirements"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.parameter-binding.digest-test-vectors-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "parameter-binding",
+   "text": "at least one vector MUST exercise a normalization rule that materially changes the input (default insertion, an omitted optional field, set-like array treatment, or another operation-specific rule), and at least one conformance case MUST present changed parameters that fail the digest match",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Operation Profile's digest test vectors include one that exercises a material normalization rule and one conformance case where changed parameters fail the digest match"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.parameter-digest.must-bind-and-reverify",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "parameter-digest",
+   "text": "the PDP MUST bind its permit to the normalized action parameters through a `parameter_digest`, and the executing PEP MUST recompute and reverify that digest immediately before acting",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit for a consequential write or higher class binds parameter_digest, and the executing PEP recomputes and reverifies it immediately before acting"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.parameter-digest.field-inclusion-rule",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "parameter-digest",
+   "text": "Every parameter that influences the action's external effect (for example, the recipient, destination, amount, or target object) MUST enter the `parameter_digest`. A field the deployment excludes MUST be shown effect-free in the Operation Profile",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every effect-influencing parameter enters the parameter_digest, and any excluded field is shown effect-free in the Operation Profile"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.permit-binding.must-bind-list",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "permit-binding",
+   "text": "Beyond the `parameter_digest`, the permit MUST also bind:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit binds the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, authorizing entry, policy-view version, and a lifetime control"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > a permit's context carries the entry_digest resolved-scope anchor",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Tested for entry_digest; the full bound-field set (issuer, audience, actor context, confirmation key, policy-view version) is not independently asserted by a test."
+  },
+  {
+   "id": "runtime.permit-binding.high-consequence-single-use-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "permit-binding",
+   "text": "The control MUST be a single-use decision identifier: a validity window alone does not bound how many times such a permit executes",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an irreversible-action, external-commitment, or privileged-administration permit's lifetime control is a single-use decision identifier, never a validity window alone"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > replayed permit is refused as permit_consumed and does not double-execute",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.permit-binding.reversible-write-control-options",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "permit-binding",
+   "text": "The control MUST be either a single-use decision identifier or a short validity window combined with an idempotency key that prevents repeat execution of the same normalized action",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a reversible consequential write's permit carries either a single-use decision identifier or a short validity window plus an idempotency key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.single-use.record-and-refuse-second-presentation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "single-use-identifiers",
+   "text": "The enforcing component MUST refuse, fail closed, any second presentation of a consumed identifier.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the enforcing component records consumed single-use decision identifiers and refuses any second presentation, independent of consumption metering"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > replayed permit is refused as permit_consumed and does not double-execute",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.single-use.store-durability-and-multi-instance-sharing",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "single-use-identifiers",
+   "text": "A multi-instance PEP MUST share or partition the store so a single-use identifier cannot be consumed once per replica.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "a multi-instance PEP shares or partitions the consumed-identifier store, and the store survives a restart or the component fails closed for pre-restart permits, so an identifier is never consumed once per replica"
+   },
+   "level": "concurrency",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > executes once across two replicas sharing a consumption domain, whatever token jti carries the txn",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.idempotency.key-required-for-non-idempotent-high-consequence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "For every non-idempotent operation in the irreversible-action, external-commitment, and privileged-administration classes, the Operation Profile MUST therefore also define an idempotency key.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every non-idempotent high-consequence operation's Operation Profile defines an idempotency key"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "Two replicas MUST NOT both succeed in consuming the same identifier",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "the PDP's idempotency-scope claim and the PEP's use-limited permit consumption are each a single linearizable operation; two replicas never both succeed in claiming or consuming the same key"
+   },
+   "level": "concurrency",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.idempotency.scope-published-and-no-volatile-members",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "a deployment MAY narrow it further and MUST publish the scope in its Enforcement Scope Statement. Volatile members MUST NOT be added to the scope.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the idempotency scope is published in the Enforcement Scope Statement, and a volatile member is never added to it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.idempotency.tombstone-retention-and-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "within that horizon a claim against a tombstoned key MUST be refused, never treated as a fresh claim.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for the high-consequence classes, the deployment retains a durable consumed-key tombstone for at least its declared idempotency horizon, a claim against it inside that horizon is refused, never treated as fresh, and outside the high-consequence classes the deployment publishes which retention posture applies"
+   },
+   "level": "concurrency",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.execution-reverification.mismatch-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-reverification",
+   "text": "The executing PEP MUST verify the permit's bindings ({{permit-binding}}) and MUST recompute the `parameter_digest` against the parameters it is about to use. A mismatch MUST cause refusal",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the executing PEP recomputes the parameter_digest against the parameters it is about to use, and a mismatch refuses the action"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.execution-reverification.lease-required-for-high-consequence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-reverification",
+   "text": "For the irreversible-action, external-commitment, and privileged-administration classes the Operation Profile MUST define an execution lease or a published maximum execution duration, and run-to-completion applies only within that bound.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a high-consequence Operation Profile defines an execution lease or a published maximum execution duration, and run-to-completion never runs past it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.read-binding.must-require-binding-for-material-reads",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "read-binding",
+   "text": "Deployments MUST require parameter binding for consequential reads when read parameters materially change the effective resource set or disclosure risk.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consequential read whose parameters materially change the resource set or disclosure risk requires parameter binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.read-binding.floor-and-no-misclassification",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "read-binding",
+   "text": "A deployment MUST NOT classify such a read as not materially affecting the resource set.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a cross-tenant, bulk or export-like, or field/destination-selecting consequential read is never classified as not materially affecting the resource set, and its parameters are bound"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.metering.unmetered-bound-refusal",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "metering",
+   "text": "an unmetered or unrecognized consumption bound MUST cause refusal rather than silent pass-through",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an applicable cumulative-consumption bound the deployment does not meter refuses the governed action rather than passing it through"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.metering.no-advertising-unperformed-enforcement",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "metering",
+   "text": "A deployment MUST NOT advertise consumption enforcement it does not perform.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment's Enforcement Scope Statement never advertises consumption enforcement it does not actually perform"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.failure-modes.evidence-must-reconstruct-path",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "failure-modes",
+   "text": "in all cases the evidence record ({{evidence}}) MUST be sufficient to reconstruct which path produced a refusal.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every failure-mode refusal's evidence record is sufficient to reconstruct which of the listed conditions produced it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The failure-modes table's individual rows restate refusal conditions already rowed under their own anchors (token-validation, mission-binding, state-freshness, input-history, evidence, input-time, input-state, capability-drift, metering, parameter-digest, single-use-identifiers, input-history, input-authority); this row covers only the table's own added requirement, that the evidence record reconstructs the path."
+  },
+  {
+   "id": "runtime.evidence.decision-and-refusal-must-produce-record",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "Every PDP decision on a consequential action MUST produce a runtime enforcement evidence record. A PEP refusal for a consequential action, whether before a PDP decision (for example, token validation failure or PDP unreachability) or after a PDP permit (for example, a `parameter_digest` mismatch), MUST likewise produce a runtime enforcement evidence record with the available fields and the failure condition.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every PDP decision and every PEP refusal on a consequential action produces a runtime enforcement evidence record"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "runtime.evidence.no-chain-of-thought-should-not",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "a deployment SHOULD NOT record model chain-of-thought in enforcement evidence",
+   "role": "AS",
+   "strength": "SHOULD NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "enforcement evidence never records the model's internal chain-of-thought"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence.required-fields",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "A record MUST contain:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision or refusal record always contains the result, request time, and a parameter_digest or privacy-preserving digest, plus the Mission, token, actor, action, authorization-detail, decision-identifier, and policy-view fields when available and trusted"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence.no-describing-unverified-claims-as-authenticated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "For a token-validation failure, the record MUST NOT describe unverified token claims as authenticated facts.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an evidence record for a token-validation failure never presents the token's unverified claims as authenticated facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.evidence.execution-outcome-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "For an action in the high-consequence classes, the executing PEP MUST also produce, after it acts, an execution-outcome record keyed to the permit's evaluation identifier",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a high-consequence action's executing PEP produces an execution-outcome record keyed to the permit's evaluation identifier, recording success or failure and the effective parameter digest"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "runtime.evidence.reconciliation-must-actively-reconcile",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "the declared component MUST actively reconcile each unresolved outcome before the window closes, querying the resource and matching evidence, and record the outcome the evidence establishes",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the declared reconciliation component actively resolves each unresolved execution outcome within the reconciliation window, never leaving it to expire unresolved"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "runtime.evidence.claim-persistence-and-no-new-effect-post-termination",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "it MAY record the outcome of work already initiated and MUST NOT admit a new effect under that Mission",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "once a Mission is non-active, reconciliation may record the outcome of already-initiated work but never admits a new effect under that Mission; consumed identifiers and idempotency claims persist across the lifecycle transition and an indeterminate outcome converts to a non-reusable tombstone, never expiring into a fresh claim"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.mission-receipt.must-identify-mission",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-receipt",
+   "text": "A Mission Receipt MUST identify the Mission the action was authorized under, as `mission.id` and `mission.issuer`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Mission Receipt identifies the Mission the action was authorized under by mission.id and mission.issuer"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.record-integrity.append-only-and-mechanism-named",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "It MUST be append-only and integrity-protected; the enforcement scope MUST name the mechanism (a hash-linked log, signed segments, a transparency anchor, or equivalent).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "runtime enforcement evidence is append-only and integrity-protected under a mechanism the enforcement scope names"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.record-integrity.no-raw-parameters-in-record",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "Raw parameters MUST NOT appear in the record; when retained for forensics they MUST be in separately access-controlled storage referenced by an opaque identifier, with only the `parameter_digest` in the record.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an evidence record never carries raw action parameters; only the parameter_digest, with any forensic retention in separately access-controlled storage"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.record-integrity.sequence-and-retention-floor",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's audit horizon",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's audit horizon"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compromise-resistant.key-custody-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compromise-resistant",
+   "text": "the sender-constraint private key is held by the mediating PEP, not by the agent component, gateway custody being the realizable shape ({{custody}}), and is generated in the mediating PEP or its HSM and never transferred from the agent",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "under the agent-compromise-resistant claim the sender-constraint key is generated in, and never transferred out of, the mediating PEP or its HSM"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compromise-resistant.action-bound-approval-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compromise-resistant",
+   "text": "each such action requires an action-bound approval ({{action-approval}});",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under the agent-compromise-resistant claim, every high-consequence action requires an action-bound approval"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compromise-resistant.independent-rendering-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compromise-resistant",
+   "text": "the disclosure rendered to the Approver for an action-bound approval is derived from the bound normalized parameters by a component isolated from the agent (the approval service or the mediating PEP), never composed by the agent",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the approval disclosure under the agent-compromise-resistant claim is rendered by a component isolated from the agent, never composed by the agent"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compromise-resistant.active-freshness-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compromise-resistant",
+   "text": "the Mission state source for those classes is an active freshness mechanism, not token-lifetime expiry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under the agent-compromise-resistant claim, the high-consequence classes rely on an active freshness mechanism, never token-lifetime expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compromise-resistant.unmet-condition-blocks-claim",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compromise-resistant",
+   "text": "A deployment that leaves any of the four conditions unmet, or whose Enforcement Scope Statement does not declare the path scope, MUST NOT claim agent-compromise-resistant enforcement; it may still claim base runtime conformance.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment leaving any of the four conditions unmet, or omitting the declared path scope, does not claim agent-compromise-resistant enforcement"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-scope.test.ts",
+     "name": "harness scope statement: single-process cannot claim agent-compromise-resistant containment > downgrades an in-memory config to the honest no-claim form",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.named-claims.evidence-binding-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "A deployment claiming either named property MUST bind its statement to the evidence this table names, for each condition its Enforcement Scope Statement claims.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming agent-compromise-resistant enforcement or trifecta containment binds its statement to the named evidence for each claimed condition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.named-claims.no-eat-alone-satisfies-other-facts",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "a deployment MUST NOT represent EAT evidence alone as satisfying those.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "verified EAT evidence alone is never represented as establishing the exposure, approval, rendering, freshness, path, or topology facts the table assigns elsewhere"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.trifecta-containment.private-data-exposure-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "the context surfaced to the agent is scoped to the active Mission, and credential material stays out of the agent for every mediated class",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.trifecta-containment"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "under the trifecta containment claim, agent-surfaced context is scoped to the active Mission and credential material stays out of the agent for every mediated class"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.trifecta-containment.untrusted-content-egress-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "a consequential external-communication or external-commitment action whose bound parameters derive from tainted content (or, under session-level taint, any such action in a tainted session) obtains a fresh action-bound approval ({{action-approval}}) or is refused.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.trifecta-containment"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under the trifecta containment claim, a tainted external-communication or external-commitment action obtains a fresh action-bound approval or is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.trifecta-containment.external-communication-mediated-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "The external-communication and external-commitment classes are mediated: no unmediated path, the scope statement's egress-channel enumeration covers them",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.trifecta-containment"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under the trifecta containment claim, every external-communication and external-commitment path is mediated and enumerated in the scope statement's egress-channel list"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/egress-gate.test.ts",
+     "name": "egress gate: default-deny against the published scope statement > refuses an undeclared channel and records the refusal (role egress, statement digest)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "runtime.negative-conformance.should-demonstrate-and-retain-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "negative-conformance",
+   "text": "A deployment SHOULD demonstrate it with negative tests: each of the following bypass attempts MUST be refused or contained by a conforming deployment that makes the relevant claim, and a deployment SHOULD retain evidence that it ran them.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment claiming agent-compromise-resistant enforcement demonstrates and retains evidence of the bypass-attempt negative tests"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/egress-gate.test.ts",
+     "name": "egress gate: default-deny against the published scope statement > never reaches the inner fetch through guardedFetch when the channel is not mediated",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "The unmediated-direct-call and secondary-channel bypass attempts are exercised for egress; the cached-token-after-revocation, stale-resume, no-inheritance-delegation, and parameter-alteration bypass rows are covered as duplicates of their own anchors (state-freshness, custody, input-actor, parameter-digest) rather than as a dedicated bypass-table test."
+  },
+  {
+   "id": "runtime.negative-conformance.evidence-emission-should-demonstrate",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "negative-conformance",
+   "text": "a deployment claiming it SHOULD demonstrate, per covered emitter:",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.agent-isolated-evidence-emission"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment claiming the agent-isolated evidence-emission condition demonstrates, per covered emitter, that key export, caller-supplied records, misdirected signatures, cross-emitter key use, and signer-unavailability fallback are all refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-api-binding.custom-binding-must-be-specified",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authzen",
+   "text": "A deployment that uses a different decision API MUST specify that binding in the same way.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment using a decision API other than the AuthZEN binding specifies its own binding to the same normative depth"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.security.no-overstate-exfiltration-guarantee",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "prompt-injection-exfiltration",
+   "text": "Two limits are inherent and a deployment MUST NOT overstate the guarantee.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment's exfiltration-resistance claim never overstates the guarantee past PEP-placement completeness and the absence of information-flow control"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.security.no-relaxing-cross-resource-bindings",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "security-considerations",
+   "text": "A deployment MUST NOT relax those bindings in a way that would let a permit cross a resource, audience, tenant, or operation boundary it was not issued for.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit's resource, audience, tenant, and operation bindings are never relaxed to let it be presented across a boundary it was not issued for"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.idempotency.retransmission-returns-prior-decision",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "the PDP SHOULD return the prior decision, so a permit response lost in transit does not lock the action out for the reconciliation window.",
+   "role": "PDP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a re-presentation matching the prior claim's idempotency scope, key, and operation identity, while the permit is unexpired and unconsumed, returns the prior decision rather than a fresh evaluation or an error"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.execution-reverification.stop-or-renew-before-lease-expires",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-reverification",
+   "text": "when a lease is required the executing PEP MUST stop or renew before the lease expires.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when an execution lease is required, the executing PEP stops the action or renews the lease before it expires"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.record-integrity.must-define-serialization",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "The Resource Server runtime profile MUST define the record's concrete serialization and canonicalization before storage and integrity protection.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Resource Server runtime profile fixes a record's concrete serialization and canonicalization before storage and integrity protection, using JCS for JSON records and the evidence_envelope JWS convention where a record is individually signed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.trifecta-containment.eat-selections-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "the Enforcement Scope Statement MUST select the claim or profile identifiers the attestation carries, the expected measurements or reference values it is appraised against, the appraisal policy applied, the attester identity, and a checkable nonce, timestamp, or session-binding freshness rule.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.compromise-resistant"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for each condition the table assigns to EAT evidence, the Enforcement Scope Statement selects the claim or profile identifiers, expected measurements, appraisal policy, attester identity, and a checkable freshness rule; a selection's absence makes the token a declaration, not proof, and the named claim unavailable"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.inspection-controls.advisory-signal-no-widen",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "inspection-controls",
+   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the inert treatment of `goal` and `purpose` in the issuance profile",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a semantic intent-alignment signal supplied to the PDP as advisory input can only narrow a decision; it never widens, grants, or refreshes authority"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
   }
  ]
 }
