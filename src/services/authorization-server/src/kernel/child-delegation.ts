@@ -32,6 +32,7 @@ import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash }
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
+import { newMissionId } from "./mission-id.js";
 import {
   type ApprovalBasis,
   type AuthorityEntry,
@@ -291,7 +292,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // Child Evidence record carries a real `child` member (REQUIRED unconditionally,
   // @spec child-delegation#child-evidence-object). The same id and hash are then
   // used for the inserted record on permit.
-  const childId = `msn_${randomBytes(18).toString("base64url")}`;
+  const childId = newMissionId();
   const childAuthorityHash = authorityHash(parent.issuer, childAuthority as never);
 
   const makeEvidence = (

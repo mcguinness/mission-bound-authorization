@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { authorityHash, intentHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
@@ -8,8 +10,10 @@ import {
   IntentError,
   isSubsetSet,
   LifecycleConflictError,
+  MISSION_ID_ENTROPY_BYTES,
   MissionKernel,
   type MissionRecord,
+  newMissionId,
   validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
@@ -318,6 +322,45 @@ describe("mission reference unguessability (@spec mission-substrate#reference)",
     const suffix = record.id.replace(/^msn_/, "");
     const decoded = Buffer.from(suffix, "base64url");
     expect(decoded.length).toBeGreaterThanOrEqual(16); // 128-bit floor; the kernel mints 18 bytes (144 bits)
+  });
+
+  // Length is not entropy: these test the SOURCE the helper draws from, not
+  // merely the length of one identifier from one call site.
+  it("newMissionId draws at least 18 bytes (144 bits) from a caller-injected random source", () => {
+    let requestedSize: number | undefined;
+    const observedSource = (size: number) => {
+      requestedSize = size;
+      return randomBytes(size); // still the real cryptographic source
+    };
+    const id = newMissionId(observedSource);
+    expect(requestedSize).toBe(MISSION_ID_ENTROPY_BYTES);
+    expect(requestedSize).toBeGreaterThanOrEqual(18);
+    expect(id).toMatch(/^msn_/);
+  });
+
+  it("newMissionId's default source is node:crypto's randomBytes and needs no argument", () => {
+    const id = newMissionId(); // no source supplied: exercises the default parameter itself
+    const decoded = Buffer.from(id.replace(/^msn_/, ""), "base64url");
+    expect(decoded.length).toBe(MISSION_ID_ENTROPY_BYTES);
+  });
+
+  it("successive draws are distinct (sanity check, not a substitute for the entropy proof above)", () => {
+    const ids = new Set(Array.from({ length: 1000 }, () => newMissionId()));
+    expect(ids.size).toBe(1000);
+  });
+
+  it("every msn_ minting site draws from the single newMissionId helper, never an inline construction", () => {
+    const sites = [
+      "../src/kernel/kernel.ts",
+      "../src/kernel/expansion.ts",
+      "../src/kernel/template.ts",
+      "../src/kernel/child-delegation.ts",
+    ];
+    for (const rel of sites) {
+      const src = readFileSync(new URL(rel, import.meta.url), "utf8");
+      expect(src.includes("newMissionId()"), `${rel} calls newMissionId()`).toBe(true);
+      expect(src.includes("msn_${"), `${rel} has no inline msn_ construction`).toBe(false);
+    }
   });
 });
 

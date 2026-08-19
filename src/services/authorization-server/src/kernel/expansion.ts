@@ -11,6 +11,7 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
+import { newMissionId } from "./mission-id.js";
 import type {
   ApprovalBasis,
   AuthorityEntry,
@@ -110,7 +111,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
       ? input.intent.expires_at
       : input.approvedUntil;
 
-  const id = `msn_${randomBytes(18).toString("base64url")}`;
+  const id = newMissionId();
   const authorityHashValue = authorityHash(predecessor.issuer, authoritySet as never);
   // @spec mission#approval-basis — Expansion is a fresh human approval that
   // widens authority (like kernel.approve()'s direct path): consent_principal

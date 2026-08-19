@@ -16,6 +16,7 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { newMissionId } from "./mission-id.js";
 import {
   type IntentSubmissionPresenter,
   provisionalIntentHash,
@@ -259,8 +260,9 @@ export class MissionKernel {
     // carry neither `proposed_authority` nor `proposal_hash`.
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
     const authoritySet = this.derive(input.intent, proposal);
-    // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy.
-    const id = `msn_${randomBytes(18).toString("base64url")}`;
+    // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
+    // drawn from the single mission-id.ts minting helper.
+    const id = newMissionId();
     // @spec mission#integrity-anchors (TOCTOU) — all three commitments
     // (intent_hash, proposal_hash, authority_hash) are computed TOGETHER here,
     // at the approval decision, over the exact context being recorded: a task,
