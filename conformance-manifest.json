@@ -4933,8 +4933,15 @@
      "name": "M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > a denied decision also produces attributable, mission-correlated Decision Evidence, not only a permit",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "This row's 'every PDP decision' covers both permit and deny; the happy-path test proves the permit arm and the denied-decision test proves the deny arm, both against the PEP-side (mcp-payments) EvidenceStore, the correct PEP-role home for this runtime-evidence row (unlike the Controller-role substrate.governance-record rows, which this evidence does not satisfy)."
   },
   {
    "id": "runtime.evidence.no-chain-of-thought-should-not",
@@ -8312,16 +8319,9 @@
     "normative": "the Controller maintains an integrity-protected, ordered governance-event record for the Mission"
    },
    "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
-     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
-     "level": "unit",
-     "surface": "governance-record"
-    }
-   ],
-   "notes": "Partial: EvidenceStore (src/services/mcp-payments/src/evidence.ts) is an append-only, in-memory array that never amends a record in place, in receipt order; the cited test (already covering runtime-evidence#pre-decision-refusal under its own document tag as evidence.refusal.per-attempt-immutable-append-only) proves ordering and immutability. Not tested, and not implemented: 'integrity-protected'. The store retains plain unsigned objects; signing and SCITT registration are explicitly M10 future work per the file's own header comment, so the integrity-protection arm of this MUST has no code to test."
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The Controller MUST maintain this record ({{mission-substrate#oauth-statement}} item 9: the governance record is the Mission Record with its approval evidence and lifecycle history), not the resource-side PEP. mcp-payments's EvidenceStore (src/services/mcp-payments/src/evidence.ts) is a PEP-side, in-memory, unsigned array of per-request decision/refusal evidence; it satisfies no arm of a Controller-maintained record and its test does not establish Controller-role coverage, so it is not cited here. No Controller-owned governance record exists in src/ yet: the Mission Kernel's approval and lifecycle-transition events (kernel.ts approve()/setState()) fan out only through the ephemeral onLifecycleCommit callback and are never journaled into any persisted, queryable, integrity-protected record. The mcp-payments evidence tests remain cited, correctly, on the runtime-evidence rows they do prove (see evidence.refusal.per-attempt-immutable-append-only and the M4 enforcement-tier rows)."
   },
   {
    "id": "substrate.governance-record.minimum-coverage-and-attribution",
@@ -8342,22 +8342,9 @@
     "normative": "the record covers approval, positive and negative reliance decisions, and the non-active transition; events are attributable to their source and correlated with the Mission Reference"
    },
    "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/enforcement.test.ts",
-     "name": "M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded",
-     "level": "endpoint",
-     "surface": "governance-record"
-    },
-    {
-     "file": "src/services/mcp-payments/test/enforcement.test.ts",
-     "name": "M4 core enforcement tier > a denied decision also produces attributable, mission-correlated Decision Evidence, not only a permit",
-     "level": "endpoint",
-     "surface": "governance-record"
-    }
-   ],
-   "notes": "Partial: the mcp-payments EvidenceStore records positive and negative reliance decisions (kind: 'decision', decision: true|false), each attributable to its emitter and correlated by mission_id; the happy-path test covers the positive arm and the new denied-decision test covers the negative arm. Not covered: 'approval' and 'transition to a non-active outcome' are Mission Kernel lifecycle events (kernel.ts approve()/setState()) that fan out only through the ephemeral onLifecycleCommit callback (emitCommit), never journaled into EvidenceStore or any other persisted, queryable record; no governance-record-shaped log of approval/transition events exists in src today."
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The Controller MUST maintain this record ({{mission-substrate#oauth-statement}} item 9), not the resource-side PEP; mcp-payments's EvidenceStore records are PEP-side per-request decision evidence, not the Mission Record's approval evidence and lifecycle history, so they satisfy no arm of this row's minimum coverage (approval, positive/negative Controller decisions, and the non-active transition) and are not cited here. No Controller-owned record exists in src/ today: Mission Kernel approval and lifecycle-transition events (kernel.ts approve()/setState()) fan out only through the ephemeral onLifecycleCommit callback, never journaled into any persisted, queryable record. The mcp-payments decision-evidence tests remain cited, correctly, on the runtime-evidence Decision Evidence rows they do prove (the M4 enforcement-tier rows)."
   },
   {
    "id": "substrate.governance-record.ordering-and-retention-statement",
