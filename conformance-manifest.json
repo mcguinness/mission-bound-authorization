@@ -7451,7 +7451,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The base AuthZEN Authorization API 1.0 and its PDP Capabilities registry are themselves pinned as \"pending\" in notes/external-pins.json (id AUTHZEN): no commit or digest is established yet, so this row's own upstream registry surface is unpinnable at this slice, not merely unpinned by oversight."
+   "notes": "The base AuthZEN Authorization API 1.0 is pinned in notes/external-pins.json (id AUTHZEN, openid/authzen commit 2b07366d2dfd7ad9e2dedf44b97bd41e8a2b8c63, status established at Ship 3), so this row's upstream registry surface is verifiable against that snapshot."
   },
   {
    "id": "substrate.reference.stable-unambiguous-non-reassigned",
