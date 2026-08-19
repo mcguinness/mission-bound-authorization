@@ -23,13 +23,15 @@ reader preface.
 
 ## The two levels
 
-| Level | Normative documents | Disabled conditionals |
-|---|---|---|
-| OAuth Mission Issuance Baseline | core (self-contained by design) | core's OPTIONAL capabilities as elected; Cross-Domain disabled |
-| OAuth Mission Runtime-Enforced Baseline | the issuance slice plus substrate, status, runtime, runtime-evidence, authzen | Cross-Domain disabled; the transaction-assurance tier a named extension |
+| Level | Normative document slugs | Disabled conditionals | Named extensions |
+|---|---|---|---|
+| OAuth Mission Issuance Baseline | `draft-mcguinness-oauth-mission` | Cross-Domain | (none) |
+| OAuth Mission Runtime-Enforced Baseline | `draft-mcguinness-oauth-mission`, `draft-mcguinness-mission-substrate`, `draft-mcguinness-oauth-mission-status`, `draft-mcguinness-mission-runtime`, `draft-mcguinness-mission-runtime-evidence`, `draft-mcguinness-mission-authzen` | Cross-Domain | Transaction Assurance |
 
-An issuance-only adopter is never told the runtime documents are mandatory,
-and the Issuance Baseline is never blocked on their conformance inventories.
+Core (`draft-mcguinness-oauth-mission`) is self-contained by design: the
+Issuance Baseline names no other floor document. An issuance-only adopter
+is never told the runtime documents are mandatory, and the Issuance
+Baseline is never blocked on their conformance inventories.
 
 ## Reading order
 

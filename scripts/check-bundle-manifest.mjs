@@ -30,7 +30,7 @@
 //     entry is IDENTICAL (deep, key-for-key) to the resolved record. The
 //     required external-pin id set is also DERIVED mechanically from each
 //     document's normative front matter at the pinned commit (see
-//     deriveRequiredExternalIds below) and compared for exact equality
+//     deriveDocumentExternalKeys below) and compared for exact equality
 //     against the bundle's external_pins id set: fails on any pin the
 //     bundle omits and on any pin the bundle carries that no document's
 //     front matter actually requires.
@@ -288,6 +288,52 @@ function buildReferenceKeyIndex(registryById, errors, label) {
     }
   }
   return index;
+}
+
+// Returns the body of a markdown section (from just after a heading at
+// `level` whose text equals `headingText`, up to the next heading at that
+// level or shallower), or null if not found. Used to locate the preview
+// markdown's "## The two levels" table without a markdown-parsing
+// dependency.
+function extractMarkdownSection(markdown, headingText, level) {
+  const lines = markdown.split("\n");
+  const headings = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+(.*)$/);
+    if (!m) continue;
+    headings.push({ level: m[1].length, text: m[2].trim(), line: i });
+  }
+  const startIdx = headings.findIndex((h) => h.level === level && h.text === headingText);
+  if (startIdx === -1) return null;
+  const start = headings[startIdx];
+  let endLine = lines.length;
+  for (let j = startIdx + 1; j < headings.length; j++) {
+    if (headings[j].level <= start.level) {
+      endLine = headings[j].line;
+      break;
+    }
+  }
+  return lines.slice(start.line + 1, endLine).join("\n");
+}
+
+// Parses "| Level | Normative document slugs | ... |" rows out of the
+// preview's "## The two levels" table: the first cell is the level's
+// label (plain text), the second cell is read for every backtick-quoted
+// slug it contains (order-independent, comma-separated or not). Header and
+// separator rows fall out naturally: neither's first cell equals a real
+// profile label, and a separator row's second cell has no backtick tokens.
+function parseLevelTableRows(section) {
+  const rows = [];
+  for (const line of section.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const inner = trimmed.slice(1, -1).split("|").map((c) => c.trim());
+    if (inner.length < 2) continue;
+    const slugs = [...inner[1].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    if (slugs.length === 0) continue; // header or separator row
+    rows.push({ label: inner[0], slugs });
+  }
+  return rows;
 }
 
 function validateOneManifest(rootDir, manifestPath, registry, errors) {
@@ -551,6 +597,143 @@ function validateOneManifest(rootDir, manifestPath, registry, errors) {
       if (!isNonEmptyString(entry.capability)) errors.push(`${dl}: missing a non-empty "capability"`);
       if (!isNonEmptyString(entry.reason)) errors.push(`${dl}: missing a non-empty "reason"`);
     });
+  }
+
+  // deferred_capabilities[] is for work that is absent by design (not yet
+  // landed normatively anywhere), which is a different claim than
+  // disabled_capabilities[] (a conditional this bundle actively turns
+  // off). Optional: a bundle with nothing deferred simply omits the field.
+  if (doc.deferred_capabilities !== undefined) {
+    if (!Array.isArray(doc.deferred_capabilities)) {
+      errors.push(`${label}: "deferred_capabilities", if present, must be an array`);
+    } else {
+      doc.deferred_capabilities.forEach((entry, i) => {
+        const dl = `${label}: deferred_capabilities[${i}]`;
+        if (!entry || typeof entry !== "object") {
+          errors.push(`${dl}: not an object`);
+          return;
+        }
+        if (!isNonEmptyString(entry.capability)) errors.push(`${dl}: missing a non-empty "capability"`);
+        if (!isNonEmptyString(entry.note)) errors.push(`${dl}: missing a non-empty "note"`);
+      });
+    }
+  }
+
+  // profiles{}: machine-readable normative slices. Every profile's
+  // normative_document_slugs must exist in documents[]; for
+  // oauth-mission-baseline-bundle specifically, the union of every
+  // profile's normative_document_slugs plus the architecture preface must
+  // equal documents[] exactly (a future sibling bundle with a different
+  // catalog and no informative preface is not held to that half of the
+  // check, only to slug existence). The preview markdown's "## The two
+  // levels" table must name, per profile (matched by label), the same
+  // document-slug set: a mechanical string comparison, not NLP.
+  if (doc.profiles === null || typeof doc.profiles !== "object" || Array.isArray(doc.profiles)) {
+    errors.push(`${label}: "profiles" must be an object`);
+  } else if (Object.keys(doc.profiles).length === 0) {
+    errors.push(`${label}: "profiles" must not be empty`);
+  } else {
+    const documentSlugSet = new Set(
+      Array.isArray(doc.documents) ? doc.documents.filter((d) => d && isNonEmptyString(d.slug)).map((d) => d.slug) : []
+    );
+    const unionOfProfileSlugs = new Set();
+
+    for (const [key, profile] of Object.entries(doc.profiles)) {
+      const pl = `${label}: profiles.${key}`;
+      if (!profile || typeof profile !== "object") {
+        errors.push(`${pl}: not an object`);
+        continue;
+      }
+      if (!isNonEmptyString(profile.label)) errors.push(`${pl}: missing a non-empty "label"`);
+
+      if (!Array.isArray(profile.normative_document_slugs) || profile.normative_document_slugs.length === 0) {
+        errors.push(`${pl}: "normative_document_slugs" must be a non-empty array`);
+      } else {
+        for (const slug of profile.normative_document_slugs) {
+          if (typeof slug !== "string" || slug.trim() === "") {
+            errors.push(`${pl}: "normative_document_slugs" contains a non-string or empty entry`);
+          } else {
+            unionOfProfileSlugs.add(slug);
+            if (!documentSlugSet.has(slug)) {
+              errors.push(`${pl}: "normative_document_slugs" names "${slug}", which is not in "documents"`);
+            }
+          }
+        }
+      }
+
+      if (!Array.isArray(profile.disabled_conditionals)) {
+        errors.push(`${pl}: "disabled_conditionals" must be an array`);
+      } else if (profile.disabled_conditionals.some((c) => typeof c !== "string" || c.trim() === "")) {
+        errors.push(`${pl}: "disabled_conditionals" contains a non-string or empty entry`);
+      }
+
+      if (profile.named_extensions !== undefined) {
+        if (!Array.isArray(profile.named_extensions) || profile.named_extensions.some((e) => typeof e !== "string" || e.trim() === "")) {
+          errors.push(`${pl}: "named_extensions", if present, must be an array of non-empty strings`);
+        }
+      }
+    }
+
+    if (doc.bundle_id === OAUTH_MISSION_BASELINE_BUNDLE_ID) {
+      const expectedUnion = new Set([...unionOfProfileSlugs, OAUTH_MISSION_BASELINE_ARCHITECTURE_SLUG]);
+      const notCovered = [...documentSlugSet].filter((s) => !expectedUnion.has(s));
+      const coveredButAbsent = [...expectedUnion].filter((s) => !documentSlugSet.has(s));
+      if (notCovered.length > 0 || coveredButAbsent.length > 0) {
+        errors.push(
+          `${label}: the union of every profile's "normative_document_slugs" plus the architecture preface must equal "documents" exactly` +
+            (notCovered.length > 0 ? `; documents not covered by any profile or the preface: ${notCovered.join(", ")}` : "") +
+            (coveredButAbsent.length > 0 ? `; named by a profile or the preface but not in documents: ${coveredButAbsent.join(", ")}` : "")
+        );
+      }
+    }
+
+    // The preview markdown tracked in artifact_digests (its path matching
+    // /preview\.md$/) must name, in its own "## The two levels" table, the
+    // same per-profile document-slug set declared here.
+    const previewKeys = Object.keys(doc.artifact_digests ?? {}).filter((k) => /preview\.md$/.test(k));
+    if (previewKeys.length !== 1) {
+      errors.push(
+        `${label}: expected exactly one "artifact_digests" entry matching /preview\\.md$/ to check "## The two levels" against, found ${previewKeys.length}`
+      );
+    } else {
+      const previewRelPath = previewKeys[0];
+      let previewText = null;
+      try {
+        previewText = fs.readFileSync(path.join(rootDir, previewRelPath), "utf8");
+      } catch (e) {
+        errors.push(`${label}: cannot read "${previewRelPath}" to check "## The two levels": ${e.message}`);
+      }
+      if (previewText !== null) {
+        const section = extractMarkdownSection(previewText, "The two levels", 2);
+        if (section === null) {
+          errors.push(`${label}: could not find a "## The two levels" section in "${previewRelPath}"`);
+        } else {
+          const rows = parseLevelTableRows(section);
+          for (const [key, profile] of Object.entries(doc.profiles)) {
+            if (!profile || !isNonEmptyString(profile.label)) continue; // already reported above
+            const matches = rows.filter((r) => r.label === profile.label);
+            if (matches.length === 0) {
+              errors.push(`${label}: profiles.${key}'s label "${profile.label}" has no matching row in "${previewRelPath}"'s "## The two levels" table`);
+              continue;
+            }
+            if (matches.length > 1) {
+              errors.push(`${label}: profiles.${key}'s label "${profile.label}" matches ${matches.length} rows in "${previewRelPath}"'s "## The two levels" table`);
+            }
+            const rowSlugs = new Set(matches[0].slugs);
+            const profileSlugs = new Set(Array.isArray(profile.normative_document_slugs) ? profile.normative_document_slugs : []);
+            const missingFromRow = [...profileSlugs].filter((s) => !rowSlugs.has(s));
+            const extraInRow = [...rowSlugs].filter((s) => !profileSlugs.has(s));
+            if (missingFromRow.length > 0 || extraInRow.length > 0) {
+              errors.push(
+                `${label}: "${previewRelPath}"'s "## The two levels" row for "${profile.label}" lists a different document-slug set than profiles.${key}.normative_document_slugs` +
+                  (missingFromRow.length > 0 ? `; row is missing: ${missingFromRow.join(", ")}` : "") +
+                  (extraInRow.length > 0 ? `; row has extra: ${extraInRow.join(", ")}` : "")
+              );
+            }
+          }
+        }
+      }
+    }
   }
 }
 

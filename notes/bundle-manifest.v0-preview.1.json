@@ -128,16 +128,38 @@
     }
   ],
   "artifact_digests": {
-    "notes/oauth-mission-baseline-bundle-preview.md": "7c8c8ca1413ac33c2d22a83596247077e9025fbb562fb9d14c2fb16342f0f3c8"
+    "notes/oauth-mission-baseline-bundle-preview.md": "4d68aa8e234323cab22fd84a936283b4e1aed17441d014cfbcf0eb6c1d2a2d8a"
+  },
+  "profiles": {
+    "issuance-baseline": {
+      "label": "OAuth Mission Issuance Baseline",
+      "normative_document_slugs": ["draft-mcguinness-oauth-mission"],
+      "disabled_conditionals": ["cross-domain"]
+    },
+    "runtime-enforced-baseline": {
+      "label": "OAuth Mission Runtime-Enforced Baseline",
+      "normative_document_slugs": [
+        "draft-mcguinness-oauth-mission",
+        "draft-mcguinness-mission-substrate",
+        "draft-mcguinness-oauth-mission-status",
+        "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
+        "draft-mcguinness-mission-authzen"
+      ],
+      "disabled_conditionals": ["cross-domain"],
+      "named_extensions": ["transaction-assurance"]
+    }
   },
   "disabled_capabilities": [
     {
       "capability": "cross-domain",
       "reason": "Cross-Domain is a conditional normative dependency the baseline disables, for both the Issuance and Runtime-Enforced levels (profile matrix, notes/adoption-plan.md)."
-    },
+    }
+  ],
+  "deferred_capabilities": [
     {
       "capability": "rar-free-mode",
-      "reason": "The RAR-free mode is absent by design, not merely disabled: it is protocol design work, not a packaging decision this bundle makes, and it waits on #220 landing normatively before it could be a mode this bundle selects."
+      "note": "Absent by design, not a disabled conditional: RAR-free mode is protocol design work that has not landed normatively (issue #220), so this bundle cannot select a mode that does not yet exist."
     }
   ]
 }
