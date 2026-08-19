@@ -11,7 +11,8 @@
    "PDP",
    "PEP",
    "verifier",
-   "TAS"
+   "TAS",
+   "Controller"
   ],
   "strengths": [
    "MUST",
@@ -43,7 +44,14 @@
    "transaction-authorization-endpoint",
    "decision-request",
    "resource-operation",
-   "evidence-emission"
+   "evidence-emission",
+   "mission-reference",
+   "approval-ceremony",
+   "governance-decision",
+   "commitment",
+   "propagation",
+   "governance-record",
+   "mission-statement"
   ],
   "levels": [
    "unit",
@@ -68,7 +76,15 @@
    "runtime.discovered-catalog",
    "containment.narrowing",
    "cross-domain.origin-principal",
-   "runtime.taint-enforcement"
+   "runtime.taint-enforcement",
+   "substrate.lifecycle-gated",
+   "substrate.state-observable",
+   "substrate.structured-authority",
+   "substrate.monotonic-derivation",
+   "substrate.credential-bound",
+   "substrate.authorized-context-correlation",
+   "substrate.independently-verifiable",
+   "substrate.portable-evidence"
   ]
  },
  "profiles": [
@@ -7201,6 +7217,1839 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The base AuthZEN Authorization API 1.0 and its PDP Capabilities registry are themselves pinned as \"pending\" in notes/external-pins.json (id AUTHZEN): no commit or digest is established yet, so this row's own upstream registry surface is unpinnable at this slice, not merely unpinned by oversight."
+  },
+  {
+   "id": "substrate.reference.stable-unambiguous-non-reassigned",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "reference",
+   "text": "A binding MUST define a Mission Reference that is:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Mission Reference is stable for the lifetime and retention period of the Mission Context, unambiguous within the declared Controller namespace, and never reassigned to a different Mission Context within that namespace"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.reference.namespace-disambiguation",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "reference",
+   "text": "If the native reference is not globally unambiguous, the binding MUST define the Controller identifier or other namespace value with which it is compared.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when the reference alone is not globally unambiguous, the binding names the namespace value compared alongside it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.reference.unguessability",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "reference",
+   "text": "A reference disclosed beyond the Controller MUST NOT be guessable by parties outside the Mission's authorized set",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a disclosed reference resists guessing by unauthorized parties: satisfied by at least 128 bits of reference entropy, a reference derived from undisclosed content, or a namespace whose every keyed surface authenticates the caller and does not disclose existence"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.reference.controller-identification",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "reference",
+   "text": "The binding MUST define how a relying component identifies the Controller responsible for the reference.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a relying component has a defined mechanism (local configuration, protocol identifier, trust anchor, or other substrate-native mechanism) for identifying the accountable Controller"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.reference.no-overclaim-global-uniqueness",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "reference",
+   "text": "A binding MUST NOT describe a bare value as globally identifying a Mission when its uniqueness actually depends on unstated local context.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reference whose uniqueness depends on unstated local context is not documented as globally identifying"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.authority-roles.no-silent-collapse",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "authority-roles",
+   "text": "a provider statement MUST NOT use colocation to imply that one role's assertion establishes another role's fact",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "co-locating roles in one implementation never lets one role's assertion silently stand in for a different role's fact in the provider statement"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.actor-binding.bind-at-approval",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "actor-binding",
+   "text": "At approval, the Controller MUST bind the Mission Context to the Actor identity, key, workload identity, authenticated session, or other actor handle defined by the binding.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Controller binds the Mission Context to a defined Actor handle at approval"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.actor-binding.authenticated-derivation-only",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "actor-binding",
+   "text": "The value MUST be derived from authenticated context or verified proof; it MUST NOT be accepted solely from an unauthenticated proposal.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Actor handle comes from authenticated context or verified proof; an unauthenticated proposal alone never establishes it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.actor-binding.statement-disclosure",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "actor-binding",
+   "text": "The binding MUST state:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding states what the Actor handle identifies, how the Controller establishes it at approval, and how a later positive governance decision establishes that the acting party is the bound Actor or an authorized delegate"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.actor-binding.identifier-mapping-definition",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "actor-binding",
+   "text": "A binding that maps between identifiers MUST define which component performs the mapping and the assurance and ambiguity of that mapping.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a binding that maps between identifier syntaxes names the mapping component and states the mapping's assurance and ambiguity"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approved-context.maintain-or-commit",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approved-context",
+   "text": "The binding MUST maintain either the Approved Context itself or a verifiable commitment to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding maintains either the Approved Context or a verifiable commitment to it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approved-context.immutability",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approved-context",
+   "text": "After approval, the approved value MUST be immutable.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the approved value never changes after approval"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approved-context.mutable-fields-distinguishable",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approved-context",
+   "text": "Mutable operational fields, including current state and log entries, MUST be distinguishable from the approved value.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "mutable operational fields (current state, log entries) are distinguishable from the immutable approved value"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approved-context.no-silent-replacement",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approved-context",
+   "text": "A binding MUST NOT silently replace the approved value behind an existing reference.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the approved value behind an existing reference is never silently replaced"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approved-context.change-requires-new-approval",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approved-context",
+   "text": "Changing the Approved Context requires a new approval event and a new Mission Reference, unless a binding defines the change as approval of a new immutable version with its own unambiguous reference.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a changed Approved Context gets a new approval event and new Mission Reference, or an explicitly defined new immutable version with its own unambiguous reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approved-context.commitment-definition-requirements",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approved-context",
+   "text": "When a binding uses a commitment instead of retaining or disclosing the value, it MUST define:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding defines the exact committed bytes or canonicalization procedure, algorithm identification and agility behavior, domain separation sufficient to prevent cross-type substitution, and how a possessing party verifies the commitment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.default-commitment.ijson-conformance",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "default-commitment",
+   "text": "Every committed JSON value, and the envelope around it, MUST satisfy I-JSON",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "committed JSON values and their envelope satisfy I-JSON; non-conformant input destined for commitment is rejected before canonicalization: duplicate member names are refused at parse time before the parsed data model exists, string data is valid Unicode free of surrogate/noncharacter code points, and number data is representable as a finite IEEE 754 binary64 value"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Duplicate-member rejection is tested via the shared canonicalization primitive that substrate's Default Commitment Construction defines (#284 ruling); core.commitment.duplicate-members exercises the identical function under its own document tag. The I-JSON string (surrogate/noncharacter) and number (finite binary64) conformance arms have no test."
+  },
+  {
+   "id": "substrate.default-commitment.reject-unknown-prefix",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "default-commitment",
+   "text": "A verifier MUST reject a digest whose algorithm prefix it does not recognize and MUST NOT treat an unrecognized prefix as `sha-256`.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unrecognized algorithm prefix is rejected outright and never silently compared as sha-256"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Same shared verifyAnchor primitive substrate's Default Commitment Construction defines (#284 ruling); core.commitment.unknown-prefix exercises the identical function under its own document tag."
+  },
+  {
+   "id": "substrate.approval.atomic-ceremony",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approval",
+   "text": "A binding MUST define a native approval ceremony that atomically creates an active Mission Context or has equivalent transactional semantics.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the approval ceremony creates the active Mission Context atomically, or with equivalent transactional semantics: a failed creation leaves no partial record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/store/test/store.test.ts",
+     "name": "store baseline (D27) > transactions are atomic",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "The shared store's transactional primitive (openStore/withTransaction over the missions table) is the generic mechanism substrate's approval ceremony requires; core's mission creation is built on it. This is a generic-infrastructure match rather than a @spec-tagged substrate test, recorded here for honesty."
+  },
+  {
+   "id": "substrate.approval.ceremony-steps",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approval",
+   "text": "The ceremony MUST:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the ceremony authenticates the Approver at the deployment's required assurance level, establishes the Actor per Actor Binding, presents or makes available a faithful representation of the approved context, records the approval decision/Approver/Actor binding/Approved Context or its commitment/Mission Reference/Controller, and initializes the Mission as active only after approval succeeds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approval.no-create-without-consent-to-changed-context",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approval",
+   "text": "the ceremony MUST NOT create the Mission Context without the Approver's consent to the changed context, and any commitment is computed over the context actually approved",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a context change between presentation and decision blocks Mission creation absent the Approver's consent to the changed context, and any commitment covers the context actually approved"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.approval.untrusted-material-identification",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "approval",
+   "text": "A binding MUST identify security-relevant material supplied by an untrusted proposer and describe how the approval ceremony prevents it from being mistaken for Controller-derived policy or trusted explanation.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding identifies untrusted-proposer-supplied security-relevant material and describes how the ceremony prevents it from being mistaken for Controller-derived policy or trusted explanation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.basic-gate.active-predicate-and-outcome",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "basic-gate",
+   "text": "Every binding MUST define an active predicate and a non-active outcome.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding defines an active predicate and a non-active outcome over its state vocabulary"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.basic-gate.decision-only-while-active",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "basic-gate",
+   "text": "The Controller MUST make a positive governance decision only while the Mission is active.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a positive governance decision is made only while the Mission is active"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.basic-gate.unrecognized-fails-closed",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "basic-gate",
+   "text": "Every value or condition not recognized as active MUST fail closed for that decision.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "any value or condition not recognized as active fails the decision closed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.basic-gate.non-active-transition-definition",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "basic-gate",
+   "text": "The binding MUST define at least one authenticated means by which an authorized party can cause the Mission to become non-active.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding names an authenticated non-active-transition mechanism, identifies the authorized parties, and states the effect on subsequent Controller decisions"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.bounded-reliance.stated-bound-required",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "bounded-reliance",
+   "text": "Authority derived from a Mission MUST NOT be usable indefinitely.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for every positive decision and every governed artifact, the binding states a reliance bound as either a maximum post-non-active residual interval or an artifact expiry bounded by/disclosed with the Approved Context; a decision or artifact with neither bound does not conform"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > absolute-lifetime clamp: the initial access token exp never exceeds the Mission expires_at",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "core.tokens.exp-clamp tests the artifact-expiry-bound arm for core's issued credentials (exp capped by the Mission's expires_at). The decision-point residual-interval arm, and the general non-conformance-without-either-bound check, are untested at this generic level."
+  },
+  {
+   "id": "substrate.bounded-reliance.should-not-exceed-purpose",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "bounded-reliance",
+   "text": "a stated bound SHOULD NOT exceed the interval the Mission's purpose requires",
+   "role": "Controller",
+   "strength": "SHOULD NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the stated reliance bound is no longer than the Mission's purpose requires"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.propagation.carry-or-joinable",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "propagation",
+   "text": "Each positive governance decision and each artifact that a binding claims is Mission-governed MUST carry, or be unambiguously joinable to, the Mission Reference and Controller namespace.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every governed decision or artifact carries, or is unambiguously joinable to, the Mission Reference and Controller namespace, and the binding defines the join and the party performing it"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.propagation.no-bare-unverified-acceptance",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "propagation",
+   "text": "Merely accepting an unverified reference supplied by the Actor does not establish Mission governance.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unverified Actor-supplied reference, accepted without more, does not establish Mission governance"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.propagation.proof-property-distinction",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "propagation",
+   "text": "The binding MUST state what the propagation mechanism proves.  In particular, it MUST distinguish among:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding distinguishes correlation with a Mission Context, proof the Controller made a particular decision, proof a credential was issued under the Mission, and proof a requested operation is within approved structured authority; the kernel requires only the first, with authenticated or integrity-protected provenance"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.governance-record.maintain-integrity-protected-ordered",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "governance-record",
+   "text": "The Controller MUST maintain an integrity-protected, ordered record of governance events for the Mission.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the Controller maintains an integrity-protected, ordered governance-event record for the Mission"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.governance-record.minimum-coverage-and-attribution",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "governance-record",
+   "text": "At minimum, the record MUST cover approval, positive and negative Controller decisions that rely on the Mission Context, and transition to a non-active outcome.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the record covers approval, positive and negative reliance decisions, and the non-active transition; events are attributable to their source and correlated with the Mission Reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.governance-record.ordering-and-retention-statement",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "governance-record",
+   "text": "The binding MUST state its ordering semantics, integrity protection, authorized readers, and retention period.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding states the record's ordering semantics, integrity protection, authorized readers, and retention period"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.governance-record.retention-covers-post-termination",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "governance-record",
+   "text": "The retention period MUST include the active lifetime and a declared post-termination period.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the stated retention period spans the active lifetime plus a declared post-termination period"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.capabilities.claim-requires-complete-satisfaction",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "capabilities",
+   "text": "A binding MUST NOT claim a capability unless it meets every requirement in that capability's subsection.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a capability is claimed only when every requirement in its subsection is met"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.capabilities.scope-must-appear-in-statement",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "capabilities",
+   "text": "such scope is part of the claim and MUST appear in the Mission Substrate Statement",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability's mode/role/operation/deployment scope is documented in the Mission Substrate Statement, not left implicit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.lifecycle-gated.statement-enumerates-operations",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "lifecycle-gated",
+   "text": "Its Statement MUST enumerate those operations, such as authority derivation, delegation, credential issuance, credential refresh, permission decisions, or continued reliance.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.lifecycle-gated"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement enumerates the named authorization operations the Lifecycle-Gated Authorization claim covers"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.lifecycle-gated.decision-point-establishes-active",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "lifecycle-gated",
+   "text": "For every operation in the claim, the decision point MUST establish that the Mission is currently active before returning a positive result.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.lifecycle-gated"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the decision point confirms current active state before returning a positive result, for every claimed operation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.lifecycle-gated.freshness-fail-closed",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "lifecycle-gated",
+   "text": "It MUST fail closed when current state cannot be established within the binding's stated freshness bound.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.lifecycle-gated"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the decision point fails closed when current state cannot be established within the stated freshness bound"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.lifecycle-gated.residual-interval-statement",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "lifecycle-gated",
+   "text": "The binding MUST state the maximum interval during which a previously issued positive result can remain usable after the Mission becomes non-active.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.lifecycle-gated"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding states the maximum post-non-active residual usability interval for a previously issued positive result"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.lifecycle-gated.no-generalize-narrower-claim",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "lifecycle-gated",
+   "text": "It MUST NOT generalize the narrower claim to the uncovered path.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.lifecycle-gated"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Lifecycle-Gated Authorization claim scoped to one operation class is never presented as covering an uncovered path"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.state-observable.expose-authenticated-source",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "state-observable",
+   "text": "A binding claiming **State-Observable** MUST expose at least one authenticated, integrity-protected source from which a named consumer can determine whether a Mission is active.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at least one authenticated, integrity-protected source exposes whether a Mission is active to a named consumer"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "core's introspection endpoint is the concrete instantiation core's Mission Substrate Statement names for this capability; core.introspection.caller-authentication tests the authenticated-source property for that instantiation. Generic integrity-protection and the multi-source case beyond introspection are untested at this level."
+  },
+  {
+   "id": "substrate.state-observable.statement-disclosure",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "state-observable",
+   "text": "For each source, the Statement MUST identify:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.state-observable"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement identifies the authorized consumers, the state vocabulary and active predicate, authentication and integrity protection, the freshness or maximum staleness bound, and fail-closed behavior for unavailable, invalid, or unknown state"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.state-observable.projection-preserves-distinction",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "state-observable",
+   "text": "A projection onto another protocol's vocabulary MUST preserve the active/non-active distinction; an unknown or non-active native value MUST NOT project to active.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection onto another protocol's vocabulary never maps an unknown or non-active native value to active"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > Mission-expired composite: active:false with state expired",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "core.introspection.composite-active exercises this exact projection rule (revoked/expired never project to active) for core's own instantiation."
+  },
+  {
+   "id": "substrate.structured-authority.define-representation-and-owner",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "structured-authority",
+   "text": "A binding claiming **Structured Authority** MUST define a machine-evaluable representation of authority associated with the Mission and MUST identify the authority that owns the representation's semantics.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.structured-authority"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding defines a machine-evaluable authority representation and identifies the authority that owns its semantics"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.structured-authority.statement-specifics",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "structured-authority",
+   "text": "The Statement MUST specify:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.structured-authority"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement specifies the representation and its version/type rules, how resources/operations/constraints are interpreted, which decision points consume it, whether it is approved context/Controller-derived policy/resource-owned input/decision result, and the scope in which two values compare"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.structured-authority.comparison-definition-and-fail-closed",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "structured-authority",
+   "text": "Where constraints admit comparison, the binding MUST define comparison in the constraint's value space.  Unknown types or constraints MUST fail closed at a decision point that requires their semantics.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.structured-authority"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "comparison is defined in the constraint's value space, and unknown types or constraints fail closed at any decision point requiring their semantics"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.monotonic-derivation.also-claims-structured-authority",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "monotonic-derivation",
+   "text": "A binding claiming **Monotonic Derivation** MUST also claim Structured Authority for the values covered by the derivation.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.monotonic-derivation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Monotonic Derivation claim always pairs with a Structured Authority claim for the covered values"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.monotonic-derivation.no-broader-than-relation-definition",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "monotonic-derivation",
+   "text": "It MUST define a no-broader-than relation for those values and the protocol boundary within which that relation is valid.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.monotonic-derivation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding defines a no-broader-than relation for the covered values and the protocol boundary within which it is valid"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.monotonic-derivation.verify-no-broader-and-fail-closed",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "monotonic-derivation",
+   "text": "Every derivation, delegation, or attenuation operation included in the claim MUST verify that its result is no broader than its declared parent under that relation.  Unsupported or incomparable values MUST fail closed.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every covered derivation/delegation/attenuation verifies its result is no broader than its declared parent; unsupported or incomparable values fail closed"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
+     "name": "toolsSubset (capability monotonicity) > adding a tool the parent lacks is NOT a subset (widen)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
+     "name": "verifyAttenuationChain > WIDEN by raising the cap on the child is refused (capability_widened)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "core's attenuation-chain verifier (packages/mission-core) tests the no-broader-than narrowing check extensively (widen refused on tools, ranges, aud, exp, and delegation depth) for core's own claim. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+  },
+  {
+   "id": "substrate.monotonic-derivation.classification-taxonomy",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "monotonic-derivation",
+   "text": "Every covered transition is classified as exactly one of:",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each covered transition is classified as exactly one of preserve, attenuate, or decide_anew; incomparability routes to refusal or decide_anew, and a translation between vocabularies is never silently treated as attenuation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.monotonic-derivation.no-constrain-uncovered-hop",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "monotonic-derivation",
+   "text": "It MUST NOT be presented as constraining fresh authorization decisions made under a different resource-owned policy or at an uncovered protocol hop.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.monotonic-derivation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Monotonic Derivation claim is never presented as constraining a fresh decision under a different resource-owned policy or at an uncovered hop"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.credential-bound.integrity-protected-association",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "credential-bound",
+   "text": "A binding claiming **Credential-Bound** MUST define an integrity-protected association between a credential or authorization artifact and exactly one Mission Reference and Controller namespace.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.credential-bound"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding defines an integrity-protected association between a credential/artifact and exactly one Mission Reference and Controller namespace"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.credential-bound.identify-elements",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "credential-bound",
+   "text": "It MUST identify:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.credential-bound"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding identifies the protected fields or join inputs establishing the association, the credential/artifact issuer and verifier trust relationship, how the credential is bound to the Actor or authorized delegate, substitution and replay protections, and whether issuance or refresh is covered by Lifecycle-Gated Authorization"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.credential-bound.no-unvalidated-actor-reference",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "credential-bound",
+   "text": "A reference copied from Actor-controlled input without Controller or credential-issuer validation does not satisfy this capability.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.credential-bound"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reference copied from Actor-controlled input, without Controller or credential-issuer validation, does not satisfy Credential-Bound"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.credential-bound.fact-semantics-selection",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "credential-bound",
+   "text": "A Credential-Bound claim MUST select which of the following fact semantics the mechanism establishes, and a claim MUST NOT say \"Mission-bound\" without that selection:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.credential-bound"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the claim selects among correlation only, artifact issuance under the Mission, authority derivation under the Mission, lifecycle-gated issuance, or current state as of an observation; a bare \"Mission-bound\" label without that selection does not satisfy the capability"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.credential-bound.no-shared-unqualified-claim",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "credential-bound",
+   "text": "the issued-under and correlation-only semantics MUST NOT share an unqualified claim",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.credential-bound"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the issued-under-the-Mission semantics and the correlation-only semantics never ride under one unqualified claim"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.authorized-context-correlation.supply-authorized-association",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "authorized-context-correlation",
+   "text": "A binding claiming **Authorized Context Correlation** MUST supply an authorized association among independently established facts, such as the Mission, the Subject, the Actor (and the Deployment and executing instance where the binding distinguishes them), an authority artifact, a request or transaction, and a target resource.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.authorized-context-correlation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding supplies an authorized association among the independently established facts it names (Mission, Subject, Actor, authority artifact, request/transaction, target resource, and any distinguished Deployment/executing instance)"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.authorized-context-correlation.claim-identifies-elements",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "authorized-context-correlation",
+   "text": "The claim MUST identify the joining authority, the association policy, the proof inputs, conflict handling, the association's lifetime and revocation, its audience, and its substitution protection.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.authorized-context-correlation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the claim identifies the joining authority, association policy, proof inputs, conflict handling, lifetime/revocation, audience, and substitution protection"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.authorized-context-correlation.no-coincidence-as-association",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "authorized-context-correlation",
+   "text": "Matching strings or timestamps do not satisfy this capability: the association is an authorized fact established by the joining authority, not an observation that two values coincide.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.authorized-context-correlation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "coincidence of strings or timestamps never satisfies the capability; only an authorized fact established by the joining authority does"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.independently-verifiable.online-query-free-verification",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "independently-verifiable",
+   "text": "A binding claiming **Independently Verifiable** MUST let the named consumer verify a specified Mission property without an online query to the Controller.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.independently-verifiable"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the named consumer verifies the specified property without an online query to the Controller"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.independently-verifiable.statement-enumerates-properties",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "independently-verifiable",
+   "text": "The Statement MUST enumerate the properties, for example Controller approval, context commitment, credential binding, structured authority, or state as of a signed observation.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.independently-verifiable"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement enumerates each independently verifiable property the claim covers"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.independently-verifiable.define-verification-elements",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "independently-verifiable",
+   "text": "For every property, the binding MUST define the verification artifact, canonical input, trust anchor or key discovery mechanism, algorithm agility, validity interval, and revocation or freshness limitations.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.independently-verifiable"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for every enumerated property, the binding defines the verification artifact, canonical input, trust anchor/key discovery, algorithm agility, validity interval, and revocation/freshness limitations"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.independently-verifiable.failure-fails-closed",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "independently-verifiable",
+   "text": "Verification failure or an unsupported algorithm MUST fail closed.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.independently-verifiable"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a verification failure or unsupported algorithm fails closed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.portable-evidence.define-transferable-evidence",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "portable-evidence",
+   "text": "A binding claiming **Portable Evidence** MUST define evidence that can be transferred across the administrative boundary stated in the claim and verified there.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.portable-evidence"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the binding defines evidence transferable across the claim's stated administrative boundary and verifiable there"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.portable-evidence.statement-identifies-elements",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "portable-evidence",
+   "text": "The Statement MUST identify:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.portable-evidence"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement identifies each evidence type and the event/decision it represents, its binding to the Mission Reference/Controller/Actor/relevant decision or artifact, canonical bytes/integrity protection/verification procedure, ordering/duplicate-handling/correlation semantics, retention and key-availability periods, and disclosure/minimization/unlinkability considerations"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.conformance.fail-closed-generalization",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "conformance",
+   "text": "defines fail-closed behavior when a required reference, binding, state, authority value, commitment, proof, or capability cannot be established",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a conforming binding fails closed whenever a required reference, binding, state, authority value, commitment, proof, or capability cannot be established, generalizing the basic-gate and capability-confusion fail-closed rules to every kernel and capability element"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.section-required-with-version-and-mode",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "A Mission Substrate Binding MUST contain a section titled \"Mission Substrate Statement\".  It MUST identify the specification version and mode to which the statement applies.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming binding publishes a section titled \"Mission Substrate Statement\" identifying the specification version and mode it applies to"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.kernel-checklist",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "For the kernel, the Statement MUST provide a checkable mapping for:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement provides a checkable mapping for all nine kernel items: the Mission Reference's uniqueness/comparison/retention/non-reassignment/unguessability treatment; Controller identity establishment; the Actor handle's authentication/binding/delegation/identifier mappings; the Approved Context's immutable boundary and commitment/verification; each approval-ceremony step; the active predicate, non-active outcome, transition mechanisms, and decision effect; the bounded-reliance bound per decision/artifact class; every propagation/join surface and the property it proves; and governance-record coverage, ordering, integrity, access, and retention"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.capability-table-required",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "The Statement MUST then include a capability table with one row for each capability in {{capabilities}}.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement includes a capability table with one row for each of the eight optional capabilities"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.binary-supplied-state",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "Each row MUST say `supplied` or `not supplied`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability row states supplied or not supplied; there is no third (retired conditional) state"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.supplied-row-requirements",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "A supplied row MUST:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a supplied row cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.no-silent-broadening-outside-statement",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "Text outside the Statement cannot silently broaden a capability claim.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no text outside the published Statement broadens a capability claim"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.statement.added-capability-requires-updated-statement",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "statement",
+   "text": "If another specification adds a capability, that specification MUST publish an updated Statement or a Statement extension that identifies the base binding and precise added scope.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a specification adding a capability publishes an updated Statement, or a Statement extension naming the base binding and the precise added scope"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.capability-confusion.fail-closed-on-unmet-conditions",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "capability-confusion",
+   "text": "A secure implementation fails closed when a required capability is absent, claimed with unmet activation conditions, or outside its declared scope.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an absent capability, one claimed with unmet activation conditions, or one used outside its declared scope, fails the relying decision closed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.capability-confusion.no-syntactic-upgrade",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "capability-confusion",
+   "text": "It does not upgrade a kernel-only reference because its syntax resembles a credential claim or content digest.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a kernel-only reference is never upgraded to a stronger capability's guarantee merely because its syntax resembles a credential claim or content digest"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.context-splicing.correlation-required-and-no-coincidence-association",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "context-splicing",
+   "text": "a consumer MUST NOT treat co-presentation of independently valid facts as an authorized association",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer never treats the mere co-presentation of independently valid identity evidence, credential, and Mission as an authorized association; Authorized Context Correlation is required whenever one authority did not itself bind all the required facts"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.monotonic-derivation.statement-identifies-narrowing-points",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "monotonic-derivation",
+   "text": "The Statement MUST identify each narrowing point and the component that performs the comparison.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "substrate.monotonic-derivation"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Statement identifies every narrowing point in the covered derivation/delegation/attenuation flow and the component performing each comparison"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
   }
  ]
 }
