@@ -2926,7 +2926,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: \"gated\" here means a PEP invokes a PDP at all for the action before it runs; evaluate() cannot observe or falsify whether it was called in the first place (that is complete mediation / PEP placement, {{pep-placement}}). The static action-to-class map lives in mcp-payments/src/pep.ts, not evaluate.ts. Left todo for a PEP-side/resource-operation-surface slice."
   },
   {
    "id": "runtime.classification.no-lowering-below-resource-floor",
@@ -2948,7 +2949,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: classification assignment (whether purpose or deployment policy lowers an action's class) happens in the PEP's static action-to-class map (mcp-payments/src/pep.ts), never inside evaluate(), which receives action_class as an already-decided opaque label and has no classifier or floor table of its own. No lowering mechanism exists in evaluate.ts to exercise."
   },
   {
    "id": "runtime.classification.no-evasion-and-write-floor",
@@ -2969,9 +2971,16 @@
     "normative": "an action classified consequential write or higher is gated and parameter-bound as the classification table requires, and classification cannot be used to escape that"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Duplicate observable of runtime.classification.high-consequence-must-be-gated for the top three classes; rowed separately because it additionally covers the consequential-write floor and the anti-evasion rule."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-classification.test.ts",
+     "name": "classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification) > no action_class label, including the high-consequence and unrecognized ones, opens a bypass around the authority-entry-match gate",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the PDP's own share: action_class is opaque to evaluateInner (used only to pick a staleness bound, permit TTL/single_use, and approval-required dispatch) and no value of it skips or loosens the authority-entry-match, containment, FGA, amount, or approval gates. NOT tested: that a PEP actually invokes the PDP at all for a consequential-write-or-higher action (a PEP-placement / complete-mediation concern outside evaluate()'s pure-function boundary), and the parameter-binding half (\"and bound\") is tracked separately under runtime.permit-binding.must-bind-list (already partial)."
   },
   {
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
@@ -2994,7 +3003,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Antecedent unreachable in this codebase: applicability names capability runtime.discovered-catalog, and no argument-dependent classifier exists anywhere (grep across src/services and src/packages for classifier/action_class/mission_action_class_floors finds only the static per-tool action_class label in mcp-payments/src/pep.ts and its pass-through in evaluate.ts; no component ever classifies an invocation from its normalized parameters). Nothing to test without fabricating a classifier the deployment does not have."
   },
   {
    "id": "runtime.classification.class-floor-metadata-not-lowered",
@@ -3017,7 +3027,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Antecedent unreachable: applicability names capability runtime.discovered-catalog. mission_action_class_floors (RFC 9728 protected resource metadata) is not read, stored, or referenced anywhere in src/services/pdp or src/services/mcp-payments; MissionView and AuthorityEntry (policy-view.ts) carry no floor member for evaluateInner to consult."
   },
   {
    "id": "runtime.classification.unknown-floor-value-high-consequence",
@@ -3040,7 +3051,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Antecedent unreachable, same capability and evidence as class-floor-metadata-not-lowered: there is no mission_action_class_floors consumption path in this deployment, so there is no PDP code path that could receive an unrecognized floor value to fail closed on."
   },
   {
    "id": "runtime.action-approval.refusal-without-fresh-approval",
