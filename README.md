@@ -59,7 +59,9 @@ chapter by chapter, for readers who want the why before the wire.
 
 ## The adoption map
 
-Ten picks, in order. Each pick is one decision; within a pick,
+Ten picks across two menus. **Level 1 lays down the necessary
+pieces of Mission-based authorization**; **Level 2 grows breadth and
+depth across use cases**. Each pick is one decision; within a pick,
 options are ordered by growing capability, and each option is usable
 on its own rung. Maturity is one vocabulary everywhere on the menu,
 taken verbatim from the family manifest: **stable** (unmarked),
@@ -69,6 +71,12 @@ for pulling each document) is in the collapsed section below. Bundle
 contents and minimum conformance profile are not synonymous; the
 profile matrix in [notes/adoption-plan.md](notes/adoption-plan.md)
 draws the line between them.
+
+### Level 1: the necessary pieces
+
+The model, a binding to carry it, enforcement at the point of use,
+and a record of what enforcement decided. With these, Mission-based
+authorization exists.
 
 **1. Read the [`mission-architecture`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (informational).** The Mission
 model, invariants, and assurance levels everything else cites.
@@ -93,6 +101,12 @@ the PDP).
 enforcement decision a durable, verifiable record. Proof portable to
 outside verifiers waits in the closing shelf ([`mission-audit`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html),
 [`mission-mandate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html)).
+
+### Level 2: breadth and depth
+
+How Missions are shaped and approved, how work fans out, how
+authority moves in flight, and how the estate is operated. Order by
+use case; nothing here is required to start.
 
 **5. Shape your Mission.** How tightly the approved authority is
 derived from what the agent asked for.
@@ -157,7 +171,7 @@ and the [`mission-aam`](https://mcguinness.github.io/mission-bound-authorization
 document set; these are the published conformance baselines, not the
 bundle's table of contents.
 
-| Level | The order | What it gives |
+| Baseline | The order | What it gives |
 |---|---|---|
 | Issuance Baseline | pick 2 alone (OAuth: the core by itself) | Approval bound durably to the tokens it issues |
 | Runtime-Enforced Baseline | picks 2 through 4: the six-document floor | Point-of-use checks with durable evidence |

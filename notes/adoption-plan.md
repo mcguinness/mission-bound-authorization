@@ -90,10 +90,11 @@ that property while staying experimental (this is also a freeze class below).
 
 **Reader-facing layer: the order menu.** The map's first reader test (the author, reading
 the shipped compact track table cold) failed it: zone/track rows answer "where does this
-document live", not "what do I order". The top layer is therefore an eight-pick menu: read
-the architecture; pick your binding (OAuth, AAuth, standalone authority server, or a
-sketch); pick your runtime; pick your evidence; shape your Mission and pick your approval
-complexity (each a table of named options ordered by growing capability, the two lanes
+document live", not "what do I order". The top layer is therefore a ten-pick menu sorted
+into two levels. Level 1 lays down the necessary pieces of Mission-based authorization:
+read the architecture; pick your binding (OAuth, AAuth, standalone authority server, or a
+sketch); pick your runtime; pick your evidence. Level 2 grows breadth and depth across
+use cases: shape your Mission and pick your approval complexity (each a table of named options ordered by growing capability, the two lanes
 every end-to-end deployment decides; rank adjectives are never used as option labels);
 pick your delegation (a complexity progression); run your agent (the agent-side stop and
 unwind); adjust authority in flight (a named-direction table: widen, meet the unknown,
