@@ -920,7 +920,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#lifecycle, child-delegation#child-state, mission-substrate#basic-gate — the shared active
+   * @spec mission#lifecycle, child-delegation#child-state, mission-substrate#basic-gate: the shared active
    * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
    * clock, require the Mission itself `active`, and walk `parent` upward refusing
    * if ANY ancestor is non-active. Returns the expiry-fresh record. It does NOT

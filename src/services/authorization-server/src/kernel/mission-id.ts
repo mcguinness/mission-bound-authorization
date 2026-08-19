@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 /**
  * @spec mission#mission-identifier, mission-substrate#reference
- * (unguessability) — the single Mission Reference minting helper. Every
+ * (unguessability): the single Mission Reference minting helper. Every
  * `msn_` minting site (approve, expansion, template instantiation,
  * child-delegation) MUST draw its id from this helper rather than construct
  * one inline, so the entropy source and byte count are asserted in exactly
