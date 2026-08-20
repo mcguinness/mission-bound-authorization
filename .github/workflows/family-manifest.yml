@@ -10,3 +10,4 @@ jobs:
         with: { node-version: 22 }
       - run: node scripts/check-family-manifest.mjs
       - run: node scripts/check-conformance-manifest.mjs
+      - run: node scripts/check-substrate-statements.mjs
