@@ -10,6 +10,16 @@
  * any other `authorization_details` type, the PDP MUST evaluate the action
  * under that type's documented runtime semantics and MUST refuse if it
  * does not understand or cannot enforce those semantics").
+ *
+ * GAP 2: freshness (step 3) fails closed when context.freshness is absent
+ * for a high-consequence action class (irreversible_action,
+ * external_commitment, privileged_administration), which @spec
+ * runtime#state-freshness requires an active freshness mechanism for: "The
+ * PDP MUST refuse a consequential action when it cannot establish, within
+ * the deployment's published staleness bound, that the Mission is
+ * `active`." Below that floor, token-lifetime expiry is itself a
+ * conforming state source (@spec runtime#state-freshness, "Token-lifetime
+ * freshness"), so an absent member there stays a permit.
  */
 
 import { describe, expect, it } from "vitest";
@@ -94,6 +104,88 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         authority_set: [entryOfType("future_authorization_details_type"), entryOfType(MISSION_RESOURCE_ACCESS_TYPE)],
       };
       const dec = await evaluate(req(), opts(mixedView));
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    });
+  });
+
+  describe("GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness)", () => {
+    const entry: AuthorityEntry = {
+      type: MISSION_RESOURCE_ACCESS_TYPE,
+      resource: RESOURCE,
+      actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send"],
+    };
+
+    const HIGH_CONSEQUENCE_CLASSES = ["irreversible_action", "external_commitment", "privileged_administration"];
+
+    it("every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass", async () => {
+      for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
+        const dec = await evaluate(
+          req({
+            context: {
+              audience: RESOURCE,
+              mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+              action_class: actionClass,
+            },
+          }),
+          opts(view(entry)),
+        );
+        expect(dec.decision, actionClass).toBe(false);
+        expect(dec.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
+
+    it("every high-consequence action_class with context.freshness present and fresh -> permit (the fix denies absence, not presence)", async () => {
+      for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
+        const dec = await evaluate(
+          req({
+            context: {
+              audience: RESOURCE,
+              mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+              action_class: actionClass,
+              freshness: { observed_at: NOW.toISOString(), source: "status" },
+            },
+          }),
+          opts(view(entry)),
+        );
+        expect(dec.decision, actionClass).toBe(true);
+      }
+    });
+
+    it("every high-consequence action_class with context.freshness present but stale -> deny stale_state (the pre-existing arm, unchanged)", async () => {
+      for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
+        const dec = await evaluate(
+          req({
+            context: {
+              audience: RESOURCE,
+              mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+              action_class: actionClass,
+              // an hour old: beyond every class's staleness bound (30s/60s/300s default)
+              freshness: { observed_at: "2026-07-22T11:00:00Z", source: "status" },
+            },
+          }),
+          opts(view(entry)),
+        );
+        expect(dec.decision, actionClass).toBe(false);
+        expect(dec.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
+
+    it("a non-high-consequence action_class with context.freshness absent -> permit (token-lifetime freshness suffices below the floor)", async () => {
+      const dec = await evaluate(
+        req({
+          context: {
+            audience: RESOURCE,
+            mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+            action_class: "consequential_write",
+          },
+        }),
+        opts(view(entry)),
+      );
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    });
+
+    it("no action_class at all, context.freshness absent -> permit (unclassified requests are unaffected)", async () => {
+      const dec = await evaluate(req(), opts(view(entry)));
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     });
   });

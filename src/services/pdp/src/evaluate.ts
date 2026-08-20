@@ -21,6 +21,17 @@ import {
   policyViewId,
 } from "./policy-view.js";
 
+/**
+ * @spec runtime#classification — the high-consequence classes (a closed
+ * set the draft defines by predicate: irreversible, external-commitment,
+ * privileged-administration). @spec runtime#state-freshness — these are
+ * the classes for which "the state source MUST be an active freshness
+ * mechanism", never token-lifetime expiry alone; below this floor, token
+ * expiry is itself a conforming state source, so absence of
+ * `context.freshness` is not by itself a fail-closed signal there.
+ */
+const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
+
 /** @spec authzen#context-approval */
 export interface ActionApproval {
   id: string;
@@ -131,9 +142,20 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   if (view.state !== "active") return deny("mission_inactive");
 
   // 3. Freshness against the staleness bound (@spec: stale_state).
+  // @spec runtime#state-freshness: "The PDP MUST refuse a consequential
+  // action when it cannot establish, within the deployment's published
+  // staleness bound, that the Mission is `active`." An absent
+  // `context.freshness` on a high-consequence action class means Mission
+  // state cannot be established at all, which is not weaker than state
+  // established-but-stale: it MUST fail closed the same way, never pass
+  // through as if no staleness bound applied. Below the high-consequence
+  // floor the draft treats token-lifetime expiry as itself a conforming
+  // state source, so an absent member there is not by itself a refusal.
   if (req.context.freshness) {
     const ageMs = now().getTime() - Date.parse(req.context.freshness.observed_at);
     if (ageMs > opts.stalenessBoundSeconds(actionClass) * 1000) return deny("stale_state");
+  } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
+    return deny("stale_state");
   }
 
   // 4. Actor chain shape/consistency (@spec: actor_invalid).

@@ -4239,8 +4239,15 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > stale freshness beyond the bound -> deny stale_state",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "Two arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), and state absent entirely for a class that requires an active source (#608 GAP 2, the added unconditional mapping). The added test asserts the absent-member arm for all three high-consequence classes (irreversible_action, external_commitment, privileged_administration) in one case, with sibling unconditional cases in the same file covering the fresh-present and stale-present arms, plus a boundary control: a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",

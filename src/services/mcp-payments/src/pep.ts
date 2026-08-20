@@ -342,6 +342,14 @@ export class Pep {
       context: {
         audience: CANONICAL_RESOURCE,
         mission: { id: view.id, authority_hash: token.mission.authority_hash },
+        // @spec runtime#state-freshness: `loadView` re-reads live Mission
+        // state synchronously on every `enforce()` call, with no caching
+        // layer, so the read IS this deployment's active freshness
+        // observation, current as of `this.now()`. Supplying it keeps a
+        // high-consequence action class (irreversible_action,
+        // external_commitment) from being denied `stale_state` merely for
+        // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
+        freshness: { observed_at: this.now().toISOString(), source: "load_view" },
         actor: buildContextActor({
           ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
           ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
