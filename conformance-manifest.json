@@ -3894,8 +3894,28 @@
     "normative": "an authorization_details entry of a type the PDP does not understand or cannot enforce is refused, never passed through"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry of an unrecognized type, otherwise identical resource+actions -> deny out_of_authority, never permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry with the type member absent entirely -> deny out_of_authority, never a bare-undefined pass-through",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an unrecognized-type entry alongside a valid entry for the same resource+actions -> permit via the valid entry, never short-circuited by the unrecognized one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The text carries two MUSTs: evaluate under the other type's own runtime semantics, and refuse if the PDP does not understand or cannot enforce them. The PDP recognizes exactly one authorization_details type (mission_resource_access), so it implements only the refusal limb, which is exactly this row's own observation.normative and assertion (\"refusal\"): recognition is a whitelist (@spec evaluate.ts step 5), so any other type never matches by resource/actions and falls through to the pre-existing out_of_authority path. The cited tests prove an unrecognized type and an absent type member both refuse rather than pass through, plus a mixed-authority_set case (an unrecognized-type entry alongside a valid entry for the same resource/actions) proving the unrecognized entry is skipped rather than short-circuiting the match, and a positive control (same file) proving the recognized-type case still permits."
   },
   {
    "id": "runtime.decision-inputs.capability-drift-refusal",

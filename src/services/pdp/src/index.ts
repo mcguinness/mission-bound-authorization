@@ -2,6 +2,7 @@ export { Fga, DOMAIN_MODEL, loadCa, type FgaConfig } from "./fga.js";
 export {
   policyViewId,
   deriveContextualTuples,
+  MISSION_RESOURCE_ACCESS_TYPE,
   type MissionView,
   type AuthorityEntry,
 } from "./policy-view.js";

@@ -13,7 +13,13 @@ import { AUTHORITY_ENTRY_TYP, compareAmounts, computeAnchor, isValidAmount } fro
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
-import { type AuthorityEntry, deriveContextualTuples, type MissionView, policyViewId } from "./policy-view.js";
+import {
+  type AuthorityEntry,
+  deriveContextualTuples,
+  MISSION_RESOURCE_ACCESS_TYPE,
+  type MissionView,
+  policyViewId,
+} from "./policy-view.js";
 
 /** @spec authzen#context-approval */
 export interface ActionApproval {
@@ -141,8 +147,22 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
 
   // 5. Authority entry match: the approved entry's resource is matched
   //    against context.audience (NOT the AuthZEN resource member).
+  // @spec runtime#input-authority — "For any other `authorization_details`
+  // type, the PDP MUST evaluate the action under that type's documented
+  // runtime semantics and MUST refuse if it does not understand or cannot
+  // enforce those semantics." The PDP understands exactly one type, so
+  // recognition is a whitelist: an entry whose `type` is not
+  // MISSION_RESOURCE_ACCESS_TYPE never matches by resource/actions alone,
+  // even if the AS admission layer's type closure ever broke upstream (a
+  // new entry type admitted, a deserialization change). It falls through
+  // to the same out_of_authority refusal as a never-approved entry,
+  // fail-closed by construction, never by an explicit blocklist entry
+  // that could omit a case.
   const entry: AuthorityEntry | undefined = view.authority_set.find(
-    (e) => e.resource === req.context.audience && e.actions.includes(req.action.name),
+    (e) =>
+      e.type === MISSION_RESOURCE_ACCESS_TYPE &&
+      e.resource === req.context.audience &&
+      e.actions.includes(req.action.name),
   );
   if (!entry) return deny("out_of_authority");
 

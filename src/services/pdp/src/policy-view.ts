@@ -10,8 +10,18 @@ import { createHash } from "node:crypto";
 import { canonicalize } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
 
+/**
+ * @spec runtime#input-authority — the one `authorization_details` type the
+ * PDP understands. Recognition is a whitelist: `evaluate()` matches an
+ * entry only when `entry.type` equals this literal, so an entry of any
+ * other type (a deserialization change, a new type admitted upstream)
+ * never matches by `resource`/`actions` alone and falls through to the
+ * same fail-closed refusal as a never-approved entry.
+ */
+export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
+
 export interface AuthorityEntry {
-  type: "mission_resource_access";
+  type: typeof MISSION_RESOURCE_ACCESS_TYPE;
   resource: string;
   actions: string[];
   constraints?: {
