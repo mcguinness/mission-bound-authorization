@@ -106,6 +106,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
+          freshness: { observed_at: NOW.toISOString(), source: "status" },
         },
       }),
       opts(view()),
@@ -271,6 +272,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
+          freshness: { observed_at: NOW.toISOString(), source: "status" },
         },
       }),
       {
@@ -300,6 +302,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
+          freshness: { observed_at: NOW.toISOString(), source: "status" },
           action_approval: {
             id: "apr_expired",
             approved_at: NOW.toISOString(), // fresh (within max age)
@@ -324,6 +327,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
+          freshness: { observed_at: NOW.toISOString(), source: "status" },
           action_approval: {
             id: "apr_ok",
             approved_at: NOW.toISOString(),
