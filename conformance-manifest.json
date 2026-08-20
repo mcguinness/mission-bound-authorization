@@ -3301,7 +3301,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Deployment-declaration duty (AS role), same artifact gap as runtime.conformance.no-claim-outside-declared-scope: no Enforcement Scope Statement exists to check the MUST NOT against. Vacuously true of this reference deployment (every TOOL_ACTIONS entry in mcp-payments/src/pep.ts is PEP-mediated by construction, runtime.rs-profile.no-claim-without-pep and runtime.classification.high-consequence-must-be-gated demonstrate that directly), but a vacuous antecedent is not evidence for the declaration duty itself."
+   "notes": "Deployment-declaration duty (AS role), same artifact gap as runtime.conformance.no-claim-outside-declared-scope: no Enforcement Scope Statement exists to check the MUST NOT against. Vacuously true of this reference deployment on inspection: TOOL_ACTIONS in mcp-payments/src/pep.ts routes all six tools through the same enforce() dispatch, so none bypasses a PEP by construction. runtime.classification.high-consequence-must-be-gated demonstrates that directly for the two high-consequence entries (execute_wire_transfer, send_remittance_email); runtime.rs-profile.no-claim-without-pep is no longer cited here (author review finding 2 downgraded it to partial: its mappings cover one of the six declared operations and inspect no RS conformance claim, so it is not itself direct demonstration for the other four). A vacuous antecedent is not evidence for the declaration duty itself."
   },
   {
    "id": "runtime.custody.mediated-credential-sender-constrained",
