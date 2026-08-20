@@ -744,6 +744,12 @@ authority, not an observation that two values coincide.  This
 capability is required whenever one authority did not itself bind all
 required facts in the applicable context ({{context-splicing}}).
 
+The inverse also holds: a binding whose single authority natively
+binds all required facts in scope does not supply this capability.
+Nothing independently established remains to join, so its Statement
+says `not supplied` with that reason, rather than presenting native
+binding as a join.
+
 ## Independently Verifiable {#independently-verifiable}
 
 A binding claiming **Independently Verifiable** MUST let the named
@@ -1040,7 +1046,7 @@ and an extension or deployment can change a row.
 | Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
 | Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
 | Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; supplied when a verified join or a cooperating credential issuer is active | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
-| Authorized Context Correlation | Native grant binding associates the Mission, Subject, client, and credential at issuance | Native: the MAS join and Join Assertion machinery | The PS binds the Mission, person, agent, and token natively at decision time |
+| Authorized Context Correlation | Not supplied natively: the issuer binds all facts at issuance | The MAS join and Join Assertion machinery | Not supplied natively: the PS binds the Mission, person, agent, and token at decision time |
 | Independently Verifiable | Supplied where signed credentials expose the property and verification material | Supplied when signed artifacts expose the property | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
 | Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise supplied only when an evidence profile is active | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
 {: title="Illustrative capability mapping for existing architectures"}
@@ -1204,7 +1210,7 @@ The capability table:
 | Structured Authority | supplied | always | `authorization_details` with registered types and the Common Constraints | Semantics exist per registered type, not universally |
 | Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
 | Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
-| Authorized Context Correlation | supplied | always | The grant binding at issuance | The joining authority is the issuer itself; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
+| Authorized Context Correlation | not supplied | -- | -- | The issuer binds the Mission, Subject, client, and credential natively at issuance; no cross-authority join is defined. Cross-authority joins are the Mission Authority Server's machinery, not this binding's |
 | Independently Verifiable | supplied | Mandate, signed Status, or audit companion active | Anchor recomputation and signed artifacts per those profiles | Signature verification never establishes current state |
 | Portable Evidence | supplied | Evidence, Mandate, or audit companion active | Per those profiles | The governance record is otherwise issuer-local |
 {: title="OAuth Mission binding capability table"}
