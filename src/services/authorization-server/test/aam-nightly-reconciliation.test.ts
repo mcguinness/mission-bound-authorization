@@ -376,7 +376,12 @@ function viewFor(missionId: string): MissionView {
   };
 }
 
-const loadView = (id: string): MissionView | undefined => (as.kernel.get(id) ? viewFor(id) : undefined);
+// @spec runtime#state-freshness: a synchronous live read, freshness-stamped
+// at this read (Finding 1); "load_view" declared trusted at the Pep below.
+const loadView = (id: string) =>
+  as.kernel.get(id)
+    ? { view: viewFor(id), freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    : undefined;
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */
 const evalAction = async (missionId: string, action: string) => {
@@ -432,6 +437,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       loadView,
       instanceEpoch: "aam-epoch",
       sourceDigest: sourceDigestOf({ name: "payments", tools: ["get_invoice", "send_remittance_email"] }),
+      allowedFreshnessSources: new Set(["load_view"]),
     });
 
     // The gate's own evidence store; the gate is built in step 4 (needs the mission id).

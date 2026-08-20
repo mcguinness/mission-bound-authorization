@@ -73,6 +73,15 @@ export interface HarnessDeps {
   revokedInstances?: Set<string>;
 }
 
+/** @spec runtime#state-freshness: this harness's one declared state source. */
+const EVAL_FRESHNESS_SOURCE = "eval_harness";
+
+/** The harness's own loader: a synchronous live read of `deps.view`, freshness-stamped at this read (@spec runtime#state-freshness, Finding 1). */
+function loadHarnessView(view: MissionView, id: string) {
+  if (id !== view.id) return undefined;
+  return { view, freshness: { observed_at: new Date().toISOString(), source: EVAL_FRESHNESS_SOURCE } };
+}
+
 /** Run one case against a fresh composed stack; measure side effects + evidence. */
 export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResult> {
   const payments = deps.seedStore();
@@ -84,15 +93,16 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     evidence,
     fga: deps.fga,
     modelId: deps.modelId,
-    loadView: (id) => (id === deps.view.id ? deps.view : undefined),
+    loadView: (id) => loadHarnessView(deps.view, id),
     instanceEpoch: "epoch-eval",
     sourceDigest: sourceDigestOf({ name: "payments" }),
+    allowedFreshnessSources: new Set([EVAL_FRESHNESS_SOURCE]),
     ...(deps.revokedInstances ? { revokedInstances: deps.revokedInstances } : {}),
   });
   const server = new McpPaymentsServer({
     pep,
     payments,
-    loadView: (id) => (id === deps.view.id ? deps.view : undefined),
+    loadView: (id) => loadHarnessView(deps.view, id),
     jwks: { keys: [] },
     issuer: "https://as.test",
     serverCard: { name: "payments" },

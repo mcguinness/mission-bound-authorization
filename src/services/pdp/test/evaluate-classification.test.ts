@@ -45,6 +45,10 @@ const reqFor = (actionClass: string): EvaluationRequest => ({
     audience: RESOURCE,
     mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
     action_class: actionClass,
+    // Fresh state so a high-consequence class clears step 3 and this test
+    // keeps exercising the gate it names (step 5's entry match), never the
+    // freshness gate (@spec runtime#state-freshness).
+    freshness: { observed_at: NOW.toISOString(), source: "status" },
   },
 });
 
@@ -55,6 +59,7 @@ const opts = {
   now: () => NOW,
   stalenessBoundSeconds,
   relationForAction,
+  allowedFreshnessSources: new Set(["status"]),
 };
 
 describe("classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification)", () => {

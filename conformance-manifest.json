@@ -4064,9 +4064,34 @@
     "normative": "an authorization_details entry of a type the PDP does not understand or cannot enforce is refused, never passed through"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Misfit / antecedent unreachable at the PDP: AuthorityEntry.type is a closed TypeScript literal (\"mission_resource_access\") both in policy-view.ts (the PDP's own view) and in the AS kernel's own AuthorityEntry (src/services/authorization-server/src/kernel/types.ts); the transaction-authorization admission path separately refuses any other authorization_details type at admission (src/demo/src/stack.ts's operationProfiles comment: \"an entry naming any other type is refused at admission rather than read structurally\"). No entry of another type can ever reach MissionView.authority_set, so evaluate() never sees the case this row governs; the real enforcement locus is the AS/admission layer, out of this PDP-only slice. Worth flagging separately: evaluateInner's own entry-match predicate (step 5) matches on resource+actions shape alone and never inspects entry.type, so if this whitelist ever broke upstream, the PDP itself would not catch it; that is a structural observation for a follow-up, not something a passing test can honestly assert today."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry of an unrecognized type, otherwise identical resource+actions -> deny unsupported_authorization_type (@spec authzen#failure-condition-coverage), never out_of_authority or permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry with the type member absent entirely -> deny unsupported_authorization_type, never a bare-undefined pass-through or out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an unrecognized-type entry alongside a valid entry for the same resource+actions -> permit via the valid entry, never short-circuited by the unrecognized one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 4: unsupported_authorization_type is distinct from out_of_authority (@spec authzen#failure-condition-coverage) > side by side: no entry at all for this resource/action denies out_of_authority; an unrecognized-type entry for the SAME resource/action instead denies unsupported_authorization_type",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The text carries two MUSTs: evaluate under the other type's own runtime semantics, and refuse if the PDP does not understand or cannot enforce them. The PDP recognizes exactly one authorization_details type (mission_resource_access), so it implements only the refusal limb, which is exactly this row's own observation.normative and assertion (\"refusal\"): recognition is a whitelist (@spec evaluate.ts step 5), so any other type never matches by resource/actions. Author-review finding 3 corrected WHICH refusal it falls through to: draft-mcguinness-mission-authzen.md's normative mapping table (@spec authzen#failure-condition-coverage) keeps \"Action outside the Authority Set\" (`out_of_authority`) and \"Unsupported authorization_details type\" (`unsupported_authorization_type`) as two different failure kinds, not two degrees of one; an entry matching this request's resource/actions under an unrecognized type is the second kind, so step 5 now denies unsupported_authorization_type there, reserving out_of_authority for a genuine absence of any matching entry regardless of type. The cited tests prove an unrecognized type and an absent type member both deny unsupported_authorization_type rather than pass through or misclassify as out_of_authority, a side-by-side case contrasting the two denial reasons on otherwise-identical requests, a mixed-authority_set case (an unrecognized-type entry alongside a valid entry for the same resource/actions) proving the unrecognized entry is skipped rather than short-circuiting the match (skip-not-shortcircuit unaffected by the classification fix), and a positive control (same file) proving the recognized-type case still permits. Defense in depth beyond evaluateInner's own check: AuthorityEntry.type is also a closed TypeScript literal (\"mission_resource_access\") both in policy-view.ts and in the AS kernel's own AuthorityEntry (src/services/authorization-server/src/kernel/types.ts), and the transaction-authorization admission path separately refuses any other authorization_details type at admission (src/demo/src/stack.ts's operationProfiles comment: \"an entry naming any other type is refused at admission rather than read structurally\"); the whitelist check above is no longer relying solely on those upstream closures. No authzen-anchored ledger row exists for this specific mapping-table identifier assignment (the only failure-condition-coverage row, exactly-one-carrier, asserts the table's carrier-exhaustiveness across all conditions, not any one row's specific identifier), so this stays cited only under its runtime#input-authority anchor."
   },
   {
    "id": "runtime.decision-inputs.capability-drift-refusal",
@@ -4411,8 +4436,39 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > stale freshness beyond the bound -> deny stale_state",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable observed_at with an unrecognized source -- denies stale_state, never permits, for every high-consequence class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at beyond the skew tolerance denies stale_state, for every high-consequence class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation from a source outside the deployment's allowed set denies stale_state, for every high-consequence class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",

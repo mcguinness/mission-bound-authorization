@@ -18,12 +18,12 @@ import {
 } from "@mission/core";
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 import type { ActObject } from "@mission/actor-chain";
-import type { MissionView } from "@mission/pdp";
 import {
   type ActionApprovalInput,
   CANONICAL_RESOURCE,
   type EnforceResult,
   type InsufficientAuthorization,
+  type LoadedView,
   type Pep,
   type RequestSignals,
   type TokenFacts,
@@ -76,7 +76,7 @@ export const TOOLS: ToolDef[] = [
 export interface McpServerDeps {
   pep: Pep;
   payments: PaymentsStore;
-  loadView: (missionId: string) => MissionView | undefined;
+  loadView: (missionId: string) => LoadedView | undefined;
   jwks: { keys: Record<string, unknown>[] };
   issuer: string;
   serverCard: unknown;
@@ -530,9 +530,9 @@ export class McpPaymentsServer {
    * action is within the mission's authority are shown.
    */
   toolsList(token: TokenFacts): ToolDef[] {
-    const view = this.deps.loadView(token.mission.id);
-    if (!view) return [];
-    const granted = new Set(view.authority_set.flatMap((e) => e.actions));
+    const loaded = this.deps.loadView(token.mission.id);
+    if (!loaded) return [];
+    const granted = new Set(loaded.view.authority_set.flatMap((e) => e.actions));
     return TOOLS.filter((t) => granted.has(t.action));
   }
 

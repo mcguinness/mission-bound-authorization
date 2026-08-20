@@ -83,6 +83,10 @@ let server: McpPaymentsServer;
 let root: string;
 let leafTools: AATTools;
 
+/** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
+ *  at this read (Finding 1); `allowedFreshnessSources` below declares "load_view" as trusted. */
+const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
+
 async function dpopProof(
   htu: string,
   keys: { privateKey: CryptoKey; publicKey: CryptoKey } = delegateKeys,
@@ -162,12 +166,13 @@ beforeAll(async () => {
       evidence: new EvidenceStore(),
       fga: {} as unknown as Fga,
       modelId: "m",
-      loadView: () => view,
+      loadView,
       instanceEpoch: "epoch-1",
       sourceDigest: "sha-256:x",
+      allowedFreshnessSources: new Set(["load_view"]),
     }),
     payments: new PaymentsStore(),
-    loadView: () => view,
+    loadView,
     jwks: { keys: [asPub] },
     issuer: AS_ISS,
     serverCard: {},
@@ -208,9 +213,10 @@ describe("attenuation chain: verify + leaf enforcement", () => {
       evidence: new EvidenceStore(),
       fga: {} as unknown as Fga, // never reached: the leaf guard precedes the PDP
       modelId: "m",
-      loadView: () => view,
+      loadView,
       instanceEpoch: "epoch-1",
       sourceDigest: "sha-256:x",
+      allowedFreshnessSources: new Set(["load_view"]),
     });
     const res = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, facts);
     expect(res.permitted).toBe(false);
@@ -261,9 +267,10 @@ d("attenuation chain: PEP permits an in-leaf action (OpenFGA)", () => {
       evidence: new EvidenceStore(),
       fga,
       modelId,
-      loadView: () => view,
+      loadView,
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf(card),
+      allowedFreshnessSources: new Set(["load_view"]),
     });
     const res = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, facts);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
