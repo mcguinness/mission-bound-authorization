@@ -4436,9 +4436,33 @@
      "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable observed_at with an unrecognized source -- denies stale_state, never permits, for every high-consequence class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at beyond the skew tolerance denies stale_state, for every high-consequence class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation from a source outside the deployment's allowed set denies stale_state, for every high-consequence class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Two arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), and state absent entirely for a class that requires an active source (#608 GAP 2, the added unconditional mapping). The added test asserts the absent-member arm for all three high-consequence classes (irreversible_action, external_commitment, privileged_administration) in one case, with sibling unconditional cases in the same file covering the fresh-present and stale-present arms, plus a boundary control: a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",

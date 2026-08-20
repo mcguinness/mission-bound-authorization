@@ -59,6 +59,7 @@ const opts = {
   now: () => NOW,
   stalenessBoundSeconds,
   relationForAction,
+  allowedFreshnessSources: new Set(["status"]),
 };
 
 describe("classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification)", () => {

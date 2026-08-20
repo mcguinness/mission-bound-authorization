@@ -70,6 +70,7 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBoundSeconds,
   relationForAction,
+  allowedFreshnessSources: new Set(["status"]),
 });
 
 d("PDP decisions against OpenFGA (@spec authzen)", () => {

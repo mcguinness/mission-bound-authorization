@@ -67,6 +67,7 @@ const optsFor = (actionClass: string) => ({
   requiresActionApproval: (_action: string, ac: string | undefined) => ac === actionClass,
   maxApprovalAgeSeconds: 300,
   relationForAction,
+  allowedFreshnessSources: new Set(["status"]),
 });
 
 describe("action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant)", () => {

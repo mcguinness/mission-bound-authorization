@@ -32,6 +32,15 @@ import {
  */
 const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
+/**
+ * @spec runtime#state-freshness: the default allowed future skew for
+ * `observed_at`, seconds. Small enough to absorb ordinary clock drift
+ * between a state source and the PDP without meaningfully widening even the
+ * tightest published staleness bound (30s for irreversible_action);
+ * configurable per deployment via `EvaluateOptions.freshnessSkewToleranceSeconds`.
+ */
+const DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS = 5;
+
 /** @spec authzen#context-approval */
 export interface ActionApproval {
   id: string;
@@ -104,6 +113,22 @@ export interface EvaluateOptions {
   maxApprovalAgeSeconds?: number;
   /** For requestable denials: sign the PDP denial binding + the ARS endpoint. */
   requestable?: { sign: CryptoKey; kid: string; endpoint: string };
+  /**
+   * @spec runtime#state-freshness: "A runtime deployment MUST define the
+   * Mission state source it trusts for each enforcement scope." A presented
+   * `context.freshness.source` outside this set is untrusted, denied the
+   * same way as a stale or malformed observation. Omitting this option
+   * denies every presented freshness: absent a declared set, no source is
+   * trusted, never the reverse (fail closed on missing config, not open).
+   */
+  allowedFreshnessSources?: ReadonlySet<string>;
+  /**
+   * @spec runtime#state-freshness: allowed future clock skew for
+   * `observed_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
+   * Beyond this, a future-dated observation denies rather than passing
+   * through on the negative age it produces.
+   */
+  freshnessSkewToleranceSeconds?: number;
 }
 
 let decisionCounter = 0;
@@ -167,8 +192,26 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // floor the draft treats token-lifetime expiry as itself a conforming
   // state source, so an absent member there is not by itself a refusal.
   if (req.context.freshness) {
-    const ageMs = now().getTime() - Date.parse(req.context.freshness.observed_at);
-    if (ageMs > opts.stalenessBoundSeconds(actionClass) * 1000) return deny("stale_state");
+    const observedAtMs = Date.parse(req.context.freshness.observed_at);
+    const ageMs = now().getTime() - observedAtMs;
+    const skewToleranceMs =
+      (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
+    const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
+    // A malformed timestamp (non-finite), one dated far enough in the future
+    // to be fabricated rather than ordinary clock drift, or a source outside
+    // the deployment's declared set: none of these let the PDP actually
+    // establish Mission state from this observation, so each denies the same
+    // way as present-but-stale (@spec runtime#state-freshness, "cannot
+    // establish ... within the staleness bound"), never permits on an
+    // unverifiable input.
+    if (
+      !Number.isFinite(observedAtMs) ||
+      ageMs < -skewToleranceMs ||
+      ageMs > opts.stalenessBoundSeconds(actionClass) * 1000 ||
+      !sourceTrusted
+    ) {
+      return deny("stale_state");
+    }
   } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
     return deny("stale_state");
   }
