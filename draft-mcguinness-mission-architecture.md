@@ -234,6 +234,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-transaction-authorization:
+    title: "Mission Transaction Authorization Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -2595,6 +2603,109 @@ Two deployments at the same level under different bindings can hold
 different claims; the MAS modes are the worked case
 ({{I-D.draft-mcguinness-mission-authority-server}}). The claims, not
 the level, are what a relying party compares.
+
+## Mission Binding Properties {#binding-properties}
+
+Whether an operation is bound to a Mission is not one question but
+three independent ones: who selected and attached the Mission to
+this work item (attachment provenance), whether the acting
+credential's authority was issued and bounded for the Mission
+(credential binding), and whether one authenticated permit covers
+these exact operation inputs (action binding). The dimensions are
+independent: a native Mission-bound token has strong credential
+binding with no harness in sight, a trusted harness attributes work
+items precisely while the credential is an ordinary bearer token,
+and an action-bound permit can exist over either. No single ladder
+orders them, so the family names the properties directly, as a
+vector, and a deployment claims the combination each path actually
+has.
+
+| Property | Meaning | Minimum proof |
+| --- | --- | --- |
+| `mission-reference-selected` | A Mission tuple was supplied for routing and selection | The canonical (issuer, mission id) pair; grants nothing and makes no security claim |
+| `work-item-bound` | A trusted component bound that tuple to this session, queue, or task item | An authenticated attacher, a tamper-resistant work-item identifier, and stated inheritance and retry rules |
+| `credential-correlated` | The presented credential is correlated to the Mission's parties | A mapping join or Mission Join Assertion ({{I-D.draft-mcguinness-mission-authority-server}}), with its stated ceiling |
+| `credential-mission-bound` | The credential's authority was issued or derived for the Mission | The seven equivalence properties below |
+| `instance-bound` | The concrete acting instance proves possession of the bound key | Verified instance identity plus `cnf` or an equivalent sender proof |
+| `action-bound` | An authenticated permit authorizes one operation, resource, and input projection | The permit's full binding, defined below |
+{: title="Mission binding properties"}
+
+The properties are claimed per covered Authorization Server,
+resource, and action path, never as a product-wide maximum: a mixed
+estate claims what each path has, and a weaker path never inherits a
+stronger path's claim from the deployment's name. Where policy
+requires a property on a path, its absence denies; nothing falls
+back silently to a weaker binding.
+
+**Credential-mission-bound** is defined by equivalence, not by one
+artifact. For the covered path the credential establishes all of:
+
+1. a trusted issuer authorized to issue for the Mission;
+2. the canonical (`mission.issuer`, `mission.id`) pair and the
+   recorded `authority_hash`;
+3. an issued authority projection no broader than the Mission's
+   Authority Set for the target audience;
+4. the mapped subject, the requesting `client_id`, and actor or
+   delegation context where applicable;
+5. sender constraint for the acting instance and key;
+6. bounded lifetime plus active-state issuance and refresh gates; and
+7. an auditable derivation link to the Mission authorization: an
+   Issuance Grant `jti`
+   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a native
+   issuance record ({{I-D.draft-mcguinness-oauth-mission}}), a
+   cross-domain projection's provenance
+   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or an
+   equivalently specified artifact.
+
+Native Mission-bound issuance, the Mission Issuance Grant, and a
+conforming cross-domain exchange all satisfy the one property; a
+Mission Join Assertion fails properties 3, 6, and 7 by design, which
+is what separates correlation from issuance.
+
+**Action-bound** requires the authenticated permit and its full
+binding: the Mission, the credential or actor and key, the action
+and resource, and the normalized parameters or complete request
+projection, under the permit's validity and use controls. The
+transaction token of
+{{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} and
+a runtime permit carrying the parameter binding
+({{I-D.draft-mcguinness-mission-authzen}}) are the family's two
+discharges. An evaluation identifier alone is a correlator, never
+the property: it qualifies only where dereferencing it through an
+authenticated, audience-bound, freshness- and use-controlled permit
+store yields that same full binding.
+
+Deployments claim compositions, and a claimed composition requires
+every member property:
+
+- **harness-attributed**: `work-item-bound`, under the attacher and
+  inheritance rules the harness states
+  ({{I-D.draft-mcguinness-mission-harness}});
+- **mission-credential-bound**: `credential-mission-bound` plus
+  `instance-bound`, end to end;
+- **runtime-action-bound**: authoritative Mission establishment plus
+  `action-bound`; and
+- **work-item-attributable**: `work-item-bound` plus `action-bound`,
+  binding the executed action to its originating work item.
+
+The mechanism mapping is conservative: a propagated
+Mission-Reference is selection only; a mapping join is
+`credential-correlated`, with its equivalence-class ambiguity; a
+Mission Join Assertion is a stronger, token- and key-specific
+`credential-correlated`, still never issuance; a trusted harness
+supplies `work-item-bound` where its attacher requirements hold; a
+native or issuance-grant-derived token is
+`credential-mission-bound`, and `instance-bound` only with
+end-to-end sender constraint; a verified transaction token or
+parameter-bound runtime permit is `action-bound`.
+
+Binding properties and the assurance claims above compose rather
+than repeat: a binding property says whose Mission a path's work and
+credentials are bound to; an assurance claim says what the
+deployment's enforcement proves. Credential-level and action-level
+binding likewise compose rather than substitute, and the Enforcement
+Scope Statement and the Mission Deployment Profile
+({{deployment-profile}}) carry both, per path.
 
 # The Mission Deployment Profile {#deployment-profile}
 
