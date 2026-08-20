@@ -150,7 +150,7 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
     expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
     expect(permitted.decision?.decision).toBe(true);
     // Reevaluate mode: the result is a fresh PDP decision, not a new token.
-    expect(permitted.decision?.context.permit_expires_at).toBeDefined();
+    expect((permitted.decision?.context.conditions as { valid_until?: string } | undefined)?.valid_until).toBeDefined();
   });
 
   it("rejects an approval bound to a different parameter_digest", async () => {

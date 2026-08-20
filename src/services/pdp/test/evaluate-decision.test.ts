@@ -96,14 +96,14 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
 
     expect(withoutApproval.decision).toBe(false);
     expect(withoutApproval.context.denial_reason).toBe("out_of_authority");
-    expect(withoutApproval.context.permit_expires_at).toBeUndefined();
+    expect(withoutApproval.context.conditions).toBeUndefined();
     // Identical outcome with a valid, matching, fresh approval present: the
     // approval confers nothing on its own, and evaluate() (a stateless pure
     // function, D28) carries no state from the approval past this one call.
     // The deny also hands the PEP nothing permit-shaped to act on either way.
     expect(withApproval.decision).toBe(false);
     expect(withApproval.context.denial_reason).toBe("out_of_authority");
-    expect(withApproval.context.permit_expires_at).toBeUndefined();
+    expect(withApproval.context.conditions).toBeUndefined();
     expect(withApproval.context.entry_digest).toBeUndefined();
   });
 
@@ -180,7 +180,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("stale_state");
     // A deny hands the PEP no permit-shaped fields to act on.
-    expect(dec.context.permit_expires_at).toBeUndefined();
+    expect(dec.context.conditions).toBeUndefined();
     expect(dec.context.entry_digest).toBeUndefined();
   });
 

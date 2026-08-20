@@ -246,7 +246,7 @@ describe("a PDP deny is terminal for the attempted action: no execution, and no 
     // caller-supplied prior decision; every call re-derives one.
     const permitted = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, TOKEN);
     expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
-    expect(permitted.decision?.context.permit_expires_at).toBeDefined();
+    expect((permitted.decision?.context.conditions as { valid_until?: string } | undefined)?.valid_until).toBeDefined();
 
     // Authority withdrawn: the SAME loadView now resolves to an entry-less
     // view. The fresh evaluation denies, and this attempt has nothing to

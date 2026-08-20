@@ -332,18 +332,22 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
   }
 
   // Every currently-recognized permit-context member at once (decision
-  // metadata + the three genuine conditions): a control proving the
-  // enumeration below does not false-positive on the permit shape the real
-  // PDP actually produces.
+  // metadata + the profile's own top-level members + the three genuine
+  // conditions, NESTED under `conditions` per @spec authzen#response-context):
+  // a control proving the enumeration below does not false-positive on the
+  // permit shape the real PDP actually produces.
   const FULLY_RECOGNIZED_CONTEXT = {
     decision_id: "dec_1",
+    evaluation_id: "dec_1",
     policy_view_id: "pv_1",
     action_class: "irreversible_action",
     class_source: "deployment",
-    permit_expires_at: new Date(Date.now() + 120_000).toISOString(),
-    single_use: true,
     entry_digest: "sha-256:entry",
-    parameter_digest: "sha-256:params",
+    conditions: {
+      valid_until: new Date(Date.now() + 120_000).toISOString(),
+      use_limit: 1,
+      parameter_digest: "sha-256:params",
+    },
   };
 
   it("a permit whose context carries only recognized members is granted", async () => {
@@ -354,11 +358,14 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
   });
 
-  it("a permit whose context carries ONE unrecognized member is refused with zero effect, never silently granted", async () => {
+  it("a permit whose context carries ONE unrecognized member INSIDE conditions is refused with zero effect, never silently granted", async () => {
     const { pep, evidence } = build();
     vi.mocked(pdp.evaluate).mockResolvedValueOnce({
       decision: true,
-      context: { ...FULLY_RECOGNIZED_CONTEXT, require_step_up: true },
+      context: {
+        ...FULLY_RECOGNIZED_CONTEXT,
+        conditions: { ...FULLY_RECOGNIZED_CONTEXT.conditions, require_step_up: true },
+      },
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
@@ -368,11 +375,35 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     expect(refusal?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
+  it("a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted -- the must-understand rule is scoped to conditions, never the whole response context", async () => {
+    const { pep, evidence } = build();
+    vi.mocked(pdp.evaluate).mockResolvedValueOnce({
+      decision: true,
+      context: { ...FULLY_RECOGNIZED_CONTEXT, next_action: "none", some_future_response_member: "x" },
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
+  });
+
+  it("a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition", async () => {
+    const { pep, evidence } = build();
+    vi.mocked(pdp.evaluate).mockResolvedValueOnce({
+      decision: true,
+      context: { ...FULLY_RECOGNIZED_CONTEXT, obligations: [{ type: "step_up" }] },
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
+    expect(res.permitted).toBe(false);
+    expect(res.refusal_reason).toBe("unfulfillable_obligation");
+    const refusal = evidence.forMission(missionId).find((e) => e.kind === "refusal");
+    expect(refusal?.refusal_reason).toBe("unfulfillable_obligation");
+  });
+
   it("a DENY decision (no permit) is unaffected by the recognized-member enumeration", async () => {
     const { pep } = build();
     vi.mocked(pdp.evaluate).mockResolvedValueOnce({
       decision: false,
-      context: { decision_id: "dec_2", policy_view_id: "pv_2", denial_reason: "out_of_authority" },
+      context: { decision_id: "dec_2", evaluation_id: "dec_2", policy_view_id: "pv_2", denial_reason: "out_of_authority", reason: "out_of_authority" },
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);

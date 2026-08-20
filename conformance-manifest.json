@@ -3939,7 +3939,7 @@
     "normative": "an unrecognized decision condition makes the permit unusable, and an unfulfilled or unrecognized obligation is an effective deny"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
@@ -3949,12 +3949,24 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries ONE unrecognized member is refused with zero effect, never silently granted",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries ONE unrecognized member INSIDE conditions is refused with zero effect, never silently granted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted -- the must-understand rule is scoped to conditions, never the whole response context",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#610 GAP 2 fixes and proves the CONDITION half only: pep.ts enumerates the permit-path decision.context members it recognizes (the three genuine conditions, parameter_digest, permit_expires_at, single_use, plus decision metadata that is never a reliance constraint) and refuses with zero effect on any other member, tested with a synthetic unrecognized member and a full-recognized-set control. The OBLIGATIONS half of this row (\"an unfulfilled or unrecognized obligation is an effective deny\") has no PDP-output arm here: @mission/pdp's evaluate() never emits an `obligations` member in decision.context at all, so that half stays unproven; partial, not tested."
+   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: this PEP implements no obligation type, so obligations.length > 0 is, by definition, unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired)."
   },
   {
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
@@ -7200,9 +7212,28 @@
     "normative": "a parameter-bound permit's conditions.parameter_digest equals the request's supplied digest, and the executing PEP enforces exactly that binding"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No test asserts conditions.parameter_digest equality to the request's supplied parameter_digest, or that the PEP enforces that exact binding; the previously mapped test asserts only the entry_digest resolved-scope anchor and was removed as non-probative for this clause."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "an action-bound approval is reverified against the concrete parameters, and a parameter change after approval invalidates it (@spec runtime#action-approval) > an approval whose digest matched the parameters at approval time no longer satisfies the gate once the record changes underneath it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "evaluate.test.ts proves the PDP echoes the request's parameter_digest into conditions.parameter_digest unchanged (equality, not a recomputation). The PEP's enforcement of the exact binding is proven by the reverification tests: server.ts's callReadTool/callWriteTool/callTransactionTool all read the digest from decision.context.conditions.parameter_digest and recompute-and-compare against authoritative state immediately before execution, refusing parameter_mismatch on any divergence (proven for both the write path, pre-existing, and the list-read path, #612 finding 1). Known limitation, unrelated to this row's PEP-enforcement text: the request-side carriage this profile's current examples show (action.properties.parameter_digest) differs from this deployment's context.parameter_digest placement; that request-shape divergence is pre-existing and out of this finding's scope (response-context only), flagged here rather than silently carried."
   },
   {
    "id": "authzen.response-context.valid-until-required-and-bounded",
@@ -7244,15 +7275,22 @@
     "normative": "every high-consequence-class permit carries use_limit: 1, and the PEP refuses a high-consequence permit lacking it, applying its own classification floor independent of the PDP's internal class label"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
-     "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
-     "level": "endpoint",
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "in-authority remittance send under external_commitment -> permit with conditions.use_limit 1 too (both high-consequence classes, not just irreversible)",
+     "level": "unit",
      "surface": "resource-operation"
     }
-   ]
+   ],
+   "notes": "#612 finding 2 downgrades this row honestly: it was marked tested against transaction.test.ts's scenario 4, which proves the transaction tier executes a wire transfer exactly once through the hard-coded redemption/lease/consumption state machine, but never reads or asserts on conditions.use_limit (or the prior flat single_use) at all -- that test is not probative for this row's wire-shape text. The value-level bug this migration also fixes: evaluate.ts previously set single_use only for action_class === \"irreversible_action\", so a send_remittance_email (external_commitment, also a high-consequence class per runtime#classification) permit never carried a use limit. The PDP half is now directly tested for BOTH high-consequence classes present in this deployment (irreversible_action, external_commitment; privileged_administration is unused). The PEP-side half of this row's text (\"the PEP MUST treat a high-consequence permit lacking it as invalid ... applying its own deployment classification floor independent of the PDP's internal class label\") is NOT implemented anywhere in this deployment: server.ts's transaction-tier single-use redemption is unconditional on the tool identity, never gated on reading conditions.use_limit and comparing it against the PEP's own floor. Partial, not tested, until that PEP-side floor check exists."
   },
   {
    "id": "authzen.response-context.honor-every-condition-or-refuse",
@@ -7273,8 +7311,16 @@
     "normative": "a permit whose conditions include a member the PEP does not recognize is treated as invalid, and the PEP does not release the action's effect under it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries ONE unrecognized member INSIDE conditions is refused with zero effect, never silently granted",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Proven directly: a permit whose conditions object carries a member outside {parameter_digest, valid_until, use_limit} (RECOGNIZED_CONDITIONS in pep.ts) is refused unrecognized_condition with zero effect -- the action never executes, and the refusal itself is evidenced. Scoped correctly to conditions members only (a companion test proves an unknown TOP-LEVEL member, outside conditions, does not trigger this rule)."
   },
   {
    "id": "authzen.response-context.no-permit-conditions-to-unestablished-pep",
@@ -7339,8 +7385,28 @@
     "normative": "the response context carries evaluation_id (string) on every decision, reason (string) whenever decision is false, and conditions (object) whenever decision is true for a consequential action"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "in-authority read -> permit",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "out-of-authority action -> deny out_of_authority",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "evaluation_id is asserted present on both a permit and a deny decision; reason is asserted equal to the denial classification on a deny, and conditions is asserted present (as an object with valid_until/parameter_digest/use_limit) on a permit and absent on a deny. evaluation_id's value is additionally asserted equal to the pre-existing decision_id (same correlation identifier, additive carriage, never a second independent id)."
   },
   {
    "id": "authzen.obligations.permit-fulfillment-and-denial-execution",

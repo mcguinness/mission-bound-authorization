@@ -164,31 +164,23 @@ function deriveVendorScope(
 }
 
 /**
- * @spec runtime#decision-output — the permit's decision CONDITIONS: the
- * declarative constraints on RELYING on the permit that the draft names
- * verbatim ("a request binding, a validity bound, a use limit"), which map
- * 1:1 onto this PDP's three permit-only `decision.context` members
- * (evaluate.ts's permit branch): `parameter_digest` (request binding),
- * `permit_expires_at` (validity bound), `single_use` (use limit).
+ * @spec authzen#response-context, runtime#decision-output — the permit's
+ * decision CONDITIONS live NESTED inside `decision.context.conditions`
+ * (never as flat top-level members): the declarative constraints on RELYING
+ * on the permit that the draft names verbatim ("a request binding, a
+ * validity bound, a use limit"), which map 1:1 onto the profile's own
+ * condition names: `parameter_digest` (request binding), `valid_until`
+ * (validity bound), `use_limit` (use limit). A member inside `conditions`
+ * this PEP does not recognize makes the permit unusable; a top-level member
+ * OUTSIDE `conditions` (decision metadata such as `decision_id`,
+ * `policy_view_id`, `action_class`, `class_source`, `entry_digest`, or a
+ * profile response member such as `evaluation_id`/`reason`) is accepted
+ * without enumeration -- this PEP reads the specific ones it needs and
+ * otherwise ignores what it does not, since the profile's must-understand
+ * rule for an unrecognized member is scoped to `conditions` alone, never to
+ * the whole response context.
  */
-const RECOGNIZED_PERMIT_CONDITIONS = new Set(["parameter_digest", "permit_expires_at", "single_use"]);
-
-/**
- * @spec runtime#decision-output — permit-path `decision.context` members
- * that are evaluation METADATA and evidence, never a condition on relying on
- * the permit: correlation identifiers and the deployment's action
- * classification (both echoed on deny contexts too, so they cannot be
- * reliance constraints specific to a permit), plus `entry_digest`, the
- * evidence resolved-scope anchor (@spec authzen#decision-evidence-object,
- * not named among the Decision Output lanes at all).
- */
-const RECOGNIZED_PERMIT_METADATA = new Set([
-  "decision_id",
-  "policy_view_id",
-  "action_class",
-  "class_source",
-  "entry_digest",
-]);
+const RECOGNIZED_CONDITIONS = new Set(["parameter_digest", "valid_until", "use_limit"]);
 
 export interface PepDeps {
   payments: PaymentsStore;
@@ -540,6 +532,10 @@ export class Pep {
       // @spec authzen `entry_digest`: the PDP's resolved-scope anchor, copied
       // from the decision context so the retained record cites the entry.
       ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
+      // @spec authzen#response-context — Decision Evidence records the SAME
+      // `evaluation_id` the PDP response carries, additive alongside the
+      // pre-existing `decision_id` copy this record already keeps.
+      ...(decision.context.evaluation_id ? { evaluation_id: decision.context.evaluation_id as string } : {}),
       mission_id: view.id,
       authority_hash: view.authority_hash,
       action: mapping.action,
@@ -643,25 +639,37 @@ export class Pep {
       return result;
     }
 
-    // @spec runtime#decision-output — "on a permit, decision conditions:
-    // declarative constraints on relying on the permit (a request binding, a
-    // validity bound, a use limit) ... a condition the enforcing component
-    // does not recognize makes the permit unusable, the reliance counterpart
-    // of the obligations rule." A permit's decision.context here carries
-    // three genuine conditions (parameter_digest = request binding,
-    // permit_expires_at = validity bound, single_use = use limit) alongside
-    // decision metadata this PEP always expects (decision_id, policy_view_id,
-    // action_class/class_source, entry_digest, the evidence resolved-scope
-    // anchor per @spec authzen#decision-evidence-object): none of which is a
-    // constraint on RELYING on the permit; they appear on deny contexts too.
-    // Any OTHER member is a condition this PEP does not recognize, so the
-    // permit it rides on is unusable: refuse with zero effect, never ignore.
-    const unrecognizedConditions = Object.keys(decision.context).filter(
-      (k) => !RECOGNIZED_PERMIT_CONDITIONS.has(k) && !RECOGNIZED_PERMIT_METADATA.has(k),
-    );
+    // @spec authzen#response-context, runtime#decision-output — "a condition
+    // the enforcing component does not recognize makes the permit unusable."
+    // The check is scoped to `decision.context.conditions` ONLY (the
+    // profile's must-understand rule names conditions specifically, never
+    // the whole response context): a permit's `conditions` carries the
+    // three genuine reliance constraints (parameter_digest = request
+    // binding, valid_until = validity bound, use_limit = use limit). ANY
+    // other member inside `conditions` is one this PEP does not recognize,
+    // so the permit it rides on is unusable: refuse with zero effect, never
+    // ignore.
+    const conditions = decision.context.conditions as Record<string, unknown> | undefined;
+    const unrecognizedConditions = conditions
+      ? Object.keys(conditions).filter((k) => !RECOGNIZED_CONDITIONS.has(k))
+      : [];
     if (unrecognizedConditions.length > 0) {
       this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
       return { permitted: false, refusal_reason: "unrecognized_condition" };
+    }
+
+    // @spec authzen#obligations — an obligation MAY accompany a permit; the
+    // PEP MUST fulfill every obligation before releasing the action's effect
+    // and MUST treat an unrecognized or unfulfillable obligation as an
+    // effective deny, the obligations-lane counterpart of the conditions
+    // check above. This PEP implements NO obligation type yet, so ANY
+    // obligation present is, by definition, unfulfillable: its mere presence
+    // is a deny, never a silently granted permit and never folded into the
+    // conditions refusal reason above (a distinct rule, a distinct reason).
+    const obligations = decision.context.obligations as unknown[] | undefined;
+    if (obligations && obligations.length > 0) {
+      this.recordRefusal(token, "unfulfillable_obligation", mapping.action, view);
+      return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }
 
     return {

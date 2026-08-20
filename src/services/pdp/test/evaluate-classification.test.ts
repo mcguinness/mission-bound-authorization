@@ -6,8 +6,9 @@
  * higher it MUST be gated and bound as the table requires."
  *
  * evaluateInner treats `context.action_class` as an opaque label: it is read
- * only to pick a staleness bound, a permit TTL/single_use flag, and to decide
- * whether an action-bound approval is required (which only ever ADDS a gate).
+ * only to pick a staleness bound, a permit TTL and `conditions.use_limit`
+ * (@spec authzen#response-context), and to decide whether an action-bound
+ * approval is required (which only ever ADDS a gate).
  * No branch in evaluateInner skips or loosens the authority-entry-match,
  * containment, FGA, amount, or approval gates based on the class label. This
  * test proves that structurally: no action_class value opens a bypass around

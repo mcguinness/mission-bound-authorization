@@ -84,6 +84,10 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     expect(dec.context.policy_view_id).toMatch(/^sha-256:/);
     expect(dec.context.decision_id).toBeDefined();
+    // @spec authzen#response-context — evaluation_id is the profile's own
+    // REQUIRED correlation identifier, carried alongside decision_id.
+    expect(dec.context.evaluation_id).toBeDefined();
+    expect(dec.context.evaluation_id).toBe(dec.context.decision_id);
   });
 
   it("a permit's context carries the entry_digest resolved-scope anchor", async () => {
@@ -96,7 +100,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     );
   });
 
-  it("in-authority execute under the cap -> permit with single_use for irreversible", async () => {
+  it("in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible", async () => {
     const dec = await evaluate(
       req({
         action: { name: "payments:payment.execute" },
@@ -111,14 +115,41 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       opts(view()),
     );
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
-    expect(dec.context.single_use).toBe(true);
-    expect(dec.context.parameter_digest).toBe("sha-256:pd");
+    const conditions = dec.context.conditions as { use_limit?: number; parameter_digest?: string; valid_until?: string };
+    expect(conditions.use_limit).toBe(1);
+    expect(conditions.parameter_digest).toBe("sha-256:pd");
+    expect(conditions.valid_until).toBeDefined();
+  });
+
+  it("in-authority remittance send under external_commitment -> permit with conditions.use_limit 1 too (both high-consequence classes, not just irreversible)", async () => {
+    const dec = await evaluate(
+      req({
+        action: { name: "payments:invoice.read" },
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          action_class: "external_commitment",
+          parameter_digest: "sha-256:pd2",
+        },
+      }),
+      opts(view()),
+    );
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    const conditions = dec.context.conditions as { use_limit?: number };
+    expect(conditions.use_limit).toBe(1);
   });
 
   it("out-of-authority action -> deny out_of_authority", async () => {
     const dec = await evaluate(req({ action: { name: "payments:remittance.send" } }), opts(view()));
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
+    // @spec authzen#response-context — evaluation_id is REQUIRED on every
+    // decision (permit or deny), and reason is REQUIRED whenever decision is
+    // false, both carried alongside the pre-existing decision_id/denial_reason.
+    expect(dec.context.evaluation_id).toBeDefined();
+    expect(dec.context.reason).toBe("out_of_authority");
+    // A deny never carries conditions (permit-only per the response contract).
+    expect(dec.context.conditions).toBeUndefined();
   });
 
   it("contained action -> deny authority_contained; never-granted action stays out_of_authority", async () => {

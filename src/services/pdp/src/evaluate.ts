@@ -101,15 +101,26 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
   const decisionId = newDecisionId();
+  // @spec authzen#response-context — `evaluation_id` is the profile's own
+  // REQUIRED correlation identifier (ARAP's `evaluation_id`), additive
+  // alongside the pre-existing `decision_id` deployment metadata (still load-
+  // bearing as the permit id downstream: server.ts's redeemPermit/
+  // operationKey). Both carry the SAME value; this is a carriage addition,
+  // never a rename.
   const base = (extra: Record<string, unknown>) => ({
     decision_id: decisionId,
+    evaluation_id: decisionId,
     policy_view_id: pvid,
     ...(actionClass ? { action_class: actionClass, class_source: "deployment" } : {}),
     ...extra,
   });
+  // @spec authzen#response-context — `reason` is the profile's own response
+  // member for the denial classification; `denial_reason` (the pre-existing
+  // deployment field, also the Decision Evidence member name per
+  // authzen#failure-condition-coverage) is kept alongside it, additive.
   const deny = (denial_reason: DenialReason): Decision => ({
     decision: false,
-    context: base({ denial_reason }),
+    context: base({ denial_reason, reason: denial_reason }),
   });
 
   // 1. View consistency (@spec: view_inconsistent).
@@ -160,7 +171,11 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     if (contained) {
       return {
         decision: false,
-        context: base({ denial_reason: "authority_contained", containment_version: containment.version }),
+        context: base({
+          denial_reason: "authority_contained",
+          reason: "authority_contained",
+          containment_version: containment.version,
+        }),
       };
     }
   }
@@ -229,6 +244,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     if (!valid) {
       const ctx: Record<string, unknown> = base({
         denial_reason: "action_approval_required",
+        reason: "action_approval_required",
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
       });
       if (opts.requestable && req.context.parameter_digest) {
@@ -255,19 +271,35 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     }
   }
 
-  // Permit (@spec authzen permit shape). Properties declared; PEP redeems.
-  // The PDP's evidence contribution stays in the decision context (D28/D32):
-  // entry_digest anchors the Authority Set entry the permit was evaluated
-  // against (@spec authzen#decision-evidence-object, resolved-scope anchor).
+  // Permit (@spec authzen#response-context permit shape). Properties
+  // declared; PEP redeems. `entry_digest` (the evidence resolved-scope
+  // anchor, @spec authzen#decision-evidence-object) is NOT one of the
+  // profile's `conditions` -- it is not named among the response-context
+  // lanes at all -- so it stays top-level deployment metadata, unchanged.
+  // `conditions` carries the profile's three named condition members:
+  // `valid_until` (REQUIRED; was `permit_expires_at`), `use_limit`
+  // (REQUIRED exactly 1 for a high-consequence-class permit; was the
+  // boolean `single_use`), and `parameter_digest` (CONDITIONAL, present
+  // when the action was parameter-bound).
   const permitTtl = actionClass === "irreversible_action" ? 120 : 300;
-  const nowIso = new Date(now().getTime() + permitTtl * 1000).toISOString();
+  const validUntil = new Date(now().getTime() + permitTtl * 1000).toISOString();
+  // @spec runtime#classification — the high-consequence classes are
+  // irreversible_action, external_commitment, and privileged_administration
+  // (this deployment defines no privileged_administration action); the same
+  // pairing policy.ts's stalenessBoundSeconds already keys its tight bound
+  // on. Previously this checked only "irreversible_action", so a
+  // send_remittance_email (external_commitment) permit never carried a use
+  // limit at all -- a genuine value-level bug this migration also fixes.
+  const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment";
   return {
     decision: true,
     context: base({
-      permit_expires_at: nowIso,
-      single_use: actionClass === "irreversible_action",
       entry_digest: computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never),
-      ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
+      conditions: {
+        valid_until: validUntil,
+        ...(highConsequence ? { use_limit: 1 } : {}),
+        ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
+      },
     }),
   };
 }
