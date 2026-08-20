@@ -475,6 +475,42 @@ authoritative provenance of who approved and under what authority
 ({{I-D.draft-mcguinness-mission-approval-governance}}); this document
 neither restates nor requires it.
 
+## Subject Establishment {#subject-establishment}
+
+The destination-local subject the flow binds, from the approval of
+step 5 through the token of {{transaction-token}}, is established at
+admission and revalidated at completion:
+
+1. verify `subject_token` and establish its issuer-qualified
+   identity, the pair of its `iss` and its `sub`;
+2. establish the destination-local subject from that identity under
+   the configured namespace policy of {{subject-namespaces}};
+3. where the Origin Principal profile applies
+   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), co-resolve
+   that subject with `mission.subject` under the profile's
+   destination mapping rule; a conflict between them MUST be refused;
+4. persist, on the pending workflow, the issuer-qualified source
+   identity, the pinned destination-local subject, the origin
+   principal where present, and the identity and version of the
+   namespace policy that produced the pinned subject;
+5. at completion, resolve the current namespace policy against the
+   persisted source identity again and require it to produce the
+   pinned subject; a policy that no longer exists, no longer accepts
+   the identity, or produces any other value MUST be refused; and
+6. only then run the fresh decision of step 7 and mint the token.
+
+### Subject Namespaces {#subject-namespaces}
+
+A TAS MAY restrict which `subject_token` issuers and subject
+namespaces it accepts. Whether an accepted issuer shares this
+Authorization Server's subject namespace is configured trust policy,
+never inferred from request data. For a same-namespace issuer the
+verified `sub` is the destination-local subject, unchanged. For every
+accepted foreign namespace the TAS MUST apply an injective,
+issuer-qualified mapping from the pair (`iss`, `sub`) into its own
+namespace and use the mapped value. A missing, ambiguous, stale, or
+disabled mapping MUST be refused rather than guessed.
+
 ## Two-Phase Expiry {#two-phase-expiry}
 
 The challenge's `exp` bounds initial admission only: the Presenting
@@ -534,27 +570,17 @@ this profile's shape. Its claims:
   Never a list and never any other value.
 
 `sub`:
-: REQUIRED. The destination-local subject: the verified subject of
-  the presented `subject_token`, under this Authorization Server's
-  own subject semantics. Where the Origin Principal profile applies
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), the
+: REQUIRED. The destination-local subject, derived from the verified
+  issuer-qualified identity of the presented `subject_token` under
+  the establishment and revalidation rules of
+  {{subject-establishment}} and the namespace contract of
+  {{subject-namespaces}}: the pinned subject those rules produced at
+  admission and reconfirmed at completion, never a value derived a
+  second way at minting time. Where the Origin Principal profile
+  applies ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), the
   issuer-qualified origin principal travels in `mission.subject`,
   alongside the local subject and never in place of it. Never the
   Approver.
-
-  Copying `subject_token`'s verified `sub` directly is sound only
-  when its issuer and this Authorization Server's own issuer identify
-  the same subject namespace; the value MAY then be copied unchanged.
-  Otherwise the TAS MUST maintain its own injective mapping from
-  `subject_token`'s issuer-qualified (`iss`, `sub`) into its
-  namespace and emit the mapped value; a missing, ambiguous, stale,
-  or disabled mapping MUST be refused rather than guessed. Where the
-  Origin Principal profile applies, the resulting local subject
-  (copied or mapped) and `mission.subject` MUST resolve to the same
-  destination-local principal, consistent with that profile's
-  destination mapping rule
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); a conflict
-  between them MUST be refused the same way.
 
 `client_id`:
 : REQUIRED. The client authenticated at the transaction endpoint
