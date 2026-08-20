@@ -137,7 +137,7 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
 const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
 
 /**
- * @spec runtime#read-binding — the pure normal-form derivation for a bound
+ * @spec runtime#read-binding: the pure normal-form derivation for a bound
  * `list_invoices` read, over the CURRENT matched entry and the caller's
  * (possibly absent) `vendor_id`. Used at decision time (against the entry
  * `enforceInner` just matched) and again at {@link Pep.reverifyList} (against
@@ -164,7 +164,7 @@ function deriveVendorScope(
 }
 
 /**
- * @spec authzen#response-context, runtime#decision-output — the permit's
+ * @spec authzen#response-context, runtime#decision-output: the permit's
  * decision CONDITIONS live NESTED inside `decision.context.conditions`
  * (never as flat top-level members): the declarative constraints on RELYING
  * on the permit that the draft names verbatim ("a request binding, a
@@ -175,7 +175,7 @@ function deriveVendorScope(
  * OUTSIDE `conditions` (decision metadata such as `decision_id`,
  * `policy_view_id`, `action_class`, `class_source`, `entry_digest`, or a
  * profile response member such as `evaluation_id`/`reason`) is accepted
- * without enumeration -- this PEP reads the specific ones it needs and
+ * without enumeration: this PEP reads the specific ones it needs and
  * otherwise ignores what it does not, since the profile's must-understand
  * rule for an unrecognized member is scoped to `conditions` alone, never to
  * the whole response context.
@@ -260,7 +260,7 @@ export interface EnforceResult {
   refusal_reason?: string;
   effective?: EffectiveParams;
   /**
-   * @spec runtime#read-binding — present on a permitted `bindsVendorScope`
+   * @spec runtime#read-binding: present on a permitted `bindsVendorScope`
    * action (list_invoices): the NORMALIZED parameters `parameter_digest`
    * binds on the wire. `Pep.reverifyList` recomputes this same normal form
    * immediately before execution and refuses on a mismatch, the read-binding
@@ -433,7 +433,7 @@ export class Pep {
       // vendor_id is exactly that bulk form. `deriveVendorScope` is this
       // action's Operation Profile: it normalizes (entry, requested vendor_id)
       // to the canonical form above, which is what actually enters
-      // `parameter_digest` below -- previously nothing did, so no digest ever
+      // `parameter_digest` below; previously nothing did, so no digest ever
       // reached the PDP request or the reverification the write/transaction
       // paths already perform.
       const entry = view.authority_set.find(
@@ -457,24 +457,28 @@ export class Pep {
         // Bulk form, vendor-constrained entry: bind the RESULT SET to the
         // entry's own scope (never the unconstrained store). The set-level
         // authority is the Mission Record's own entry.constraints.vendors,
-        // read directly here, not derived from the FGA check below; that
-        // check names only ONE representative member of the allowlist
-        // (an empty allowlist still denies, since it has none to name), so
-        // it verifies "this entry's vendor scope is non-empty and reachable"
-        // rather than re-verifying every member independently. This is
-        // sound today because the FGA check on this domain model is a
-        // formality: deriveContextualTuples injects a contextual tuple that
-        // names exactly the object being checked (D26), so it always agrees
-        // with the entry. It would need a per-member check instead of a
-        // representative one if this model ever grows real PERSISTED
-        // per-vendor tuples that could disagree with the entry's own
-        // allowlist. The Decision Evidence this permit produces still
-        // anchors the FULL entry (entry_digest, @spec
-        // authzen#decision-evidence-object), so a verifier resolving that
-        // digest sees the true multi-vendor scope even though this
-        // in-process check only named one of its members.
+        // read directly here, not derived from the FGA check below.
+        //
+        // @spec runtime#read-binding: finding 3 (PR #612 author review), the
+        // FGA/PDP request names the FULL collection, not just one
+        // representative member: `vendor_ids` carries every vendor this read
+        // is about to return, and evaluateInner's step 6a checks each one
+        // independently (a denial on ANY member denies the whole read). An
+        // empty allowlist still denies, since UNSCOPED_VENDOR_OBJECT names no
+        // real vendor. `id`/`vendor_id` still name one representative member
+        // (the step-6 single check, unchanged, still runs first) so every
+        // OTHER single-object caller of this request shape is unaffected;
+        // `vendor_ids` is what makes the per-member check happen at all. The
+        // Decision Evidence this permit produces still anchors the FULL entry
+        // (entry_digest, @spec authzen#decision-evidence-object): that proves
+        // the Mission's OWN ceiling, never Resource policy's independent
+        // per-member say, which is what this member now actually proves.
         const representative = scope.vendor_scope[0] ?? UNSCOPED_VENDOR_OBJECT;
-        resourceObj = { type: "vendor", id: representative, properties: { vendor_id: representative } };
+        resourceObj = {
+          type: "vendor",
+          id: representative,
+          properties: { vendor_id: representative, vendor_ids: scope.vendor_scope },
+        };
       } else {
         // Bulk form, unconstrained entry: already entitled to every vendor,
         // so the read is bound to that full, documented scope, not an
@@ -532,7 +536,7 @@ export class Pep {
       // @spec authzen `entry_digest`: the PDP's resolved-scope anchor, copied
       // from the decision context so the retained record cites the entry.
       ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
-      // @spec authzen#response-context — Decision Evidence records the SAME
+      // @spec authzen#response-context: Decision Evidence records the SAME
       // `evaluation_id` the PDP response carries, additive alongside the
       // pre-existing `decision_id` copy this record already keeps.
       ...(decision.context.evaluation_id ? { evaluation_id: decision.context.evaluation_id as string } : {}),
@@ -639,7 +643,7 @@ export class Pep {
       return result;
     }
 
-    // @spec authzen#response-context, runtime#decision-output — "a condition
+    // @spec authzen#response-context, runtime#decision-output: "a condition
     // the enforcing component does not recognize makes the permit unusable."
     // The check is scoped to `decision.context.conditions` ONLY (the
     // profile's must-understand rule names conditions specifically, never
@@ -658,7 +662,7 @@ export class Pep {
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
-    // @spec authzen#obligations — an obligation MAY accompany a permit; the
+    // @spec authzen#obligations: an obligation MAY accompany a permit; the
     // PEP MUST fulfill every obligation before releasing the action's effect
     // and MUST treat an unrecognized or unfulfillable obligation as an
     // effective deny, the obligations-lane counterpart of the conditions

@@ -41,7 +41,7 @@ export function buildEffectiveParams(input: {
 }
 
 /**
- * @spec runtime#read-binding — the normalized parameter form for a bound
+ * @spec runtime#read-binding: the normalized parameter form for a bound
  * LIST read (`list_invoices`): distinct from {@link EffectiveParams}
  * (invoice-shaped writes/reads), since a bulk read has no single invoice to
  * bind. `vendor_scope_source` is the canonical normal form's discriminator,

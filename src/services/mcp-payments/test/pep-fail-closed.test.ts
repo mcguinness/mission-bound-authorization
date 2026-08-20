@@ -192,7 +192,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     expect(invoices.map((i) => i.vendor_id)).toEqual(["acme"]);
   });
 
-  // @spec runtime#read-binding (finding 1, #612 author review) -- result-set
+  // @spec runtime#read-binding (finding 1, PR #612 author review): result-set
   // filtering alone is not Runtime parameter binding: a `parameter_digest`
   // must actually enter the PDP request/Decision Evidence, and it must be
   // reverified immediately before execution exactly as the write/transaction
@@ -235,7 +235,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       (r.result as Array<{ vendor_id: string }>).map((i) => i.vendor_id).sort();
     // Both serve the identical result set...
     expect(vendorsOf(resA)).toEqual(vendorsOf(resB));
-    // ...but the canonical normal form -- and so parameter_digest -- never
+    // ...but the canonical normal form, and so parameter_digest, never
     // collapses the two: a vendor-constrained entry (source "entry") and the
     // explicit all-in-scope marker (source "all") are distinct normal forms
     // regardless of what they happen to enumerate.
@@ -282,7 +282,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
 
     const res = await server.callReadTool("list_invoices", {}, TOKEN, () => {
       // Mid-flight, exactly in the decision->execute window: the Mission's
-      // own entry narrows from [acme, globex] to [acme] -- mirroring how
+      // own entry narrows from [acme, globex] to [acme], mirroring how
       // callWriteTool's beforeReverify mutates the payments store for a
       // write's TOCTOU proof.
       current = {
@@ -293,6 +293,85 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("parameter_mismatch");
     expect(res.result).toBeUndefined();
+  });
+});
+
+/**
+ * @spec runtime#read-binding: finding 3 (PR #612 author review), one
+ * representative vendor cannot authorize a multi-vendor result. The
+ * PDP/FGA request previously named only the entry's first allowed vendor
+ * while execution returned every vendor in the entry. entry_digest proves
+ * the Mission ceiling, never that Resource policy permitted every returned
+ * vendor. Unconditional: a stub `Fga` (not live OpenFGA, which this domain
+ * model cannot make independently disagree with the Mission's own
+ * allowlist, see the manifest row's notes) proves the full production
+ * path (pep.ts's `vendor_ids` construction, evaluateInner's per-member
+ * loop, and server.ts's execute()): it denies the WHOLE read the moment any
+ * one named vendor is refused, so a denied vendor's rows never appear.
+ */
+describe("finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding)", () => {
+  const missionId = "msn_612_g3";
+  const TOKEN: TokenFacts = {
+    sub: "alice",
+    clientId: "ap-agent",
+    mission: { id: missionId, authority_hash: "sha-256:g3hash" },
+    cnfJkt: "jkt-1",
+  };
+  const view: MissionView = {
+    id: missionId,
+    issuer: ISSUER,
+    state: "active",
+    version: 1,
+    authority_hash: "sha-256:g3hash",
+    authority_set: [
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.list"],
+        constraints: { vendors: ["acme", "globex"] },
+      },
+    ],
+  };
+
+  function build(fga: import("@mission/pdp").Fga): { server: McpPaymentsServer } {
+    const payments = seedPayments();
+    const evidence = new EvidenceStore();
+    const card = { name: "payments", tools: ["list_invoices"] };
+    const loadView = (id: string) => (id === missionId ? view : undefined);
+    const pep = new Pep({
+      payments,
+      evidence,
+      fga,
+      modelId: "unit-test-model",
+      loadView,
+      instanceEpoch: "epoch-1",
+      sourceDigest: sourceDigestOf(card),
+    });
+    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER, serverCard: card });
+    return { server };
+  }
+
+  it("Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result", async () => {
+    const denyGlobex = {
+      checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
+    } as unknown as import("@mission/pdp").Fga;
+    const { server } = build(denyGlobex);
+    const res = await server.callReadTool("list_invoices", {}, TOKEN);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    // The denied vendor's rows never appear, nor does any OTHER vendor's:
+    // this fails the whole read closed, per the response contract having no
+    // lane for a partially narrowed permit.
+    expect(res.result).toBeUndefined();
+  });
+
+  it("Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices", async () => {
+    const allow = { checkWithContext: async () => true } as unknown as import("@mission/pdp").Fga;
+    const { server } = build(allow);
+    const res = await server.callReadTool("list_invoices", {}, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    const invoices = res.result as Array<{ vendor_id: string }>;
+    expect(invoices.map((i) => i.vendor_id).sort()).toEqual(["acme", "globex"]);
   });
 });
 
@@ -375,7 +454,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     expect(refusal?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
-  it("a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted -- the must-understand rule is scoped to conditions, never the whole response context", async () => {
+  it("a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted: the must-understand rule is scoped to conditions, never the whole response context", async () => {
     const { pep, evidence } = build();
     vi.mocked(pdp.evaluate).mockResolvedValueOnce({
       decision: true,

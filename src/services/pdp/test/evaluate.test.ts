@@ -84,7 +84,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     expect(dec.context.policy_view_id).toMatch(/^sha-256:/);
     expect(dec.context.decision_id).toBeDefined();
-    // @spec authzen#response-context — evaluation_id is the profile's own
+    // @spec authzen#response-context: evaluation_id is the profile's own
     // REQUIRED correlation identifier, carried alongside decision_id.
     expect(dec.context.evaluation_id).toBeDefined();
     expect(dec.context.evaluation_id).toBe(dec.context.decision_id);
@@ -143,7 +143,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     const dec = await evaluate(req({ action: { name: "payments:remittance.send" } }), opts(view()));
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
-    // @spec authzen#response-context — evaluation_id is REQUIRED on every
+    // @spec authzen#response-context: evaluation_id is REQUIRED on every
     // decision (permit or deny), and reason is REQUIRED whenever decision is
     // false, both carried alongside the pre-existing decision_id/denial_reason.
     expect(dec.context.evaluation_id).toBeDefined();

@@ -59,7 +59,7 @@ function refuseTransactionToken(accessToken: string): void {
 }
 
 /**
- * @spec authzen#response-context — a permit's decision conditions
+ * @spec authzen#response-context: a permit's decision conditions
  * (`parameter_digest`/`valid_until`/`use_limit`) live NESTED under
  * `decision.context.conditions`, never as flat top-level members. Every
  * digest reverification site reads through this one accessor so the nesting
@@ -577,7 +577,7 @@ export class McpPaymentsServer {
     }
     if (res.listEffective) {
       beforeReverify?.();
-      // @spec runtime#read-binding — reverify the bound list read's
+      // @spec runtime#read-binding: reverify the bound list read's
       // normalized parameters immediately before execution, exactly as
       // callWriteTool/callTransactionTool already do for a write.
       const digest = permitConditions(res.decision)?.parameter_digest as string | undefined;

@@ -27,8 +27,16 @@ export interface ActionApproval {
 
 export interface EvaluationRequest {
   subject: { id: string; type?: string };
-  /** Fine-grained target object (Resource-policy only), NOT the entry match. */
-  resource: { type: string; id: string; properties?: { vendor_id?: string } };
+  /**
+   * Fine-grained target object (Resource-policy only), NOT the entry match.
+   * `vendor_ids`, when present, names the FULL collection a bound bulk read
+   * resolves to (@spec runtime#read-binding): `id`/`vendor_id` above still
+   * name one REPRESENTATIVE member (so every existing single-object caller
+   * is unaffected), but Resource policy is checked against EVERY member of
+   * `vendor_ids`, not just the representative one (see evaluateInner's
+   * step 6a).
+   */
+  resource: { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
   action: { name: string };
   context: {
     audience: string; // matched against the approved entry's resource
@@ -101,7 +109,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
   const decisionId = newDecisionId();
-  // @spec authzen#response-context — `evaluation_id` is the profile's own
+  // @spec authzen#response-context: `evaluation_id` is the profile's own
   // REQUIRED correlation identifier (ARAP's `evaluation_id`), additive
   // alongside the pre-existing `decision_id` deployment metadata (still load-
   // bearing as the permit id downstream: server.ts's redeemPermit/
@@ -114,7 +122,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     ...(actionClass ? { action_class: actionClass, class_source: "deployment" } : {}),
     ...extra,
   });
-  // @spec authzen#response-context — `reason` is the profile's own response
+  // @spec authzen#response-context: `reason` is the profile's own response
   // member for the denial classification; `denial_reason` (the pre-existing
   // deployment field, also the Decision Evidence member name per
   // authzen#failure-condition-coverage) is kept alongside it, additive.
@@ -202,6 +210,38 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   );
   if (!allowed) return deny("out_of_authority");
 
+  // 6a. @spec runtime#read-binding: a bound bulk/cross-tenant read names a
+  // COLLECTION, not one object: the check above names only the entry's first
+  // (representative) member, which proves Resource policy permits THAT
+  // member, never that it permits every OTHER member the read actually
+  // returns. `entry_digest` (Decision Evidence) anchors the Mission
+  // ceiling (what the Authority Set allows), not what Resource policy
+  // independently permits per object. When the request names the full
+  // collection (`resource.properties.vendor_ids`), every member is checked
+  // independently here; the FIRST refusal denies the WHOLE read
+  // out_of_authority. Narrowing the response to just the permitted subset
+  // is deliberately not done instead: the response contract has no lane for
+  // a partially narrowed permit (@spec authzen#response-context), so
+  // inventing one here would be a new, uncoordinated wire member; fail
+  // closed on the whole read is the choice this contract already supports.
+  const vendorIds = req.resource.properties?.vendor_ids;
+  if (vendorIds) {
+    for (const memberVendorId of vendorIds) {
+      const memberTuples = deriveContextualTuples({
+        view,
+        entry,
+        target: { objectType: "vendor", objectId: memberVendorId, vendorId: memberVendorId },
+        relation: mapping.relation,
+      });
+      if (memberTuples.length === 0) return deny("out_of_authority");
+      const memberAllowed = await fga.checkWithContext(
+        { user: `mission:${view.id}`, relation: mapping.relation, object: `vendor:${memberVendorId}` },
+        memberTuples,
+      );
+      if (!memberAllowed) return deny("out_of_authority");
+    }
+  }
+
   // 7. Numeric constraint (overlay, O-6): per-payment cap.
   if (mapping.needsAmount) {
     const cap = entry.constraints?.max_amount;
@@ -274,8 +314,8 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // Permit (@spec authzen#response-context permit shape). Properties
   // declared; PEP redeems. `entry_digest` (the evidence resolved-scope
   // anchor, @spec authzen#decision-evidence-object) is NOT one of the
-  // profile's `conditions` -- it is not named among the response-context
-  // lanes at all -- so it stays top-level deployment metadata, unchanged.
+  // profile's `conditions`: it is not named among the response-context
+  // lanes at all, so it stays top-level deployment metadata, unchanged.
   // `conditions` carries the profile's three named condition members:
   // `valid_until` (REQUIRED; was `permit_expires_at`), `use_limit`
   // (REQUIRED exactly 1 for a high-consequence-class permit; was the
@@ -283,13 +323,13 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // when the action was parameter-bound).
   const permitTtl = actionClass === "irreversible_action" ? 120 : 300;
   const validUntil = new Date(now().getTime() + permitTtl * 1000).toISOString();
-  // @spec runtime#classification — the high-consequence classes are
+  // @spec runtime#classification: the high-consequence classes are
   // irreversible_action, external_commitment, and privileged_administration
-  // (this deployment defines no privileged_administration action); the same
+  // (this deployment defines no privileged_administration action), the same
   // pairing policy.ts's stalenessBoundSeconds already keys its tight bound
   // on. Previously this checked only "irreversible_action", so a
   // send_remittance_email (external_commitment) permit never carried a use
-  // limit at all -- a genuine value-level bug this migration also fixes.
+  // limit at all: a genuine value-level bug this migration also fixes.
   const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment";
   return {
     decision: true,

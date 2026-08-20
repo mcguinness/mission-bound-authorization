@@ -3955,7 +3955,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted -- the must-understand rule is scoped to conditions, never the whole response context",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted: the must-understand rule is scoped to conditions, never the whole response context",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -5075,9 +5075,39 @@
      "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read permits",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> out_of_authority; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. Known limitation: for a multi-vendor allowlist the FGA check that pep.ts routes through names only one representative member of the allowlist per request (addressed for the read-binding case's cross-tenant collection separately, see the multi-vendor authorization rows below); the result-set binding itself does not depend on that check's content, and the permit's Decision Evidence anchors the full entry (entry_digest) regardless."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> out_of_authority; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read out_of_authority the moment any one member is refused (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -5141,9 +5171,39 @@
      "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read permits",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied out_of_authority (the unbound call's implicit vendorId of \"\" never matched a real vendors constraint) and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes)."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied out_of_authority (the unbound call's implicit vendorId of \"\" never matched a real vendors constraint) and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read out_of_authority the moment any one member is refused (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -7290,7 +7350,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#612 finding 2 downgrades this row honestly: it was marked tested against transaction.test.ts's scenario 4, which proves the transaction tier executes a wire transfer exactly once through the hard-coded redemption/lease/consumption state machine, but never reads or asserts on conditions.use_limit (or the prior flat single_use) at all -- that test is not probative for this row's wire-shape text. The value-level bug this migration also fixes: evaluate.ts previously set single_use only for action_class === \"irreversible_action\", so a send_remittance_email (external_commitment, also a high-consequence class per runtime#classification) permit never carried a use limit. The PDP half is now directly tested for BOTH high-consequence classes present in this deployment (irreversible_action, external_commitment; privileged_administration is unused). The PEP-side half of this row's text (\"the PEP MUST treat a high-consequence permit lacking it as invalid ... applying its own deployment classification floor independent of the PDP's internal class label\") is NOT implemented anywhere in this deployment: server.ts's transaction-tier single-use redemption is unconditional on the tool identity, never gated on reading conditions.use_limit and comparing it against the PEP's own floor. Partial, not tested, until that PEP-side floor check exists."
+   "notes": "#612 finding 2 downgrades this row honestly: it was marked tested against transaction.test.ts's scenario 4, which proves the transaction tier executes a wire transfer exactly once through the hard-coded redemption/lease/consumption state machine, but never reads or asserts on conditions.use_limit (or the prior flat single_use) at all; that test is not probative for this row's wire-shape text. The value-level bug this migration also fixes: evaluate.ts previously set single_use only for action_class === \"irreversible_action\", so a send_remittance_email (external_commitment, also a high-consequence class per runtime#classification) permit never carried a use limit. The PDP half is now directly tested for BOTH high-consequence classes present in this deployment (irreversible_action, external_commitment; privileged_administration is unused). The PEP-side half of this row's text (\"the PEP MUST treat a high-consequence permit lacking it as invalid ... applying its own deployment classification floor independent of the PDP's internal class label\") is NOT implemented anywhere in this deployment: server.ts's transaction-tier single-use redemption is unconditional on the tool identity, never gated on reading conditions.use_limit and comparing it against the PEP's own floor. Partial, not tested, until that PEP-side floor check exists."
   },
   {
    "id": "authzen.response-context.honor-every-condition-or-refuse",
@@ -7320,7 +7380,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Proven directly: a permit whose conditions object carries a member outside {parameter_digest, valid_until, use_limit} (RECOGNIZED_CONDITIONS in pep.ts) is refused unrecognized_condition with zero effect -- the action never executes, and the refusal itself is evidenced. Scoped correctly to conditions members only (a companion test proves an unknown TOP-LEVEL member, outside conditions, does not trigger this rule)."
+   "notes": "Proven directly: a permit whose conditions object carries a member outside {parameter_digest, valid_until, use_limit} (RECOGNIZED_CONDITIONS in pep.ts) is refused unrecognized_condition with zero effect: the action never executes, and the refusal itself is evidenced. Scoped correctly to conditions members only (a companion test proves an unknown TOP-LEVEL member, outside conditions, does not trigger this rule)."
   },
   {
    "id": "authzen.response-context.no-permit-conditions-to-unestablished-pep",
