@@ -90,8 +90,9 @@ Table of Contents
      4.3.  Governed Requests and Mission Log
      4.4.  Deterministic Resource Authorization
      4.5.  Resource Access Modes
-     4.6.  Reference Propagation
-     4.7.  Lifecycle
+     4.6.  Transaction Authorization
+     4.7.  Reference Propagation
+     4.8.  Lifecycle
    5.  Conformance
    6.  Security Considerations
      6.1.  Reference Substitution and Blob Integrity
@@ -141,7 +142,7 @@ Table of Contents
 
    This document is a thin binding over those facilities.  AAuth's own
    expires_at mission-blob member carries the expiry this binding
-   requires on every mission (Section 4.7); this document defines no new
+   requires on every mission (Section 4.8); this document defines no new
    AAuth endpoint, header field, token claim, mission-blob member, or
    lifecycle state at all.  Its purpose is to make the security and
    composition properties of AAuth missions explicit and to prevent an
@@ -264,7 +265,7 @@ Table of Contents
 
    Bounded reliance:  AAuth enforces expires_at on every PS decision
       path and caps every token carrying mission_s256 to it
-      (Section 4.7); the PS still establishes active at decision time.
+      (Section 4.8); the PS still establishes active at decision time.
 
    Context propagation:  The signed mission_s256 claim, carried by
       person, resource, and auth tokens, carries only the reference.
@@ -318,7 +319,7 @@ Table of Contents
    including approver, agent, approved_at, and description, and
    optionally approved_tools and approved_resources.  The blob carries
    AAuth's expires_at member, which this binding requires on every
-   mission (Section 4.7).  This binding itself defines no additional
+   mission (Section 4.8).  This binding itself defines no additional
    members.  AAuth states that these member lists are a floor, not a
    closed set; a reader MUST ignore a member it does not recognize.
 
@@ -541,7 +542,7 @@ Table of Contents
       |                  | PS issuance gating is structural for a   |
       |                  | request whose resource token carries the |
       |                  | mission's mission_s256 claim             |
-      |                  | (Section 4.6).  The resource still       |
+      |                  | (Section 4.7).  The resource still       |
       |                  | applies its own resource policy.         |
       +------------------+------------------------------------------+
       | Federated        | The PS evaluates the active Mission      |
@@ -573,7 +574,94 @@ Table of Contents
    aware Resource or Access Server receives only the reference and MUST
    NOT dereference it to obtain the private mission blob.
 
-4.6.  Reference Propagation
+4.6.  Transaction Authorization
+
+   This binding does not claim the transaction authorization capability.
+   The Carrier Binding Floor of
+   [I-D.draft-mcguinness-oauth-mission-transaction-authorization] names
+   the slots a binding must provide to host action-bound transaction
+   authorization, and several have no native home in AAuth or R3 today.
+   Consistent with this document's rule that it adds no new AAuth wire
+   members, it defines no extensions to close them; this section records
+   the status informatively, so the gap is legible rather than implied.
+
+   +===========+=================================================+=============+
+   |Requirement|Native today                                     |Missing home |
+   +===========+=================================================+=============+
+   |Challenge  |The AAuth-Requirement challenge with a signed    |Members      |
+   |carrier    |resource token                                   |committing to|
+   |           |                                                 |the concrete |
+   |           |                                                 |parameters,  |
+   |           |                                                 |the mission  |
+   |           |                                                 |reference,   |
+   |           |                                                 |and the      |
+   |           |                                                 |presenter key|
+   +-----------+-------------------------------------------------+-------------+
+   |Operation  |R3 vocabulary definitions, content-addressed     |Definition   |
+   |identity   |                                                 |versioning   |
+   |           |                                                 |and          |
+   |           |                                                 |supersession |
+   +-----------+-------------------------------------------------+-------------+
+   |Parameter  |The content-addressed R3 per-call document       |A defined    |
+   |commitment |                                                 |parameter-   |
+   |           |                                                 |commitment   |
+   |           |                                                 |member       |
+   +-----------+-------------------------------------------------+-------------+
+   |Workflow   |None: r3_s256 is a content address, and          |A            |
+   |handle     |intentionally identical calls share it           |transaction- |
+   |           |                                                 |instance     |
+   |           |                                                 |identifier   |
+   |           |                                                 |with its own |
+   |           |                                                 |lifetime and |
+   |           |                                                 |admission    |
+   |           |                                                 |idempotency  |
+   +-----------+-------------------------------------------------+-------------+
+   |Result     |None: the per-call result is an ordinary aa-     |A class every|
+   |class      |auth+jwt                                         |verifier can |
+   |           |                                                 |distinguish, |
+   |           |                                                 |with single  |
+   |           |                                                 |use semantic |
+   |           |                                                 |to the class |
+   +-----------+-------------------------------------------------+-------------+
+   |At most one|R3 single-uses one issued token                  |An issuance  |
+   |result     |                                                 |guard giving |
+   |           |                                                 |one admitted |
+   |           |                                                 |transaction  |
+   |           |                                                 |at most one  |
+   |           |                                                 |result       |
+   +-----------+-------------------------------------------------+-------------+
+   |Possession |AAuth proof of possession                        |An execution |
+   |           |                                                 |proof bound  |
+   |           |                                                 |to the       |
+   |           |                                                 |presented    |
+   |           |                                                 |artifact     |
+   |           |                                                 |itself       |
+   +-----------+-------------------------------------------------+-------------+
+   |Current-   |Conditional: the management status operation     |An           |
+   |state      |where deployed                                   |unconditional|
+   |source     |([I-D.draft-mcguinness-mission-aauth-management])|source on the|
+   |           |                                                 |execution    |
+   |           |                                                 |path         |
+   +-----------+-------------------------------------------------+-------------+
+   |Failure    |Proposal pending, denied, and expired states     |None         |
+   |vocabulary |                                                 |             |
+   +-----------+-------------------------------------------------+-------------+
+   |Fresh      |PS adjudication under the lifecycle gate         |None         |
+   |decision   |(Section 4.8)                                    |             |
+   +-----------+-------------------------------------------------+-------------+
+
+    Table 3: Transaction authorization requirements: native and missing
+
+   A deployment could claim the capability only after the missing homes
+   exist upstream and this binding additionally claims State-Observable
+   unconditionally on the execution path (today conditional), and either
+   Structured Authority or an equivalent resource-owned evaluation of
+   the operation commitment (today not supported).  Until then the
+   execution gate and the authority evaluation the transaction
+   invariants require have no source in this binding, and hosting the
+   flow is unsupported.
+
+4.7.  Reference Propagation
 
    An agent operating in a Mission Context names the mission when it
    requests a person token from its PS, and the PS stamps mission_s256
@@ -619,7 +707,7 @@ Table of Contents
    requests whose resource token carries the protected mission_s256
    claim.
 
-4.7.  Lifecycle
+4.8.  Lifecycle
 
    An AAuth Mission Context has exactly the two native states:
 
@@ -923,10 +1011,10 @@ Table of Contents
        terminated is permanent, and an unrecognized state is not active.
        Person-accepted completion and the mission's expires_at are the
        base transitions; administrative termination is supplied by AAuth
-       Mission Management where deployed (Section 4.7).
+       Mission Management where deployed (Section 4.8).
 
    7.  *Reliance bound*: every mission carries AAuth's native expires_at
-       member, enforced on every PS decision path (Section 4.7); PS
+       member, enforced on every PS decision path (Section 4.8); PS
        decisions establish active at decision time, no token carrying
        mission_s256 exceeds the mission's expires_at, and the residual
        after a transition is bounded by outstanding token lifetime.
@@ -936,7 +1024,7 @@ Table of Contents
    8.  *Context propagation*: the signed mission_s256 claim, carried by
        person, resource, and auth tokens, carries governance context;
        the blob itself never propagates; coverage varies by access mode
-       (Section 4.6, Section 4.5).
+       (Section 4.7, Section 4.5).
 
    9.  *Governance record*: the PS mission log is the ordered governance
        record, scoped to PS-observed operations with agent-reported
@@ -954,12 +1042,12 @@ Table of Contents
    |             |           |performs or brokers for requests carrying the    |credentials  |
    |             |           |person-token-issued mission_s256 claim; decisions|and          |
    |             |           |fail closed when current state cannot be         |missionless  |
-   |             |           |established (Section 4.7, Section 4.5,           |token        |
+   |             |           |established (Section 4.8, Section 4.5,           |token        |
    |             |           |Section 4.3)                                     |requests are |
    |             |           |                                                 |outside the  |
    |             |           |                                                 |claim        |
    |             |           |                                                 |(Section     |
-   |             |           |                                                 |4.6); the    |
+   |             |           |                                                 |4.7); the    |
    |             |           |                                                 |post-        |
    |             |           |                                                 |transition   |
    |             |           |                                                 |residual is  |
@@ -1001,7 +1089,7 @@ Table of Contents
    |             |           |issued or PS-brokered artifacts, a binding       |resource-    |
    |             |           |established at issuance rather than by an        |managed modes|
    |             |           |external join, for requests whose resource token |convey no    |
-   |             |           |carries the claim (Section 4.5, Section 4.6)     |mission      |
+   |             |           |carries the claim (Section 4.5, Section 4.7)     |mission      |
    |             |           |                                                 |binding;     |
    |             |           |                                                 |federated    |
    |             |           |                                                 |artifacts are|
@@ -1024,7 +1112,7 @@ Table of Contents
    |             |           |                                                 |extension    |
    +-------------+-----------+-------------------------------------------------+-------------+
 
-               Table 3: AAuth Mission substrate capabilities
+               Table 4: AAuth Mission substrate capabilities
 
 10.  IANA Considerations
 
@@ -1064,6 +1152,12 @@ Table of Contents
               McGuinness, K., "AAuth Mission Management", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-aauth-management.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
+              McGuinness, K., "Mission Transaction Authorization Profile
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-transaction-authorization.html>.
 
 Appendix A.  Acknowledgments
 
