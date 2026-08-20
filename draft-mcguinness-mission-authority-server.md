@@ -1155,10 +1155,14 @@ issued for the Mission ({{limitations}}). For the high-consequence
 classes, association is therefore not the terminal architecture. The
 issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
 or native Mission-bound issuance restores cryptographic derivation.
-A deployment claiming high-consequence enforcement in MAS mode
-SHOULD adopt one of them for those classes. A deployment that instead
-runs high-consequence work on an asserted join alone MUST state that
-residual in its Mission Deployment Profile's `residual_risks`.
+A path claiming the Enterprise profile's high-consequence credential
+property MUST use Mission-bound issuance: an acting credential
+satisfying the credential-mission-bound equivalence of the Mission
+Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).
+A deployment without it still claims the runtime and join
+capabilities its paths actually have, and states the difference in
+its Mission Deployment Profile; no `residual_risks` entry buys the
+stronger claim, and a Join Assertion cannot satisfy it.
 
 A Mission-joining PDP and its PEPs MUST observe the following:
 
@@ -1712,8 +1716,11 @@ at the MAS under the runtime profile's freshness rules, denies with
 from the Mission.
 
 For the high-consequence action classes
-({{I-D.draft-mcguinness-mission-runtime}}) in MAS mode, the PDP SHOULD
-require a Join Assertion. The mapping join of {{mission-join}} remains
+({{I-D.draft-mcguinness-mission-runtime}}) in MAS mode, the
+Enterprise profile requires Mission-bound issuance for the acting
+credential ({{enterprise-profile}}); a Join Assertion strengthens
+every joined path below that tier and remains required there under
+that profile. The mapping join of {{mission-join}} remains
 the conformance floor: a deployment without the endpoint still joins,
 and a PDP MUST NOT treat possession of an assertion as authority,
 per the family rule that references and binding proofs grant nothing.
@@ -1744,8 +1751,10 @@ Enforcement Scope Statement:
 - the subject and client mapping granularity, and whether instance
   identity is included in the join
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}});
-- whether Mission Join Assertions are required, which they SHOULD be
-  for the high-consequence classes ({{join-assertion}}); and
+- whether Mission Join Assertions are required, which the Enterprise
+  profile requires below the high-consequence tier, the classes the
+  tier itself reserves for Mission-bound issuance
+  ({{join-assertion}}, {{enterprise-profile}}); and
 - which action paths are covered by runtime enforcement, since nothing
   at the token layer covers the rest.
 
@@ -1834,8 +1843,32 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
   assume without knowing an action's class; the per-class bounds are
   published in the Enforcement Scope Statement.
 - **Join Assertion.** The MAS MUST offer the Mission Join Assertion
-  ({{join-assertion}}). For the high-consequence classes the PDP
-  MUST require one.
+  ({{join-assertion}}). For every joined governed path below the
+  high-consequence tier the PDP MUST require one.
+- **Mission-bound issuance for the high-consequence classes.** For
+  the high-consequence action classes
+  ({{I-D.draft-mcguinness-mission-runtime}}) the PDP MUST require an
+  acting credential satisfying the credential-mission-bound
+  equivalence of the Mission Binding Properties
+  ({{I-D.draft-mcguinness-mission-architecture}}), with sender
+  constraint end to end; a Join Assertion does not satisfy it, and
+  absence denies rather than falling back to a mapping or asserted
+  join. Where the Mission Issuance Grant
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) is the
+  issuance path for such a class, the grant MUST carry `cnf` and
+  redemption MUST produce an access token sender-constrained to that
+  same key, or to a separately authenticated, explicitly specified
+  rotation result: the issuance upgrade opens no bearer interval
+  between grant and action. Mission-bound issuance restores the
+  issuance gate; it does not replace this profile's runtime
+  active-freshness check for these classes. Issuance also does not
+  prove that a particular work item was supposed to run under the
+  selected Mission when a client legitimately holds credentials for
+  several Missions: work-item attribution stays with the reference
+  propagation channel and the `work-item-bound` property. The
+  Enterprise claim is made per covered Authorization Server,
+  resource, and action path; a mixed estate's weaker paths never
+  inherit it from the deployment's name.
 - **Instance-bound joins.** Where the acting credential carries a
   client-instance identity
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), a
@@ -2105,6 +2138,10 @@ A **Mission-joining PDP**:
   runtime profile's freshness rules ({{mission-join}});
 - verifies the subject join and the client join before evaluating
   authority, and denies with `mission_mismatch` on any join failure;
+- for a high-consequence path under the Enterprise profile, requires
+  the credential-mission-bound acting credential and denies on its
+  absence, never falling back to a mapping or asserted join
+  ({{enterprise-profile}});
 - evaluates joined actions under the runtime profile's decision
   contract, drawing authority from the Mission; and
 - when the AuthZEN binding is in use, emits Decision Evidence per
