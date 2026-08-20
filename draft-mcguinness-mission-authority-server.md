@@ -402,17 +402,21 @@ The contextual-governance kernel maps as follows:
    the same integrity and access controls as the Mission record; and
    MUST retain both for the declared audit horizon.
 
-The binding declares these optional capabilities:
+The Statement's capability table follows, one row per capability;
+every supplied row states its activation conditions, and its temporal
+and failure elements in its cells or by express inheritance of the
+Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
-| Capability | Claim | Scope and defining sections | Limitations |
-| --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | conditional | MAS-native authority operations and, in a Mission-joining PDP deployment, action decisions check current state ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh |
-| State-Observable | supported | Signed Mission Status responses with `mission_max_stale_seconds` ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
-| Structured Authority | supported | The issuance profile's Authority Set and Common Constraints are held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
-| Monotonic Derivation | conditional | Mission-joining PDP action evaluation and optional native child creation apply the defined no-broader-than relation ({{mission-join}}, {{native-child}}) | A separately approved expansion is a new approval, not a monotonic derivation; unchanged AS tokens are outside the claim |
-| Credential-Bound | conditional | A verified mapping join establishes credential-to-Mission correlation; an optional Join Assertion binds one introspected token more strongly ({{mission-join}}, {{join-assertion}}) | Neither form proves that the Authorization Server issued the token under the Mission |
-| Independently Verifiable | supported | Signed Mission Status proves record and state properties as of its freshness window; Join Assertions add token-specific correlation where used | Does not prove AS issuance under the Mission or current state after the observation window |
-| Portable Evidence | conditional | Consent Evidence, a Mission Mandate, or Audit Transparency when adopted | The base MAS audit log is Controller-local and is not portable evidence |
+| Capability | Claim | Activation | Scope and defining sections | Limitations |
+| --- | --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | supplied | a Mission-joining PDP deployment | MAS-native authority operations and joined action decisions check current state ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh; the token-layer residual runs to credential expiry |
+| State-Observable | supplied | always | Signed Mission Status responses with the `mission_max_stale_seconds` freshness bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
+| Structured Authority | supplied | always | The issuance profile's Authority Set and Common Constraints are held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
+| Monotonic Derivation | supplied | native child creation ({{native-child}}) | The defined no-broader-than relation at the native child-creation derivation point | PDP action evaluation is enforcement, never derivation; a separately approved expansion is a new approval; unchanged AS tokens are outside the claim |
+| Credential-Bound | supplied | the Join Assertion endpoint ({{join-assertion}}) | A signed assertion binds one introspected token digest and `cnf` thumbprint to the Mission; fact semantics: verified party correlation, with the assertion's `exp` bounded by the token's remaining lifetime | Neither the assertion nor the mapping join proves the Authorization Server issued the token under the Mission; a mapping-join-only deployment is outside this row |
+| Authorized Context Correlation | supplied | always | The mapping join and the Join Assertion ({{mission-join}}, {{join-assertion}}): the MAS and its joining PDPs are the joining authority under the enterprise mapping contract, joining the introspected credential, the subject and client mappings, and the Mission; a failed join denies `mission_mismatch`, never falling back | The association proves the credential belongs to the Mission's parties, never that it was issued for the Mission; the bare mapping join carries the (`subject`, `client`) equivalence-class ambiguity, and substitution protection requires the `cnf`-bound assertion ({{join-spoofing}}) |
+| Independently Verifiable | supplied | signed Mission Status ({{lifecycle-and-state}}) | Record and state properties as of the response's freshness window; Join Assertions add token-specific correlation where used | Does not prove AS issuance under the Mission or current state after the observation window |
+| Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base MAS audit log is Controller-local and is not portable evidence |
 {: title="Standalone MAS Mission substrate capabilities"}
 
 The Portable Evidence condition is supplied only when the deployment
