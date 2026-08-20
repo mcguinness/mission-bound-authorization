@@ -406,13 +406,53 @@ export function buildProvider(opts: AdapterOptions): Provider {
       const fam = opts.familyStore?.resolve(grant.jti);
       record = fam ? kernel.get(fam.missionId) : undefined;
     }
-    if (!record) return rar; // no Mission: no narrowing mechanism applies
+    if (!record) {
+      // @spec issuance-grant#effective-set-projection (#617 review 3) — the
+      // durable index, consulted as the LAST resolution step and then as the
+      // discriminator. Index MISS: this grant was never Mission-bound, so its
+      // rar carries no Mission narrowing and passes through (an ordinary OAuth
+      // grant). Index HIT and the indexed Mission resolves: project through it
+      // (this also covers a grant the Mission's own `grant_id` column has
+      // moved on from, and a family row invalidated on a terminal Mission).
+      // Index HIT and no Mission: the state integration this profile requires
+      // cannot be performed, so it fails CLOSED. Returning the grant's
+      // issuance-time rar here (the prior behavior) reissued a Mission-bound
+      // credential's old authority with the Mission gone.
+      const indexed = missionForBoundGrant(grant.jti);
+      if (!indexed) return rar; // never Mission-bound: nothing narrows it
+      record = indexed;
+    }
     const { projected, collapsed } = projectMissionRar(record, rar as AuthorityEntry[]);
     if (collapsed) {
       throw new errors.InvalidGrant("mission-bound credential authority is fully contained");
     }
     return projected;
   };
+
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 3) — resolve a
+   * grant the ordinary lookups (kernel.findByGrant, then the delegation-family
+   * store) could not place, through the durable Mission-bound grant index.
+   *
+   * Returns the indexed Mission where it resolves: the grant IS Mission-bound
+   * and its Mission is live, which happens when the Mission's own `grant_id`
+   * column has since moved to another grant, or when a family row was
+   * invalidated on a terminal lifecycle commit. Both must be GATED and
+   * PROJECTED, never passed through. THROWS `invalid_grant` where the index
+   * knows the grant is Mission-bound and no Mission record resolves at all:
+   * the state gate cannot be evaluated, so the profile fails closed. Returns
+   * undefined only for an index MISS, the one case a token-plane hook may pass
+   * through unchanged (an ordinary OAuth grant this AS never bound).
+   */
+  function missionForBoundGrant(grantId: string): MissionRecord | undefined {
+    const bound = kernel.missionBoundGrants.resolve(grantId);
+    if (!bound) return undefined;
+    const record = kernel.get(bound.missionId);
+    if (!record) {
+      throw new errors.InvalidGrant("mission-bound grant's Mission no longer resolves");
+    }
+    return record;
+  }
 
   /**
    * @spec issuance-grant#effective-set-projection (#617 review 1) — project
@@ -643,12 +683,29 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // family never reaches here in practice: its grant is destroyed on the
         // terminal lifecycle commit, so refresh fails structurally first. The
         // gateActive map (GateError -> InvalidGrant) is identical to the branch below.
+        // @spec issuance-grant#effective-set-projection (#617 review 3) — the
+        // durable index as the LAST resolution step, then the discriminator.
+        // `{}` is an access token with NO `mission` claim: for an ordinary
+        // OAuth grant that is correct (index miss), for a Mission-bound grant
+        // it silently strips the binding at exactly the moment the state gate
+        // could not be evaluated. So an index hit whose Mission resolves is
+        // GATED here (a family row invalidated on a terminal Mission, or a
+        // Mission whose own `grant_id` column has moved on), and an index hit
+        // with no Mission at all refuses (missionForBoundGrant throws).
         const fam = opts.familyStore?.resolve(grantId);
-        if (!fam) return {};
-        const famRecord = kernel.get(fam.missionId);
+        const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
         if (!famRecord) return {};
         try {
+          // gateActive, never gateDerivation: the SINGLE count of a family (or
+          // of the Mission's original issuance) was spent once at issuance
+          // (handleAsyncDelegationExchange step 4), so re-gating here checks
+          // live state without recounting.
           kernel.gateActive(famRecord.id);
+          // The base claim, unchanged from the family fallback's existing
+          // behavior: the lineage members of the approval branch below are
+          // deliberately not introduced onto this path by #617 review 3, which
+          // is about failing closed, not about reshaping a claim that already
+          // ships.
           return { mission: kernel.missionClaim(famRecord) };
         } catch (e) {
           if (e instanceof GateError) throw new errors.InvalidGrant(e.message);

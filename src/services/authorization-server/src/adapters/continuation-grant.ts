@@ -711,6 +711,13 @@ export async function handleAsyncDelegationExchange(
   }
   const grantId = await grant.save();
   familyStore.record({ grantId, missionId: record.id });
+  // @spec issuance-grant#effective-set-projection (#617 review 3) — the DURABLE
+  // Mission-bound discriminator, alongside the family row. The family row is
+  // invalidated on a terminal Mission (and on the GateError rollback below);
+  // this index is append-only, so a later hook that cannot resolve the Mission
+  // still knows the grant was Mission-bound and fails CLOSED instead of
+  // reissuing its stale authority with no `mission` claim.
+  kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "delegation-family" });
   try {
     idem.advanceReserved(client.clientId, creationRequestId, { grant_id: grantId, target }, () => {
       kernel.gateDerivation(record.id);

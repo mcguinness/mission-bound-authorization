@@ -723,6 +723,93 @@ describe("transient authority-source failure (@spec issuance-grant#effective-set
   });
 });
 
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
+ * Mission-bound grant discriminator. "No Mission resolved" used to mean "not a
+ * Mission-bound grant" at both token-plane hooks, so a Mission-bound grant
+ * whose record became unresolvable fell through to the fail-OPEN branch: the
+ * stored issuance-time authorization_details were reissued, with NO `mission`
+ * claim, at exactly the moment the state gate could not be evaluated.
+ */
+describe("unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection)", () => {
+  /** Purge ONLY the Mission record; the index is a separate store by design. */
+  const purgeMission = (missionId: string): void => {
+    as.kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(missionId);
+    expect(as.kernel.get(missionId)).toBeUndefined();
+  };
+
+  it("a per-delegation family grant whose Mission record is purged refuses refresh instead of reissuing its stale authority", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    expect(first.authorization_details).toEqual(confinedAuthority());
+
+    purgeMission(missionId);
+
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { error?: string; access_token?: string; authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.access_token).toBeUndefined();
+    expect(body.authorization_details).toBeUndefined();
+  });
+
+  it("the Mission's OWN code-flow grant fails closed the same way once its record is purged", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    purgeMission(missionId);
+    const res = await refreshFamily(missionRefreshToken, codeDpop);
+    const body = (await res.json()) as { error?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.access_token).toBeUndefined();
+  });
+
+  it("a LIVE Mission whose grant_id column has moved on still refreshes, gated and claimed through the index (never a false refusal, never a claimless token)", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    // Rebind the Mission to a different grant id: the credential's own grant is
+    // no longer what `missions.grant_id` holds, so findByGrant misses while the
+    // Mission is perfectly live. The index must RESOLVE it (gate + project),
+    // not refuse it, and not fall through to the claimless pass-through.
+    as.kernel.bindGrant(missionId, "rebound-grant-id-for-test");
+    const res = await refreshFamily(missionRefreshToken, codeDpop);
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(as.kernel.get(missionId)?.authority_set);
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    // The `mission` claim is still attached: extraTokenClaims resolved the
+    // Mission through the index rather than returning {}.
+    expect((payload.mission as { id?: string } | undefined)?.id).toBe(missionId);
+  });
+
+  it("the index is the discriminator: it survives the Mission's deletion, and an unknown grant resolves undefined (the pass-through case)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    expect(typeof first.refresh_token).toBe("string");
+
+    const recorded = as.kernel.db
+      .prepare("SELECT grant_id FROM missions WHERE id = ?")
+      .get(missionId) as { grant_id: string };
+    expect(as.kernel.missionBoundGrants.resolve(recorded.grant_id)).toEqual({
+      missionId,
+      kind: "approval",
+    });
+
+    purgeMission(missionId);
+    // Append-only: the binding outlives the record it refers to, which is the
+    // whole point (a discriminator cleaned up with the Mission would answer
+    // "not Mission-bound" for exactly the grants it exists to catch).
+    expect(as.kernel.missionBoundGrants.resolve(recorded.grant_id)?.missionId).toBe(missionId);
+    // An ordinary (never Mission-bound) grant is a miss, so the hooks pass it
+    // through untouched rather than refusing it.
+    expect(as.kernel.missionBoundGrants.resolve("some-unbound-grant-id")).toBeUndefined();
+  });
+});
+
 describe("async-delegation single count (@spec async-delegation)", () => {
   it("derivation_count rises by exactly 1 across issuance + N refreshes", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();

@@ -16,6 +16,7 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
   type IntentSubmissionPresenter,
@@ -180,11 +181,20 @@ export interface KernelOptions {
 
 export class MissionKernel {
   readonly db: Database;
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
+   * Mission-bound grant index. Its own store handle, deliberately NOT this
+   * kernel's `db`: a `DELETE FROM missions` (or any future record pruning) must
+   * not take the discriminator with it, or the token-plane hooks would read a
+   * purged Mission-bound grant as an ordinary one and fail OPEN.
+   */
+  readonly missionBoundGrants: MissionBoundGrantStore;
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
   constructor(private readonly opts: KernelOptions) {
     this.db = openStore(SCHEMA);
+    this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
   }
@@ -457,8 +467,17 @@ export class MissionKernel {
     return row ? rowToRecord(row) : undefined;
   }
 
+  /**
+   * Bind a provider grant to a Mission. @spec
+   * issuance-grant#effective-set-projection (#617 review 3) — ALSO records the
+   * durable discriminator, so a later token-plane hook can tell "this grant was
+   * never Mission-bound" (pass through) from "its Mission no longer resolves"
+   * (fail closed), which the `missions.grant_id` column alone cannot do once the
+   * row is gone.
+   */
   bindGrant(missionId: string, grantId: string): void {
     this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+    this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
   }
 
   /** @spec child-delegation#parent-member — the immediate Child Missions of a parent. */
