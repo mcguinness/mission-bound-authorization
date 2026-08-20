@@ -13,5 +13,6 @@ export {
   type EvaluateOptions,
   type EvaluationRequest,
   type ActionApproval,
+  type Freshness,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";

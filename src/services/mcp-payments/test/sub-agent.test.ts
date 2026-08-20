@@ -87,9 +87,15 @@ function pep(): Pep {
     evidence: new EvidenceStore(),
     fga,
     modelId,
-    loadView: (id) => (id === VIEW.id ? VIEW : undefined),
+    // @spec runtime#state-freshness: a synchronous live read, freshness-
+    // stamped at this read (Finding 1); source declared to allowedFreshnessSources below.
+    loadView: (id) =>
+      id === VIEW.id
+        ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        : undefined,
     instanceEpoch: "epoch-1",
     sourceDigest: sourceDigestOf({ name: "payments" }),
+    allowedFreshnessSources: new Set(["load_view"]),
     revokedInstances: revoked,
   });
 }

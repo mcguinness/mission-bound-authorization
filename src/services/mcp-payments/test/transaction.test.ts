@@ -56,6 +56,11 @@ const VIEW: MissionView = {
     },
   ],
 };
+
+/** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
+ *  at this read (Finding 1); `allowedFreshnessSources` below declares "load_view" as trusted. */
+const loadView = (id: string) =>
+  id === VIEW.id ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined;
 /**
  * @spec RFC 9449 — the presenter's REAL key. A transaction credential is only
  * ever accepted with a proof of possession bound to this request, so the
@@ -149,9 +154,10 @@ function build(
     evidence,
     fga,
     modelId,
-    loadView: (id) => (id === VIEW.id ? VIEW : undefined),
+    loadView,
     instanceEpoch: "epoch-1",
     sourceDigest: sourceDigestOf(card),
+    allowedFreshnessSources: new Set(["load_view"]),
     ...(gated
       ? { requiresActionApproval: (action: string) => action === "payments:remittance.send", maxApprovalAgeSeconds: 300 }
       : {}),
@@ -161,7 +167,7 @@ function build(
   const server = new McpPaymentsServer({
     pep,
     payments,
-    loadView: (id) => (id === VIEW.id ? VIEW : undefined),
+    loadView,
     jwks: opts.jwks ?? { keys: [] },
     issuer: "https://as.test",
     serverCard: card,

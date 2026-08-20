@@ -77,7 +77,12 @@ function buildStack(missionView: MissionView, fga: Fga) {
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
-  const loadView = (id: string) => (id === missionView.id ? missionView : undefined);
+  // @spec runtime#state-freshness: a synchronous live read, freshness-
+  // stamped at this read (Finding 1); "load_view" declared trusted below.
+  const loadView = (id: string) =>
+    id === missionView.id
+      ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      : undefined;
   const pep = new Pep({
     payments,
     evidence,
@@ -86,6 +91,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
     loadView,
     instanceEpoch: "epoch-1",
     sourceDigest: sourceDigestOf(card),
+    allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
     pep,
@@ -236,9 +242,13 @@ describe("a PDP deny is terminal for the attempted action: no execution, and no 
       evidence,
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
-      loadView: () => current,
+      // @spec runtime#state-freshness: re-reads `current` (the mutable
+      // binding below) at each call, so a withdrawal is observed as a fresh
+      // read, never a stale cached one (Finding 1).
+      loadView: () => ({ view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }),
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf({ name: "payments" }),
+      allowedFreshnessSources: new Set(["load_view"]),
     });
 
     // A genuine permit exists for this exact action, held only as a local

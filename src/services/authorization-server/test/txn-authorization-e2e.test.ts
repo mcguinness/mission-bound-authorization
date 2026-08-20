@@ -300,11 +300,13 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
         },
       ],
     );
-    const loadView = (id: string): MissionView | undefined => {
+    // @spec runtime#state-freshness: a synchronous live read, freshness-
+    // stamped at this read (Finding 1); "load_view" declared trusted below.
+    const loadView = (id: string) => {
       const record = as.kernel.get(id);
       if (!record) return undefined;
       const fresh = as.kernel.applyExpiry(record);
-      return {
+      const view: MissionView = {
         id: fresh.id,
         issuer: fresh.issuer,
         state: fresh.state,
@@ -312,6 +314,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
         authority_hash: fresh.authority_hash,
         authority_set: fresh.authority_set,
       };
+      return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
     };
     evidence = new EvidenceStore();
     const card = { name: "payments" };
@@ -325,6 +328,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       sourceDigest: sourceDigestOf(card),
       requiresActionApproval: (action) => action === "payments:remittance.send",
       maxApprovalAgeSeconds: 300,
+      allowedFreshnessSources: new Set(["load_view"]),
       challengeSigner: { sign: rsTxnKeys.privateKey, kid: "rs-txn", alg: "ES256", asIssuer: ISSUER },
     });
     const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };

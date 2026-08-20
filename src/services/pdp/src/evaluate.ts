@@ -42,6 +42,21 @@ export interface ActionApproval {
   state?: string;
 }
 
+/**
+ * @spec runtime#state-freshness: a Mission state observation, asserted by
+ * whichever state source produced it (a status call, introspection, a
+ * Lifecycle Signal, or a loader's own live read). `observed_at` MUST be the
+ * time the source actually read authoritative state, never the time a later
+ * consumer happened to use the observation; that is what keeps a cached or
+ * relayed observation honestly stale instead of relabeled fresh at
+ * consumption (Finding 1). `source` names the mechanism, checked against the
+ * deployment's configured set (below).
+ */
+export interface Freshness {
+  observed_at: string;
+  source: string;
+}
+
 export interface EvaluationRequest {
   subject: { id: string; type?: string };
   /** Fine-grained target object (Resource-policy only), NOT the entry match. */
@@ -51,7 +66,7 @@ export interface EvaluationRequest {
     audience: string; // matched against the approved entry's resource
     mission: { id: string; authority_hash: string; policy_view_id?: string };
     actor?: ContextActor;
-    freshness?: { observed_at: string; source: string };
+    freshness?: Freshness;
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
