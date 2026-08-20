@@ -35,8 +35,8 @@
     "content_sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "8453d78197a9c6c5d93b615221ad86c78662903f",
-    "content_sha256": "c3004791c8839ed2f53d39ca3edbb22717fe588c4b472037dfde0f239ab695b0"
+    "revision": "12b540f5c8e547a61cac16259c98515eca7ec504",
+    "content_sha256": "8a769d44b6dc559847d60e34b6e966eab0d75c2db921ab93f431f8c880aebefb"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
@@ -2753,7 +2753,7 @@
    "id": "txn-authorization.token.local-subject-projection",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "transaction-token",
-   "text": "REQUIRED. The destination-local subject: the verified subject of the presented `subject_token`, under this Authorization Server's own subject semantics. Where the Origin Principal profile applies ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), the issuer-qualified origin principal travels in `mission.subject`, alongside the local subject and never in place of it. Never the Approver.",
+   "text": "REQUIRED. The destination-local subject, derived from the verified issuer-qualified identity of the presented `subject_token`",
    "role": "TAS",
    "strength": "MUST",
    "applicability": {
@@ -2763,7 +2763,7 @@
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the token's sub is always the destination-local subject of the verified subject_token, never the Approver and never the issuer-qualified origin principal flattened into it; where the Origin Principal profile applies, the origin principal travels only in mission.subject, alongside the local subject and never in place of it"
+    "normative": "the token's sub is always the pinned destination-local subject the establishment rules produced at admission and reconfirmed at completion (copied for a same-namespace issuer, injectively mapped for an accepted foreign one), never the Approver and never a flattened origin principal; mission.subject carries the issuer-qualified origin principal alongside it"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -2789,6 +2789,12 @@
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > never flattens the origin principal's sub into the token's local sub",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > maps an accepted foreign namespace injectively and mints the mapped subject",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -2828,6 +2834,12 @@
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses an approval bound to a different origin principal than the workflow pinned",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses an approval whose binding names a different local subject",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -2876,8 +2888,8 @@
   {
    "id": "txn-authorization.token.subject-namespace-mapping",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
-   "anchor": "transaction-token",
-   "text": "Copying `subject_token`'s verified `sub` directly is sound only when its issuer and this Authorization Server's own issuer identify the same subject namespace; the value MAY then be copied unchanged. Otherwise the TAS MUST maintain its own injective mapping from `subject_token`'s issuer-qualified (`iss`, `sub`) into its namespace and emit the mapped value; a missing, ambiguous, stale, or disabled mapping MUST be refused rather than guessed. Where the Origin Principal profile applies, the resulting local subject (copied or mapped) and `mission.subject` MUST resolve to the same destination-local principal, consistent with that profile's destination mapping rule ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); a conflict between them MUST be refused the same way.",
+   "anchor": "subject-namespaces",
+   "text": "For every accepted foreign namespace the TAS MUST apply an injective, issuer-qualified mapping from the pair (`iss`, `sub`) into its own namespace and use the mapped value. A missing, ambiguous, stale, or disabled mapping MUST be refused rather than guessed.",
    "role": "TAS",
    "strength": "MUST",
    "applicability": {
@@ -2887,20 +2899,26 @@
    "surface": "transaction-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "when subject_token's issuer and this Authorization Server's own issuer identify the same subject namespace, the verified sub may be copied directly; otherwise the TAS maintains its own injective mapping from subject_token's issuer-qualified (iss, sub) into its namespace and refuses a missing, ambiguous, stale, or disabled mapping; under the Origin Principal profile the resulting local subject, whichever branch produced it, and mission.subject resolve to the same destination-local principal, and a conflict between them is refused"
+    "normative": "issuer and namespace acceptance is configured trust policy, never inferred from request data; an accepted foreign identity is mapped injectively and the mapped value is minted; an unaccepted issuer or a disabled mapping refuses"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
-     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses a subject_token from an issuer this Authorization Server never signed for",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses a foreign subject_token issuer on the namespace policy alone",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
-     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses when the challenge and subject_token disagree about the origin principal for one local subject",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > maps an accepted foreign namespace injectively and mints the mapped subject",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses at completion when the pinned mapping no longer produces the pinned subject",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -3098,6 +3116,114 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "txn-authorization.redemption.mission-invariants-equality",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "challenge-redemption",
+   "text": "requiring exact equality between the challenge's `mission` and `subject_token`'s `mission` invariants",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a challenge and subject_token that disagree on any profiled mission member, the origin principal included, are refused at step 2 before authority or approval are consulted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses when the challenge and subject_token disagree about the origin principal for one local subject",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "txn-authorization.redemption.subject-mapping-revalidated",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "subject-establishment",
+   "text": "at completion, resolve the current namespace policy against the persisted source identity again and require it to produce the pinned subject",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the workflow persists the issuer-qualified source identity and policy version; a mapping removed, disabled, or repointed between admission and completion refuses rather than minting under a subject the deployment no longer stands behind"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token) > refuses at completion when the pinned mapping no longer produces the pinned subject",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "txn-authorization.token.client-id-required",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "transaction-token",
+   "text": "REQUIRED. The client authenticated at the transaction endpoint ({{RFC8693}} Section 4.3). The upstream client and the executing agent MAY be different parties; this claim identifies the former.",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "client_id is always the client authenticated at the transaction endpoint, never a request assertion and never the executing agent's identity"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction token identity projection (@spec txn-authorization#transaction-token) > projects the effective subject and authenticated client, and carries act only where actor context existed",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "txn-authorization.token.act-attribution",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "transaction-token",
+   "text": "REQUIRED whenever requester or actor context existed on `subject_token` or the challenge; otherwise absent.",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "act is present exactly when actor context existed upstream and absent otherwise; the chain is attribution, never authority, and actor proofs stay off the token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction token identity projection (@spec txn-authorization#transaction-token) > projects the effective subject and authenticated client, and carries act only where actor context existed",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "runtime.conformance.enforcement-scope-statement-required",
