@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "64eeea86dbe9ce535542deccbf1c3158149ad8cf",
-    "content_sha256": "3c6c28eca353333de2127f99c6ad3a3157b7994425b3712f71c24ba2bfed359e"
+    "revision": "5402385438cc09a2327bbe07ffac63393bfe034c",
+    "content_sha256": "5cc806b3f01ffecb7c969dac15f96eae95b5f1d5a7d2ee64e6aa5728930205ba"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
@@ -2117,7 +2117,7 @@
    "id": "mas.join.stronger-claim-requires-issuance",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the credential-mission-bound equivalence of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).",
+   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -2137,7 +2137,7 @@
    "id": "mas.join.issuance-required-high-consequence",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "the PDP MUST require an acting credential satisfying the credential-mission-bound equivalence of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}), with sender constraint end to end",
+   "text": "the PDP MUST require an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}): the credential-mission-bound equivalence plus presenter-key-bound possession, end to end",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
