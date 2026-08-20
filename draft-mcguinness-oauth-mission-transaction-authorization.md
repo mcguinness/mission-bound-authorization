@@ -549,9 +549,10 @@ this profile's shape. Its claims:
   `subject_token`'s issuer-qualified (`iss`, `sub`) into its
   namespace and emit the mapped value; a missing, ambiguous, stale,
   or disabled mapping MUST be refused rather than guessed. Where the
-  Origin Principal profile applies, that mapped identity and
-  `mission.subject` MUST resolve to the same destination-local
-  principal, consistent with that profile's destination mapping rule
+  Origin Principal profile applies, the resulting local subject
+  (copied or mapped) and `mission.subject` MUST resolve to the same
+  destination-local principal, consistent with that profile's
+  destination mapping rule
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); a conflict
   between them MUST be refused the same way.
 
