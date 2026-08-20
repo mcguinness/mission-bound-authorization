@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS txn_workflows (
   action TEXT NOT NULL,
   operation_type TEXT NOT NULL,
   subject TEXT NOT NULL,
+  subject_token_iss TEXT NOT NULL,
+  subject_token_sub TEXT NOT NULL,
+  subject_policy TEXT NOT NULL,
   subject_token_jti TEXT NOT NULL,
   act_json TEXT,
   parameter_digest TEXT NOT NULL,
@@ -88,6 +91,15 @@ export interface TxnWorkflowRecord {
   /** The `authorization_details` entry's `type` at admission (profile version). */
   operationType: string;
   subject: string;
+  /**
+   * @spec txn-authorization#subject-establishment — the issuer-qualified
+   * SOURCE identity the pinned subject was derived from, and the identity of
+   * the namespace policy that derived it. Completion re-resolves the current
+   * policy against this pair and requires it to produce `subject` again.
+   */
+  subjectTokenIss: string;
+  subjectTokenSub: string;
+  subjectPolicy: string;
   /** `subject_token`'s own expiry, pinned at admission (epoch seconds). */
   subjectTokenExpS: number;
   /**
@@ -121,6 +133,9 @@ interface Row {
   action: string;
   operation_type: string;
   subject: string;
+  subject_token_iss: string;
+  subject_token_sub: string;
+  subject_policy: string;
   subject_token_jti: string;
   act_json: string | null;
   challenge_json: string;
@@ -177,9 +192,9 @@ export class TxnWorkflowStore {
       .prepare(
         `INSERT INTO txn_workflows
            (id, challenge_iss, challenge_jti, client_id, cnf_jkt, txn, task_id, mission_id, action,
-            operation_type, subject, subject_token_jti, act_json, parameter_digest, challenge_json,
+            operation_type, subject, subject_token_iss, subject_token_sub, subject_policy, subject_token_jti, act_json, parameter_digest, challenge_json,
             subject_token_exp, mission_exp, expires_at, state, issued_token, issued_jti, issued_exp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
          ON CONFLICT DO NOTHING`,
       )
       .run(
@@ -194,6 +209,9 @@ export class TxnWorkflowStore {
         record.action,
         record.operationType,
         record.subject,
+        record.subjectTokenIss,
+        record.subjectTokenSub,
+        record.subjectPolicy,
         record.subjectTokenJti,
         record.act === undefined ? null : JSON.stringify(record.act),
         record.challenge.parameter_digest,
@@ -282,6 +300,9 @@ function toRecord(row: Row): TxnWorkflowRecord {
     action: row.action,
     operationType: row.operation_type,
     subject: row.subject,
+    subjectTokenIss: row.subject_token_iss,
+    subjectTokenSub: row.subject_token_sub,
+    subjectPolicy: row.subject_policy,
     subjectTokenJti: row.subject_token_jti,
     ...(row.act_json !== null ? { act: JSON.parse(row.act_json) as unknown } : {}),
     subjectTokenExpS: row.subject_token_exp,

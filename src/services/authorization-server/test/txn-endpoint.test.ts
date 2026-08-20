@@ -37,6 +37,7 @@ import { newDpopProofReplay } from "../src/adapters/dpop-replay.js";
 import {
   handleTransactionAuthorization,
   newTxnWorkflows,
+  type SubjectNamespacePolicy,
   type TxnAuthorizationDeps,
 } from "../src/adapters/transaction-authorization.js";
 import type { TxnWorkflowStore } from "../src/kernel/txn-workflow-store.js";
@@ -1386,6 +1387,7 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
     subjectTokenOrigin?: { iss: string; sub: string };
     challengeOrigin?: { iss: string; sub: string };
     bindingMutate?: (b: TxnApprovalBinding) => TxnApprovalBinding;
+    subjectNamespaces?: SubjectNamespacePolicy;
   }): Promise<{
     admit: () => Promise<{ status: number; body: Record<string, unknown> }>;
     complete: (txaId: string) => Promise<{ status: number; body: Record<string, unknown> }>;
@@ -1471,6 +1473,7 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
         maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
         freshDecision: async () => ({ decision: "permit" as const }),
+        ...(opts.subjectNamespaces ? { subjectNamespaces: opts.subjectNamespaces } : {}),
       },
     };
     const workflows = newTxnWorkflows();
@@ -1505,24 +1508,100 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
     expect((claims.mission as { subject: unknown }).subject).toEqual(ORIGIN);
   });
 
-  it("refuses a subject_token from an issuer this Authorization Server never signed for", async () => {
+  it("refuses a foreign subject_token issuer on the namespace policy alone", async () => {
     const txn = "txn_dual_foreign_issuer";
-    // @spec txn-authorization#transaction-token — this is today's fail-closed
-    // default for the "otherwise" branch of the namespace rule: a
-    // subject_token whose issuer this AS did not itself mint is refused
-    // outright, rather than mapped through an injective registry. The rule
-    // permits either outcome; this deployment has not built the mapping
-    // registry, so refusal is the conforming behavior it falls back to.
+    // @spec txn-authorization#subject-namespaces — issuer policy is isolated
+    // from key trust: the token is signed by THIS harness's trusted key under
+    // its usual kid, so the signature verifies, and only `iss` varies. The
+    // default policy accepts only the AS's own issuer, so the refusal below is
+    // the namespace decision and nothing upstream of it.
     const { admit } = await harness({
       txn,
       subjectTokenIssuer: "https://foreign-tas.example",
-      subjectTokenKid: "foreign-tas",
     });
     const admitted = await admit();
     expect(admitted.status, JSON.stringify(admitted.body)).toBe(400);
     expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
     expect((admitted.body as { error_description?: string }).error_description).toBe(
-      "subject_token did not verify",
+      "subject_token issuer is not accepted by namespace policy",
+    );
+  });
+
+  it("maps an accepted foreign namespace injectively and mints the mapped subject", async () => {
+    const txn = "txn_dual_mapped_foreign";
+    // @spec txn-authorization#subject-namespaces — an accepted foreign
+    // namespace goes through the configured issuer-qualified mapping, and the
+    // token carries the MAPPED destination-local value, never the source sub.
+    const { admit, complete } = await harness({
+      txn,
+      subjectTokenIssuer: "https://partner-as.example",
+      subjectNamespaces: {
+        establish: ({ iss, sub }) =>
+          iss === "https://partner-as.example" && sub === LOCAL_SUB
+            ? { subject: "mapped-alice-local", policy: "partner-map-v1" }
+            : undefined,
+      },
+    });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const txaId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const issued = await complete(txaId);
+    expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+    const claims = decodeJwt((issued.body as { access_token: string }).access_token);
+    expect(claims.sub).toBe("mapped-alice-local");
+    expect(claims.sub).not.toBe(LOCAL_SUB);
+  });
+
+  it("refuses at completion when the pinned mapping no longer produces the pinned subject", async () => {
+    const txn = "txn_dual_mapping_revoked";
+    // @spec txn-authorization#subject-establishment step 5 — the workflow
+    // pinned the source identity and the subject the policy produced at
+    // admission; completion re-resolves the CURRENT policy and must get the
+    // pinned subject back. Disabling the mapping in between refuses, after
+    // approval and before any mint.
+    let disabled = false;
+    const { admit, complete } = await harness({
+      txn,
+      subjectTokenIssuer: "https://partner-as.example",
+      subjectNamespaces: {
+        establish: ({ iss, sub }) =>
+          !disabled && iss === "https://partner-as.example" && sub === LOCAL_SUB
+            ? { subject: "mapped-alice-local", policy: "partner-map-v1" }
+            : undefined,
+      },
+    });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const txaId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    disabled = true;
+    const refused = await complete(txaId);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect((refused.body as { error?: string }).error).toBe("access_denied");
+    expect((refused.body as { error_description?: string }).error_description).toBe(
+      "subject mapping is no longer current",
+    );
+  });
+
+  it("refuses an approval whose binding names a different local subject", async () => {
+    const txn = "txn_dual_binding_subject";
+    // The approval is bound to BOTH identities; this isolates the LOCAL half:
+    // an approval opened under a different destination-local subject fails the
+    // binding-digest recomputation at completion, before the fresh decision.
+    const { admit, complete } = await harness({
+      txn,
+      bindingMutate: (b) => ({ ...b, subject: "mallory-local" }),
+    });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const txaId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const refused = await complete(txaId);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect((refused.body as { error?: string }).error).toBe("access_denied");
+    expect((refused.body as { error_description?: string }).error_description).toBe(
+      "approval is not bound to this transaction",
     );
   });
 
