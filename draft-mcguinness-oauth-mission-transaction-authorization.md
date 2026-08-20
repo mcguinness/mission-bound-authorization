@@ -906,104 +906,125 @@ must provide for another substrate to host this profile's flow, is
 
 The wire mechanics of this document are one discharge of a
 carrier-neutral flow: {{mission-substrate}} declares what this profile
-consumes from the Mission kernel, and this section declares what a
-protocol binding MUST provide for another substrate to host the same
-flow. Each obligation closes by naming this document's own OAuth
-discharge. A binding that cannot provide an obligation does not host
-this profile: absence is fail-closed, and there is no partial
+consumes from the Mission kernel, and this section declares what the
+flow itself requires, in three layers. {{transaction-invariants}}
+states the invariants that make the flow safe on any substrate.
+{{carrier-requirements}} states the slots a protocol binding MUST
+provide to carry them. {{oauth-discharge}} names this document's own
+discharge of each slot. A binding that cannot provide a slot does not
+host this profile: absence is fail-closed, and there is no partial
 hosting.
 
+## Transaction Invariants {#transaction-invariants}
+
+Four roles participate: the Challenging Resource, which owns the
+operation and its state; the Transaction Authority, which admits the
+workflow and mints the result; the Presenter, which holds the
+committed key; and the Approver, whose governed decision is input to
+the Transaction Authority's own. The invariants bind commitments, not
+member names:
+
+1. Every commitment the challenge carries, to the operation, to the
+   concrete parameters, to the Mission context, and to the presenter
+   key, is derived by the Challenging Resource from its own
+   authoritative state; a caller-supplied replacement for any of them
+   is never accepted.
+2. Admission and completion are distinct: challenge expiry bounds
+   admission alone, the pending workflow has its own declared
+   lifetime, and completion runs a fresh authorization decision to
+   which the approval is input and never a bypass. A step-up
+   authentication context and durable governance state never issue
+   alone.
+3. At most one result exists per transaction instance, across every
+   workflow that references it, and repeated polls return that result
+   stably.
+4. The result is single-use by class, sender-constrained to the
+   committed key, audience-restricted to the Challenging Resource,
+   carries no approval object, no evidence, and no raw parameters,
+   and is never acceptable as a general credential of the substrate.
+5. Immediately before execution, the Challenging Resource
+   re-establishes, within declared freshness bounds, current Mission
+   lifecycle state, current authority, current entitlement, and its
+   own policy, and consumes the transaction instance atomically,
+   linearizably across every replica capable of executing the
+   operation, failing closed when either the state source or the
+   consumption store is unavailable. A result minted before a
+   termination or a narrowing never executes after it.
+6. The result's subject is the destination-local subject; the
+   issuer-qualified origin principal travels alongside it, never in
+   place of it; actor context is attribution, never authority.
+7. Refusals are typed, and pending, denied, and expired workflow
+   states are distinguishable, so a refused caller can re-plan
+   without receiving a map of the environment.
+
+## Carrier Requirements {#carrier-requirements}
+
+A protocol binding provides one slot for each requirement below. Each
+slot is named by function; the binding supplies the substrate-native
+carrier.
+
 Challenge carrier:
-: A resource-authenticated challenge artifact derived from the
-  resource's authoritative state, committing to the operation
-  identity, `parameter_digest`, the Mission invariants, and the
-  presenter key. A client-supplied replacement for a committed member
-  is never accepted. A verifier resolves a challenge issuer's keys
-  from that issuer's published metadata and nowhere else; one
-  issuer's key never verifies another issuer's challenge. This
-  document's discharge: {{resource-challenge}} and
-  `txn_challenge_jwks_uri`.
+: A resource-authenticated artifact for the commitments of
+  {{transaction-invariants}}, whose signing keys a verifier resolves
+  from the issuer's published metadata and nowhere else; one issuer's
+  key never verifies another issuer's challenge.
 
 Operation identity:
-: The pair of the resource and a versioned Operation Profile
-  identifier. The profile validates the complete entry and yields a
-  typed operation; a human-readable member is never authorization
-  input; a superseded Operation Profile version resolves only for
-  workflows admitted under it. This document's discharge: the
-  `authorization_details` entry `type` of {{resource-challenge}}.
+: A versioned operation identifier scoped to the Challenging
+  Resource, validated as a complete entry and yielding a typed
+  operation; a human-readable member is never authorization input; a
+  superseded version resolves only for workflows admitted under it.
 
-One canonicalization:
-: The binding adopts the runtime profile's `parameter_digest`
-  ({{I-D.draft-mcguinness-mission-runtime}}) into its native
-  parameter commitment, or defines a verifiable equivalence to it. It
-  never defines a second canonicalization. This document's discharge:
-  {{resource-challenge}}.
+Parameter commitment:
+: The runtime profile's `parameter_digest`
+  ({{I-D.draft-mcguinness-mission-runtime}}), adopted into the
+  binding's native commitment, or a verifiable equivalence to it. A
+  binding never defines a second canonicalization.
 
 Workflow handle:
-: Challenge expiry bounds admission alone. The pending workflow
-  carries its own deployment-declared lifetime under a binding-native
-  handle; repeated initial submission of one (challenge issuer,
-  challenge identifier, client, presenter key) returns the existing
-  workflow or fails deterministically; at most one authorization
-  result exists per resource-scoped `txn`, returned stably to
-  repeated polls. This document's discharge: {{two-phase-expiry}}.
-
-Approval binding and fresh decision:
-: The governed approval is bound to the complete transaction: the
-  resource, `txn`, the Mission invariants, the operation identity and
-  exact authorization details, `parameter_digest`, the local subject
-  and, where present, the origin principal, the authenticated client,
-  and the presenter key. Approval completion, a step-up
-  authentication context, and durable governance state never issue
-  alone; issuance requires a fresh authorization decision at
-  completion, revalidated immediately before the result is minted.
-  This document's discharge: {{challenge-redemption}} steps 4
-  through 7.
+: A transaction-instance identifier with its own lifetime, distinct
+  from any content address, under which repeated initial submission
+  of one (challenge issuer, challenge identifier, client, presenter
+  key) returns the existing workflow or fails deterministically.
 
 Result class:
-: A result artifact whose class every verifier can distinguish from
-  each of the substrate's general credential classes. Single use is
-  semantic to the class, never a member. The artifact is
-  sender-constrained and single-audience, carries no approval object,
-  no evidence, and no raw parameters, and is never acceptable as a
-  general Mission-bound credential. This document's discharge:
-  {{transaction-token}} and the `mission-txn-token+jwt` type.
-
-Offline verification and consumption:
-: The resource verifies the result locally against the pending
-  operation it retained, recomputing `parameter_digest` from its
-  authoritative state. Consumption of the resource-scoped `txn` is
-  atomic and linearizable across every replica capable of executing
-  the operation, per the Exact enforcement profile of
-  {{I-D.draft-mcguinness-mission-metering}}; an unavailable
-  consumption store fails closed; a second result identifier
-  presented for a consumed `txn` is the same replay. This document's
-  discharge: {{offline-verification}}.
-
-Identity projection:
-: The result's subject is the destination-local subject. The
-  issuer-qualified origin principal travels alongside it in the
-  Mission invariants where the Origin Principal profile applies,
-  never in place of it. Actor context is attribution, never
-  authority. This document's discharge: {{transaction-token}}.
+: An artifact class every verifier can distinguish from each of the
+  substrate's general credential classes, carrying the single-use
+  semantics of invariant 4 on the class itself, never on a member.
 
 Possession:
-: The challenge commits to a presenter key; possession is proven at
-  redemption and at execution; the execution proof binds to the
-  presented artifact itself, not only to the key. This document's
-  discharge: `cnf` under DPoP or mutual TLS, including `ath`.
+: Proof of the committed presenter key at redemption and at
+  execution, with the execution proof bound to the presented artifact
+  itself, not only to the key.
+
+Current-state source:
+: An authoritative source for the execution-time checks of invariant
+  5, with a declared freshness bound, available to the Challenging
+  Resource unconditionally on the execution path.
 
 Failure vocabulary:
-: Pending, denied, and expired workflow states map onto the
-  substrate's native vocabulary, and the binding defines no second
-  vocabulary. Refusals are typed, so a refused caller can re-plan
-  without receiving a map of the environment. This document's
-  discharge: {{failure-semantics}}.
+: A mapping of pending, denied, and expired workflow states onto the
+  substrate's native vocabulary; the binding defines no second
+  vocabulary.
+
+## OAuth Discharge {#oauth-discharge}
+
+| Requirement | This document |
+| --- | --- |
+| Challenge carrier | The signed challenge of {{resource-challenge}}, keys via `txn_challenge_jwks_uri` |
+| Operation identity | The `authorization_details` entry `type` and Operation Profile rules of {{resource-challenge}} |
+| Parameter commitment | `parameter_digest`, carried and verified per {{resource-challenge}} and {{offline-verification}} |
+| Workflow handle | `transaction_authorization_id` and the admission rules of {{two-phase-expiry}} |
+| Result class | `mission-txn-token+jwt` per {{transaction-token}} |
+| Possession | `cnf` under DPoP or mutual TLS, including `ath`, per {{challenge-redemption}} and {{offline-verification}} |
+| Current-state source | Offline verification step 5 of {{offline-verification}}: the Mission Status surface, the Status List, or issuer introspection within declared freshness bounds |
+| Failure vocabulary | The upstream vocabulary applied unchanged per {{failure-semantics}} |
+{: title="OAuth discharge of the carrier requirements"}
 
 The Mission Context Binding for AAuth
-({{I-D.draft-mcguinness-mission-aauth}}) discharges this floor with
-AAuth-native mechanisms, including the R3 proposal model
-({{I-D.draft-hardt-aauth-r3}}).
+({{I-D.draft-mcguinness-mission-aauth}}) records, informatively, the
+native and missing status of each requirement against AAuth and R3
+({{I-D.draft-hardt-aauth-r3}}); it does not claim the capability.
 
 # Conformance {#conformance}
 
