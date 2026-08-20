@@ -130,6 +130,33 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
  */
 const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
 
+/**
+ * @spec runtime#decision-output — the permit's decision CONDITIONS: the
+ * declarative constraints on RELYING on the permit that the draft names
+ * verbatim ("a request binding, a validity bound, a use limit"), which map
+ * 1:1 onto this PDP's three permit-only `decision.context` members
+ * (evaluate.ts's permit branch): `parameter_digest` (request binding),
+ * `permit_expires_at` (validity bound), `single_use` (use limit).
+ */
+const RECOGNIZED_PERMIT_CONDITIONS = new Set(["parameter_digest", "permit_expires_at", "single_use"]);
+
+/**
+ * @spec runtime#decision-output — permit-path `decision.context` members
+ * that are evaluation METADATA and evidence, never a condition on relying on
+ * the permit: correlation identifiers and the deployment's action
+ * classification (both echoed on deny contexts too, so they cannot be
+ * reliance constraints specific to a permit), plus `entry_digest`, the
+ * evidence resolved-scope anchor (@spec authzen#decision-evidence-object,
+ * not named among the Decision Output lanes at all).
+ */
+const RECOGNIZED_PERMIT_METADATA = new Set([
+  "decision_id",
+  "policy_view_id",
+  "action_class",
+  "class_source",
+  "entry_digest",
+]);
+
 export interface PepDeps {
   payments: PaymentsStore;
   evidence: EvidenceStore;
@@ -548,6 +575,28 @@ export class Pep {
       }
       return result;
     }
+
+    // @spec runtime#decision-output — "on a permit, decision conditions:
+    // declarative constraints on relying on the permit (a request binding, a
+    // validity bound, a use limit) ... a condition the enforcing component
+    // does not recognize makes the permit unusable, the reliance counterpart
+    // of the obligations rule." A permit's decision.context here carries
+    // three genuine conditions (parameter_digest = request binding,
+    // permit_expires_at = validity bound, single_use = use limit) alongside
+    // decision metadata this PEP always expects (decision_id, policy_view_id,
+    // action_class/class_source, entry_digest -- the evidence resolved-scope
+    // anchor, @spec authzen#decision-evidence-object -- none of which is a
+    // constraint on RELYING on the permit; they appear on deny contexts too).
+    // Any OTHER member is a condition this PEP does not recognize, so the
+    // permit it rides on is unusable: refuse with zero effect, never ignore.
+    const unrecognizedConditions = Object.keys(decision.context).filter(
+      (k) => !RECOGNIZED_PERMIT_CONDITIONS.has(k) && !RECOGNIZED_PERMIT_METADATA.has(k),
+    );
+    if (unrecognizedConditions.length > 0) {
+      this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
+      return { permitted: false, refusal_reason: "unrecognized_condition" };
+    }
+
     return {
       permitted: true,
       decision,
