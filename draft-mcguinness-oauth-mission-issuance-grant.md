@@ -127,11 +127,13 @@ gating. This document defines the Mission Issuance Grant: a
 short-lived, audience-bound, one-time assertion, minted by a
 standalone Mission Issuer for an approved, active Mission, that an
 OAuth Authorization Server redeems at its token endpoint to issue
-Mission-bound tokens gated on Mission state. Approval, record, and
-lifecycle stay at the Mission Authority Server; the Authorization
-Server keeps the token plane and adds only grant validation,
-subset-bounded minting, and state-gated refresh. This issuance join
-restores Mission-bound credentials and the issuance-gate kill switch
+Mission-bound tokens gated on Mission state and the Mission's current
+effective authority. Approval, record, and lifecycle stay at the
+Mission Authority Server; the Authorization Server keeps the token
+plane and adds only grant validation, subset-bounded minting, and
+refresh gated on that same state and effective authority. This
+issuance join restores Mission-bound credentials and the
+issuance-gate kill switch
 without the Authorization Server implementing the issuance profile's
 intake, approval, or derivation surfaces.
 
@@ -158,13 +160,15 @@ Issuance Grant**, a short-lived assertion the MAS mints for an
 active Mission and the AS redeems under the JWT authorization grant
 {{RFC7523}} to issue tokens that carry the `mission` claim and are
 bounded by the Mission's derived authority. Because every grant is
-minted against current Mission state and refresh is gated on that
-state, the possession-independent kill switch returns to the
+minted against current Mission state, and both redemption and refresh
+are gated on that state and on the Mission's current effective
+authority, the possession-independent kill switch returns to the
 issuance gate, the property the MAS-only mode structurally lacks.
 
 The Authorization Server's obligations are deliberately small:
-validate the grant, mint within its bounds, gate refresh on Mission
-state. It implements none of the core's intake, approval ceremony,
+validate the grant, mint within its bounds, gate issuance and refresh
+on Mission state and current effective authority. It implements none
+of the core's intake, approval ceremony,
 derivation, record, or lifecycle surfaces; those stay at the MAS.
 The integration ladder is then: record-only governance, the runtime
 join, the issuance join, and native Mission-awareness, each adopted
@@ -472,8 +476,9 @@ in an order that fails closed:
 2. the signature, under a `kid` resolving in the published key
    material of an `iss` its local policy trusts for issuance joins;
 3. `aud` names this AS; `exp` and `iat` are within the 300-second
-   bound; the `jti` has not been seen, and is recorded until `exp`
-   passes (single use);
+   bound; the `jti` has not been seen. The record of a seen `jti` is
+   written atomically with successful issuance and retained until
+   `exp` passes (single use, {{effective-set-projection}});
 4. the requester is the grant's `client_id`: the authenticated client
    equals it, or, where `cnf` is present, the proof of possession of
    step 5 binds the redemption to the key the grant was minted for;
@@ -514,11 +519,13 @@ On success the consuming AS mints tokens under these rules:
   Mission Issuer. The consuming AS MUST NOT prompt the Subject or
   any user for consent at redemption.
 
-A grant redeems exactly once. Subsequent token needs are met by the
-issued refresh token (state-gated) or a fresh grant (state-gated at
-minting); either way, every path to new authority re-enters a
-Mission-state gate, which is the issuance-gate kill switch this
-profile restores.
+A grant redeems exactly once, meaning exactly one successful
+issuance: a redemption that fails before issuance leaves the grant
+unconsumed ({{effective-set-projection}}). Subsequent token needs are
+met by the issued refresh token (state-gated) or a fresh grant
+(state-gated at minting); either way, every path to new authority
+re-enters a Mission-state gate, which is the issuance-gate kill
+switch this profile restores.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
@@ -526,40 +533,69 @@ A consuming AS with a Mission-state integration MUST, at redemption
 and at every refresh, resolve the Mission's current state and
 Effective Authority Set through the Mission Status operation
 ({{I-D.draft-mcguinness-oauth-mission-status}}) or an equivalent
-authenticated, audience-scoped authority source, within a published
-staleness bound, and refuse when the Mission is not established
-`active`. Where the Mission is `active`, the consuming AS projects
-issued authority through the current Effective Authority Set: the
-intersection of the grant's `authorization_details` (on refresh, the
-refresh family's own ceiling), any narrower authority the client
-requests at the token endpoint, that Effective Authority Set, and the
-consuming AS's own policy, which narrows only, per the subset rule
-above. A partial intersection issues only the remainder. An empty
-intersection refuses `invalid_grant` ({{redemption-errors}}), and MAY
-carry Containment's `authority_contained` denial reason where
-Containment is composed
-({{I-D.draft-mcguinness-oauth-mission-containment}}). This projection
-precedes scope projection above: an AS that models authority as
-`scope` maps the narrowed remainder, never the grant's original set.
+authority source, and refuse when the Mission is not established
+`active`. An equivalent source MUST be authenticated, MUST be
+audience-scoped to this AS, MUST carry the Mission's current
+`authorization_details` and a monotonic state `version`, and MUST
+answer within a staleness bound the deployment publishes
+({{conformance}}). Where the Mission is `active`, the consuming AS
+projects issued authority through the current Effective Authority
+Set: the intersection of the grant's `authorization_details` (on
+refresh, the refresh family's own ceiling), any narrower authority the
+client requests at the token endpoint, that Effective Authority Set,
+and the consuming AS's own policy, which narrows only, per the subset
+rule above. A partial intersection issues only the remainder. This
+projection precedes scope projection above: an AS that models
+authority as `scope` maps the narrowed remainder, never the grant's
+original set.
 
-The source for this projection is an authenticated, audience-scoped
-Mission Status Response, queried with this AS's own audience,
-carrying current `authorization_details` and the Mission's state
-`version` ({{I-D.draft-mcguinness-oauth-mission-status}}). An active
-Mission state, or a Status List VALID bit, does not alone satisfy
-this: containment and discharge narrow an active Mission without
-moving its lifecycle state, and the Status List's bit carries no
-`authorization_details` at all.
+An empty intersection is refused by its cause. Where the underlying
+authorization is exhausted, that is, where the grant's own authority
+intersected with the Effective Authority Set and the AS's policy is
+already empty before the request's own narrowing term, the refusal is
+`invalid_grant` ({{redemption-errors}}); it MAY carry Containment's
+`authority_contained` denial reason where Containment causally removed
+the authority, and a collapse from any other cause MUST NOT be
+reported as containment merely because Containment is composed
+({{I-D.draft-mcguinness-oauth-mission-containment}}). Where that
+authorization survives and only the narrowing the client requested
+fails to intersect it, the request is at fault: the refusal is
+`invalid_scope` where the request carried `scope`, or
+`invalid_authorization_details` {{RFC9396}} where it carried
+`authorization_details`.
+
+The Mission Status operation discharges the source properties above
+directly: an authenticated, audience-scoped Mission Status Response,
+queried with this AS's own audience, carries current
+`authorization_details` and the Mission's state `version`
+({{I-D.draft-mcguinness-oauth-mission-status}}). Whatever the source,
+an active Mission state, or a Status List VALID bit, does not alone
+satisfy this: containment and discharge narrow an active Mission
+without moving its lifecycle state, and the Status List's bit carries
+no `authorization_details` at all.
 
 A source that is unavailable, fails verification, or reports a state
-`version` older than one already observed for this Mission fails this
-projection closed: the consuming AS refuses `invalid_grant`
-({{redemption-errors}}) and leaves its stored ceiling unchanged,
-never treating the outage as authority exhaustion. Unlike an empty
-intersection, this refusal is retryable per the deployment's declared
-state-recovery policy, and the AS SHOULD distinguish it in
-`error_description` as {{redemption-errors}} already does for the
-dead-Mission case.
+`version` older than one already observed for this Mission is a
+transient failure, never authority exhaustion, and is refused in a
+machine-readable shape: this profile defines a token-endpoint use of
+the OAuth `temporarily_unavailable` error code {{RFC6749}}, carried
+with HTTP status 503, and the response MAY carry `Retry-After` per the
+deployment's declared state-recovery policy ({{redemption-errors}}).
+The consuming AS leaves its stored ceiling unchanged. `invalid_grant`
+stays for the permanent classes: an invalid, expired, or replayed
+grant, a Mission that is not established `active`, and a genuinely
+empty current intersection.
+
+Consumption is atomic with issuance. The single-use `jti` check of
+{{redemption}} refuses a grant already recorded; the record itself is
+written atomically with successful issuance, after the state gate and
+this projection. A redemption that fails before issuance, a transient
+source failure in particular, therefore leaves the grant unconsumed
+and retryable, and concurrent redemptions of one grant are resolved by
+that atomic record: the loser is a replay, refused `invalid_grant`. On
+the refresh path a transient source failure MUST NOT consume or rotate
+the presented refresh token, so the client retries with the credential
+it already holds.
 
 A refresh family's issued authority MUST NOT widen across refreshes
 within the same Mission: the consuming AS atomically narrows its own
@@ -594,18 +630,24 @@ problem from a dead Mission:
 | authenticated client is not the grant's `client_id` | `invalid_grant` |
 | `cnf` proof of possession fails | `invalid_grant` |
 | refresh refused because the Mission is not `active` | `invalid_grant` |
-| the current Effective Authority Set intersection is empty ({{effective-set-projection}}) | `invalid_grant` |
-| the Effective Authority Set source is unavailable, unverifiable, or reports a rolled-back state version ({{effective-set-projection}}) | `invalid_grant` |
+| the surviving authorization is exhausted: the intersection is empty before the request's own narrowing ({{effective-set-projection}}) | `invalid_grant` |
+| the client's requested narrowing does not intersect surviving authority, `scope` form ({{effective-set-projection}}) | `invalid_scope` |
+| the same, `authorization_details` form ({{effective-set-projection}}) | `invalid_authorization_details` |
+| the Effective Authority Set source is unavailable, unverifiable, or reports a rolled-back state version ({{effective-set-projection}}) | `temporarily_unavailable`, HTTP 503 |
 
-The distinction the client needs is "get a fresh grant" versus "the
-Mission is dead." Most `invalid_grant` cases are the former: the client
-mints a fresh grant ({{minting}}) and retries. The dead-Mission case is
-a refresh refused on a non-active Mission; there the AS SHOULD make the
-response distinguishable with an `error_description` stating the
-Mission is not active, and a client that re-mints will in any case be
-refused at the MAS `active` gate with `mission_not_active`
+The distinctions the client needs are "retry as is", "get a fresh
+grant", and "the Mission is dead", and the first is machine-readable:
+`temporarily_unavailable` with HTTP 503 says the authorization is
+intact and the same credential may be presented again, without parsing
+`error_description`. Most `invalid_grant` cases are the second: the
+client mints a fresh grant ({{minting}}) and retries. The dead-Mission
+case is a refresh refused on a non-active Mission; there the AS SHOULD
+make the response distinguishable with an `error_description` stating
+the Mission is not active, and a client that re-mints will in any case
+be refused at the MAS `active` gate with `mission_not_active`
 ({{minting-errors}}), which is the authoritative signal to stop rather
-than retry.
+than retry. `invalid_scope` and `invalid_authorization_details` name a
+request the client can narrow and re-send under the same grant.
 
 ## Authorization Code Flow Carriage {#par-carriage}
 
@@ -621,13 +663,19 @@ reference.
 The AS consumes the grant at PAR validation: the 300-second `exp`,
 `iat`, and `aud` checks and the single-use `jti` check are evaluated
 there, and the `jti` is recorded as seen at that point, so the grant
-cannot be replayed into a second authorization request.
+cannot be replayed into a second authorization request. Recording
+there is the atomic issuance step of {{effective-set-projection}}
+under this carriage, because the issued authorization code becomes the
+grant's carrier from that point on.
 
 The grant's window is not re-evaluated at code exchange; the issued
 authorization code carries its own lifetime from there. All
 remaining redemption rules (subset, lifetime, Effective Authority Set
 projection, no re-approval, and the error mapping of
-{{redemption-errors}}) apply at the token request unchanged.
+{{redemption-errors}}) apply at the token request unchanged. A
+transient source failure at code exchange refuses
+`temporarily_unavailable` and MUST NOT consume the authorization code,
+so the exchange stays retryable within the code's own lifetime.
 
 This carriage serves user-delegated Missions
 ({{I-D.draft-mcguinness-oauth-mission}}), where an authenticated
@@ -704,8 +752,12 @@ full:
 - verbatim `mission` claim carriage;
 - subset-bounded minting;
 - `expires_at` capping;
-- Effective Authority Set projection at redemption and refresh, or no
-  refresh ({{effective-set-projection}});
+- Effective Authority Set projection at redemption, which binds every
+  state-integrated consuming AS unconditionally
+  ({{effective-set-projection}});
+- Effective Authority Set projection at every refresh, which binds a
+  consuming AS that issues refresh tokens; a no-refresh deployment
+  discharges this duty by absence ({{effective-set-projection}});
 - no re-approval; and
 - the redemption error mapping of {{redemption-errors}}.
 
@@ -713,7 +765,7 @@ The PAR carriage of {{par-carriage}} is OPTIONAL.
 
 A deployment claiming this profile states, alongside its
 Enforcement Scope Statement, which Authorization Servers consume
-grants, the staleness bound of each one's refresh gating, and its
+grants, the staleness bound of each one's state gating, and its
 reconciliation posture ({{security-considerations}}): the window
 within which minting and redemption logs are reconciled, or that
 they are not. A consuming AS advertises its support with the
