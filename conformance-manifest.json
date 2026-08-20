@@ -35,8 +35,8 @@
     "content_sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "700499b5e01daec50a4ce5c7a2a15fc543d29a99",
-    "content_sha256": "a42687e945a9b9fecd442a9130b81c952f640fea87633d10f5540322dae032db"
+    "revision": "781c700812640440daa101a84b22d589bd53a97f",
+    "content_sha256": "8e37dd60c2c4de89f40b6d8df29e4880c504cb621999b54eeeb43cd3979de5bb"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
@@ -2753,7 +2753,7 @@
    "id": "txn-authorization.token.identity-projection",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "transaction-token",
-   "text": "REQUIRED. The verified effective subject: the Mission's subject or, where the Origin Principal profile applies, the origin principal. Never the Approver.",
+   "text": "REQUIRED. The destination-local subject: the verified subject of the presented `subject_token`, under this Authorization Server's own subject semantics.",
    "role": "TAS",
    "strength": "MUST",
    "applicability": {
@@ -2763,7 +2763,7 @@
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the token's sub is always the verified effective subject (the Mission subject or, under the Origin Principal profile, the origin principal), never the Approver; client_id is the client authenticated at the transaction endpoint, and act is present whenever requester or actor context existed on subject_token or the challenge, since the upstream client and the executing agent may be different parties"
+    "normative": "the token's sub is always the destination-local subject of the verified subject_token, never the Approver and never a flattened origin principal; where the Origin Principal profile applies the issuer-qualified origin principal travels in mission.subject alongside the local subject; client_id is the client authenticated at the transaction endpoint, and act is present whenever requester or actor context existed on subject_token or the challenge"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -2783,6 +2783,12 @@
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "client identification (@spec txn-authorization#challenge-redemption) > resolves the authenticated client from its own assertion, never from another client's record",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "origin principal vs the local subject (@spec txn-authorization#transaction-token) > mints the LOCAL subject and preserves the origin principal, and the decision sees both",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -2853,6 +2859,132 @@
      "surface": "verification"
     }
    ]
+  },
+  {
+   "id": "txn-authorization.floor.resource-derived-commitments",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "transaction-invariants",
+   "text": "is derived by the Challenging Resource from its own authoritative state; a caller-supplied replacement for any of them is never accepted",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "profiles": [],
+   "surface": "challenge-endpoint",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "every challenge commitment (operation, parameters, Mission context, presenter key) comes from the resource's own state on any substrate; a caller-supplied replacement is never reflected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authorization.floor.fresh-decision-at-completion",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "transaction-invariants",
+   "text": "completion runs a fresh authorization decision to which the approval is input and never a bypass",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on any substrate, approval completion alone never issues; the fresh decision at completion is the only issuance path"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authorization.floor.single-result-per-instance",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "transaction-invariants",
+   "text": "At most one result exists per transaction instance, across every workflow that references it, and repeated polls return that result stably",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "one admitted transaction instance yields at most one result artifact regardless of workflow or carrier; polls after decision are stable"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authorization.floor.execution-gate",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "transaction-invariants",
+   "text": "re-establishes, within declared freshness bounds, current Mission lifecycle state, current authority, current entitlement, and its own policy",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "immediately before execution the resource re-checks current lifecycle, authority, entitlement, and policy; a result minted before a termination or narrowing never executes after it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authorization.floor.one-canonicalization",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "carrier-requirements",
+   "text": "A binding never defines a second canonicalization.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a binding adopts the runtime parameter_digest or a verifiable equivalence; no second digest family exists on any substrate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authorization.floor.class-semantic-single-use",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "carrier-requirements",
+   "text": "carrying the single-use semantics of invariant 4 on the class itself, never on a member",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "single use attaches to the result artifact's class, distinguishable from every general credential class of the substrate, never to a claim or member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "runtime.conformance.enforcement-scope-statement-required",

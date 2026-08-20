@@ -108,7 +108,8 @@
    "is_published_core": false,
    "deps": [
     "draft-mcguinness-aauth-mission-expiry",
-    "draft-mcguinness-mission-substrate"
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission-transaction-authorization"
    ]
   },
   {
@@ -549,6 +550,7 @@
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
+    "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-metering",

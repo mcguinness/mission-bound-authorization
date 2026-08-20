@@ -45,6 +45,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-transaction-authorization:
+    title: "Mission Transaction Authorization Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
     target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
@@ -474,6 +482,39 @@ implementation MUST NOT infer that a resource evaluated mission context
 merely because a token carried the claim.  Even a mission-aware Resource
 or Access Server receives only the reference and MUST NOT dereference it
 to obtain the private mission blob.
+
+## Transaction Authorization {#transaction-authorization}
+
+This binding does not claim the transaction authorization capability.
+The Carrier Binding Floor of
+{{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} names
+the slots a binding must provide to host action-bound transaction
+authorization, and several have no native home in AAuth or R3 today.
+Consistent with this document's rule that it adds no new AAuth wire
+members, it defines no extensions to close them; this section records
+the status informatively, so the gap is legible rather than implied.
+
+| Requirement | Native today | Missing home |
+| --- | --- | --- |
+| Challenge carrier | The AAuth-Requirement challenge with a signed resource token | Members committing to the concrete parameters, the mission reference, and the presenter key |
+| Operation identity | R3 vocabulary definitions, content-addressed | Definition versioning and supersession |
+| Parameter commitment | The content-addressed R3 per-call document | A defined parameter-commitment member |
+| Workflow handle | None: `r3_s256` is a content address, and intentionally identical calls share it | A transaction-instance identifier with its own lifetime and admission idempotency |
+| Result class | None: the per-call result is an ordinary `aa-auth+jwt` | A class every verifier can distinguish, with single use semantic to the class |
+| At most one result | R3 single-uses one issued token | An issuance guard giving one admitted transaction at most one result |
+| Possession | AAuth proof of possession | An execution proof bound to the presented artifact itself |
+| Current-state source | Conditional: the management status operation where deployed ({{I-D.draft-mcguinness-mission-aauth-management}}) | An unconditional source on the execution path |
+| Failure vocabulary | Proposal pending, denied, and expired states | None |
+| Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | None |
+{: title="Transaction authorization requirements: native and missing"}
+
+A deployment could claim the capability only after the missing homes
+exist upstream and this binding additionally claims State-Observable
+unconditionally on the execution path (today conditional), and either
+Structured Authority or an equivalent resource-owned evaluation of the
+operation commitment (today not supported).  Until then the execution
+gate and the authority evaluation the transaction invariants require
+have no source in this binding, and hosting the flow is unsupported.
 
 ## Reference Propagation {#ref-propagation}
 
