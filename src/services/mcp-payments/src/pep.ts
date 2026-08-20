@@ -411,9 +411,23 @@ export class Pep {
       } else if (allowedVendors) {
         // Bulk form, vendor-constrained entry: bind the RESULT SET to the
         // entry's own scope (never the unconstrained store). The set-level
-        // authority already comes from the entry match above; one member of
-        // the allowlist stands in for the per-object FGA check that every
-        // other action performs, so an empty allowlist still denies below.
+        // authority is the Mission Record's own entry.constraints.vendors,
+        // read directly here, not derived from the FGA check below; that
+        // check names only ONE representative member of the allowlist
+        // (an empty allowlist still denies, since it has none to name), so
+        // it verifies "this entry's vendor scope is non-empty and reachable"
+        // rather than re-verifying every member independently. This is
+        // sound today because the FGA check on this domain model is a
+        // formality: deriveContextualTuples injects a contextual tuple that
+        // names exactly the object being checked (D26), so it always agrees
+        // with the entry. It would need a per-member check instead of a
+        // representative one if this model ever grows real PERSISTED
+        // per-vendor tuples that could disagree with the entry's own
+        // allowlist. The Decision Evidence this permit produces still
+        // anchors the FULL entry (entry_digest, @spec
+        // authzen#decision-evidence-object), so a verifier resolving that
+        // digest sees the true multi-vendor scope even though this
+        // in-process check only named one of its members.
         listVendorScope = allowedVendors;
         const representative = allowedVendors[0] ?? UNSCOPED_VENDOR_OBJECT;
         resourceObj = { type: "vendor", id: representative, properties: { vendor_id: representative } };
@@ -584,9 +598,9 @@ export class Pep {
     // three genuine conditions (parameter_digest = request binding,
     // permit_expires_at = validity bound, single_use = use limit) alongside
     // decision metadata this PEP always expects (decision_id, policy_view_id,
-    // action_class/class_source, entry_digest -- the evidence resolved-scope
-    // anchor, @spec authzen#decision-evidence-object -- none of which is a
-    // constraint on RELYING on the permit; they appear on deny contexts too).
+    // action_class/class_source, entry_digest, the evidence resolved-scope
+    // anchor per @spec authzen#decision-evidence-object): none of which is a
+    // constraint on RELYING on the permit; they appear on deny contexts too.
     // Any OTHER member is a condition this PEP does not recognize, so the
     // permit it rides on is unusable: refuse with zero effect, never ignore.
     const unrecognizedConditions = Object.keys(decision.context).filter(

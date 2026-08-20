@@ -3786,7 +3786,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#610 GAP 2 fixes and proves the CONDITION half only: pep.ts enumerates the permit-path decision.context members it recognizes (the three genuine conditions -- parameter_digest, permit_expires_at, single_use -- plus decision metadata that is never a reliance constraint) and refuses with zero effect on any other member, tested with a synthetic unrecognized member and a full-recognized-set control. The OBLIGATIONS half of this row (\"an unfulfilled or unrecognized obligation is an effective deny\") has no PDP-output arm here: @mission/pdp's evaluate() never emits an `obligations` member in decision.context at all, so that half stays unproven; partial, not tested."
+   "notes": "#610 GAP 2 fixes and proves the CONDITION half only: pep.ts enumerates the permit-path decision.context members it recognizes (the three genuine conditions, parameter_digest, permit_expires_at, single_use, plus decision metadata that is never a reliance constraint) and refuses with zero effect on any other member, tested with a synthetic unrecognized member and a full-recognized-set control. The OBLIGATIONS half of this row (\"an unfulfilled or unrecognized obligation is an effective deny\") has no PDP-output arm here: @mission/pdp's evaluate() never emits an `obligations` member in decision.context at all, so that half stays unproven; partial, not tested."
   },
   {
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
@@ -4848,9 +4848,15 @@
      "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id inside the entry's vendor constraint is permitted and bound to exactly that vendor",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > no vendor_id, MULTI-vendor allowlist: returns every allowlisted vendor's invoices and excludes the one left out",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> out_of_authority; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope rather than the unconstrained store."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> out_of_authority; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. Known limitation: for a multi-vendor allowlist the FGA check that pep.ts routes through names only one representative member of the allowlist (see the comment in pep.ts's bindsVendorScope branch), not every member independently; the result-set binding itself does not depend on that check's content, and the permit's Decision Evidence anchors the full entry (entry_digest) regardless."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -4890,9 +4896,15 @@
      "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused out_of_authority, not silently filtered",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > no vendor_id, MULTI-vendor allowlist: returns every allowlisted vendor's invoices and excludes the one left out",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was classified as an ordinary unbound read (the bulk/cross-vendor form was never distinguished from a single-object read). It is now bound: a vendor-constrained entry narrows the bulk result to its own vendor scope (never the whole store) and refuses a named vendor_id outside that scope; an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied out_of_authority (the unbound call's implicit vendorId of \"\" never matched a real vendors constraint) and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",

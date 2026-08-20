@@ -65,10 +65,12 @@ function seedPayments(): PaymentsStore {
     [
       { id: "acme", name: "Acme", status: "approved" },
       { id: "globex", name: "Globex", status: "approved" },
+      { id: "initech", name: "Initech", status: "approved" },
     ],
     [
       { id: "inv-acme-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
       { id: "inv-globex-1", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
+      { id: "inv-initech-1", vendor_id: "initech", amount: "75.00", currency: "USD", payee_account: "acct-initech", status: "payable" },
     ],
   );
   return payments;
@@ -145,6 +147,23 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     const res = await server.callReadTool("list_invoices", {}, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     const invoices = res.result as Array<{ vendor_id: string }>;
+    expect(invoices.map((i) => i.vendor_id).sort()).toEqual(["acme", "globex", "initech"].sort());
+  });
+
+  it("no vendor_id, MULTI-vendor allowlist: returns every allowlisted vendor's invoices and excludes the one left out", async () => {
+    const { server } = await build({
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.list"],
+      constraints: { vendors: ["acme", "globex"] },
+    });
+    const res = await server.callReadTool("list_invoices", {}, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    const invoices = res.result as Array<{ vendor_id: string }>;
+    // Both allowlisted vendors are served, not just the FGA check's
+    // representative member (@spec read-binding): the result set is bound
+    // to the entry's whole vendors array, and "initech" (outside it) never
+    // appears.
     expect(invoices.map((i) => i.vendor_id).sort()).toEqual(["acme", "globex"]);
   });
 
