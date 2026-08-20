@@ -66,6 +66,22 @@ informative:
   RFC9470:
   I-D.draft-reece-wimse-cross-org-delegation:
   I-D.draft-mcguinness-oauth-actor-profile:
+  I-D.draft-hardt-aauth-r3:
+    title: "AAuth Rich Resource Requests (R3)"
+    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission Context Binding for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -877,6 +893,113 @@ applicable cumulative-consumption or stateful operational gate
 ({{I-D.draft-mcguinness-mission-runtime}}, Section "The Runtime
 Decision"): the fresh, action-bound permit this profile mints is one
 more independent gate, never a substitute for the others.
+
+The carrier-side dual of this declaration, what a protocol binding
+must provide for another substrate to host this profile's flow, is
+{{carrier-binding-floor}}.
+
+# Carrier Binding Floor {#carrier-binding-floor}
+
+The wire mechanics of this document are one discharge of a
+carrier-neutral flow: {{mission-substrate}} declares what this profile
+consumes from the Mission kernel, and this section declares what a
+protocol binding MUST provide for another substrate to host the same
+flow. Each obligation closes by naming this document's own OAuth
+discharge. A binding that cannot provide an obligation does not host
+this profile: absence is fail-closed, and there is no partial
+hosting.
+
+Challenge carrier:
+: A resource-authenticated challenge artifact derived from the
+  resource's authoritative state, committing to the operation
+  identity, `parameter_digest`, the Mission invariants, and the
+  presenter key. A client-supplied replacement for a committed member
+  is never accepted. A verifier resolves a challenge issuer's keys
+  from that issuer's published metadata and nowhere else; one
+  issuer's key never verifies another issuer's challenge. This
+  document's discharge: {{resource-challenge}} and
+  `txn_challenge_jwks_uri`.
+
+Operation identity:
+: The pair of the resource and a versioned Operation Profile
+  identifier. The profile validates the complete entry and yields a
+  typed operation; a human-readable member is never authorization
+  input; a superseded Operation Profile version resolves only for
+  workflows admitted under it. This document's discharge: the
+  `authorization_details` entry `type` of {{resource-challenge}}.
+
+One canonicalization:
+: The binding adopts the runtime profile's `parameter_digest`
+  ({{I-D.draft-mcguinness-mission-runtime}}) into its native
+  parameter commitment, or defines a verifiable equivalence to it. It
+  never defines a second canonicalization. This document's discharge:
+  {{resource-challenge}}.
+
+Workflow handle:
+: Challenge expiry bounds admission alone. The pending workflow
+  carries its own deployment-declared lifetime under a binding-native
+  handle; repeated initial submission of one (challenge issuer,
+  challenge identifier, client, presenter key) returns the existing
+  workflow or fails deterministically; at most one authorization
+  result exists per resource-scoped `txn`, returned stably to
+  repeated polls. This document's discharge: {{two-phase-expiry}}.
+
+Approval binding and fresh decision:
+: The governed approval is bound to the complete transaction: the
+  resource, `txn`, the Mission invariants, the operation identity and
+  exact authorization details, `parameter_digest`, the local subject
+  and, where present, the origin principal, the authenticated client,
+  and the presenter key. Approval completion, a step-up
+  authentication context, and durable governance state never issue
+  alone; issuance requires a fresh authorization decision at
+  completion, revalidated immediately before the result is minted.
+  This document's discharge: {{challenge-redemption}} steps 4
+  through 7.
+
+Result class:
+: A result artifact whose class every verifier can distinguish from
+  each of the substrate's general credential classes. Single use is
+  semantic to the class, never a member. The artifact is
+  sender-constrained and single-audience, carries no approval object,
+  no evidence, and no raw parameters, and is never acceptable as a
+  general Mission-bound credential. This document's discharge:
+  {{transaction-token}} and the `mission-txn-token+jwt` type.
+
+Offline verification and consumption:
+: The resource verifies the result locally against the pending
+  operation it retained, recomputing `parameter_digest` from its
+  authoritative state. Consumption of the resource-scoped `txn` is
+  atomic and linearizable across every replica capable of executing
+  the operation, per the Exact enforcement profile of
+  {{I-D.draft-mcguinness-mission-metering}}; an unavailable
+  consumption store fails closed; a second result identifier
+  presented for a consumed `txn` is the same replay. This document's
+  discharge: {{offline-verification}}.
+
+Identity projection:
+: The result's subject is the destination-local subject. The
+  issuer-qualified origin principal travels alongside it in the
+  Mission invariants where the Origin Principal profile applies,
+  never in place of it. Actor context is attribution, never
+  authority. This document's discharge: {{transaction-token}}.
+
+Possession:
+: The challenge commits to a presenter key; possession is proven at
+  redemption and at execution; the execution proof binds to the
+  presented artifact itself, not only to the key. This document's
+  discharge: `cnf` under DPoP or mutual TLS, including `ath`.
+
+Failure vocabulary:
+: Pending, denied, and expired workflow states map onto the
+  substrate's native vocabulary, and the binding defines no second
+  vocabulary. Refusals are typed, so a refused caller can re-plan
+  without receiving a map of the environment. This document's
+  discharge: {{failure-semantics}}.
+
+The Mission Context Binding for AAuth
+({{I-D.draft-mcguinness-mission-aauth}}) discharges this floor with
+AAuth-native mechanisms, including the R3 proposal model
+({{I-D.draft-hardt-aauth-r3}}).
 
 # Conformance {#conformance}
 
