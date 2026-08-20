@@ -1842,112 +1842,87 @@ to obtain the private mission blob.<a href="#section-4.5-4" class="pilcrow">¶</
         <h3 id="name-transaction-authorization">
 <a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-transaction-authorization" class="section-name selfRef">Transaction Authorization</a>
         </h3>
-<p id="section-4.6-1">An operation under an action-bound approval requirement can be hosted
-in this binding under the transaction authorization profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span>).
-This section discharges that profile's Carrier Binding Floor with
-AAuth-native mechanisms.  A deployment that does not provide one of
-these mechanisms does not host the flow: absence is fail-closed, and
-no other AAuth mechanism substitutes for a missing obligation.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4.6-2">
-          <dt id="section-4.6-2.1">Challenge carrier:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.2">
-            <p id="section-4.6-2.2.1">The AAuth-Requirement challenge carrying a signed resource token.
-For this flow the resource token additionally commits to the native
-reference (<code>mission_s256</code> within the approver's namespace), the
-runtime <code>parameter_digest</code>
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the presenter key,
-all derived from the resource's own state.  A verifier resolves the
-resource's challenge-signing keys from the resource's published
-AAuth metadata, never from the request.<a href="#section-4.6-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.3">Operation identity:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.4">
-            <p id="section-4.6-2.4.1">A resource-owned R3 vocabulary definition
-(<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>), identified by the resource and the
-definition's version.  The content-addressed definition document
-gives the operation the same exact-byte commitment the mission blob
-has (<a href="#reference" class="auto internal xref">Section 3.2</a>).  A superseded definition version resolves only
-for workflows admitted under it.<a href="#section-4.6-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.5">One canonicalization:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.6">
-            <p id="section-4.6-2.6.1">The R3 per-call proposal document carries the runtime
-<code>parameter_digest</code> as a member computed from the resource's
-authoritative state, and the document's content address commits to
-it.  This binding defines no second canonicalization.  Where R3
-does not define a member this discharge names, the binding carries
-it as an extension member of the same document; the commitment and
-verification rules are unchanged.<a href="#section-4.6-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.7">Workflow handle:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.8">
-            <p id="section-4.6-2.8.1">The R3 proposal identifier.  The pending proposal carries its own
-deployment-declared lifetime, independent of challenge expiry;
-repeated initial submission of one (resource, challenge identifier,
-agent, presenter key) resolves to the one proposal; at most one
-per-call auth token exists per resource-scoped transaction,
-returned stably.<a href="#section-4.6-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.9">Approval and fresh decision:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.10">
-            <p id="section-4.6-2.10.1">The PS adjudicates the approval against the complete transaction:
-the resource, the transaction identifier, the native reference, the
-operation identity and the exact requested operation, the
-<code>parameter_digest</code>, both identities, the requesting agent, and the
-presenter key.  Adjudication never issues.  The per-call auth token
-is minted only by a fresh decision at completion that re-observes
-the mission (<code>active</code>, within <code>expires_at</code>, per <a href="#lifecycle" class="auto internal xref">Section 4.8</a>), the
-person token's validity, and resource policy.<a href="#section-4.6-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.11">Result class:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.12">
-            <p id="section-4.6-2.12.1">The per-call auth token, under a token class distinguishable from
-every other token class of this binding.  Single use is semantic to
-the class.  The token is sender-constrained and bound to the single
-challenging resource, carries no approval object and no raw
-parameters, and is never acceptable as a person token or as a
-general resource authorization.<a href="#section-4.6-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.13">Offline verification and consumption:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.14">
-            <p id="section-4.6-2.14.1">The resource verifies the per-call token locally against the
-proposal it retained, recomputing <code>parameter_digest</code> from its own
-state, and consumes the resource-scoped transaction atomically and
-linearizably across every replica capable of executing the
-operation, failing closed when the consumption store is
-unavailable.<a href="#section-4.6-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.15">Identity projection:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.16">
-            <p id="section-4.6-2.16.1">The token's subject is the resource-local subject the person token
-names.  The originating identity stays in mission context under the
-approver's namespace, never substituted for the local subject.  The
-acting agent is attribution, never authority.<a href="#section-4.6-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.17">Possession:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.18">
-            <p id="section-4.6-2.18.1">Possession of the presenter key is proven at redemption and at
-execution, and the execution proof binds to the presented per-call
-token itself, not only to the key.<a href="#section-4.6-2.18.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.6-2.19">Failure vocabulary:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.6-2.20">
-            <p id="section-4.6-2.20.1">The proposal's native pending, denied, and expired states carry the
-workflow.  This binding defines no second vocabulary for that
-surface.<a href="#section-4.6-2.20.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
+<p id="section-4.6-1">This binding does not claim the transaction authorization capability.
+The Carrier Binding Floor of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span> names
+the slots a binding must provide to host action-bound transaction
+authorization, and several have no native home in AAuth or R3 today.
+Consistent with this document's rule that it adds no new AAuth wire
+members, it defines no extensions to close them; this section records
+the status informatively, so the gap is legible rather than implied.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+<span id="name-transaction-authorization-r"></span><table class="center" id="table-3">
+          <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-transaction-authorization-r" class="selfRef">Transaction authorization requirements: native and missing</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Requirement</th>
+              <th class="text-left" rowspan="1" colspan="1">Native today</th>
+              <th class="text-left" rowspan="1" colspan="1">Missing home</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Challenge carrier</td>
+              <td class="text-left" rowspan="1" colspan="1">The AAuth-Requirement challenge with a signed resource token</td>
+              <td class="text-left" rowspan="1" colspan="1">Members committing to the concrete parameters, the mission reference, and the presenter key</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Operation identity</td>
+              <td class="text-left" rowspan="1" colspan="1">R3 vocabulary definitions, content-addressed</td>
+              <td class="text-left" rowspan="1" colspan="1">Definition versioning and supersession</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Parameter commitment</td>
+              <td class="text-left" rowspan="1" colspan="1">The content-addressed R3 per-call document</td>
+              <td class="text-left" rowspan="1" colspan="1">A defined parameter-commitment member</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Workflow handle</td>
+              <td class="text-left" rowspan="1" colspan="1">None: <code>r3_s256</code> is a content address, and intentionally identical calls share it</td>
+              <td class="text-left" rowspan="1" colspan="1">A transaction-instance identifier with its own lifetime and admission idempotency</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Result class</td>
+              <td class="text-left" rowspan="1" colspan="1">None: the per-call result is an ordinary <code>aa-auth+jwt</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">A class every verifier can distinguish, with single use semantic to the class</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">At most one result</td>
+              <td class="text-left" rowspan="1" colspan="1">R3 single-uses one issued token</td>
+              <td class="text-left" rowspan="1" colspan="1">An issuance guard giving one admitted transaction at most one result</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Possession</td>
+              <td class="text-left" rowspan="1" colspan="1">AAuth proof of possession</td>
+              <td class="text-left" rowspan="1" colspan="1">An execution proof bound to the presented artifact itself</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Current-state source</td>
+              <td class="text-left" rowspan="1" colspan="1">Conditional: the management status operation where deployed (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">An unconditional source on the execution path</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Failure vocabulary</td>
+              <td class="text-left" rowspan="1" colspan="1">Proposal pending, denied, and expired states</td>
+              <td class="text-left" rowspan="1" colspan="1">None</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Fresh decision</td>
+              <td class="text-left" rowspan="1" colspan="1">PS adjudication under the lifecycle gate (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">None</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-4.6-3">A deployment could claim the capability only after the missing homes
+exist upstream and this binding additionally claims State-Observable
+unconditionally on the execution path (today conditional), and either
+Structured Authority or an equivalent resource-owned evaluation of the
+operation commitment (today not supported).  Until then the execution
+gate and the authority evaluation the transaction invariants require
+have no source in this binding, and hosting the flow is unsupported.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ref-propagation">
@@ -2116,10 +2091,8 @@ brokers auth tokens; and<a href="#section-5-4.6.1" class="pilcrow">¶</a></p>
 <p id="section-5-5">An implementation conforms as a <strong>mission-aware Resource or Access
 Server</strong> if it preserves and validates the native reference as required
 by AAuth and does not claim to have evaluated the private mission
-description.  One that hosts transaction authorization does so only
-with every obligation of <a href="#transaction-authorization" class="auto internal xref">Section 4.6</a> discharged, and
-refuses to host the flow otherwise.  Support by a Resource or Access
-Server is not required for agent-and-PS conformance.<a href="#section-5-5" class="pilcrow">¶</a></p>
+description.  Support by a Resource or Access Server is not required for
+agent-and-PS conformance.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">This document intentionally makes no "full" or "partial" provision
 claim.  Conformance states which capabilities are present; it does not
 rank AAuth by similarity to an OAuth authorization model.<a href="#section-5-6" class="pilcrow">¶</a></p>
@@ -2379,9 +2352,9 @@ of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#s
 </li>
       </ol>
 <p id="section-9-4">The binding declares these optional capabilities:<a href="#section-9-4" class="pilcrow">¶</a></p>
-<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-3">
+<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-4">
         <caption>
-<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#table-4" class="selfRef">Table 4</a>:
 <a href="#name-aauth-mission-substrate-cap" class="selfRef">AAuth Mission substrate capabilities</a>
         </caption>
 <thead>
@@ -2467,17 +2440,9 @@ metadata member, error code, capability value, or registry value.<a href="#secti
         <dd>
 <span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html">https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
       <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transaction Authorization Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -2497,8 +2462,12 @@ metadata member, error code, capability value, or registry value.<a href="#secti
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-aauth-management">[I-D.draft-mcguinness-mission-aauth-management]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Management"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transaction Authorization Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

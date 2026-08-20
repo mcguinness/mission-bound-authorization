@@ -1219,6 +1219,17 @@ fresh decision, and the transaction-token profile.<a href="#section-abstract-1" 
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
             <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-carrier-binding-floor" class="internal xref">Carrier Binding Floor</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-transaction-invariants" class="internal xref">Transaction Invariants</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-carrier-requirements" class="internal xref">Carrier Requirements</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
+                <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-oauth-discharge" class="internal xref">OAuth Discharge</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
             <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
@@ -2217,125 +2228,215 @@ must provide for another substrate to host this profile's flow, is
       </h2>
 <p id="section-15-1">The wire mechanics of this document are one discharge of a
 carrier-neutral flow: <a href="#mission-substrate" class="auto internal xref">Section 14</a> declares what this profile
-consumes from the Mission kernel, and this section declares what a
-protocol binding <span class="bcp14">MUST</span> provide for another substrate to host the same
-flow. Each obligation closes by naming this document's own OAuth
-discharge. A binding that cannot provide an obligation does not host
-this profile: absence is fail-closed, and there is no partial
+consumes from the Mission kernel, and this section declares what the
+flow itself requires, in three layers. <a href="#transaction-invariants" class="auto internal xref">Section 15.1</a>
+states the invariants that make the flow safe on any substrate.
+<a href="#carrier-requirements" class="auto internal xref">Section 15.2</a> states the slots a protocol binding <span class="bcp14">MUST</span>
+provide to carry them. <a href="#oauth-discharge" class="auto internal xref">Section 15.3</a> names this document's own
+discharge of each slot. A binding that cannot provide a slot does not
+host this profile: absence is fail-closed, and there is no partial
 hosting.<a href="#section-15-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-15-2">
-        <dt id="section-15-2.1">Challenge carrier:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.2">
-          <p id="section-15-2.2.1">A resource-authenticated challenge artifact derived from the
-resource's authoritative state, committing to the operation
-identity, <code>parameter_digest</code>, the Mission invariants, and the
-presenter key. A client-supplied replacement for a committed member
-is never accepted. A verifier resolves a challenge issuer's keys
-from that issuer's published metadata and nowhere else; one
-issuer's key never verifies another issuer's challenge. This
-document's discharge: <a href="#resource-challenge" class="auto internal xref">Section 5</a> and
-<code>txn_challenge_jwks_uri</code>.<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+<div id="transaction-invariants">
+<section id="section-15.1">
+        <h3 id="name-transaction-invariants">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-transaction-invariants" class="section-name selfRef">Transaction Invariants</a>
+        </h3>
+<p id="section-15.1-1">Four roles participate: the Challenging Resource, which owns the
+operation and its state; the Transaction Authority, which admits the
+workflow and mints the result; the Presenter, which holds the
+committed key; and the Approver, whose governed decision is input to
+the Transaction Authority's own. The invariants bind commitments, not
+member names:<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-15.1-2">
+<li id="section-15.1-2.1">
+            <p id="section-15.1-2.1.1">Every commitment the challenge carries, to the operation, to the
+concrete parameters, to the Mission context, and to the presenter
+key, is derived by the Challenging Resource from its own
+authoritative state; a caller-supplied replacement for any of them
+is never accepted.<a href="#section-15.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.2">
+            <p id="section-15.1-2.2.1">Admission and completion are distinct: challenge expiry bounds
+admission alone, the pending workflow has its own declared
+lifetime, and completion runs a fresh authorization decision to
+which the approval is input and never a bypass. A step-up
+authentication context and durable governance state never issue
+alone.<a href="#section-15.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.3">
+            <p id="section-15.1-2.3.1">At most one result exists per transaction instance, across every
+workflow that references it, and repeated polls return that result
+stably.<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.4">
+            <p id="section-15.1-2.4.1">The result is single-use by class, sender-constrained to the
+committed key, audience-restricted to the Challenging Resource,
+carries no approval object, no evidence, and no raw parameters,
+and is never acceptable as a general credential of the substrate.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.5">
+            <p id="section-15.1-2.5.1">Immediately before execution, the Challenging Resource
+re-establishes, within declared freshness bounds, current Mission
+lifecycle state, current authority, current entitlement, and its
+own policy, and consumes the transaction instance atomically,
+linearizably across every replica capable of executing the
+operation, failing closed when either the state source or the
+consumption store is unavailable. A result minted before a
+termination or a narrowing never executes after it.<a href="#section-15.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.6">
+            <p id="section-15.1-2.6.1">The result's subject is the destination-local subject; the
+issuer-qualified origin principal travels alongside it, never in
+place of it; actor context is attribution, never authority.<a href="#section-15.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.7">
+            <p id="section-15.1-2.7.1">Refusals are typed, and pending, denied, and expired workflow
+states are distinguishable, so a refused caller can re-plan
+without receiving a map of the environment.<a href="#section-15.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="carrier-requirements">
+<section id="section-15.2">
+        <h3 id="name-carrier-requirements">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-carrier-requirements" class="section-name selfRef">Carrier Requirements</a>
+        </h3>
+<p id="section-15.2-1">A protocol binding provides one slot for each requirement below. Each
+slot is named by function; the binding supplies the substrate-native
+carrier.<a href="#section-15.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-15.2-2">
+          <dt id="section-15.2-2.1">Challenge carrier:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.2">
+            <p id="section-15.2-2.2.1">A resource-authenticated artifact for the commitments of
+<a href="#transaction-invariants" class="auto internal xref">Section 15.1</a>, whose signing keys a verifier resolves
+from the issuer's published metadata and nowhere else; one issuer's
+key never verifies another issuer's challenge.<a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.3">Operation identity:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.4">
+            <p id="section-15.2-2.4.1">A versioned operation identifier scoped to the Challenging
+Resource, validated as a complete entry and yielding a typed
+operation; a human-readable member is never authorization input; a
+superseded version resolves only for workflows admitted under it.<a href="#section-15.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.5">Parameter commitment:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.6">
+            <p id="section-15.2-2.6.1">The runtime profile's <code>parameter_digest</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), adopted into the
+binding's native commitment, or a verifiable equivalence to it. A
+binding never defines a second canonicalization.<a href="#section-15.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.7">Workflow handle:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.8">
+            <p id="section-15.2-2.8.1">A transaction-instance identifier with its own lifetime, distinct
+from any content address, under which repeated initial submission
+of one (challenge issuer, challenge identifier, client, presenter
+key) returns the existing workflow or fails deterministically.<a href="#section-15.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.9">Result class:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.10">
+            <p id="section-15.2-2.10.1">An artifact class every verifier can distinguish from each of the
+substrate's general credential classes, carrying the single-use
+semantics of invariant 4 on the class itself, never on a member.<a href="#section-15.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.11">Possession:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.12">
+            <p id="section-15.2-2.12.1">Proof of the committed presenter key at redemption and at
+execution, with the execution proof bound to the presented artifact
+itself, not only to the key.<a href="#section-15.2-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.13">Current-state source:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.14">
+            <p id="section-15.2-2.14.1">An authoritative source for the execution-time checks of invariant
+5, with a declared freshness bound, available to the Challenging
+Resource unconditionally on the execution path.<a href="#section-15.2-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.15">Failure vocabulary:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.16">
+            <p id="section-15.2-2.16.1">A mapping of pending, denied, and expired workflow states onto the
+substrate's native vocabulary; the binding defines no second
+vocabulary.<a href="#section-15.2-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-15-2.3">Operation identity:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.4">
-          <p id="section-15-2.4.1">The pair of the resource and a versioned Operation Profile
-identifier. The profile validates the complete entry and yields a
-typed operation; a human-readable member is never authorization
-input; a superseded Operation Profile version resolves only for
-workflows admitted under it. This document's discharge: the
-<code>authorization_details</code> entry <code>type</code> of <a href="#resource-challenge" class="auto internal xref">Section 5</a>.<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.5">One canonicalization:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.6">
-          <p id="section-15-2.6.1">The binding adopts the runtime profile's <code>parameter_digest</code>
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) into its native
-parameter commitment, or defines a verifiable equivalence to it. It
-never defines a second canonicalization. This document's discharge:
-<a href="#resource-challenge" class="auto internal xref">Section 5</a>.<a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.7">Workflow handle:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.8">
-          <p id="section-15-2.8.1">Challenge expiry bounds admission alone. The pending workflow
-carries its own deployment-declared lifetime under a binding-native
-handle; repeated initial submission of one (challenge issuer,
-challenge identifier, client, presenter key) returns the existing
-workflow or fails deterministically; at most one authorization
-result exists per resource-scoped <code>txn</code>, returned stably to
-repeated polls. This document's discharge: <a href="#two-phase-expiry" class="auto internal xref">Section 6.1</a>.<a href="#section-15-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.9">Approval binding and fresh decision:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.10">
-          <p id="section-15-2.10.1">The governed approval is bound to the complete transaction: the
-resource, <code>txn</code>, the Mission invariants, the operation identity and
-exact authorization details, <code>parameter_digest</code>, the local subject
-and, where present, the origin principal, the authenticated client,
-and the presenter key. Approval completion, a step-up
-authentication context, and durable governance state never issue
-alone; issuance requires a fresh authorization decision at
-completion, revalidated immediately before the result is minted.
-This document's discharge: <a href="#challenge-redemption" class="auto internal xref">Section 6</a> steps 4
-through 7.<a href="#section-15-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.11">Result class:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.12">
-          <p id="section-15-2.12.1">A result artifact whose class every verifier can distinguish from
-each of the substrate's general credential classes. Single use is
-semantic to the class, never a member. The artifact is
-sender-constrained and single-audience, carries no approval object,
-no evidence, and no raw parameters, and is never acceptable as a
-general Mission-bound credential. This document's discharge:
-<a href="#transaction-token" class="auto internal xref">Section 7</a> and the <code>mission-txn-token+jwt</code> type.<a href="#section-15-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.13">Offline verification and consumption:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.14">
-          <p id="section-15-2.14.1">The resource verifies the result locally against the pending
-operation it retained, recomputing <code>parameter_digest</code> from its
-authoritative state. Consumption of the resource-scoped <code>txn</code> is
-atomic and linearizable across every replica capable of executing
-the operation, per the Exact enforcement profile of
-<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>; an unavailable
-consumption store fails closed; a second result identifier
-presented for a consumed <code>txn</code> is the same replay. This document's
-discharge: <a href="#offline-verification" class="auto internal xref">Section 8</a>.<a href="#section-15-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.15">Identity projection:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.16">
-          <p id="section-15-2.16.1">The result's subject is the destination-local subject. The
-issuer-qualified origin principal travels alongside it in the
-Mission invariants where the Origin Principal profile applies,
-never in place of it. Actor context is attribution, never
-authority. This document's discharge: <a href="#transaction-token" class="auto internal xref">Section 7</a>.<a href="#section-15-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.17">Possession:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.18">
-          <p id="section-15-2.18.1">The challenge commits to a presenter key; possession is proven at
-redemption and at execution; the execution proof binds to the
-presented artifact itself, not only to the key. This document's
-discharge: <code>cnf</code> under DPoP or mutual TLS, including <code>ath</code>.<a href="#section-15-2.18.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-15-2.19">Failure vocabulary:</dt>
-        <dd style="margin-left: 1.5em" id="section-15-2.20">
-          <p id="section-15-2.20.1">Pending, denied, and expired workflow states map onto the
-substrate's native vocabulary, and the binding defines no second
-vocabulary. Refusals are typed, so a refused caller can re-plan
-without receiving a map of the environment. This document's
-discharge: <a href="#failure-semantics" class="auto internal xref">Section 10</a>.<a href="#section-15-2.20.1" class="pilcrow">¶</a></p>
-</dd>
-      <dd class="break"></dd>
 </dl>
-<p id="section-15-3">The Mission Context Binding for AAuth
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>) discharges this floor with
-AAuth-native mechanisms, including the R3 proposal model
-(<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>).<a href="#section-15-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="oauth-discharge">
+<section id="section-15.3">
+        <h3 id="name-oauth-discharge">
+<a href="#section-15.3" class="section-number selfRef">15.3. </a><a href="#name-oauth-discharge" class="section-name selfRef">OAuth Discharge</a>
+        </h3>
+<span id="name-oauth-discharge-of-the-carr"></span><table class="center" id="table-2">
+          <caption>
+<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#name-oauth-discharge-of-the-carr" class="selfRef">OAuth discharge of the carrier requirements</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Requirement</th>
+              <th class="text-left" rowspan="1" colspan="1">This document</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Challenge carrier</td>
+              <td class="text-left" rowspan="1" colspan="1">The signed challenge of <a href="#resource-challenge" class="auto internal xref">Section 5</a>, keys via <code>txn_challenge_jwks_uri</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Operation identity</td>
+              <td class="text-left" rowspan="1" colspan="1">The <code>authorization_details</code> entry <code>type</code> and Operation Profile rules of <a href="#resource-challenge" class="auto internal xref">Section 5</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Parameter commitment</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>parameter_digest</code>, carried and verified per <a href="#resource-challenge" class="auto internal xref">Section 5</a> and <a href="#offline-verification" class="auto internal xref">Section 8</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Workflow handle</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>transaction_authorization_id</code> and the admission rules of <a href="#two-phase-expiry" class="auto internal xref">Section 6.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Result class</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-txn-token+jwt</code> per <a href="#transaction-token" class="auto internal xref">Section 7</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Possession</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>cnf</code> under DPoP or mutual TLS, including <code>ath</code>, per <a href="#challenge-redemption" class="auto internal xref">Section 6</a> and <a href="#offline-verification" class="auto internal xref">Section 8</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Current-state source</td>
+              <td class="text-left" rowspan="1" colspan="1">Offline verification step 5 of <a href="#offline-verification" class="auto internal xref">Section 8</a>: the Mission Status surface, the Status List, or issuer introspection within declared freshness bounds</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Failure vocabulary</td>
+              <td class="text-left" rowspan="1" colspan="1">The upstream vocabulary applied unchanged per <a href="#failure-semantics" class="auto internal xref">Section 10</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-15.3-2">The Mission Context Binding for AAuth
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>) records, informatively, the
+native and missing status of each requirement against AAuth and R3
+(<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>); it does not claim the capability.<a href="#section-15.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="conformance">
