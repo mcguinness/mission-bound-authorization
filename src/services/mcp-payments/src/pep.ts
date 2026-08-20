@@ -23,7 +23,13 @@ import {
   relationForAction,
   stalenessBoundSeconds,
 } from "@mission/pdp";
-import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
+import {
+  buildEffectiveParams,
+  buildListEffectiveParams,
+  type EffectiveParams,
+  type ListEffectiveParams,
+  parameterDigest,
+} from "./effective-params.js";
 import type { EvidenceStore } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { signChallenge } from "./txn-challenge.js";
@@ -99,16 +105,83 @@ export interface ActionMapping {
   action: string;
   actionClass?: "irreversible_action" | "external_commitment";
   needsInvoice: boolean;
+  /**
+   * @spec runtime#read-binding — this action's unfiltered form requests a
+   * bulk, cross-vendor result, which the read-binding floor MUST bind: a
+   * supplied `vendor_id` binds through the ordinary vendor-constraint check
+   * every invoice-scoped action uses; absent one, the returned set binds to
+   * the matched Authority Set entry's OWN vendor scope, never the
+   * unconstrained store (see the `bindsVendorScope` branch in
+   * {@link Pep.enforceInner}).
+   */
+  bindsVendorScope?: boolean;
 }
 
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
-  list_invoices: { action: "payments:invoice.list", needsInvoice: false },
+  list_invoices: { action: "payments:invoice.list", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", needsInvoice: true },
   lookup_vendor: { action: "payments:vendor.read", needsInvoice: false },
   schedule_payment: { action: "payments:payment.schedule", needsInvoice: true },
   execute_wire_transfer: { action: "payments:payment.execute", actionClass: "irreversible_action", needsInvoice: true },
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", needsInvoice: true },
 };
+
+/**
+ * @spec runtime#read-binding — synthetic FGA check object for a bulk
+ * `list_invoices` request under an entry with NO `vendors` constraint at
+ * all (entitled to every vendor already). There is no specific vendor to
+ * name, and no FGA object type here supports a wildcard check target, so
+ * this fixed placeholder stands in for "the entry's own scope, whatever it
+ * is" under the same contextual-tuple pattern every other action uses
+ * (the injected tuple names exactly the object being checked).
+ */
+const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
+
+/**
+ * @spec runtime#read-binding: the pure normal-form derivation for a bound
+ * `list_invoices` read, over the CURRENT matched entry and the caller's
+ * (possibly absent) `vendor_id`. Used at decision time (against the entry
+ * `enforceInner` just matched) and again at {@link Pep.reverifyList} (against
+ * a freshly loaded entry), so a change to the Mission's own authority between
+ * those two calls recomputes a DIFFERENT normal form rather than silently
+ * repeating the stale one. `requestedVendorId`'s in-scope test mirrors the
+ * FGA/entry-constraint check the request goes on to face: a requested vendor
+ * that is (no longer) in the entry's `constraints.vendors` normalizes to an
+ * EMPTY scope, never to `[requestedVendorId]` regardless of authority.
+ */
+function deriveVendorScope(
+  entry: AuthorityEntry | undefined,
+  requestedVendorId: string | undefined,
+): { vendor_scope: string[]; vendor_scope_source: "requested" | "entry" | "all" } {
+  const allowedVendors = entry?.constraints?.vendors;
+  if (requestedVendorId !== undefined) {
+    const inScope = !allowedVendors || allowedVendors.includes(requestedVendorId);
+    return { vendor_scope: inScope ? [requestedVendorId] : [], vendor_scope_source: "requested" };
+  }
+  if (allowedVendors) {
+    return { vendor_scope: [...allowedVendors].sort(), vendor_scope_source: "entry" };
+  }
+  return { vendor_scope: [], vendor_scope_source: "all" };
+}
+
+/**
+ * @spec authzen#response-context, runtime#decision-output: the permit's
+ * decision CONDITIONS live NESTED inside `decision.context.conditions`
+ * (never as flat top-level members): the declarative constraints on RELYING
+ * on the permit that the draft names verbatim ("a request binding, a
+ * validity bound, a use limit"), which map 1:1 onto the profile's own
+ * condition names: `parameter_digest` (request binding), `valid_until`
+ * (validity bound), `use_limit` (use limit). A member inside `conditions`
+ * this PEP does not recognize makes the permit unusable; a top-level member
+ * OUTSIDE `conditions` (decision metadata such as `decision_id`,
+ * `policy_view_id`, `action_class`, `class_source`, `entry_digest`, or a
+ * profile response member such as `evaluation_id`/`reason`) is accepted
+ * without enumeration: this PEP reads the specific ones it needs and
+ * otherwise ignores what it does not, since the profile's must-understand
+ * rule for an unrecognized member is scoped to `conditions` alone, never to
+ * the whole response context.
+ */
+const RECOGNIZED_CONDITIONS = new Set(["parameter_digest", "valid_until", "use_limit"]);
 
 /**
  * @spec runtime#state-freshness: a loaded MissionView paired with the
@@ -214,6 +287,22 @@ export interface EnforceResult {
   denial_reason?: string;
   refusal_reason?: string;
   effective?: EffectiveParams;
+  /**
+   * @spec runtime#read-binding: present on a permitted `bindsVendorScope`
+   * action (list_invoices): the NORMALIZED parameters `parameter_digest`
+   * binds on the wire. `Pep.reverifyList` recomputes this same normal form
+   * immediately before execution and refuses on a mismatch, the read-binding
+   * counterpart of `effective`/{@link Pep.reverify} for a write.
+   */
+  listEffective?: ListEffectiveParams;
+  /**
+   * @spec runtime#read-binding — present on a permitted `bindsVendorScope`
+   * action (list_invoices): the vendor ids the bound result set is limited
+   * to. Absent only when the matched entry carries no vendor constraint and
+   * the caller requested no `vendor_id` (entitled to, and requesting, every
+   * vendor already).
+   */
+  list_vendor_scope?: string[];
   /** Present on a requestable denial: the ARAP access-request context. */
   access_request?: { endpoint: string; denial_binding: string; binding_token: string; expires_at: string };
   /**
@@ -351,8 +440,11 @@ export class Pep {
 
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
+    let listEffective: ListEffectiveParams | undefined;
+    let listDigest: string | undefined;
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: EvaluationRequest["resource"] = { type: "server", id: CANONICAL_RESOURCE };
+    let listVendorScope: string[] | undefined;
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
@@ -362,6 +454,66 @@ export class Pep {
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE });
       amount = effective.amount;
       resourceObj = { type: "invoice", id: invoice.id, properties: { vendor_id: vendor.id } };
+    } else if (mapping.bindsVendorScope) {
+      // @spec runtime#read-binding — "a consequential read whose parameters
+      // ... request a bulk or export-like result ... MUST bind those
+      // parameters. A deployment MUST NOT classify such a read as not
+      // materially affecting the resource set." list_invoices without
+      // vendor_id is exactly that bulk form. `deriveVendorScope` is this
+      // action's Operation Profile: it normalizes (entry, requested vendor_id)
+      // to the canonical form above, which is what actually enters
+      // `parameter_digest` below; previously nothing did, so no digest ever
+      // reached the PDP request or the reverification the write/transaction
+      // paths already perform.
+      const entry = view.authority_set.find(
+        (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
+      );
+      const requestedVendorId = args.vendor_id !== undefined ? String(args.vendor_id) : undefined;
+      const scope = deriveVendorScope(entry, requestedVendorId);
+      listEffective = buildListEffectiveParams({ action: mapping.action, resource: CANONICAL_RESOURCE, ...scope });
+      listDigest = parameterDigest(listEffective);
+      // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
+      // additional authorization-enforcement control, not the binding itself:
+      // "all" (unconstrained entry) filters nothing (undefined = every
+      // vendor), the other two sources filter to exactly the normalized scope.
+      listVendorScope = scope.vendor_scope_source === "all" ? undefined : scope.vendor_scope;
+      if (requestedVendorId !== undefined) {
+        // A named vendor_id binds through the SAME vendor-constraint check
+        // every invoice-scoped action here uses (out-of-scope -> denied
+        // out_of_authority at the FGA step below, same as get_invoice).
+        resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
+      } else if (scope.vendor_scope_source === "entry") {
+        // Bulk form, vendor-constrained entry: bind the RESULT SET to the
+        // entry's own scope (never the unconstrained store). The set-level
+        // authority is the Mission Record's own entry.constraints.vendors,
+        // read directly here, not derived from the FGA check below.
+        //
+        // @spec runtime#read-binding: finding 3 (PR #612 author review), the
+        // FGA/PDP request names the FULL collection, not just one
+        // representative member: `vendor_ids` carries every vendor this read
+        // is about to return, and evaluateInner's step 6a checks each one
+        // independently (a denial on ANY member denies the whole read). An
+        // empty allowlist still denies, since UNSCOPED_VENDOR_OBJECT names no
+        // real vendor. `id`/`vendor_id` still name one representative member
+        // (the step-6 single check, unchanged, still runs first) so every
+        // OTHER single-object caller of this request shape is unaffected;
+        // `vendor_ids` is what makes the per-member check happen at all. The
+        // Decision Evidence this permit produces still anchors the FULL entry
+        // (entry_digest, @spec authzen#decision-evidence-object): that proves
+        // the Mission's OWN ceiling, never Resource policy's independent
+        // per-member say, which is what this member now actually proves.
+        const representative = scope.vendor_scope[0] ?? UNSCOPED_VENDOR_OBJECT;
+        resourceObj = {
+          type: "vendor",
+          id: representative,
+          properties: { vendor_id: representative, vendor_ids: scope.vendor_scope },
+        };
+      } else {
+        // Bulk form, unconstrained entry: already entitled to every vendor,
+        // so the read is bound to that full, documented scope, not an
+        // accident of the tool's default arguments.
+        resourceObj = { type: "vendor", id: UNSCOPED_VENDOR_OBJECT, properties: {} };
+      }
     }
 
     const req: EvaluationRequest = {
@@ -393,6 +545,7 @@ export class Pep {
           operation_ref: `tools/${tool}`,
         },
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
+        ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
         ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
@@ -423,6 +576,10 @@ export class Pep {
       // @spec authzen `entry_digest`: the PDP's resolved-scope anchor, copied
       // from the decision context so the retained record cites the entry.
       ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
+      // @spec authzen#response-context: Decision Evidence records the SAME
+      // `evaluation_id` the PDP response carries, additive alongside the
+      // pre-existing `decision_id` copy this record already keeps.
+      ...(decision.context.evaluation_id ? { evaluation_id: decision.context.evaluation_id as string } : {}),
       mission_id: view.id,
       authority_hash: view.authority_hash,
       action: mapping.action,
@@ -525,7 +682,47 @@ export class Pep {
       }
       return result;
     }
-    return { permitted: true, decision, ...(effective ? { effective } : {}) };
+
+    // @spec authzen#response-context, runtime#decision-output: "a condition
+    // the enforcing component does not recognize makes the permit unusable."
+    // The check is scoped to `decision.context.conditions` ONLY (the
+    // profile's must-understand rule names conditions specifically, never
+    // the whole response context): a permit's `conditions` carries the
+    // three genuine reliance constraints (parameter_digest = request
+    // binding, valid_until = validity bound, use_limit = use limit). ANY
+    // other member inside `conditions` is one this PEP does not recognize,
+    // so the permit it rides on is unusable: refuse with zero effect, never
+    // ignore.
+    const conditions = decision.context.conditions as Record<string, unknown> | undefined;
+    const unrecognizedConditions = conditions
+      ? Object.keys(conditions).filter((k) => !RECOGNIZED_CONDITIONS.has(k))
+      : [];
+    if (unrecognizedConditions.length > 0) {
+      this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
+      return { permitted: false, refusal_reason: "unrecognized_condition" };
+    }
+
+    // @spec authzen#obligations: an obligation MAY accompany a permit; the
+    // PEP MUST fulfill every obligation before releasing the action's effect
+    // and MUST treat an unrecognized or unfulfillable obligation as an
+    // effective deny, the obligations-lane counterpart of the conditions
+    // check above. This PEP implements NO obligation type yet, so ANY
+    // obligation present is, by definition, unfulfillable: its mere presence
+    // is a deny, never a silently granted permit and never folded into the
+    // conditions refusal reason above (a distinct rule, a distinct reason).
+    const obligations = decision.context.obligations as unknown[] | undefined;
+    if (obligations && obligations.length > 0) {
+      this.recordRefusal(token, "unfulfillable_obligation", mapping.action, view);
+      return { permitted: false, refusal_reason: "unfulfillable_obligation" };
+    }
+
+    return {
+      permitted: true,
+      decision,
+      ...(effective ? { effective } : {}),
+      ...(listEffective ? { listEffective } : {}),
+      ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
+    };
   }
 
   /**
@@ -541,6 +738,39 @@ export class Pep {
       return false;
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource });
+    if (parameterDigest(fresh) !== expectedDigest) {
+      this.recordRefusal(token, "parameter_mismatch", effective.action);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * @spec runtime#read-binding (parameter binding / TOCTOU): the list-read
+   * counterpart of {@link reverify}. The authoritative source for a bound
+   * list read's normal form is the Mission's OWN authority-set entry, not
+   * the payments store, so this re-loads the CURRENT MissionView (never the
+   * one `enforceInner` matched) and recomputes {@link deriveVendorScope}
+   * against it. A Mission-authority change landing in the decision->execute
+   * window (a narrower successor entry, containment, the entry disappearing)
+   * recomputes a DIFFERENT normal form and is caught here as a digest
+   * mismatch, refused, never executed on the stale scope the permit was
+   * decided against. `requestedVendorId` is recovered from `effective` itself
+   * (present, as `vendor_scope[0]`, exactly when `vendor_scope_source` is
+   * `"requested"`), so no separate input needs to be threaded through.
+   */
+  reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
+    const loaded = this.deps.loadView(token.mission.id);
+    const entry = loaded?.view.authority_set.find(
+      (e) => e.resource === effective.resource && e.actions.includes(effective.action),
+    );
+    const requestedVendorId =
+      effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
+    const fresh = buildListEffectiveParams({
+      action: effective.action,
+      resource: effective.resource,
+      ...deriveVendorScope(entry, requestedVendorId),
+    });
     if (parameterDigest(fresh) !== expectedDigest) {
       this.recordRefusal(token, "parameter_mismatch", effective.action);
       return false;

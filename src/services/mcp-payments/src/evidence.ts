@@ -23,6 +23,15 @@ export type EmitterRole = "pdp" | "pep" | "executor" | "harness" | "egress" | "i
 
 export interface EvidenceBase {
   decision_id?: string;
+  /**
+   * @spec authzen#response-context: the PDP response's own `evaluation_id`
+   * correlation identifier, copied onto the record alongside `decision_id`
+   * (additive, not a replacement; `decision_id` stays the permit id
+   * downstream). A distinct `evidence_id` identifying the RECORD itself
+   * (the draft's other named member here) is a named deferral: this store
+   * has no record-identity concept today beyond `trace_id`/`at`.
+   */
+  evaluation_id?: string;
   mission_id: string;
   authority_hash: string;
   action: string;

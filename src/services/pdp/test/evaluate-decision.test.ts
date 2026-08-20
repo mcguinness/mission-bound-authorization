@@ -96,14 +96,14 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
 
     expect(withoutApproval.decision).toBe(false);
     expect(withoutApproval.context.denial_reason).toBe("out_of_authority");
-    expect(withoutApproval.context.permit_expires_at).toBeUndefined();
+    expect(withoutApproval.context.conditions).toBeUndefined();
     // Identical outcome with a valid, matching, fresh approval present: the
     // approval confers nothing on its own, and evaluate() (a stateless pure
     // function, D28) carries no state from the approval past this one call.
     // The deny also hands the PEP nothing permit-shaped to act on either way.
     expect(withApproval.decision).toBe(false);
     expect(withApproval.context.denial_reason).toBe("out_of_authority");
-    expect(withApproval.context.permit_expires_at).toBeUndefined();
+    expect(withApproval.context.conditions).toBeUndefined();
     expect(withApproval.context.entry_digest).toBeUndefined();
   });
 
@@ -180,7 +180,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("stale_state");
     // A deny hands the PEP no permit-shaped fields to act on.
-    expect(dec.context.permit_expires_at).toBeUndefined();
+    expect(dec.context.conditions).toBeUndefined();
     expect(dec.context.entry_digest).toBeUndefined();
   });
 
@@ -192,4 +192,84 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
   // permit past this evaluation) is the PEP's own behavior on receiving that
   // deny, which evaluate() has no PEP to exercise and this file does not
   // assert.
+});
+
+/**
+ * @spec runtime#read-binding: finding 3 (PR #612 author review), a bound bulk
+ * read names a COLLECTION, not one representative object. The request
+ * shape's `resource.properties.vendor_ids` is what makes evaluateInner check
+ * every named member independently (step 6a); these two unconditional tests
+ * use a stub `Fga` that denies one specific vendor object while allowing
+ * every other check, which no LIVE OpenFGA check against this domain model
+ * can produce (the model's only grant is the ephemeral contextual tuple that
+ * always mirrors whichever entry the caller names, and there is no genuine
+ * independent Resource-policy denial surface here yet, a known, disclosed
+ * limitation; see the manifest row's notes). The stub is what proves the
+ * MECHANISM (every named member is actually checked, not just the
+ * representative), independent of whether this domain model can produce a
+ * real per-member disagreement today.
+ */
+describe("a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding)", () => {
+  const LIST_RESOURCE = "http://localhost:4403/mcp";
+  const listView: MissionView = {
+    id: "msn_test_1",
+    issuer: "https://as.test",
+    state: "active",
+    version: 1,
+    authority_hash: "sha-256:testhash",
+    authority_set: [
+      {
+        type: "mission_resource_access",
+        resource: LIST_RESOURCE,
+        actions: ["payments:invoice.list"],
+        constraints: { vendors: ["acme", "globex"] },
+      },
+    ],
+  };
+  const listReq = (vendorIds: string[]): EvaluationRequest => ({
+    subject: { id: "alice" },
+    resource: { type: "vendor", id: vendorIds[0] as string, properties: { vendor_id: vendorIds[0], vendor_ids: vendorIds } },
+    action: { name: "payments:invoice.list" },
+    context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" } },
+  });
+  const listOpts = (fga: Fga) => ({
+    view: listView,
+    fga,
+    modelId: "unit-test-model",
+    now: () => NOW,
+    stalenessBoundSeconds,
+    relationForAction,
+  });
+
+  it("Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit", async () => {
+    const denyGlobex = {
+      checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
+    } as unknown as Fga;
+    const dec = await evaluate(listReq(["acme", "globex"]), listOpts(denyGlobex));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
+    expect(dec.context.denial_reason).toBe("out_of_authority");
+    // No permit-shaped fields on this deny: nothing for a PEP to act on.
+    expect(dec.context.conditions).toBeUndefined();
+  });
+
+  it("Mission authority includes two vendors; Resource policy permits both: the read permits", async () => {
+    const allow = { checkWithContext: async () => true } as unknown as Fga;
+    const dec = await evaluate(listReq(["acme", "globex"]), listOpts(allow));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+  });
+
+  it("without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check", async () => {
+    const req: EvaluationRequest = {
+      subject: { id: "alice" },
+      resource: { type: "vendor", id: "acme", properties: { vendor_id: "acme" } },
+      action: { name: "payments:invoice.list" },
+      context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" } },
+    };
+    const denyGlobex = {
+      checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
+    } as unknown as Fga;
+    const dec = await evaluate(req, listOpts(denyGlobex));
+    // globex is never named, so its denial is never consulted.
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+  });
 });

@@ -18,6 +18,7 @@ import {
 } from "@mission/core";
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 import type { ActObject } from "@mission/actor-chain";
+import type { Decision, MissionView } from "@mission/pdp";
 import {
   type ActionApprovalInput,
   CANONICAL_RESOURCE,
@@ -56,6 +57,17 @@ function refuseTransactionToken(accessToken: string): void {
   if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
     throw new Error("a transaction token is not a Mission-bound access token");
   }
+}
+
+/**
+ * @spec authzen#response-context: a permit's decision conditions
+ * (`parameter_digest`/`valid_until`/`use_limit`) live NESTED under
+ * `decision.context.conditions`, never as flat top-level members. Every
+ * digest reverification site reads through this one accessor so the nesting
+ * is never repeated ad hoc.
+ */
+function permitConditions(decision: Decision | undefined): Record<string, unknown> | undefined {
+  return decision?.context.conditions as Record<string, unknown> | undefined;
 }
 
 export interface ToolDef {
@@ -536,11 +548,17 @@ export class McpPaymentsServer {
     return TOOLS.filter((t) => granted.has(t.action));
   }
 
-  /** Read-only tool call: enforce then execute. */
+  /**
+   * Read-only tool call: enforce then execute. For a `bindsVendorScope`
+   * read (list_invoices), `beforeReverify` is a test hook to mutate Mission
+   * state in the decision->execute window, mirroring {@link callWriteTool}'s
+   * hook of the same name for the write path's TOCTOU reverification.
+   */
   async callReadTool(
     tool: string,
     args: Record<string, unknown>,
     token: TokenFacts,
+    beforeReverify?: () => void,
   ): Promise<{
     ok: boolean;
     result?: unknown;
@@ -558,7 +576,17 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
-    return { ok: true, result: this.execute(tool, args) };
+    if (res.listEffective) {
+      beforeReverify?.();
+      // @spec runtime#read-binding: reverify the bound list read's
+      // normalized parameters immediately before execution, exactly as
+      // callWriteTool/callTransactionTool already do for a write.
+      const digest = permitConditions(res.decision)?.parameter_digest as string | undefined;
+      if (!digest || !this.deps.pep.reverifyList(res.listEffective, digest, token)) {
+        return { ok: false, refusal_reason: "parameter_mismatch" };
+      }
+    }
+    return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
   }
 
   /**
@@ -589,7 +617,7 @@ export class McpPaymentsServer {
       };
     }
     beforeReverify?.();
-    const digest = res.decision.context.parameter_digest as string;
+    const digest = permitConditions(res.decision)?.parameter_digest as string;
     if (!this.deps.pep.reverify(res.effective, digest, token)) {
       return { ok: false, refusal_reason: "parameter_mismatch" };
     }
@@ -648,7 +676,7 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
-    const digest = res.decision.context.parameter_digest as string;
+    const digest = permitConditions(res.decision)?.parameter_digest as string;
     const permitId = res.decision.context.decision_id as string;
     const opKey = operationKey(token.mission.id, res.effective.action, digest);
 
@@ -843,10 +871,21 @@ export class McpPaymentsServer {
     );
   }
 
-  private execute(tool: string, args: Record<string, unknown>): unknown {
+  /**
+   * @spec runtime#read-binding — `listVendorScope` is the PEP's bound result
+   * scope for `list_invoices` (`Pep.enforceInner`'s `bindsVendorScope`
+   * branch): the vendor ids the permitted read is limited to, absent only
+   * when the Mission's entry is unconstrained and no `vendor_id` was
+   * requested. The store filter on `args.vendor_id` stays as a first pass;
+   * this filter is the actual binding enforcement, applied regardless of
+   * what the caller asked for.
+   */
+  private execute(tool: string, args: Record<string, unknown>, listVendorScope?: string[]): unknown {
     switch (tool) {
-      case "list_invoices":
-        return this.deps.payments.listInvoices(args.vendor_id ? String(args.vendor_id) : undefined);
+      case "list_invoices": {
+        const invoices = this.deps.payments.listInvoices(args.vendor_id ? String(args.vendor_id) : undefined);
+        return listVendorScope ? invoices.filter((inv) => listVendorScope.includes(inv.vendor_id)) : invoices;
+      }
       case "get_invoice":
         return this.deps.payments.getInvoice(String(args.invoice_id));
       case "lookup_vendor":

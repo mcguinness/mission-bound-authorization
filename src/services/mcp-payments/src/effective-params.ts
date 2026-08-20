@@ -40,7 +40,43 @@ export function buildEffectiveParams(input: {
   };
 }
 
-export function parameterDigest(params: EffectiveParams): string {
+/**
+ * @spec runtime#read-binding: the normalized parameter form for a bound
+ * LIST read (`list_invoices`): distinct from {@link EffectiveParams}
+ * (invoice-shaped writes/reads), since a bulk read has no single invoice to
+ * bind. `vendor_scope_source` is the canonical normal form's discriminator,
+ * carried alongside `vendor_scope` so the digest never collapses two
+ * different authorization postures that happen to enumerate the same vendor
+ * ids: a caller-supplied `vendor_id` (`"requested"`), the matched entry's own
+ * `constraints.vendors` allowlist (`"entry"`), and the explicit, deliberate
+ * marker for an unconstrained entry (`"all"`) are three distinct normal
+ * forms, never one collapsed case. `vendor_scope` is the sorted, deduped
+ * vendor id set for the first two sources and empty for `"all"` (the
+ * source discriminator alone carries that case's meaning, mirroring
+ * `UNSCOPED_VENDOR_OBJECT`'s role as an explicit sentinel in pep.ts).
+ */
+export interface ListEffectiveParams {
+  action: string;
+  resource: string;
+  vendor_scope: string[];
+  vendor_scope_source: "requested" | "entry" | "all";
+}
+
+export function buildListEffectiveParams(input: {
+  action: string;
+  resource: string;
+  vendor_scope: string[];
+  vendor_scope_source: "requested" | "entry" | "all";
+}): ListEffectiveParams {
+  return {
+    action: input.action,
+    resource: input.resource,
+    vendor_scope: input.vendor_scope,
+    vendor_scope_source: input.vendor_scope_source,
+  };
+}
+
+export function parameterDigest(params: EffectiveParams | ListEffectiveParams): string {
   const canonical = canonicalize(params as unknown as JsonValue);
   return `sha-256:${createHash("sha256").update(canonical, "utf8").digest("base64url")}`;
 }
