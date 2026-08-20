@@ -1292,13 +1292,16 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
             <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-the-enterprise-mission-auth" class="internal xref">The Enterprise Mission Authority Profile</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-estate-prerequisites" class="internal xref">Estate Prerequisites</a></p>
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-high-consequence-binding" class="internal xref">High-Consequence Binding</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
-                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-the-enterprise-mapping-cont" class="internal xref">The Enterprise Mapping Contract</a></p>
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-estate-prerequisites" class="internal xref">Estate Prerequisites</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
-                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-policy-view-distribution" class="internal xref">Policy View Distribution</a></p>
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-the-enterprise-mapping-cont" class="internal xref">The Enterprise Mapping Contract</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-policy-view-distribution" class="internal xref">Policy View Distribution</a></p>
 </li>
             </ul>
 </li>
@@ -2664,8 +2667,10 @@ credential to it before evaluating the action. The join is this
 profile's load-bearing mechanism: it is what a permit "under this
 Mission" rests on when no cryptographic binding exists. This section
 defines the baseline mapping join; the Mission Join Assertion
-(<a href="#join-assertion" class="auto internal xref">Section 12</a>) is the enterprise-mode join built on it, and the
-Enterprise profile requires it for the high-consequence classes
+(<a href="#join-assertion" class="auto internal xref">Section 12</a>) is the enterprise-mode join built on it. The
+Enterprise profile runs two modes: Mission-bound credentials carry
+the high-consequence classes, and Join Assertions carry the
+externally joined governed paths outside those classes
 (<a href="#enterprise-profile" class="auto internal xref">Section 14</a>).<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2">The join also has a ceiling no assertion raises: it proves the
 credential belongs to the Mission's parties, never that it was
@@ -2673,10 +2678,14 @@ issued for the Mission (<a href="#limitations" class="auto internal xref">Sectio
 classes, association is therefore not the terminal architecture. The
 issuance join (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>)
 or native Mission-bound issuance restores cryptographic derivation.
-A deployment claiming high-consequence enforcement in MAS mode
-<span class="bcp14">SHOULD</span> adopt one of them for those classes. A deployment that instead
-runs high-consequence work on an asserted join alone <span class="bcp14">MUST</span> state that
-residual in its Mission Deployment Profile's <code>residual_risks</code>.<a href="#section-10-2" class="pilcrow">¶</a></p>
+A path claiming the Enterprise profile's high-consequence credential
+property <span class="bcp14">MUST</span> use Mission-bound issuance: an acting credential
+satisfying the mission-credential-bound composition of the Mission
+Binding Properties (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).
+A deployment without it still claims the runtime and join
+capabilities its paths actually have, and states the difference in
+its Mission Deployment Profile; no <code>residual_risks</code> entry buys the
+stronger claim, and a Join Assertion cannot satisfy it.<a href="#section-10-2" class="pilcrow">¶</a></p>
 <p id="section-10-3">A Mission-joining PDP and its PEPs <span class="bcp14">MUST</span> observe the following:<a href="#section-10-3" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-10-4">
 <li id="section-10-4.1">
@@ -2716,7 +2725,7 @@ authorizes to act under that Mission's client. Delegate
 authorization <span class="bcp14">MUST</span> be explicit, an enumerated policy, never a
 default. Where the AS and MAS client namespaces differ, the
 deployment <span class="bcp14">MUST</span> record the client mapping in its mapping contract
-(<a href="#mapping-contract" class="auto internal xref">Section 14.2</a>), exactly as for subjects.<a href="#section-10-4.4.1" class="pilcrow">¶</a></p>
+(<a href="#mapping-contract" class="auto internal xref">Section 14.3</a>), exactly as for subjects.<a href="#section-10-4.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-10-4.5">
           <p id="section-10-4.5.1"><strong>Delegate narrowing.</strong> When the joined party is a delegate rather
@@ -3270,7 +3279,7 @@ minted for.<a href="#section-12.2-2.12.1" class="pilcrow">¶</a></p>
 <code>mapping_version</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-12.2-2.14">
             <p id="section-12.2-2.14.1"><span class="bcp14">OPTIONAL</span>. A string. The mapping contract version
-(<a href="#mapping-contract" class="auto internal xref">Section 14.2</a>) under which the subject and client joins
+(<a href="#mapping-contract" class="auto internal xref">Section 14.3</a>) under which the subject and client joins
 were evaluated. <span class="bcp14">RECOMMENDED</span> where the MAS publishes a mapping
 contract, so each join is attributable to the mapping that
 produced it.<a href="#section-12.2-2.14.1" class="pilcrow">¶</a></p>
@@ -3290,7 +3299,7 @@ instance, not any holder of a client-shared key.<a href="#section-12.2-3" class=
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
 authenticated caller, the mapping version where one is published
-(<a href="#mapping-contract" class="auto internal xref">Section 14.2</a>), and the validity window, retained for the
+(<a href="#mapping-contract" class="auto internal xref">Section 14.3</a>), and the validity window, retained for the
 audit horizon.<a href="#section-12.2-4" class="pilcrow">¶</a></p>
 <p id="section-12.2-5">Example claims:<a href="#section-12.2-5" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-12.2-6">
@@ -3343,8 +3352,11 @@ at the MAS under the runtime profile's freshness rules, denies with
 <code>mission_mismatch</code> when any check above fails, and draws authority
 from the Mission.<a href="#section-12.3-3" class="pilcrow">¶</a></p>
 <p id="section-12.3-4">For the high-consequence action classes
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) in MAS mode, the PDP <span class="bcp14">SHOULD</span>
-require a Join Assertion. The mapping join of <a href="#mission-join" class="auto internal xref">Section 10</a> remains
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) in MAS mode, the
+Enterprise profile requires Mission-bound issuance for the acting
+credential (<a href="#enterprise-profile" class="auto internal xref">Section 14</a>); a Join Assertion strengthens
+every joined path outside those classes and remains required there
+under that profile. The mapping join of <a href="#mission-join" class="auto internal xref">Section 10</a> remains
 the conformance floor: a deployment without the endpoint still joins,
 and a PDP <span class="bcp14">MUST NOT</span> treat possession of an assertion as authority,
 per the family rule that references and binding proofs grant nothing.<a href="#section-12.3-4" class="pilcrow">¶</a></p>
@@ -3385,8 +3397,11 @@ identity is included in the join
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>);<a href="#section-13-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-3.3">
-          <p id="section-13-3.3.1">whether Mission Join Assertions are required, which they <span class="bcp14">SHOULD</span> be
-for the high-consequence classes (<a href="#join-assertion" class="auto internal xref">Section 12</a>); and<a href="#section-13-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-13-3.3.1">whether Mission Join Assertions are required, which the Enterprise
+profile requires on joined, PDP-gated paths outside the
+irreversible, external-commitment, and privileged-administration
+classes, the classes it reserves for Mission-bound issuance
+(<a href="#join-assertion" class="auto internal xref">Section 12</a>, <a href="#enterprise-profile" class="auto internal xref">Section 14</a>); and<a href="#section-13-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-3.4">
           <p id="section-13-3.4.1">which action paths are covered by runtime enforcement, since nothing
@@ -3394,7 +3409,7 @@ at the token layer covers the rest.<a href="#section-13-3.4.1" class="pilcrow">�
 </li>
       </ul>
 <p id="section-13-4">An enterprise deployment carries this statement inside its mapping
-contract (<a href="#mapping-contract" class="auto internal xref">Section 14.2</a>) rather than beside it, so the join's
+contract (<a href="#mapping-contract" class="auto internal xref">Section 14.3</a>) rather than beside it, so the join's
 facts have one home.<a href="#section-13-4" class="pilcrow">¶</a></p>
 <p id="section-13-5"><strong>No Mission-bound credentials.</strong> Tokens carry no <code>mission</code> claim and
 no Mission-derived <code>authorization_details</code>. Nothing cryptographically
@@ -3457,10 +3472,15 @@ approval, the record, and the lifecycle remain here.<a href="#section-13-10" cla
 profile is the operating profile for a MAS used as an estate's
 Mission control plane: it turns the floor's SHOULDs and OPTIONALs
 into the guarantees an enterprise deployment needs. A deployment
-claims the Enterprise Mission Authority Profile only when all of the
-following hold; it is
-the Runtime-Enforced level of the Mission Assurance Levels under the MAS
-binding, with the obligations below (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-14-1" class="pilcrow">¶</a></p>
+claims the Enterprise Mission Authority Profile over a declared
+coverage set: the Authorization Server, resource, and action-class
+paths the claim names. The estate-level obligations below hold
+deployment-wide; the per-path credential, join, and runtime
+obligations hold for every path in the set; a path outside the set
+is explicitly unclaimed, and never inherits the profile from the
+deployment's name. The profile is the Runtime-Enforced level of the
+Mission Assurance Levels under the MAS binding, with the obligations
+below (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-14-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-14-2.1">
           <p id="section-14-2.1.1"><strong>Status and lifecycle.</strong> The MAS <span class="bcp14">MUST</span> serve the Mission Status
@@ -3481,11 +3501,39 @@ published in the Enforcement Scope Statement.<a href="#section-14-2.2.1" class="
 </li>
         <li class="normal" id="section-14-2.3">
           <p id="section-14-2.3.1"><strong>Join Assertion.</strong> The MAS <span class="bcp14">MUST</span> offer the Mission Join Assertion
-(<a href="#join-assertion" class="auto internal xref">Section 12</a>). For the high-consequence classes the PDP
+(<a href="#join-assertion" class="auto internal xref">Section 12</a>). For every joined, PDP-gated governed path not
+classified as irreversible, external commitment, or privileged
+administration (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the PDP
 <span class="bcp14">MUST</span> require one.<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.4">
-          <p id="section-14-2.4.1"><strong>Instance-bound joins.</strong> Where the acting credential carries a
+          <p id="section-14-2.4.1"><strong>Mission-bound issuance for the high-consequence classes.</strong> For
+the high-consequence action classes
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) the PDP <span class="bcp14">MUST</span> require an
+acting credential satisfying the mission-credential-bound
+composition of the Mission Binding Properties
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>): the
+credential-mission-bound equivalence plus presenter-key-bound
+possession, end to end; a Join Assertion does not satisfy it, and
+absence denies rather than falling back to a mapping or asserted
+join. Where the Mission Issuance Grant
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) is the
+issuance path for such a class, the grant <span class="bcp14">MUST</span> carry <code>cnf</code> and
+redemption <span class="bcp14">MUST</span> produce an access token sender-constrained to that
+same key: the issuance upgrade opens no bearer interval between
+grant and action, and this profile defines no rotation exception. Mission-bound issuance restores the
+issuance gate; it does not replace this profile's runtime
+active-freshness check for these classes. Issuance also does not
+prove that a particular work item was supposed to run under the
+selected Mission when a client legitimately holds credentials for
+several Missions: work-item attribution stays with the reference
+propagation channel and the <code>work-item-bound</code> property. The
+Enterprise claim is made per covered Authorization Server,
+resource, and action path; a mixed estate's weaker paths never
+inherit it from the deployment's name.<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.5">
+          <p id="section-14-2.5.1"><strong>Instance-bound joins.</strong> Where the acting credential carries a
 client-instance identity
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), a
 high-consequence join <span class="bcp14">MUST</span> bind (<code>subject</code>, <code>client</code>, <code>instance</code>),
@@ -3496,22 +3544,22 @@ identity rests on an unratified individual draft
 deployment has no instance-identity substrate, the high-consequence
 join binds only (<code>subject</code>, <code>client</code>), and the shared-<code>client_id</code>
 residual of <a href="#join-spoofing" class="auto internal xref">Section 17.1</a> remains, stated in the Mission
-Deployment Profile's <code>residual_risks</code>.<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
+Deployment Profile's <code>residual_risks</code>.<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.5">
-          <p id="section-14-2.5.1"><strong>Runtime enforcement.</strong> Consequential actions <span class="bcp14">MUST</span> be enforced
+        <li class="normal" id="section-14-2.6">
+          <p id="section-14-2.6.1"><strong>Runtime enforcement.</strong> Consequential actions <span class="bcp14">MUST</span> be enforced
 under the runtime profile and its AuthZEN binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), with documented PEP
 coverage published in the runtime profile's Enforcement Scope
-Statement.<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.6">
-          <p id="section-14-2.6.1"><strong>Audit evidence.</strong> Joins and decisions <span class="bcp14">MUST</span> produce runtime
-evidence retained for the audit horizon
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
+Statement.<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.7">
-          <p id="section-14-2.7.1"><strong>Approval governance.</strong> Where a recording trigger of Mission
+          <p id="section-14-2.7.1"><strong>Audit evidence.</strong> Joins and decisions <span class="bcp14">MUST</span> produce runtime
+evidence retained for the audit horizon
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.8">
+          <p id="section-14-2.8.1"><strong>Approval governance.</strong> Where a recording trigger of Mission
 Approval Governance holds for an approval event (the Approver
 differs from the Subject, more than one principal contributes, a
 non-human assertion contributes, a threshold, veto, or
@@ -3523,7 +3571,7 @@ atomically with the Mission's creation and retained for its audit
 horizon. The Mission record still carries exactly one accountable
 <code>approver</code>, the only principal any projection or enforcement
 consumes; direct self-approval by one authenticated human stays the
-degenerate case the Mission record represents completely.<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+degenerate case the Mission record represents completely.<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-14-3">The Join Assertion obligation is what separates the modes: the
@@ -3535,94 +3583,139 @@ leaving each PDP to maintain mapping tables.<a href="#section-14-3" class="pilcr
 <p id="section-14-4">A deployment claiming this profile <span class="bcp14">SHOULD</span> publish its claims,
 coverage, and residual risks as a Mission Deployment Profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-14-4" class="pilcrow">¶</a></p>
-<div id="enterprise-prerequisites">
+<div id="high-consequence-binding">
 <section id="section-14.1">
-        <h3 id="name-estate-prerequisites">
-<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-estate-prerequisites" class="section-name selfRef">Estate Prerequisites</a>
+        <h3 id="name-high-consequence-binding">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-high-consequence-binding" class="section-name selfRef">High-Consequence Binding</a>
         </h3>
-<p id="section-14.1-1">The profile's mandatory path runs through the deployment's unchanged
+<p id="section-14.1-1">The two binding-establishment modes are mutually exclusive per
+action, as the runtime profile fixes
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and a high-consequence
+path switches modes rather than layering them: the join algorithm of
+<a href="#mission-join" class="auto internal xref">Section 10</a> assumes a credential that cannot identify its
+Mission, and it never runs against one that can. For each action the
+PDP:<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-14.1-2">
+<li id="section-14.1-2.1">
+            <p id="section-14.1-2.1.1">classifies the action under the runtime profile's classes;<a href="#section-14.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-14.1-2.2">
+            <p id="section-14.1-2.2.1">for a high-consequence path in the declared coverage set, requires
+and validates a Mission-bound acting credential per the issuance
+obligation above; a mapping or asserted join never substitutes;<a href="#section-14.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-14.1-2.3">
+            <p id="section-14.1-2.3.1">establishes the Mission from that credential's authenticated
+<code>mission</code> claim, never from an external selection;<a href="#section-14.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-14.1-2.4">
+            <p id="section-14.1-2.4.1">where a propagated Mission-Reference is also present, requires
+exact equality of its issuer and Mission identifier with the
+credential's <code>mission</code> claim and a consistent <code>authority_hash</code>,
+and denies on any mismatch;<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-14.1-2.5">
+            <p id="section-14.1-2.5.1">applies current Mission state, current authority, the subject,
+client, and actor checks, and the sender proof, as elsewhere in
+this profile; and<a href="#section-14.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-14.1-2.6">
+            <p id="section-14.1-2.6.1">never uses a Join Assertion or a mapping join to select a
+different Mission than the credential's own: with concurrent
+Missions for one subject and client, the credential's <code>mission</code>
+claim is the binding, and nothing re-points it.<a href="#section-14.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="enterprise-prerequisites">
+<section id="section-14.2">
+        <h3 id="name-estate-prerequisites">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-estate-prerequisites" class="section-name selfRef">Estate Prerequisites</a>
+        </h3>
+<p id="section-14.2-1">The profile's mandatory path runs through the deployment's unchanged
 Authorization Server, and it assumes capabilities there:
 configuration rather than code, but gating nonetheless. Before
-claiming the profile a deployment confirms its estate AS provides:<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+claiming the profile a deployment confirms its estate AS provides:<a href="#section-14.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14.1-2.1">
-            <p id="section-14.1-2.1.1"><strong>Token introspection.</strong> <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> introspection reachable by the
+<li class="normal" id="section-14.2-2.1">
+            <p id="section-14.2-2.1.1"><strong>Token introspection.</strong> <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> introspection reachable by the
 MAS, under credentials the deployment protects
 (<a href="#sec-join-assertion" class="auto internal xref">Section 17.2</a>); the MAS cannot mint a Join Assertion
-without it (<a href="#join-assertion-request" class="auto internal xref">Section 12.1</a>).<a href="#section-14.1-2.1.1" class="pilcrow">¶</a></p>
+without it (<a href="#join-assertion-request" class="auto internal xref">Section 12.1</a>).<a href="#section-14.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-2.2">
-            <p id="section-14.1-2.2.1"><strong>Sender-constrained issuance.</strong> DPoP-bound or mutual-TLS-bound
+          <li class="normal" id="section-14.2-2.2">
+            <p id="section-14.2-2.2.1"><strong>Sender-constrained issuance.</strong> DPoP-bound or mutual-TLS-bound
 access tokens for the agent clients acting in the high-consequence
 classes: the join requires sender-constraint for those classes
 (<a href="#mission-join" class="auto internal xref">Section 10</a>), and the MAS <span class="bcp14">MUST NOT</span> mint an assertion for a
-token without a <code>cnf</code> key (<a href="#join-assertion-request" class="auto internal xref">Section 12.1</a>).<a href="#section-14.1-2.2.1" class="pilcrow">¶</a></p>
+token without a <code>cnf</code> key (<a href="#join-assertion-request" class="auto internal xref">Section 12.1</a>).<a href="#section-14.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-2.3">
-            <p id="section-14.1-2.3.1"><strong><code>cnf</code> in introspection.</strong> Introspection responses that report the
+          <li class="normal" id="section-14.2-2.3">
+            <p id="section-14.2-2.3.1"><strong><code>cnf</code> in introspection.</strong> Introspection responses that report the
 token's <code>cnf</code> confirmation, since the assertion binds the key
-thumbprint that response reports.<a href="#section-14.1-2.3.1" class="pilcrow">¶</a></p>
+thumbprint that response reports.<a href="#section-14.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.1-3">An estate whose Authorization Server cannot provide these still
+<p id="section-14.2-3">An estate whose Authorization Server cannot provide these still
 joins under the mapping join at the conformance floor
 (<a href="#mission-join" class="auto internal xref">Section 10</a>, <a href="#conformance" class="auto internal xref">Section 16</a>); it does not claim this profile.
 The digest pair of <a href="#join-assertion-request" class="auto internal xref">Section 12.1</a> further assumes an
 introspection surface that resolves a token by digest, which
 mainstream Authorization Servers do not provide; a deployment plans
-for the <code>access_token</code> form.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
+for the <code>access_token</code> form.<a href="#section-14.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mapping-contract">
-<section id="section-14.2">
+<section id="section-14.3">
         <h3 id="name-the-enterprise-mapping-cont">
-<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-the-enterprise-mapping-cont" class="section-name selfRef">The Enterprise Mapping Contract</a>
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-the-enterprise-mapping-cont" class="section-name selfRef">The Enterprise Mapping Contract</a>
         </h3>
-<p id="section-14.2-1">The dominant MAS risk is a coarse or drifting join: shared
+<p id="section-14.3-1">The dominant MAS risk is a coarse or drifting join: shared
 <code>client_id</code> values, many-to-one directory mappings, and workload
 identity that the join collapses (<a href="#join-spoofing" class="auto internal xref">Section 17.1</a>). An enterprise
 MAS <span class="bcp14">MUST</span> publish a mapping contract stating, for the joins it
-performs:<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+performs:<a href="#section-14.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14.2-2.1">
-            <p id="section-14.2-2.1.1">the subject namespace mapping (how a credential's authenticated
-subject maps to the Mission's <code>subject</code>);<a href="#section-14.2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.3-2.1">
+            <p id="section-14.3-2.1.1">the subject namespace mapping (how a credential's authenticated
+subject maps to the Mission's <code>subject</code>);<a href="#section-14.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-2.2">
-            <p id="section-14.2-2.2.1">the client namespace mapping (how a credential's client maps to the
-Mission's <code>client_id</code>);<a href="#section-14.2-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.3-2.2">
+            <p id="section-14.3-2.2.1">the client namespace mapping (how a credential's client maps to the
+Mission's <code>client_id</code>);<a href="#section-14.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-2.3">
-            <p id="section-14.2-2.3.1">the delegate policy applied to <code>act</code>-chain actors, which <span class="bcp14">MUST</span> state
+          <li class="normal" id="section-14.3-2.3">
+            <p id="section-14.3-2.3.1">the delegate policy applied to <code>act</code>-chain actors, which <span class="bcp14">MUST</span> state
 how the issuance profile's per-entry <code>delegation</code> rules are
-evaluated at the join;<a href="#section-14.2-2.3.1" class="pilcrow">¶</a></p>
+evaluated at the join;<a href="#section-14.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-2.4">
-            <p id="section-14.2-2.4.1">whether client-instance identity is supported and required;<a href="#section-14.2-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.3-2.4">
+            <p id="section-14.3-2.4.1">whether client-instance identity is supported and required;<a href="#section-14.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-2.5">
-            <p id="section-14.2-2.5.1">a mapping version identifier, so a mapping change is detectable;<a href="#section-14.2-2.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.3-2.5">
+            <p id="section-14.3-2.5.1">a mapping version identifier, so a mapping change is detectable;<a href="#section-14.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-2.6">
-            <p id="section-14.2-2.6.1">an audit record for each mapping decision; and<a href="#section-14.2-2.6.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.3-2.6">
+            <p id="section-14.3-2.6.1">an audit record for each mapping decision; and<a href="#section-14.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-2.7">
-            <p id="section-14.2-2.7.1">the failure semantics, which <span class="bcp14">MUST</span> fail closed with <code>mission_mismatch</code>
-on any unresolved or ambiguous mapping.<a href="#section-14.2-2.7.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.3-2.7">
+            <p id="section-14.3-2.7.1">the failure semantics, which <span class="bcp14">MUST</span> fail closed with <code>mission_mismatch</code>
+on any unresolved or ambiguous mapping.<a href="#section-14.3-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.2-3">A MAS that mints Join Assertions <span class="bcp14">SHOULD</span> carry the version in each
+<p id="section-14.3-3">A MAS that mints Join Assertions <span class="bcp14">SHOULD</span> carry the version in each
 assertion's <code>mapping_version</code> claim (<a href="#join-assertion-artifact" class="auto internal xref">Section 12.2</a>), so
 a mapping change is attributable in join evidence, not only
-detectable in documents.<a href="#section-14.2-3" class="pilcrow">¶</a></p>
+detectable in documents.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-distribution">
-<section id="section-14.3">
+<section id="section-14.4">
         <h3 id="name-policy-view-distribution">
-<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-policy-view-distribution" class="section-name selfRef">Policy View Distribution</a>
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-policy-view-distribution" class="section-name selfRef">Policy View Distribution</a>
         </h3>
-<p id="section-14.3-1">An enterprise MAS <span class="bcp14">MAY</span> serve audience-scoped Authority Set views, or
+<p id="section-14.4-1">An enterprise MAS <span class="bcp14">MAY</span> serve audience-scoped Authority Set views, or
 the runtime profile's materialized policy view
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), to the PDPs that enforce
 for each audience, rather than each PDP resolving full Mission state
@@ -3631,7 +3724,7 @@ authority distribution point: it distributes bounded, audience-scoped
 authority derived from the Mission, not tokens. The view is served
 under the Mission Status operation's authentication and anti-oracle
 rules, carries the Mission's <code>authority_hash</code> as its consent anchor,
-and does not widen authority beyond the Authority Set.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+and does not widen authority beyond the Authority Set.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3664,7 +3757,7 @@ reference and calls a PDP before each consequential action;<a href="#section-15.
           <li class="normal" id="section-15.1-2.3">
             <p id="section-15.1-2.3.1">the PDP runs the runtime profile's decision contract and its
 AuthZEN binding, drawing authority from the MAS-served Authority Set
-or a materialized policy view (<a href="#policy-distribution" class="auto internal xref">Section 14.3</a>);<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
+or a materialized policy view (<a href="#policy-distribution" class="auto internal xref">Section 14.4</a>);<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-15.1-2.4">
             <p id="section-15.1-2.4.1">the MAS mints a Join Assertion after introspecting the presented
@@ -3739,7 +3832,7 @@ enumerates and is records mode everywhere else; <strong>issuance mode</strong>
 holds in every mode; what changes is the claim, and a
 high-consequence enforcement claim requires issuance mode's
 machinery or the Estate Prerequisites' AS features
-(<a href="#enterprise-prerequisites" class="auto internal xref">Section 14.1</a>), never records alone:<a href="#section-15.3-1" class="pilcrow">¶</a></p>
+(<a href="#enterprise-prerequisites" class="auto internal xref">Section 14.2</a>), never records alone:<a href="#section-15.3-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-15.3-2">
 <li id="section-15.3-2.1">
             <p id="section-15.3-2.1.1">The MAS records Missions and approvals: governance and audit of
@@ -3871,13 +3964,19 @@ runtime profile's freshness rules (<a href="#mission-join" class="auto internal 
 authority, and denies with <code>mission_mismatch</code> on any join failure;<a href="#section-16-7.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-7.3">
-          <p id="section-16-7.3.1">evaluates joined actions under the runtime profile's decision
-contract, drawing authority from the Mission; and<a href="#section-16-7.3.1" class="pilcrow">¶</a></p>
+          <p id="section-16-7.3.1">for a high-consequence path under the Enterprise profile, requires
+the mission-credential-bound acting credential and denies on its
+absence, never falling back to a mapping or asserted join
+(<a href="#enterprise-profile" class="auto internal xref">Section 14</a>);<a href="#section-16-7.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-7.4">
-          <p id="section-16-7.4.1">when the AuthZEN binding is in use, emits Decision Evidence per
+          <p id="section-16-7.4.1">evaluates joined actions under the runtime profile's decision
+contract, drawing authority from the Mission; and<a href="#section-16-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-7.5">
+          <p id="section-16-7.5.1">when the AuthZEN binding is in use, emits Decision Evidence per
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>, recording the
-Mission reference the join was verified against.<a href="#section-16-7.4.1" class="pilcrow">¶</a></p>
+Mission reference the join was verified against.<a href="#section-16-7.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -3903,7 +4002,7 @@ else's Mission fails with <code>mission_mismatch</code>. Three residuals remain:
 many-to-one (several AS accounts map to one directory subject), any
 credential in the equivalence class joins; a deployment <span class="bcp14">SHOULD</span> keep
 the mapping one-to-one for subjects that hold Missions, with the
-granularity recorded in its mapping contract (<a href="#mapping-contract" class="auto internal xref">Section 14.2</a>).
+granularity recorded in its mapping contract (<a href="#mapping-contract" class="auto internal xref">Section 14.3</a>).
 The client join is coarse the same way where several workloads share
 one <code>client_id</code>: any of them joins. Client instance assertions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>) are the

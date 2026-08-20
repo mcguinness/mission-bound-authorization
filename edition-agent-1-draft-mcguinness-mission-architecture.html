@@ -1327,6 +1327,9 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
                 <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-assurance-claims" class="internal xref">Assurance Claims</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.3">
+                <p id="section-toc.1-1.16.2.3.1"><a href="#section-16.3" class="auto internal xref">16.3</a>.  <a href="#name-mission-binding-properties" class="internal xref">Mission Binding Properties</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
@@ -4257,6 +4260,232 @@ different claims; the MAS modes are the worked case
 the level, are what a relying party compares.<a href="#section-16.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="binding-properties">
+<section id="section-16.3">
+        <h3 id="name-mission-binding-properties">
+<a href="#section-16.3" class="section-number selfRef">16.3. </a><a href="#name-mission-binding-properties" class="section-name selfRef">Mission Binding Properties</a>
+        </h3>
+<p id="section-16.3-1">Whether an operation is bound to a Mission is not one question but
+three independent ones: who selected and attached the Mission to
+this work item (attachment provenance), whether the acting
+credential's authority was issued and bounded for the Mission
+(credential binding), and whether one authenticated permit covers
+these exact operation inputs (action binding). The dimensions are
+independent: a native Mission-bound token has strong credential
+binding with no harness in sight, a trusted harness attributes work
+items precisely while the credential is an ordinary bearer token,
+and an action-bound permit can exist over either. No single ladder
+orders them, so the family names the properties directly, as a
+vector, and a deployment claims the combination each path actually
+has.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
+<span id="name-mission-binding-properties-2"></span><table class="center" id="table-9">
+          <caption>
+<a href="#table-9" class="selfRef">Table 9</a>:
+<a href="#name-mission-binding-properties-2" class="selfRef">Mission binding properties</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Property</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+              <th class="text-left" rowspan="1" colspan="1">Minimum proof</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-reference-selected</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">A Mission tuple was supplied for routing and selection</td>
+              <td class="text-left" rowspan="1" colspan="1">The canonical (issuer, mission id) pair; grants nothing and makes no security claim</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>work-item-bound</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">A trusted component bound that tuple to this session, queue, or task item</td>
+              <td class="text-left" rowspan="1" colspan="1">An authenticated attacher, a tamper-resistant work-item identifier, and stated inheritance and retry rules</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>credential-correlated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The presented credential is correlated to the Mission's parties</td>
+              <td class="text-left" rowspan="1" colspan="1">A mapping join or Mission Join Assertion (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), with its stated ceiling</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>credential-mission-bound</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The credential's authority was issued or derived for the Mission</td>
+              <td class="text-left" rowspan="1" colspan="1">The six equivalence properties below</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>presenter-key-bound</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The presenter proves possession of the key the credential is constrained to</td>
+              <td class="text-left" rowspan="1" colspan="1">Issuance-time key targeting (<code>cnf</code> or an equivalent confirmation) plus presentation-time proof of possession</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>instance-bound</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The concrete acting instance is identified and holds the bound key</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>presenter-key-bound</code> plus the instance requirements below</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>action-bound</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">An authenticated permit authorizes one operation, resource, and input projection</td>
+              <td class="text-left" rowspan="1" colspan="1">One of the two proof forms below</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-16.3-3">The properties are claimed per covered Authorization Server,
+resource, and action path, never as a product-wide maximum: a mixed
+estate claims what each path has, and a weaker path never inherits a
+stronger path's claim from the deployment's name. Where policy
+requires a property on a path, its absence denies; nothing falls
+back silently to a weaker binding.<a href="#section-16.3-3" class="pilcrow">¶</a></p>
+<p id="section-16.3-4"><strong>Credential-mission-bound</strong> is defined by equivalence, not by one
+artifact. For the covered path the credential establishes all of:<a href="#section-16.3-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-16.3-5">
+<li id="section-16.3-5.1">
+            <p id="section-16.3-5.1.1">a trusted issuer authorized to issue for the Mission;<a href="#section-16.3-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-16.3-5.2">
+            <p id="section-16.3-5.2.1">the canonical (<code>mission.issuer</code>, <code>mission.id</code>) pair and the
+recorded <code>authority_hash</code>;<a href="#section-16.3-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-16.3-5.3">
+            <p id="section-16.3-5.3.1">an issued authority projection no broader than the Mission's
+Authority Set for the target audience;<a href="#section-16.3-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-16.3-5.4">
+            <p id="section-16.3-5.4.1">the mapped subject, the requesting <code>client_id</code>, and actor or
+delegation context where applicable;<a href="#section-16.3-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-16.3-5.5">
+            <p id="section-16.3-5.5.1">bounded lifetime plus active-state issuance and refresh gates; and<a href="#section-16.3-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-16.3-5.6">
+            <p id="section-16.3-5.6.1">an auditable derivation link to the Mission authorization: an
+Issuance Grant <code>jti</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), a native
+issuance record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), a
+cross-domain projection's provenance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), or an
+equivalently specified artifact.<a href="#section-16.3-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-16.3-6">Sender constraint is deliberately not among them: issuance-time key
+targeting and presentation-time proof are <code>presenter-key-bound</code>, a
+separate property, so a path that needs possession requires the
+composition rather than reading it into the equivalence. That is
+also what the mechanisms support: the core's tokens SHOULD be
+sender-constrained and the generic Issuance Grant's <code>cnf</code> is
+OPTIONAL, so native issuance, the Mission Issuance Grant, and a
+conforming cross-domain exchange satisfy this one property, and
+supply <code>presenter-key-bound</code> exactly where their confirmation
+binding is actually in force. A Mission Join Assertion fails
+properties 3, 5, and 6 by design, which is what separates
+correlation from issuance.<a href="#section-16.3-6" class="pilcrow">¶</a></p>
+<p id="section-16.3-7"><strong>Presenter-key-bound</strong> is possession and nothing more: the
+credential names a confirmation key at issuance, and the presenter
+proves possession at use, with DPoP or mutual TLS. It does not
+identify which concrete agent process or workload holds the key.<a href="#section-16.3-7" class="pilcrow">¶</a></p>
+<p id="section-16.3-8"><strong>Instance-bound</strong> requires all of: an authenticated instance
+identifier; a verified binding from that identity to the
+confirmation key; current proof of possession; and no key sharing
+across instances. End-to-end sender constraint alone establishes
+<code>presenter-key-bound</code>, never this property.<a href="#section-16.3-8" class="pilcrow">¶</a></p>
+<p id="section-16.3-9"><strong>Action-bound</strong> requires an authenticated permit binding the
+Mission, the action and resource, and the normalized parameters or
+complete request projection, under the permit's validity and use
+controls, in one of two proof forms:<a href="#section-16.3-9" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.3-10.1">
+            <p id="section-16.3-10.1.1"><strong>portable permit</strong>: an audience-restricted, presenter- or
+sender-bound artifact, verified where it is presented; the
+transaction token of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span>
+is the family's discharge; or<a href="#section-16.3-10.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-10.2">
+            <p id="section-16.3-10.2.1"><strong>channel-bound permit</strong>: a permit bound to the mutually
+authenticated requesting and executing parties and enforced on
+that same channel, with request cache-key equality, its validity
+window, and the applicable use controls; the runtime permit of the
+AuthZEN binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>)
+discharges it under exactly those conditions.<a href="#section-16.3-10.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-16.3-11">A parameter binding alone makes a response neither form, and an
+evaluation identifier alone is a correlator, never the property: it
+qualifies only where dereferencing it through an authenticated,
+audience-bound, freshness- and use-controlled permit store yields
+one of the two forms above, complete.<a href="#section-16.3-11" class="pilcrow">¶</a></p>
+<p id="section-16.3-12">Deployments claim compositions, and a claimed composition requires
+every member property:<a href="#section-16.3-12" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.3-13.1">
+            <p id="section-16.3-13.1.1"><strong>harness-attributed</strong>: <code>work-item-bound</code>, under the attacher and
+inheritance rules the harness states
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-16.3-13.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-13.2">
+            <p id="section-16.3-13.2.1"><strong>mission-credential-bound</strong>: <code>credential-mission-bound</code> plus
+<code>presenter-key-bound</code>, end to end; <code>instance-bound</code> strengthens
+the claim where an instance identity exists and is verified; and<a href="#section-16.3-13.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-13.3">
+            <p id="section-16.3-13.3.1"><strong>runtime-action-bound</strong>: authoritative Mission establishment plus
+<code>action-bound</code>.<a href="#section-16.3-13.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-16.3-14">A work-item-attribution composition is deliberately absent.
+<code>work-item-bound</code> and <code>action-bound</code> holding together does not prove
+the permitted action came from that work item: concurrent items
+under one Mission still substitute. The composition becomes
+definable only when a verified cross-link exists, the action permit
+or its authenticated request context binding the same
+tamper-resistant work-item identifier the harness recorded; no
+family carrier supplies that today, so a deployment claims the two
+properties separately and nothing more.<a href="#section-16.3-14" class="pilcrow">¶</a></p>
+<p id="section-16.3-15">The mechanism mapping is conservative: a propagated
+Mission-Reference is selection only; a mapping join is
+<code>credential-correlated</code>, with its equivalence-class ambiguity; a
+Mission Join Assertion is a stronger, token- and key-specific
+<code>credential-correlated</code>, still never issuance; a trusted harness
+supplies <code>work-item-bound</code> where its attacher requirements hold; a
+native or issuance-grant-derived token is
+<code>credential-mission-bound</code>, and <code>presenter-key-bound</code> where its
+confirmation binding is in force end to end; an authenticated
+client-instance assertion with a verified key binding is what makes
+a path <code>instance-bound</code>; a verified transaction token is the
+portable <code>action-bound</code> form, and an AuthZEN runtime permit is the
+channel-bound form under that binding's conditions.<a href="#section-16.3-15" class="pilcrow">¶</a></p>
+<p id="section-16.3-16">The property names above are stable identifiers, and a claim is a
+per-path declaration, not prose: each claimed property or
+composition names the covered issuer, resource, and action-class
+paths. The Enforcement Scope Statement carries the per-path
+declarations for the enforcement-adjacent properties, and the
+Mission Deployment Profile (<a href="#deployment-profile" class="auto internal xref">Section 17</a>) composes them; a
+binding's Statement declares what the binding can supply, which is
+never itself a deployment claim. An unknown property identifier, an
+undeclared path, or an unstated property is not claimed, and a
+consumer treats it as not held; nothing downgrades silently.
+Schema-level claim identifiers and validation rules remain the
+Deployment Profile's own future work.<a href="#section-16.3-16" class="pilcrow">¶</a></p>
+<p id="section-16.3-17">Binding properties and the assurance claims above compose rather
+than repeat: a binding property says whose Mission a path's work and
+credentials are bound to; an assurance claim says what the
+deployment's enforcement proves. Credential-level and action-level
+binding likewise compose rather than substitute.<a href="#section-16.3-17" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="deployment-profile">
@@ -4438,8 +4667,8 @@ that level leaves.<a href="#section-17-6" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-18-1">Each layer earns a specific property and leaves a specific residue.
 Stated as a table so a claim cannot be read as more than it is:<a href="#section-18-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-9">
-        <caption><a href="#table-9" class="selfRef">Table 9</a></caption>
+<table class="center" id="table-10">
+        <caption><a href="#table-10" class="selfRef">Table 10</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Mechanism</th>
@@ -4496,8 +4725,8 @@ direction.<a href="#section-18-3" class="pilcrow">¶</a></p>
 <p id="section-18.1-1">Mission termination is one control in a larger containment surface.
 Each kill has a different blast radius, and an incident responder
 needs the whole matrix:<a href="#section-18.1-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-10">
-          <caption><a href="#table-10" class="selfRef">Table 10</a></caption>
+<table class="center" id="table-11">
+          <caption><a href="#table-11" class="selfRef">Table 11</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Control</th>
@@ -5350,6 +5579,10 @@ minimization and retention duties applying there.<a href="#section-22-2" class="
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-4-draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transaction Authorization Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
       <dd>
