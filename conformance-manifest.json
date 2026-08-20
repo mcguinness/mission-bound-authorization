@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "5402385438cc09a2327bbe07ffac63393bfe034c",
-    "content_sha256": "5cc806b3f01ffecb7c969dac15f96eae95b5f1d5a7d2ee64e6aa5728930205ba"
+    "revision": "04e6bdea71cf26eaab1a9a30b884da3fe6f68f0b",
+    "content_sha256": "53bfd0ca5db4de625848e8f1ba732083d098f7d343e7bc735bbb329dfe8a4c0f"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
@@ -133,7 +133,8 @@
    "substrate.authorized-context-correlation",
    "substrate.independently-verifiable",
    "substrate.portable-evidence",
-   "issuance-grant.state-integration"
+   "issuance-grant.state-integration",
+   "mas.enterprise"
   ]
  },
  "profiles": [
@@ -2121,7 +2122,8 @@
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "mas.enterprise"
    },
    "profiles": [],
    "surface": "decision-request",
@@ -2141,7 +2143,8 @@
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "mas.enterprise"
    },
    "profiles": [],
    "surface": "decision-request",
@@ -2161,7 +2164,8 @@
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "mas.enterprise"
    },
    "profiles": [],
    "surface": "decision-request",
@@ -2177,17 +2181,18 @@
    "id": "mas.join.assertion-below-tier",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "For every joined governed path below the high-consequence tier the PDP MUST require one.",
+   "text": "For every joined, PDP-gated governed path not classified as irreversible, external commitment, or privileged administration ({{I-D.draft-mcguinness-mission-runtime}}), the PDP MUST require one.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "mas.enterprise"
    },
    "profiles": [],
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "below the high-consequence tier the Enterprise profile still requires a Join Assertion on every joined governed path"
+    "normative": "on every joined, PDP-gated governed path outside the three high-consequence classes the Enterprise profile still requires a Join Assertion"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -2197,17 +2202,18 @@
    "id": "mas.enterprise.issuance-grant-cnf",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "the grant MUST carry `cnf` and redemption MUST produce an access token sender-constrained to that same key",
+   "text": "Where the Mission Issuance Grant ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) is the issuance path for such a class, the grant MUST carry `cnf`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "mas.enterprise"
    },
    "profiles": [],
-   "surface": "token-endpoint",
+   "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an Issuance Grant discharging the high-consequence property is cnf-bound and its redeemed token is sender-constrained to the same key: no bearer interval opens between grant and action"
+    "normative": "a grant minted for a high-consequence Enterprise path is cnf-bound at production; a cnf-less grant cannot discharge the issuance obligation for these classes"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -2218,16 +2224,101 @@
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
    "text": "The Enterprise claim is made per covered Authorization Server, resource, and action path; a mixed estate's weaker paths never inherit it from the deployment's name.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Enterprise claim names its coverage set; a statement extending the claim to an uncovered path, or a consumer reading it deployment-wide, is an overclaim and invalid"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.enterprise.redeemed-token-key",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "redemption MUST produce an access token sender-constrained to that same key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token redeemed from a cnf-bound grant for a high-consequence path is sender-constrained to the grant's own key; no bearer interval and no rotation exception exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.enterprise.runtime-freshness-not-replaced",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "Mission-bound issuance restores the issuance gate; it does not replace this profile's runtime active-freshness check for these classes.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "mas.enterprise"
    },
    "profiles": [],
    "surface": "decision-request",
-   "assertion": "no-side-effect",
+   "assertion": "refusal",
    "observation": {
-    "normative": "in a mixed estate the Enterprise high-consequence claim attaches to the covered paths only; uncovered paths carry their own weaker claims"
+    "normative": "a Mission revoked after issuance is still refused at action time by the runtime active-freshness check; holding a Mission-bound token substitutes for nothing at the decision"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.join.credential-mission-equality",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "high-consequence-binding",
+   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim and a consistent `authority_hash`, and denies on any mismatch",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a propagated Mission-Reference co-present with a Mission-bound credential must equal the credential's own mission claim exactly; any divergence denies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.join.no-repointing",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "high-consequence-binding",
+   "text": "never uses a Join Assertion or a mapping join to select a different Mission than the credential's own",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with concurrent Missions for one subject and client, a token issued for Mission A is never evaluated against externally selected Mission B; the credential's mission claim is the binding"
    },
    "level": "endpoint",
    "coverage": "todo",
