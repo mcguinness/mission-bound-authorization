@@ -26,6 +26,7 @@ import { ContinuationStore } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
+import type { EffectiveAuthoritySource } from "./kernel/derive.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
@@ -68,7 +69,14 @@ export {
   validateMissionIntentSubmission,
   verifyIntentSubmissionEvidence,
 } from "./kernel/intent.js";
-export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
+export {
+  deriveAuthoritySet,
+  type EffectiveAuthoritySource,
+  isSubsetEntry,
+  isSubsetSet,
+  projectThroughEffective,
+  SourceUnavailableError,
+} from "./kernel/derive.js";
 export {
   missionResourceAccessProfile,
   type OperationProfile,
@@ -472,6 +480,18 @@ export async function buildAuthorizationServer(opts: {
    * local ceiling, evidence sink). Absent = the exchange is refused.
    */
   crossOrg?: CrossOrgOptions;
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 1) — override
+   * the Effective Authority Set resolution seam. Defaults to the kernel this
+   * function builds. A deployment whose authority source is remote (a MAS
+   * Mission Status client) injects it here and raises
+   * {@link SourceUnavailableError} for the TRANSIENT class, which the token
+   * endpoint refuses `temporarily_unavailable` (HTTP 503) without consuming the
+   * presented grant or refresh token.
+   */
+  authoritySource?: EffectiveAuthoritySource;
+  /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
+  stateRecoveryRetryAfter?: number;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -698,6 +718,15 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     protectedEventSources,
     issuerEvidence,
+    // @spec issuance-grant#effective-set-projection (#617 review 1) — the
+    // Effective Authority Set resolution seam. Omitted means the local kernel
+    // is the source (it is the authoritative record in this deployment); a
+    // consuming AS whose source is a remote MAS Mission Status client injects
+    // one that raises SourceUnavailableError for the transient class.
+    ...(opts.authoritySource ? { authoritySource: opts.authoritySource } : {}),
+    ...(opts.stateRecoveryRetryAfter !== undefined
+      ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
+      : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).

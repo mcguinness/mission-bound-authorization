@@ -38,7 +38,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
-import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -300,8 +300,29 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
   });
 }
 
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the injected
+ * authority source's outage switch. Set to a message to make every Effective
+ * Authority Set resolution raise the TRANSIENT class; undefined delegates to
+ * the kernel (byte-identical to the un-injected default, which is what every
+ * other test in this file exercises).
+ */
+let sourceOutage: string | undefined;
+
+const RETRY_AFTER_SECONDS = 7;
+
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    authoritySource: {
+      effectiveAuthoritySet: (record) => {
+        if (sourceOutage !== undefined) throw new SourceUnavailableError(sourceOutage);
+        return as.kernel.effectiveAuthoritySet(record);
+      },
+    },
+    stateRecoveryRetryAfter: RETRY_AFTER_SECONDS,
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   childClientKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
@@ -447,6 +468,45 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
   });
 
+  it("full containment (#589): containing exactly the FAMILY's own narrower ceiling fails the refresh invalid_grant, even though the Mission's wider authority_set is not fully contained", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    expect(first.authorization_details).toEqual(confinedAuthority());
+
+    // Contain exactly the family's own capability (invoice.read only). The
+    // Mission still holds remittance.send, so the MISSION-WIDE effective set
+    // is NOT empty (a mission-level-only check, like the pre-#589
+    // gateDerivation gate, would miss this): only the FAMILY's narrower
+    // ceiling has collapsed.
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-async-full-family",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    expect(as.kernel.effectiveAuthoritySet(as.kernel.get(missionId) as never)).not.toEqual([]);
+
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+
+    // A retry with the SAME (already rotated-and-discarded) refresh token
+    // also fails closed via oidc-provider's ordinary reuse detection,
+    // independent of the containment check above: the family is never
+    // resurrected by retrying.
+    const retry = await refreshFamily(first.refresh_token);
+    const retryBody = (await retry.json()) as { error?: string };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(400);
+    expect(retryBody.error).toBe("invalid_grant");
+  });
+
   it("contain, then refresh the CODE-FLOW mission grant: same conformance on the approval grant's copied rar", async () => {
     const { missionId, missionRefreshToken } = await issueBaseMission();
     containRemittance(missionId, "ce-code-1");
@@ -456,6 +516,95 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(body.authorization_details).toEqual(withoutRemittance(missionId));
     const payload = decodeJwt(body.access_token as string);
     expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
+  });
+
+  it("full containment (#589): containing the WHOLE resource fails a CODE-FLOW refresh invalid_grant (authority fully contained)", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-code-full",
+      },
+      remove: [{ resource: RESOURCE }],
+    });
+    expect(as.kernel.effectiveAuthoritySet(as.kernel.get(missionId) as never)).toEqual([]);
+
+    const res = await refreshFamily(missionRefreshToken, codeDpop);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+
+  it("#589: a refresh family never re-widens across a contain sequence; the Mission's state version is monotonic and every refresh observes the current (never a rolled-back) one", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    const v0 = as.kernel.get(missionId)?.version as number;
+
+    containRemittance(missionId, "ce-async-mono-1");
+    const v1 = as.kernel.get(missionId)?.version as number;
+    expect(v1).toBeGreaterThan(v0);
+
+    const res1 = await refreshFamily(first.refresh_token);
+    const body1 = (await res1.json()) as { refresh_token?: string; authorization_details?: unknown; error?: string };
+    expect(res1.status, JSON.stringify(body1)).toBe(200);
+    expect(body1.authorization_details).toEqual(withoutRemittance(missionId));
+
+    // A second, independent narrowing: the version advances again, and the
+    // NEXT refresh's projected remainder is a subset of the FIRST refresh's
+    // remainder, never a superset. The kernel always recomputes from the
+    // pristine grant ceiling through the CURRENT (monotonically narrowing)
+    // effective set, so there is no separate "ceiling" value that a stale
+    // read could roll back: every refresh observes the live, strictly
+    // monotonic state version, which is what "retains the highest observed
+    // version" reduces to when there is exactly one authoritative record and
+    // no external cache in front of it (disclosed in the accompanying report:
+    // true rollback defense against a STALE EXTERNAL source has no
+    // constructible scenario in this single-process kernel; it matters for
+    // the not-yet-implemented issuance-grant external-consuming-AS path).
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-async-mono-2",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    const v2 = as.kernel.get(missionId)?.version as number;
+    expect(v2).toBeGreaterThan(v1);
+
+    const res2 = await refreshFamily(body1.refresh_token as string);
+    const body2 = (await res2.json()) as { error?: string };
+    expect(res2.status, JSON.stringify(body2)).toBe(400);
+    expect(body2.error).toBe("invalid_grant"); // now fully contained: never a re-widened 200
+  });
+
+  it("#589: an active Mission with a still-VALID Status List bit still narrows on refresh (the bit alone is insufficient)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    const idx = as.kernel.participateInStatusList(missionId);
+
+    containRemittance(missionId, "ce-async-statuslist");
+
+    // Lifecycle state is untouched by containment: the Mission is still
+    // `active`, so its Status List bit is still VALID (0x00).
+    const record = as.kernel.get(missionId) as NonNullable<ReturnType<typeof as.kernel.get>>;
+    expect(record.state).toBe("active");
+    expect(idx).toBeGreaterThanOrEqual(0);
+
+    // Despite the VALID bit, the refresh still narrows: the coarse two-bit
+    // lifecycle signal does not observe containment, but the Effective
+    // Authority Set projection (which does not consult the Status List bit
+    // at all) still does.
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(withoutRemittance(missionId));
   });
 
   it("regression: a no-containment mission's refresh is byte-identical to issuance (fast path)", async () => {
@@ -473,6 +622,191 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(JSON.stringify(decodeJwt(body.access_token as string).authorization_details)).toBe(
       JSON.stringify(decodeJwt(first.access_token).authorization_details),
     );
+  });
+});
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+ * TRANSIENT authority-source class. An unavailable, unverifiable, or
+ * rolled-back source says nothing about the credential's authority, so the
+ * refusal is `temporarily_unavailable` with HTTP 503 (machine-readable, not an
+ * `error_description` to parse) and it consumes NOTHING: the presented
+ * credential is retryable exactly as held.
+ */
+describe("transient authority-source failure (@spec issuance-grant#effective-set-projection)", () => {
+  it("on refresh: refuses temporarily_unavailable (503 + Retry-After) and consumes neither the presented refresh token nor its rotation; the SAME token then succeeds", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    expect(typeof first.refresh_token).toBe("string");
+
+    sourceOutage = "mission status source unreachable";
+    let res: Response;
+    try {
+      res = await refreshFamily(first.refresh_token);
+    } finally {
+      sourceOutage = undefined;
+    }
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(503);
+    expect(body.error).toBe("temporarily_unavailable");
+    // NOT server_error: OIDCProviderError computes expose = status < 500, and
+    // err_out.js replaces a non-exposed error with a generic server_error body.
+    expect(body.error_description).toMatch(/unreachable/);
+    expect(res.headers.get("retry-after")).toBe(String(RETRY_AFTER_SECONDS));
+
+    // The refusal landed in rotateRefreshToken, BEFORE refreshToken.consume()
+    // and before the rotated token was saved, so the client's own credential is
+    // untouched: the SAME refresh token still redeems once the source recovers.
+    // (A refusal thrown from the rar hook or extraTokenClaims instead would have
+    // consumed it, and this retry would fail "refresh token already used".)
+    const retry = await refreshFamily(first.refresh_token);
+    const retryBody = (await retry.json()) as {
+      access_token?: string;
+      refresh_token?: string;
+      authorization_details?: unknown;
+      error?: string;
+    };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    expect(retryBody.authorization_details).toEqual(as.kernel.get(missionId)?.authority_set);
+    expect(typeof retryBody.refresh_token).toBe("string");
+    expect(retryBody.refresh_token).not.toBe(first.refresh_token); // rotation happened NOW, not then
+  });
+
+  it("at the initial exchange: refuses 503 before the idempotency reservation, so the SAME creation_request_id still redeems", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const creationRequestId = crypto.randomUUID();
+
+    sourceOutage = "mission status source returned a rolled-back state version";
+    let res: Response;
+    try {
+      res = await asyncDelegate(baseAccessToken, { creationRequestId });
+    } finally {
+      sourceOutage = undefined;
+    }
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(503);
+    expect(body.error).toBe("temporarily_unavailable");
+    expect(body.error_description).toMatch(/rolled-back/);
+    expect(res.headers.get("retry-after")).toBe(String(RETRY_AFTER_SECONDS));
+
+    // Nothing was consumed: no reservation, no family, no derivation count, so
+    // the retry is a FIRST presentation of that creation_request_id, not a
+    // recovery of a failed one (which would replay the stored refusal).
+    const retry = await asyncDelegate(baseAccessToken, { creationRequestId });
+    const retryBody = (await retry.json()) as { refresh_token?: string; error?: string };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    expect(typeof retryBody.refresh_token).toBe("string");
+  });
+
+  it("the permanent class is unaffected: a fully narrowed family still refuses invalid_grant with 400, never 503", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+    };
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-transient-contrast",
+      },
+      remove: [{ resource: RESOURCE }],
+    });
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(res.headers.get("retry-after")).toBeNull();
+  });
+});
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
+ * Mission-bound grant discriminator. "No Mission resolved" used to mean "not a
+ * Mission-bound grant" at both token-plane hooks, so a Mission-bound grant
+ * whose record became unresolvable fell through to the fail-OPEN branch: the
+ * stored issuance-time authorization_details were reissued, with NO `mission`
+ * claim, at exactly the moment the state gate could not be evaluated.
+ */
+describe("unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection)", () => {
+  /** Purge ONLY the Mission record; the index is a separate store by design. */
+  const purgeMission = (missionId: string): void => {
+    as.kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(missionId);
+    expect(as.kernel.get(missionId)).toBeUndefined();
+  };
+
+  it("a per-delegation family grant whose Mission record is purged refuses refresh instead of reissuing its stale authority", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    expect(first.authorization_details).toEqual(confinedAuthority());
+
+    purgeMission(missionId);
+
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { error?: string; access_token?: string; authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.access_token).toBeUndefined();
+    expect(body.authorization_details).toBeUndefined();
+  });
+
+  it("the Mission's OWN code-flow grant fails closed the same way once its record is purged", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    purgeMission(missionId);
+    const res = await refreshFamily(missionRefreshToken, codeDpop);
+    const body = (await res.json()) as { error?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.access_token).toBeUndefined();
+  });
+
+  it("a LIVE Mission whose grant_id column has moved on still refreshes, gated and claimed through the index (never a false refusal, never a claimless token)", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    // Rebind the Mission to a different grant id: the credential's own grant is
+    // no longer what `missions.grant_id` holds, so findByGrant misses while the
+    // Mission is perfectly live. The index must RESOLVE it (gate + project),
+    // not refuse it, and not fall through to the claimless pass-through.
+    as.kernel.bindGrant(missionId, "rebound-grant-id-for-test");
+    const res = await refreshFamily(missionRefreshToken, codeDpop);
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(as.kernel.get(missionId)?.authority_set);
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    // The `mission` claim is still attached: extraTokenClaims resolved the
+    // Mission through the index rather than returning {}.
+    expect((payload.mission as { id?: string } | undefined)?.id).toBe(missionId);
+  });
+
+  it("the index is the discriminator: it survives the Mission's deletion, and an unknown grant resolves undefined (the pass-through case)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    expect(typeof first.refresh_token).toBe("string");
+
+    const recorded = as.kernel.db
+      .prepare("SELECT grant_id FROM missions WHERE id = ?")
+      .get(missionId) as { grant_id: string };
+    expect(as.kernel.missionBoundGrants.resolve(recorded.grant_id)).toEqual({
+      missionId,
+      kind: "approval",
+    });
+
+    purgeMission(missionId);
+    // Append-only: the binding outlives the record it refers to, which is the
+    // whole point (a discriminator cleaned up with the Mission would answer
+    // "not Mission-bound" for exactly the grants it exists to catch).
+    expect(as.kernel.missionBoundGrants.resolve(recorded.grant_id)?.missionId).toBe(missionId);
+    // An ordinary (never Mission-bound) grant is a miss, so the hooks pass it
+    // through untouched rather than refusing it.
+    expect(as.kernel.missionBoundGrants.resolve("some-unbound-grant-id")).toBeUndefined();
   });
 });
 

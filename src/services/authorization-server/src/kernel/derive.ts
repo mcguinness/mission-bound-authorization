@@ -11,7 +11,7 @@
 import { compareAmounts, isValidAmount } from "@mission/core";
 import type { JsonValue } from "@mission/core";
 import { IntentError } from "./intent.js";
-import type { AuthorityEntry, DelegateMatcher, MissionIntent } from "./types.js";
+import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
 
 /**
  * @spec mission#common-constraints — every `constraints` member name the core
@@ -381,39 +381,254 @@ export function isSubsetSet(candidate: AuthorityEntry[], granted: AuthorityEntry
 }
 
 /**
- * @spec mission#introspection, containment#containment-plane — project a
- * candidate Authority Set through a TARGET's current effective set: an entry
- * survives only where both share a `resource`, narrowed to the ACTIONS
- * intersection; the candidate's own `constraints`/`delegation` ride through
- * UNCHANGED (never inherited from the target). This is deliberately NOT
- * {@link deriveAuthoritySet}'s ceiling narrowing: that function inherits a
- * ceiling's `delegation`/`max_amount`/`vendors` onto an operand that omits
- * them (the derivation-time GRANT semantics, correct for turning a proposal
- * into issued authority) and THROWS on an unimplemented Common Constraint or a
- * malformed `max_amount` (correct at derivation time, wrong at introspection
- * time, which must stay total and fail-closed-by-dropping, never by
- * throwing). Projecting a credential's ALREADY-ISSUED authority through the
- * Mission's current effective set must never WIDEN it with a target-side
- * grant it never carried, so nothing is inherited; containment's `remove`
- * shape is `{resource, actions}` only, so it can never narrow a
- * `max_amount`/`vendors`/`delegation` value — keeping the candidate's own is
- * therefore correct, not lossy. Total and non-throwing: an unresolvable
- * pairing simply drops the entry. Order follows `candidate`. Shared by the
- * containment refresh-path re-projection (provider.ts rarThroughContainment,
- * continuation-grant.ts) and the introspection credential/Mission-authority
- * intersection (@spec mission#caller-authorization-and-minimization).
+ * The `constraints` keys this PROJECTION can intersect. Everything else (a
+ * registered-but-unimplemented Common Constraint, or a deployment-defined key
+ * this code does not model) makes a pairing unprojectable: see
+ * {@link projectThroughEffective}, which drops such a fragment rather than
+ * guessing at, or silently discarding, a narrowing it cannot evaluate.
+ */
+const PROJECTABLE_CONSTRAINTS = new Set(["max_amount", "vendors", "requires_action_approval"]);
+
+function onlyProjectableConstraints(constraints: AuthorityEntry["constraints"]): boolean {
+  if (!constraints) return true;
+  return Object.keys(constraints).every((k) => PROJECTABLE_CONSTRAINTS.has(k));
+}
+
+/** min of two matcher RESTRICTION lists: absent means unconstrained on that side. */
+function intersectMatchers(
+  a: DelegateMatcher[] | undefined,
+  b: DelegateMatcher[] | undefined,
+): DelegateMatcher[] | undefined {
+  if (!a) return b?.map(cloneMatcher);
+  if (!b) return a.map(cloneMatcher);
+  const bKeys = new Set(b.map(matcherKey));
+  return a.filter((m) => bKeys.has(matcherKey(m))).map(cloneMatcher);
+}
+
+/**
+ * `children` is a GRANT nested inside `delegation`: the intersection carries it
+ * only where BOTH sides do (omitting is a subset of both, {@link
+ * isSubsetEntry}'s childrenNoBroader), and an unrecognized member on either
+ * side drops it rather than being carried unevaluated.
+ */
+function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
+  if (!a || !b) return undefined;
+  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors"]);
+  if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
+  const out: JsonObject = {};
+  const maxChildren = minNum(asNum(a.max_children), asNum(b.max_children));
+  if (maxChildren !== undefined) out.max_children = maxChildren;
+  const maxChildDepth = minNum(asNum(a.max_child_depth), asNum(b.max_child_depth));
+  if (maxChildDepth !== undefined) out.max_child_depth = maxChildDepth;
+  const actors = intersectMatchers(
+    readMatchers(a.allowed_child_actors),
+    readMatchers(b.allowed_child_actors),
+  );
+  if (actors) out.allowed_child_actors = matchersToJson(actors);
+  return out;
+}
+
+/**
+ * `delegation` is a GRANT, so the SUBSET-OF-BOTH intersection is the
+ * conservative one: carried only where both sides grant it (a candidate that
+ * omits delegation, or an effective side that does, yields a fragment WITHOUT
+ * it, which {@link isSubsetEntry} accepts against both). `max_depth` takes the
+ * min; `allowed_delegates` is a restriction, so it takes the intersection of
+ * the present lists (an empty one means "delegable to nobody", never a void
+ * entry); an unrecognized companion member on either side drops delegation
+ * entirely, since a member this code cannot evaluate must not ride through.
+ */
+function intersectDelegation(
+  a: AuthorityEntry["delegation"],
+  b: AuthorityEntry["delegation"],
+): AuthorityEntry["delegation"] | undefined {
+  if (!a || !b) return undefined;
+  const known = new Set(["max_depth", "allowed_delegates", "children"]);
+  if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
+  const out: Delegation = { max_depth: Math.min(a.max_depth, b.max_depth) };
+  const delegates = intersectMatchers(a.allowed_delegates, b.allowed_delegates);
+  if (delegates) out.allowed_delegates = delegates;
+  const children = intersectChildren(asJsonObject(a.children), asJsonObject(b.children));
+  if (children) out.children = children;
+  return out;
+}
+
+/**
+ * One candidate x effective pairing: the non-empty intersection FRAGMENT, or
+ * null where no fragment can be a subset of both. Fail-closed-by-DROPPING and
+ * total (never throws), unlike {@link intersect}, which is the derivation-time
+ * GRANT narrowing and refuses loudly.
+ */
+function intersectForProjection(
+  candidate: AuthorityEntry,
+  effective: AuthorityEntry,
+): AuthorityEntry | null {
+  if (candidate.type !== effective.type) return null;
+  if (candidate.resource !== effective.resource) return null;
+  const actions = candidate.actions.filter((a) => effective.actions.includes(a));
+  if (actions.length === 0) return null;
+  // A constraint key this projection cannot intersect makes the pairing
+  // unprovable in BOTH directions: keeping it could widen past the effective
+  // side, dropping it could widen past the candidate. Drop the fragment.
+  if (!onlyProjectableConstraints(candidate.constraints)) return null;
+  if (!onlyProjectableConstraints(effective.constraints)) return null;
+  const constraints: NonNullable<AuthorityEntry["constraints"]> = {};
+  const cCap = candidate.constraints?.max_amount;
+  const eCap = effective.constraints?.max_amount;
+  if (cCap || eCap) {
+    if (cCap && eCap) {
+      // Different currencies are incomparable: no value is at or below both,
+      // so no fragment can be a subset of both sides.
+      if (cCap.currency !== eCap.currency) return null;
+      if (!isValidAmount(cCap.amount) || !isValidAmount(eCap.amount)) return null;
+      constraints.max_amount = compareAmounts(cCap.amount, eCap.amount) <= 0 ? cCap : eCap;
+    } else {
+      const only = (cCap ?? eCap) as { amount: string; currency: string };
+      if (!isValidAmount(only.amount)) return null;
+      constraints.max_amount = only;
+    }
+  }
+  const cVendors = candidate.constraints?.vendors;
+  const eVendors = effective.constraints?.vendors;
+  if (cVendors && eVendors) {
+    const vendors = cVendors.filter((v) => eVendors.includes(v));
+    if (vendors.length === 0) return null; // no vendor is permitted by both
+    constraints.vendors = vendors;
+  } else if (cVendors || eVendors) {
+    constraints.vendors = [...((cVendors ?? eVendors) as string[])];
+  }
+  // @spec txn-authorization#applicability — monotonic OR: `true` on EITHER side
+  // narrows, and `false` is equivalent to omission.
+  if (
+    candidate.constraints?.requires_action_approval === true ||
+    effective.constraints?.requires_action_approval === true
+  ) {
+    constraints.requires_action_approval = true;
+  }
+  const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
+  if (Object.keys(constraints).length > 0) entry.constraints = constraints;
+  const delegation = intersectDelegation(candidate.delegation, effective.delegation);
+  if (delegation) entry.delegation = delegation;
+  return entry;
+}
+
+/**
+ * @spec mission#introspection, containment#containment-plane,
+ * issuance-grant#effective-set-projection — project a candidate Authority Set
+ * through a TARGET's current effective set: ENTRY-WISE INTERSECTION. Each
+ * candidate entry is paired against EVERY effective entry sharing its `type`
+ * and `resource`, and each pairing contributes its non-empty intersection
+ * fragment: actions intersected, `max_amount` the smaller (exact decimal
+ * comparison), `vendors` intersected, `requires_action_approval` OR-ed,
+ * `delegation` carried only where both sides grant it and then narrowed. The
+ * result satisfies BOTH `isSubsetSet(result, candidate)` and
+ * `isSubsetSet(result, effective)`, which is the whole point: it is the
+ * authority the credential still holds under the Mission's current narrowing.
+ *
+ * The prior implementation matched only the FIRST effective entry per resource
+ * and carried the candidate's `constraints`/`delegation` through UNCHANGED.
+ * That was sound while containment (whose `remove` shape is `{resource,
+ * actions}` only) was the sole narrowing mechanism, since containment cannot
+ * narrow a `max_amount`, and it is WRONG for any mechanism that can: a
+ * discharged `pay` entry capped at 1000 projected through a surviving entry
+ * capped at 100 kept 1000. Constraint values are therefore intersected now,
+ * which means a narrowing the EFFECTIVE side carries is inherited where the
+ * candidate has none: that is not a widening, because the effective set is by
+ * construction the Mission's own current authority, and the fragment stays a
+ * subset of the candidate too (a constraint the candidate omits is a
+ * constraint it was unbounded by).
+ *
+ * Total and fail-closed-by-DROPPING, never by throwing (unlike {@link
+ * deriveAuthoritySet}, correct at derivation time): a pairing this code cannot
+ * prove is dropped, including one whose sides carry a constraint key outside
+ * {@link PROJECTABLE_CONSTRAINTS}, a malformed `max_amount`, or mismatched
+ * currencies. Identical fragments are de-duplicated and the result follows
+ * `candidate` order. Shared by the refresh/code rar re-projection (provider.ts
+ * rarThroughEffectiveSet, continuation-grant.ts) and the introspection
+ * credential/Mission-authority intersection (@spec
+ * mission#caller-authorization-and-minimization).
  */
 export function projectThroughEffective(
   candidate: readonly AuthorityEntry[],
   effective: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
   const out: AuthorityEntry[] = [];
+  const seen = new Set<string>();
   for (const detail of candidate) {
-    const eff = effective.find((e) => e.resource === detail.resource);
-    if (!eff) continue; // the whole resource is absent from the target set
-    const actions = detail.actions.filter((a) => eff.actions.includes(a));
-    if (actions.length === 0) continue; // every action absent from the target set
-    out.push(actions.length === detail.actions.length ? detail : { ...detail, actions });
+    for (const eff of effective) {
+      const fragment = intersectForProjection(detail, eff);
+      if (!fragment) continue;
+      // Field construction is order-stable (intersectForProjection builds every
+      // fragment the same way), so the serialization is a usable identity.
+      const key = JSON.stringify(fragment);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(fragment);
+    }
   }
   return out;
+}
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+ * Mission-state / Effective Authority Set RESOLUTION SEAM. The projection's
+ * input is "the Mission's current Effective Authority Set", resolved through
+ * the Mission Status operation or an equivalent authenticated, audience-scoped
+ * source. In this deployment the local kernel IS that source (it structurally
+ * satisfies this interface), but the seam is explicit so a consuming AS can
+ * inject a remote one, which owns its own caching and published staleness
+ * bound.
+ */
+export interface EffectiveAuthoritySource {
+  effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[];
+}
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — a TRANSIENT
+ * authority-source failure: the source is unavailable, failed verification, or
+ * reported a rolled-back state `version`. It is NEVER authority exhaustion, so
+ * it must not surface as `invalid_grant` (which tells a client its
+ * authorization is gone) and must not consume a single-use credential: the
+ * profile maps it to `temporarily_unavailable` with HTTP 503 at the token
+ * endpoint, leaving the presented grant or refresh token retryable. A source
+ * raises this instead of returning an empty set, which would be
+ * indistinguishable from a fully narrowed Mission.
+ */
+export class SourceUnavailableError extends Error {}
+
+/**
+ * @spec containment#derivation-gating, status#effective-authority-set,
+ * issuance-grant#effective-set-projection (issue #589) — the Effective
+ * Authority Set projection PRIMITIVE for an already-issued credential's
+ * `rar`: project it through the Mission's CURRENT effective set (resolved
+ * through the {@link EffectiveAuthoritySource} passed in, the local kernel
+ * unless a deployment injects a remote one; a {@link SourceUnavailableError}
+ * from it propagates to the caller as the TRANSIENT class, never as a
+ * collapse),
+ * which composes every issuer-held narrowing mechanism the kernel runs
+ * (today: containment; structured so discharge and future mechanisms slot
+ * in there without a caller-side change). NEVER bypassed on an absent
+ * containment record: `effectiveAuthoritySet` already returns the approved
+ * set unchanged when nothing narrows it, so calling through unconditionally
+ * is a no-op for an unnarrowed Mission and stays live for every future
+ * mechanism that computation composes. A caller MUST resolve `record` first
+ * (a grant with no resolvable Mission carries no narrowing mechanism, which
+ * is a different case from a Mission with nothing currently narrowed) and
+ * MUST NOT special-case that resolution on `record.containment` presence.
+ *
+ * `collapsed` is true exactly when a non-empty `rar` projects to an empty
+ * one: the credential's authority is now entirely contained (or otherwise
+ * narrowed away). Reported rather than thrown, so callers on different
+ * surfaces (a throwing OAuth grant hook vs. a reporting delivery path)
+ * choose their own failure shape; both current call sites (provider.ts's
+ * code/refresh rar projection, continuation-grant.ts's resumed-delivery
+ * projection) treat a `collapsed` result as `invalid_grant`.
+ */
+export function projectRarThroughMission(
+  source: EffectiveAuthoritySource,
+  record: MissionRecord,
+  rar: readonly AuthorityEntry[],
+): { projected: AuthorityEntry[]; collapsed: boolean } {
+  const projected = projectThroughEffective(rar, source.effectiveAuthoritySet(record));
+  return { projected, collapsed: rar.length > 0 && projected.length === 0 };
 }

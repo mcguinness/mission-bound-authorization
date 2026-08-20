@@ -411,7 +411,37 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error_description).toMatch(/lifetime/);
   });
 
-  it("(b) a replayed ICA jti -> rejected (single-use; validator records the jti)", async () => {
+  it("(b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens", async () => {
+    const { missionId, handle } = newLineage("apev-b0");
+    const ica = await mintICA(handle);
+
+    // Suspend: reversible, and NOT terminal, so the handle lineage stays
+    // resolvable (step 5 passes) and the refusal comes from the Mission gate
+    // inside issueCrossDomainGrant (step 9), i.e. AFTER validation.
+    as.kernel.transition(missionId, "suspend");
+    const refused = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const refusedBody = (await refused.json()) as { error?: string; error_description?: string };
+    expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
+    expect(refusedBody.error).toBe("invalid_continuation");
+    expect(refusedBody.error_description).toMatch(/gate refused issuance/);
+
+    // Nothing was issued, so nothing was consumed: the assertion is still
+    // single-use-unspent. (Recording at validation, the prior behavior, burned
+    // it here and made this retry fail /replay/ forever.)
+    as.kernel.transition(missionId, "resume");
+    const ok = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const okBody = (await ok.json()) as { access_token?: string; error?: string };
+    expect(ok.status, JSON.stringify(okBody)).toBe(200);
+    expect(typeof okBody.access_token).toBe("string");
+
+    // And it is consumed exactly once: the successful issuance recorded it.
+    const replayed = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+    expect(replayed.status, JSON.stringify(replayedBody)).toBe(400);
+    expect(replayedBody.error_description).toMatch(/replay/);
+  });
+
+  it("(b) a replayed ICA jti -> rejected (single-use, consumed at issuance commit)", async () => {
     const { handle } = newLineage("apev-b");
     const ica = await mintICA(handle);
     const first = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });

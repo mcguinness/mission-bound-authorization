@@ -36,7 +36,12 @@ import {
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
-import { isSubsetSet, projectThroughEffective } from "../kernel/derive.js";
+import {
+  type EffectiveAuthoritySource,
+  isSubsetSet,
+  projectRarThroughMission,
+  SourceUnavailableError,
+} from "../kernel/derive.js";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
@@ -76,10 +81,15 @@ export const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
  *  credential MUST NOT be the possession carrier). */
 export const REFRESH_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:refresh_token";
 
-/** The (iss, jti) replay cache shape (from `newReplayCache()`). */
+/**
+ * The (iss, jti) replay cache shape (from `newReplayCache()`). `seen` is the
+ * early CHECK; `recordOnce` is the atomic consume, called at issuance commit
+ * (@spec issuance-grant#effective-set-projection, #617 review 1).
+ */
 export type ContinuationReplay = {
   seen: (iss: string, jti: string) => boolean;
   record: (iss: string, jti: string) => void;
+  recordOnce: (iss: string, jti: string) => boolean;
 };
 
 /**
@@ -255,10 +265,11 @@ export async function handleTokenExchangeGrant(
   }
 
   // Step 4: validate the ICA. `audience` is the AS issuer identifier (NOT /token).
-  // The validator records the (iss, jti) on success (continuation-assertion.ts
-  // step 9), so the ICA is single-use from THIS point — do NOT re-record. A
-  // request that fails a LATER step still consumes the ICA (fail-safe, not
-  // retryable). Every typed validator error maps to invalid_request with its
+  // The validator CHECKS the (iss, jti) is unseen and records nothing
+  // (continuation-assertion.ts step 9); consumption is atomic with issuance at
+  // step 11 below (@spec issuance-grant#effective-set-projection, #617 review
+  // 1), so a request that fails a LATER step leaves the ICA unconsumed and
+  // retryable. Every typed validator error maps to invalid_request with its
   // specific message preserved (invalid_request, unlike invalid_grant, is not
   // re-rendered), so exp>300 / forbidden-claim / replay / presenter-key reasons
   // stay visible.
@@ -399,6 +410,19 @@ export async function handleTokenExchangeGrant(
     throw e;
   }
 
+  // Step 11 (ordered BEFORE the response is written): CONSUME the ICA,
+  // atomically with the issuance that just succeeded (@spec
+  // issuance-grant#effective-set-projection, #617 review 1). recordOnce is the
+  // concurrency funnel: two simultaneous redemptions of one ICA both pass the
+  // step-4 check, both may reach here, and the loser is a replay. The ID-JAG it
+  // minted is discarded with the refusal (the Mission's derivation count is
+  // spent, the conservative direction: a client that sees invalid_grant never
+  // holds the credential).
+  if (!replay.recordOnce(ica.iss, ica.jti)) {
+    txError(ctx, 400, "invalid_grant", "continuation assertion replay");
+    return;
+  }
+
   // Step 10: RFC 8693 §2.2.1 response (token_type N_A; the ID-JAG is not a bearer
   // token). Set on ctx directly.
   const claims = decodeJwt(grant);
@@ -411,8 +435,6 @@ export async function handleTokenExchangeGrant(
     expires_in: expiresIn,
   };
   ctx.set("cache-control", "no-store");
-  // Step 11: the ICA jti was already recorded by the validator (step 4); nothing
-  // to record here.
 }
 
 /**
@@ -612,7 +634,21 @@ export async function handleAsyncDelegationExchange(
   // Set. Absent -> the full active set (the Mission's authority is the ceiling).
   // Containment: the ceiling (and the absent-case default) is the EFFECTIVE set,
   // so a contained capability cannot ride an async-delegation family.
-  const effective = kernel.effectiveAuthoritySet(active);
+  // @spec issuance-grant#effective-set-projection (#617 review 1) — resolved
+  // through the authority source, and BEFORE the idempotency reservation of
+  // step 4: a TRANSIENT source failure here refuses 503 having consumed
+  // nothing (no reservation, no family, no derivation count), so the same
+  // creation_request_id is redeemable on retry.
+  let effective: AuthorityEntry[];
+  try {
+    effective = authoritySource(opts).effectiveAuthoritySet(active);
+  } catch (e) {
+    if (e instanceof SourceUnavailableError) {
+      txError(ctx, 503, "temporarily_unavailable", e.message);
+      return;
+    }
+    throw e;
+  }
   let confinedSubset: AuthorityEntry[];
   if (requestedSubset === undefined) {
     confinedSubset = effective;
@@ -675,6 +711,13 @@ export async function handleAsyncDelegationExchange(
   }
   const grantId = await grant.save();
   familyStore.record({ grantId, missionId: record.id });
+  // @spec issuance-grant#effective-set-projection (#617 review 3) — the DURABLE
+  // Mission-bound discriminator, alongside the family row. The family row is
+  // invalidated on a terminal Mission (and on the GateError rollback below);
+  // this index is append-only, so a later hook that cannot resolve the Mission
+  // still knows the grant was Mission-bound and fails CLOSED instead of
+  // reissuing its stale authority with no `mission` claim.
+  kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "delegation-family" });
   try {
     idem.advanceReserved(client.clientId, creationRequestId, { grant_id: grantId, target }, () => {
       kernel.gateDerivation(record.id);
@@ -796,22 +839,33 @@ async function deliverAsyncDelegationFamily(
 }
 
 /**
- * @spec continuation#transport-async (containment conformance) — project a
- * family grant's issuance-time rar through the Mission's CURRENT effective set
- * (approved minus contained) for a RESUMED delivery, exactly as the provider's
- * rarThroughContainment does for refresh responses. No containment -> the same
- * array (fast path). The narrowing itself is {@link projectThroughEffective}
- * (shared with provider.ts and the introspection credential/Mission-authority
- * intersection, @spec mission#introspection): actions-only narrowing, nothing
- * inherited from the target.
+ * @spec continuation#transport-async (containment conformance), issuance-
+ * grant#effective-set-projection (#589) — project a family grant's
+ * issuance-time rar through the Mission's CURRENT effective set for a
+ * RESUMED delivery, via the shared {@link projectRarThroughMission}
+ * primitive (also used by provider.ts's code/refresh rar projection): NEVER
+ * bypassed on an absent containment record, since the primitive itself
+ * yields the unchanged set (a computed no-op) when nothing currently
+ * narrows the Mission. The caller below (recoverAsyncDelegation) reports a
+ * full collapse as `invalid_grant`, matching provider.ts's throw for the
+ * same condition on the ordinary refresh path.
  */
 function projectRarThroughEffective(
-  kernel: AdapterOptions["kernel"],
+  opts: AdapterOptions,
   record: MissionRecord,
   rar: AuthorityEntry[],
 ): AuthorityEntry[] {
-  if (!record.containment) return rar;
-  return projectThroughEffective(rar, kernel.effectiveAuthoritySet(record));
+  return projectRarThroughMission(authoritySource(opts), record, rar).projected;
+}
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+ * Effective Authority Set resolution seam for this adapter's own projections:
+ * the injected source, else the local kernel. Read per call (never captured at
+ * build time) so provider.ts and this file always agree on the source.
+ */
+function authoritySource(opts: AdapterOptions): EffectiveAuthoritySource {
+  return opts.authoritySource ?? opts.kernel;
 }
 
 /**
@@ -910,7 +964,20 @@ async function recoverAsyncDelegation(
       txError(ctx, 400, "invalid_grant", "recorded delegation family no longer exists");
       return;
     }
-    const projected = projectRarThroughEffective(opts.kernel, active, grantRar);
+    let projected: AuthorityEntry[];
+    try {
+      projected = projectRarThroughEffective(opts, active, grantRar);
+    } catch (e) {
+      // @spec issuance-grant#effective-set-projection (#617 review 1) — a
+      // TRANSIENT source failure on the resumed-delivery path refuses 503
+      // without failing the recorded operation: the reservation stays
+      // recoverable, so the client retries the same creation_request_id.
+      if (e instanceof SourceUnavailableError) {
+        txError(ctx, 503, "temporarily_unavailable", e.message);
+        return;
+      }
+      throw e;
+    }
     if (projected.length === 0) {
       txError(ctx, 400, "invalid_grant", "the recorded delegation's authority is fully contained");
       return;

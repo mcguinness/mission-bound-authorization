@@ -41,6 +41,10 @@
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
     "content_sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
+   },
+   "draft-mcguinness-oauth-mission-issuance-grant.md": {
+    "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
+    "content_sha256": "0978188dafc403593f6c817c23aca8f3589d5a54ec9f0265e32657d5fff09a75"
    }
   }
  },
@@ -128,7 +132,8 @@
    "substrate.credential-bound",
    "substrate.authorized-context-correlation",
    "substrate.independently-verifiable",
-   "substrate.portable-evidence"
+   "substrate.portable-evidence",
+   "issuance-grant.state-integration"
   ]
  },
  "profiles": [
@@ -12258,6 +12263,443 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.redemption",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A consuming AS with a Mission-state integration MUST, at redemption and at every refresh, resolve the Mission's current state and Effective Authority Set through the Mission Status operation",
+   "facet": "redemption",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at grant redemption, a consuming AS that has a Mission-state integration resolves current Mission state and the Effective Authority Set and refuses a non-active Mission, then projects issued authority through that set before minting; no issuance-grant redemption path exists in this implementation (verified by grep: no issuance-grant/grant-redemption code in src), so this facet is unimplemented rather than untested"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No issuance-grant redemption endpoint exists in src (inventoried #589): the profile's Grant Minter / Consuming AS redemption flow is spec-only here, so the redemption-time duty (which #617 review 4 states unconditionally for every state-integrated consuming AS, split in the conformance section from the refresh-time duty) has no code to observe. The sibling refresh facet is implemented and tested; this row stays todo until a redemption path is built."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.refresh",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A consuming AS with a Mission-state integration MUST, at redemption and at every refresh, resolve the Mission's current state and Effective Authority Set through the Mission Status operation",
+   "facet": "refresh",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on every refresh, the consuming AS projects the refresh family's own recorded authority through the Mission's current Effective Authority Set, resolved through the authority-source seam (kernel/derive.ts projectRarThroughMission over an EffectiveAuthoritySource, called unconditionally from provider.ts's rarForRefreshTokenResponse hook and never bypassed on an absent containment record); the projection is entry-wise INTERSECTION (#617 review 2), so a partial narrowing issues only the remainder with every constraint intersected (max_amount the smaller, vendors intersected, requires_action_approval OR-ed, delegation carried only where both sides grant it) and the result is a subset of BOTH the credential's authority and the effective set; a full collapse of the family's own ceiling (which may be narrower than the Mission's whole authority_set) refuses invalid_grant, and an active Mission's still-VALID Status List bit does not prevent the narrowing, since the projection never consults that bit",
+    "local": "the endpoint tests exercise the projection through containment, whose remove shape is {resource, actions} only and therefore never narrows a constraint VALUE; the constraint-intersection half of the semantics is proven at the unit level against the primitive itself (with the subset property asserted in both directions on every case), because no mechanism in this implementation narrows a max_amount/vendors/delegation on the effective side yet"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > full containment (#589): containing exactly the FAMILY's own narrower ceiling fails the refresh invalid_grant, even though the Mission's wider authority_set is not fully contained",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > full containment (#589): containing the WHOLE resource fails a CODE-FLOW refresh invalid_grant (authority fully contained)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > #589: an active Mission with a still-VALID Status List bit still narrows on refresh (the bit alone is insufficient)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > intersects max_amount to the SMALLER value: a candidate capped at 1000 through a survivor capped at 100 yields 100",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > pairs a candidate entry against EVERY effective entry sharing the resource, not just the first",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > INHERITS a cap the effective side alone carries (the candidate was unbounded by it)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > intersects vendors, and drops the fragment when no vendor is permitted by both",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > carries delegation only where BOTH sides grant it, then narrows max_depth and allowed_delegates",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > drops the fragment for a constraint key this projection cannot intersect, on EITHER side",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "projectThroughEffective: entry-wise intersection (@spec issuance-grant#effective-set-projection) > regression (the containment shape): narrows actions and leaves the rest of the entry alone",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.fail-closed-source",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A source that is unavailable, fails verification, or reports a state\n`version` older than one already observed for this Mission is a\ntransient failure, never authority exhaustion, and is refused in a\nmachine-readable shape: this profile defines a token-endpoint use of\nthe OAuth `temporarily_unavailable` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Effective Authority Set source that is unavailable, unverifiable, or reports a rolled-back state version is refused with the OAuth temporarily_unavailable error code and HTTP status 503 (machine-readable, not an error_description to parse), optionally carrying Retry-After, and is never treated as authority exhaustion nor reported as invalid_grant",
+    "local": "the authority source is an injectable seam (AdapterOptions.authoritySource over kernel/derive.ts's EffectiveAuthoritySource); a source raising SourceUnavailableError maps to temporarily_unavailable/503 with Retry-After (provider.ts sourceUnavailableError plus the header middleware, continuation-grant.ts txError for the custom grants). The tests drive an injected failing source, which is the only way to reach the class here: the local kernel is the authoritative record and can be neither unreachable nor unverifiable to itself, and the rolled-back-version trigger has no external replica to roll back, so the discrimination BETWEEN the three triggers is the source's own duty and stays unobserved"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "transient authority-source failure (@spec issuance-grant#effective-set-projection) > on refresh: refuses temporarily_unavailable (503 + Retry-After) and consumes neither the presented refresh token nor its rotation; the SAME token then succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "transient authority-source failure (@spec issuance-grant#effective-set-projection) > at the initial exchange: refuses 503 before the idempotency reservation, so the SAME creation_request_id still redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "transient authority-source failure (@spec issuance-grant#effective-set-projection) > the permanent class is unaffected: a fully narrowed family still refuses invalid_grant with 400, never 503",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#617 review 1 replaced this rule's invalid_grant mapping: a transient source failure refuses temporarily_unavailable with HTTP 503, so a client tells 'retry this same credential' from 'your authorization is gone' without parsing error_description. Partial rather than tested because the three triggers collapse into one injected signal here; distinguishing them needs the not-yet-built external MAS Mission Status client."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.no-re-widening",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A refresh family's issued authority MUST NOT widen across refreshes within the same Mission: the consuming AS atomically narrows its own stored ceiling on every refresh, or retains the highest Mission state `version` it has observed and rejects a source reporting a lower one as a rollback.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh family's issued authority never widens across a sequence of refreshes spanning multiple containment narrowings within the same Mission: the Mission's state version strictly increases and each refresh's projected remainder is a subset of the previous one, ending in invalid_grant once fully contained",
+    "local": "the test proves the invariant this single-process kernel guarantees by construction (every refresh re-reads the live, monotonically-narrowing kernel record; there is no external cache or replica that could feed back a stale, wider read), not an actual rollback ATTEMPT against a stale source: that scenario has no constructible case here (same gap as the fail-closed-source row) and would need the not-yet-built issuance-grant external-consuming-AS path to exercise the rollback-rejection half of this rule directly"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > #589: a refresh family never re-widens across a contain sequence; the Mission's state version is monotonic and every refresh observes the current (never a rolled-back) one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.pre-scope-projection",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "This projection precedes scope projection above: an AS that models authority as `scope` maps the narrowed remainder, never the grant's original set.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS that models authority as scope instead of RFC 9396 authorization_details maps the Effective-Authority-Set-narrowed remainder to scope, never the grant's original, unprojected set, so scope mapping cannot erase the narrowing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No scope-projection mode exists in src for this profile: the demo consuming AS models Mission authority as authorization_details (RFC 9396) throughout and never projects to scope. Todo pending a scope-projection implementation."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.claim-gate",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A consuming AS that cannot perform this projection MUST NOT claim containment- or discharge-aware issuance.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consuming AS incapable of the Effective Authority Set projection (no Mission-state integration, or one that cannot resolve current authorization_details and state version) does not claim containment- or discharge-aware issuance in its conformance statement"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A deployment-conformance/documentation-level statement (what a deployment MAY claim), not a runtime behavior this demo AS exposes a checkable surface for (it has no discovery member asserting containment/discharge-aware issuance to validate against). Todo pending such a claim surface."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.atomic-consumption",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "the record itself is written atomically with successful issuance, after the state gate and this projection",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the single-use record of a redeemed grant is written atomically with successful issuance, after the state gate and the projection, so a redemption that fails before issuance leaves the grant unconsumed and retryable, and two concurrent redemptions of one grant are resolved by that atomic record (the loser is a replay)",
+    "local": "there is no issuance-grant redemption path in src, so the rule is observed on this implementation's OTHER single-use redemption artifact, the Identity Continuation Assertion: its validator now CHECKS the (iss, jti) and the exchange consumes it at issuance commit through the atomic newReplayCache().recordOnce, whose false is the concurrency loser. The grant-jti half of the rule (and the PAR-carriage variant, where recording at PAR validation IS the atomic step) stays unobserved until a redemption path exists."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b) a replayed ICA jti -> rejected (single-use, consumed at issuance commit)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-assertion.test.ts",
+     "name": "validateContinuationAssertion \u2014 rejects > a jti the redeeming caller already consumed",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial by artifact, not by rule: the ordering and atomicity are implemented and tested on the ICA redemption path (#617 review 1). A Mission Issuance Grant jti store does not exist here."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.refresh-token-not-consumed",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "On the refresh path a transient source failure MUST NOT consume or rotate the presented refresh token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a transient authority-source failure during a refresh neither consumes nor rotates the presented refresh token, so the client retries with the credential it already holds and the retry succeeds",
+    "local": "guaranteed at ONE seam: oidc-provider 9.10.0's refresh_token grant awaits the rotateRefreshToken hook (L133-135) BEFORE refreshToken.consume() (L137), while the rar hook (L212) and at.save() -> extraTokenClaims (L216) both run after it, so the source is resolved in that hook (provider.ts probeAuthoritySource) and the 503 lands pre-consumption; the test proves it by redeeming the SAME refresh token after the refusal, which would fail 'refresh token already used' had the refusal come from either later hook"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "transient authority-source failure (@spec issuance-grant#effective-set-projection) > on refresh: refuses temporarily_unavailable (503 + Retry-After) and consumes neither the presented refresh token nor its rotation; the SAME token then succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.causal-containment-attribution",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "a collapse from any other cause MUST NOT be reported as containment merely because Containment is composed",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an empty-intersection refusal attributes Containment's authority_contained reason only where Containment causally removed the authority; a collapse from any other cause is refused with a distinct reason even though Containment is composed",
+    "local": "kernel.gateDerivation recomputes the effective set with the containment overlay removed and refuses authority_contained only when THAT set is non-empty, else authority_exhausted (both map to invalid_grant at the wire, with their own messages). Containment is the only overlay effectiveAuthoritySet composes today, so the exhausted branch is reached in the test by synthesizing an empty approved set; it exists for the next mechanism, which will not live in `containment`."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "gateDerivation refuses an empty effective set BY CAUSE (@spec issuance-grant#effective-set-projection) > authority_contained where containment CAUSALLY emptied the set",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/effective-set-projection.test.ts",
+     "name": "gateDerivation refuses an empty effective set BY CAUSE (@spec issuance-grant#effective-set-projection) > authority_exhausted where the set is empty with the containment overlay removed",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.request-fault-errors",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "Where that authorization survives and only the narrowing the client requested fails to intersect it, the request is at fault: the refusal is `invalid_scope` where the request carried `scope`, or `invalid_authorization_details`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the current grant authority survives the projection and only the client's requested narrowing fails to intersect it, the refusal names the request as the fault (invalid_scope for the scope form, invalid_authorization_details for the RFC 9396 form), never invalid_grant, which is reserved for an authorization that is itself exhausted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No issuance-grant redemption path exists in src, and this AS's token endpoint does not implement the client-requested narrowing term of the four-way intersection for it (RFC 9396 subset requests at the token endpoint are handled by oidc-provider's own checkRar, which never consults the Effective Authority Set). Todo pending that path; the split was added by #617 review 4."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to this AS, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a source other than the Mission Status operation is used for this projection only where it is authenticated, audience-scoped to this AS, carries the Mission's current authorization_details and a monotonic state version, and answers within the deployment's published staleness bound",
+    "local": "the implementation has the SEAM (AdapterOptions.authoritySource) but no remote source behind it: the local kernel is the authoritative record, reached in-process, so none of the four properties has an observable wire form here. The seam's contract is exercised only for its failure signal (SourceUnavailableError)."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added by #617 review 4 (2): the source contradiction is resolved by defining what an equivalent source MUST provide, with Mission Status as its discharge rather than the only source. Todo pending an external MAS Mission Status client."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.mission-bound-fails-closed",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "and refuse when the Mission is not established `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission-bound credential whose Mission state cannot be resolved at all is refused rather than reissued: the AS never treats an unresolvable Mission as an absent one and never issues the credential's stored authority with its Mission binding dropped",
+    "local": "#617 review 3: both token-plane hooks read 'no Mission resolved' as 'not a Mission-bound grant' and fell through to the pass-through branch (the stored rar echoed, extraTokenClaims returning {} so the token carried no `mission` claim). A durable, append-only Mission-bound grant index (kernel.missionBoundGrants, its own store handle so a missions-row delete cannot take it along) is the discriminator: miss passes through, hit with an unresolvable Mission refuses invalid_grant."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > a per-delegation family grant whose Mission record is purged refuses refresh instead of reissuing its stale authority",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > the Mission's OWN code-flow grant fails closed the same way once its record is purged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > the index is the discriminator: it survives the Mission's deletion, and an unknown grant resolves undefined (the pass-through case)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.par-carriage.transient-not-consume-code",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "transient source failure at code exchange refuses `temporarily_unavailable` and MUST NOT consume the authorization code",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "under the PAR carriage, a transient authority-source failure at code exchange refuses temporarily_unavailable without consuming the authorization code, so the exchange stays retryable within the code's own lifetime (the grant itself was already consumed at PAR validation, where the code became its carrier)",
+    "local": "the REFUSAL SHAPE is implemented (the code-response rar hook maps SourceUnavailableError to temporarily_unavailable/503 exactly as the refresh path does), but the non-consumption half is NOT: oidc-provider 9.10.0's authorization_code grant calls code.consume() at lib/actions/grants/authorization_code.js L89, before the rar hook (L123) and at.save() (L127), and unlike the refresh path (whose rotateRefreshToken hook at refresh_token.js L133-135 precedes consume() at L137) it offers no pre-consume seam. So a transient failure here refuses 503 with the code already spent. Unimplemented rather than untested: closing it needs a resolution point ahead of code consumption, which this library does not expose."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
   }
  ]
 }

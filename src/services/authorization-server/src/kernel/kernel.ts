@@ -16,6 +16,7 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
   type IntentSubmissionPresenter,
@@ -101,7 +102,14 @@ export class GateError extends Error {
       | "mission_not_active"
       | "mission_expired"
       | "derivation_cap_exhausted"
-      | "authority_contained",
+      // @spec issuance-grant#effective-set-projection (#617 review 2) — an
+      // empty effective set is refused BY ITS CAUSE: `authority_contained`
+      // only where Containment CAUSALLY removed the authority,
+      // `authority_exhausted` where the Mission has nothing to derive with the
+      // overlay taken away. Both refuse `invalid_grant` at the wire; the
+      // Containment denial reason rides only the former.
+      | "authority_contained"
+      | "authority_exhausted",
     message: string,
   ) {
     super(message);
@@ -173,11 +181,20 @@ export interface KernelOptions {
 
 export class MissionKernel {
   readonly db: Database;
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
+   * Mission-bound grant index. Its own store handle, deliberately NOT this
+   * kernel's `db`: a `DELETE FROM missions` (or any future record pruning) must
+   * not take the discriminator with it, or the token-plane hooks would read a
+   * purged Mission-bound grant as an ordinary one and fail OPEN.
+   */
+  readonly missionBoundGrants: MissionBoundGrantStore;
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
   constructor(private readonly opts: KernelOptions) {
     this.db = openStore(SCHEMA);
+    this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
   }
@@ -450,8 +467,17 @@ export class MissionKernel {
     return row ? rowToRecord(row) : undefined;
   }
 
+  /**
+   * Bind a provider grant to a Mission. @spec
+   * issuance-grant#effective-set-projection (#617 review 3) — ALSO records the
+   * durable discriminator, so a later token-plane hook can tell "this grant was
+   * never Mission-bound" (pass through) from "its Mission no longer resolves"
+   * (fail closed), which the `missions.grant_id` column alone cannot do once the
+   * row is gone.
+   */
   bindGrant(missionId: string, grantId: string): void {
     this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+    this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
   }
 
   /** @spec child-delegation#parent-member — the immediate Child Missions of a parent. */
@@ -960,9 +986,27 @@ export class MissionKernel {
    */
   gateDerivation(id: string): MissionRecord {
     const record = this.gateActiveLineage(id);
-    // Containment gate: token derivation draws on the EFFECTIVE set; a fully
-    // contained Mission (empty effective set) has nothing left to derive.
-    if (record.containment && this.effectiveAuthoritySet(record).length === 0) {
+    // Effective Authority Set gate (#589): token derivation draws on the
+    // EFFECTIVE set, so a Mission with nothing left in its current effective
+    // set has nothing left to derive. Never gated on `record.containment`
+    // presence: effectiveAuthoritySet already yields the approved set unchanged
+    // when nothing narrows it, and the mechanism that emptied it need not be
+    // containment for the gate to apply.
+    //
+    // @spec issuance-grant#effective-set-projection (#617 review 2) — refuse BY
+    // CAUSE. Recompute the effective set with the containment overlay REMOVED:
+    // if that is empty too, containment is not what removed the authority
+    // (`authority_exhausted`); only a non-empty no-overlay set collapsing under
+    // the overlay is `authority_contained`, which is the condition Containment's
+    // `authority_contained` denial reason may be attributed to. Today
+    // containment is the only overlay effectiveAuthoritySet composes, so the
+    // exhausted branch means an empty approved set; the branch is structural for
+    // the next mechanism (discharge), which will not live in `containment`.
+    if (this.effectiveAuthoritySet(record).length === 0) {
+      const { containment: _overlay, ...withoutOverlay } = record;
+      if (this.effectiveAuthoritySet(withoutOverlay).length === 0) {
+        throw new GateError("authority_exhausted", `mission ${id} has no effective authority to derive`);
+      }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
     if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {

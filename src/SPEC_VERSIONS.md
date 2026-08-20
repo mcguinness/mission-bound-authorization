@@ -293,6 +293,81 @@ this matrix and the `@spec` tags to the affected code and tests.
   (`services/authorization-server/test/{containment,containment-pdp-e2e,async-delegation}.test.ts`,
   `services/pdp/test/evaluate.test.ts`,
   `packages/mission-signals/test/containment-commit.test.ts`.)
+- Effective Authority Set projection, never bypassed (#589, following the
+  `draft-mcguinness-oauth-mission-issuance-grant` review that generalized the
+  refresh-path rar conformance fix above beyond containment): the prior fix's
+  two call sites (`provider.ts`'s `rarThroughContainment`,
+  `continuation-grant.ts`'s `projectRarThroughEffective`) each skipped
+  `effectiveAuthoritySet` entirely when `record.containment` was absent, so a
+  future narrowing mechanism that does not set that field (discharge) would
+  have been silently unprojected. Extracted into one shared primitive,
+  `kernel/derive.ts` `projectRarThroughMission(kernel, record, rar)`: it
+  always calls through `effectiveAuthoritySet` once a Mission resolves (that
+  function's own fast path already yields the approved set unchanged when
+  nothing narrows it, so the no-containment case is now a computed no-op, not
+  a bypassed one) and reports `{projected, collapsed}`, `collapsed` true
+  exactly when a non-empty rar projects to an empty one. Both call sites use
+  it; `provider.ts`'s code/refresh rar projection now throws `invalid_grant`
+  on `collapsed` (previously a silent 200 with empty `authorization_details`),
+  which the async-delegation family path in particular had no other check
+  catching (it re-gates refresh with `gateActive`, not `gateDerivation`, so
+  the mission-wide `authority_contained` gate never ran for it).
+  `kernel.ts`'s `gateDerivation` full-containment gate is generalized the
+  same way (`record.authority_set.length > 0`, not `record.containment`
+  presence); behavior-preserving today, future-proofed for the next
+  mechanism. New tests prove the family-level collapse (narrower than the
+  Mission's whole `authority_set`) is caught where a mission-wide-only check
+  would miss it, that a still-VALID Status List bit does not prevent the
+  narrowing, and that the Mission's state `version` stays monotonic (no
+  re-widening) across a multi-step contain-then-refresh sequence.
+  (`services/authorization-server/test/async-delegation.test.ts`.)
+- Effective Authority Set projection, review hardening (#617 review of the
+  entry above, `issuance-grant#effective-set-projection`): three corrections.
+  (1) TRANSIENT source failure. The resolution is an explicit seam,
+  `kernel/derive.ts` `EffectiveAuthoritySource` (the kernel satisfies it
+  structurally; `AdapterOptions.authoritySource` injects a remote one), and a
+  `SourceUnavailableError` from it is refused with the OAuth
+  `temporarily_unavailable` code at HTTP 503 (plus `Retry-After` from
+  `stateRecoveryRetryAfter`), never `invalid_grant`. Two oidc-provider
+  mechanics are pinned: its own `errors.TemporarilyUnavailable` is a 400, and
+  `OIDCProviderError` computes `expose = status < 500` while `err_out.js`
+  renders a non-exposed error as a generic `server_error`, so
+  `sourceUnavailableError()` sets both the status and `expose`. Refresh-token
+  non-consumption is guaranteed at ONE seam: oidc-provider 9.10.0's
+  `refresh_token` grant awaits `rotateRefreshToken` (L133-135) BEFORE
+  `refreshToken.consume()` (L137), while the rar hook (L212) and `at.save()`
+  -> `extraTokenClaims` (L216) run after, so the source is resolved in that
+  hook (`probeAuthoritySource`) and a transient refusal lands before the
+  presented token is spent. The code-exchange half of the same rule (PAR
+  carriage) is NOT met here and is disclosed as a ledger todo:
+  `authorization_code.js` consumes the code at L89, before the rar hook (L123)
+  and `at.save()` (L127), and offers no pre-consume seam. (2) CONSUMPTION atomic with issuance. There is no
+  issuance-grant redemption path in `src`, so the rule is applied to this
+  codebase's real single-use redemption: `validateContinuationAssertion` now
+  only CHECKS the ICA's `(iss, jti)` and the exchange consumes it at issuance
+  commit through the new atomic `newReplayCache().recordOnce`, so a failure
+  before issuance (a Mission gate refusal, a transient outage) no longer burns
+  an assertion whose authorization was intact. (3) HONEST projection
+  semantics. `projectThroughEffective` is entry-wise INTERSECTION: every
+  effective entry sharing a candidate's `type`/`resource` contributes a
+  fragment, with `max_amount` the smaller, `vendors` intersected,
+  `requires_action_approval` OR-ed, and `delegation` carried only where both
+  sides grant it; the result is a subset of BOTH operands (asserted on every
+  unit case). The first-match, constraints-unchanged version was sound only
+  while containment (remove shape `{resource, actions}`) was the sole
+  mechanism and kept a 1000 cap projecting through a 100 survivor.
+  `gateDerivation` refuses an empty effective set BY CAUSE
+  (`authority_contained` only where removing the containment overlay leaves a
+  non-empty set, else the new `authority_exhausted`), so Containment's denial
+  reason is attributed causally rather than wherever it is composed. Also
+  (#617 review 3) `kernel.missionBoundGrants`, an append-only grantId ->
+  missionId index on its own store handle, is the durable discriminator both
+  token-plane hooks needed: index miss passes an ordinary grant through, a hit
+  whose Mission no longer resolves fails CLOSED instead of reissuing the
+  credential's stored authority with no `mission` claim. (`provider.ts`'s
+  `rarThroughContainment` is `rarThroughEffectiveSet` from here on: it has not
+  been containment-specific since the entry above.)
+  (`services/authorization-server/test/{effective-set-projection,async-delegation,continuation-grant,continuation-assertion}.test.ts`.)
 - Unified cross-enforcement evidence base (`authzen#decision-evidence-object`):
   `EvidenceBase` gains the optional `emitter` (`id` + `role`, roles `pdp`/`pep`/
   `executor` plus the coordinated companion roles `harness`/`egress`) and a
