@@ -2625,9 +2625,10 @@ has.
 | `mission-reference-selected` | A Mission tuple was supplied for routing and selection | The canonical (issuer, mission id) pair; grants nothing and makes no security claim |
 | `work-item-bound` | A trusted component bound that tuple to this session, queue, or task item | An authenticated attacher, a tamper-resistant work-item identifier, and stated inheritance and retry rules |
 | `credential-correlated` | The presented credential is correlated to the Mission's parties | A mapping join or Mission Join Assertion ({{I-D.draft-mcguinness-mission-authority-server}}), with its stated ceiling |
-| `credential-mission-bound` | The credential's authority was issued or derived for the Mission | The seven equivalence properties below |
-| `instance-bound` | The concrete acting instance proves possession of the bound key | Verified instance identity plus `cnf` or an equivalent sender proof |
-| `action-bound` | An authenticated permit authorizes one operation, resource, and input projection | The permit's full binding, defined below |
+| `credential-mission-bound` | The credential's authority was issued or derived for the Mission | The six equivalence properties below |
+| `presenter-key-bound` | The presenter proves possession of the key the credential is constrained to | Issuance-time key targeting (`cnf` or an equivalent confirmation) plus presentation-time proof of possession |
+| `instance-bound` | The concrete acting instance is identified and holds the bound key | `presenter-key-bound` plus the instance requirements below |
+| `action-bound` | An authenticated permit authorizes one operation, resource, and input projection | One of the two proof forms below |
 {: title="Mission binding properties"}
 
 The properties are claimed per covered Authorization Server,
@@ -2647,9 +2648,8 @@ artifact. For the covered path the credential establishes all of:
    Authority Set for the target audience;
 4. the mapped subject, the requesting `client_id`, and actor or
    delegation context where applicable;
-5. sender constraint for the acting instance and key;
-6. bounded lifetime plus active-state issuance and refresh gates; and
-7. an auditable derivation link to the Mission authorization: an
+5. bounded lifetime plus active-state issuance and refresh gates; and
+6. an auditable derivation link to the Mission authorization: an
    Issuance Grant `jti`
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a native
    issuance record ({{I-D.draft-mcguinness-oauth-mission}}), a
@@ -2657,23 +2657,52 @@ artifact. For the covered path the credential establishes all of:
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or an
    equivalently specified artifact.
 
-Native Mission-bound issuance, the Mission Issuance Grant, and a
-conforming cross-domain exchange all satisfy the one property; a
-Mission Join Assertion fails properties 3, 6, and 7 by design, which
-is what separates correlation from issuance.
+Sender constraint is deliberately not among them: issuance-time key
+targeting and presentation-time proof are `presenter-key-bound`, a
+separate property, so a path that needs possession requires the
+composition rather than reading it into the equivalence. That is
+also what the mechanisms support: the core's tokens SHOULD be
+sender-constrained and the generic Issuance Grant's `cnf` is
+OPTIONAL, so native issuance, the Mission Issuance Grant, and a
+conforming cross-domain exchange satisfy this one property, and
+supply `presenter-key-bound` exactly where their confirmation
+binding is actually in force. A Mission Join Assertion fails
+properties 3, 5, and 6 by design, which is what separates
+correlation from issuance.
 
-**Action-bound** requires the authenticated permit and its full
-binding: the Mission, the credential or actor and key, the action
-and resource, and the normalized parameters or complete request
-projection, under the permit's validity and use controls. The
-transaction token of
-{{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} and
-a runtime permit carrying the parameter binding
-({{I-D.draft-mcguinness-mission-authzen}}) are the family's two
-discharges. An evaluation identifier alone is a correlator, never
-the property: it qualifies only where dereferencing it through an
-authenticated, audience-bound, freshness- and use-controlled permit
-store yields that same full binding.
+**Presenter-key-bound** is possession and nothing more: the
+credential names a confirmation key at issuance, and the presenter
+proves possession at use, with DPoP or mutual TLS. It does not
+identify which concrete agent process or workload holds the key.
+
+**Instance-bound** requires all of: an authenticated instance
+identifier; a verified binding from that identity to the
+confirmation key; current proof of possession; and no key sharing
+across instances. End-to-end sender constraint alone establishes
+`presenter-key-bound`, never this property.
+
+**Action-bound** requires an authenticated permit binding the
+Mission, the action and resource, and the normalized parameters or
+complete request projection, under the permit's validity and use
+controls, in one of two proof forms:
+
+- **portable permit**: an audience-restricted, presenter- or
+  sender-bound artifact, verified where it is presented; the
+  transaction token of
+  {{I-D.draft-mcguinness-oauth-mission-transaction-authorization}}
+  is the family's discharge; or
+- **channel-bound permit**: a permit bound to the mutually
+  authenticated requesting and executing parties and enforced on
+  that same channel, with request cache-key equality, its validity
+  window, and the applicable use controls; the runtime permit of the
+  AuthZEN binding ({{I-D.draft-mcguinness-mission-authzen}})
+  discharges it under exactly those conditions.
+
+A parameter binding alone makes a response neither form, and an
+evaluation identifier alone is a correlator, never the property: it
+qualifies only where dereferencing it through an authenticated,
+audience-bound, freshness- and use-controlled permit store yields
+one of the two forms above, complete.
 
 Deployments claim compositions, and a claimed composition requires
 every member property:
@@ -2682,11 +2711,20 @@ every member property:
   inheritance rules the harness states
   ({{I-D.draft-mcguinness-mission-harness}});
 - **mission-credential-bound**: `credential-mission-bound` plus
-  `instance-bound`, end to end;
+  `presenter-key-bound`, end to end; `instance-bound` strengthens
+  the claim where an instance identity exists and is verified; and
 - **runtime-action-bound**: authoritative Mission establishment plus
-  `action-bound`; and
-- **work-item-attributable**: `work-item-bound` plus `action-bound`,
-  binding the executed action to its originating work item.
+  `action-bound`.
+
+A work-item-attribution composition is deliberately absent.
+`work-item-bound` and `action-bound` holding together does not prove
+the permitted action came from that work item: concurrent items
+under one Mission still substitute. The composition becomes
+definable only when a verified cross-link exists, the action permit
+or its authenticated request context binding the same
+tamper-resistant work-item identifier the harness recorded; no
+family carrier supplies that today, so a deployment claims the two
+properties separately and nothing more.
 
 The mechanism mapping is conservative: a propagated
 Mission-Reference is selection only; a mapping join is
@@ -2695,17 +2733,31 @@ Mission Join Assertion is a stronger, token- and key-specific
 `credential-correlated`, still never issuance; a trusted harness
 supplies `work-item-bound` where its attacher requirements hold; a
 native or issuance-grant-derived token is
-`credential-mission-bound`, and `instance-bound` only with
-end-to-end sender constraint; a verified transaction token or
-parameter-bound runtime permit is `action-bound`.
+`credential-mission-bound`, and `presenter-key-bound` where its
+confirmation binding is in force end to end; an authenticated
+client-instance assertion with a verified key binding is what makes
+a path `instance-bound`; a verified transaction token is the
+portable `action-bound` form, and an AuthZEN runtime permit is the
+channel-bound form under that binding's conditions.
+
+The property names above are stable identifiers, and a claim is a
+per-path declaration, not prose: each claimed property or
+composition names the covered issuer, resource, and action-class
+paths. The Enforcement Scope Statement carries the per-path
+declarations for the enforcement-adjacent properties, and the
+Mission Deployment Profile ({{deployment-profile}}) composes them; a
+binding's Statement declares what the binding can supply, which is
+never itself a deployment claim. An unknown property identifier, an
+undeclared path, or an unstated property is not claimed, and a
+consumer treats it as not held; nothing downgrades silently.
+Schema-level claim identifiers and validation rules remain the
+Deployment Profile's own future work.
 
 Binding properties and the assurance claims above compose rather
 than repeat: a binding property says whose Mission a path's work and
 credentials are bound to; an assurance claim says what the
 deployment's enforcement proves. Credential-level and action-level
-binding likewise compose rather than substitute, and the Enforcement
-Scope Statement and the Mission Deployment Profile
-({{deployment-profile}}) carry both, per path.
+binding likewise compose rather than substitute.
 
 # The Mission Deployment Profile {#deployment-profile}
 
