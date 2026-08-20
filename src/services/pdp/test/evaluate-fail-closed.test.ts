@@ -29,6 +29,18 @@
  * `source` was never checked against anything. Each of these means the PDP
  * cannot actually establish Mission state from the observation, so each now
  * denies the same way as present-but-stale (@spec runtime#state-freshness).
+ *
+ * GAP 4 (finding 3 of the follow-on author review): step 5's "no entry
+ * matched" arm collapsed two different failure kinds into one
+ * `out_of_authority`. draft-mcguinness-mission-authzen.md's normative
+ * mapping table (@spec authzen#failure-condition-coverage) keeps them
+ * separate: "Action outside the Authority Set" is `out_of_authority` (the
+ * PDP understood the entry and it was insufficient); "Unsupported
+ * `authorization_details` type" is `unsupported_authorization_type` (the
+ * PDP could not evaluate the entry's semantics at all). An entry matching
+ * this request's resource/actions under an unrecognized type is the
+ * second kind, not the first; the two GAP 1 cases below that exercised this
+ * exact shape are updated to the corrected classification.
  */
 
 import { describe, expect, it } from "vitest";
@@ -91,17 +103,17 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     });
 
-    it("an entry of an unrecognized type, otherwise identical resource+actions -> deny out_of_authority, never permit", async () => {
+    it("an entry of an unrecognized type, otherwise identical resource+actions -> deny unsupported_authorization_type (@spec authzen#failure-condition-coverage), never out_of_authority or permit", async () => {
       const dec = await evaluate(req(), opts(view(entryOfType("future_authorization_details_type"))));
       expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
-      expect(dec.context.denial_reason).toBe("out_of_authority");
+      expect(dec.context.denial_reason).toBe("unsupported_authorization_type");
     });
 
-    it("an entry with the type member absent entirely -> deny out_of_authority, never a bare-undefined pass-through", async () => {
+    it("an entry with the type member absent entirely -> deny unsupported_authorization_type, never a bare-undefined pass-through or out_of_authority", async () => {
       const bare = { resource: RESOURCE, actions: ["payments:invoice.read"] } as unknown as AuthorityEntry;
       const dec = await evaluate(req(), opts(view(bare)));
       expect(dec.decision).toBe(false);
-      expect(dec.context.denial_reason).toBe("out_of_authority");
+      expect(dec.context.denial_reason).toBe("unsupported_authorization_type");
     });
 
     it("an unrecognized-type entry alongside a valid entry for the same resource+actions -> permit via the valid entry, never short-circuited by the unrecognized one", async () => {
@@ -262,6 +274,33 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         opts(view(entry)),
       );
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    });
+  });
+
+  describe("GAP 4: unsupported_authorization_type is distinct from out_of_authority (@spec authzen#failure-condition-coverage)", () => {
+    // Skip-not-shortcircuit (a mixed authority_set still permits via the
+    // recognized entry, never denied by the unrecognized one) is already
+    // proven above by GAP 1's unchanged mixed-authority_set case: that
+    // outcome does not turn on which denial reason the unrecognized branch
+    // would have produced.
+    it("side by side: no entry at all for this resource/action denies out_of_authority; an unrecognized-type entry for the SAME resource/action instead denies unsupported_authorization_type", async () => {
+      const recognizedElsewhere: AuthorityEntry = {
+        type: MISSION_RESOURCE_ACCESS_TYPE,
+        resource: RESOURCE,
+        actions: ["payments:vendor.read"], // a different action: never matches this request
+      };
+      const noMatch = await evaluate(req(), opts(view(recognizedElsewhere)));
+      expect(noMatch.decision).toBe(false);
+      expect(noMatch.context.denial_reason).toBe("out_of_authority");
+
+      const unrecognizedTypeEntry = {
+        type: "future_authorization_details_type",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+      } as unknown as AuthorityEntry;
+      const unrecognizedTypeMatch = await evaluate(req(), opts(view(unrecognizedTypeEntry)));
+      expect(unrecognizedTypeMatch.decision).toBe(false);
+      expect(unrecognizedTypeMatch.context.denial_reason).toBe("unsupported_authorization_type");
     });
   });
 });

@@ -4068,13 +4068,13 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry of an unrecognized type, otherwise identical resource+actions -> deny out_of_authority, never permit",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry of an unrecognized type, otherwise identical resource+actions -> deny unsupported_authorization_type (@spec authzen#failure-condition-coverage), never out_of_authority or permit",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry with the type member absent entirely -> deny out_of_authority, never a bare-undefined pass-through",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an entry with the type member absent entirely -> deny unsupported_authorization_type, never a bare-undefined pass-through or out_of_authority",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -4083,9 +4083,15 @@
      "name": "evaluateInner fail-closed gaps (#608) > GAP 1: authority-entry type recognition is a whitelist (@spec runtime#input-authority) > an unrecognized-type entry alongside a valid entry for the same resource+actions -> permit via the valid entry, never short-circuited by the unrecognized one",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 4: unsupported_authorization_type is distinct from out_of_authority (@spec authzen#failure-condition-coverage) > side by side: no entry at all for this resource/action denies out_of_authority; an unrecognized-type entry for the SAME resource/action instead denies unsupported_authorization_type",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "The text carries two MUSTs: evaluate under the other type's own runtime semantics, and refuse if the PDP does not understand or cannot enforce them. The PDP recognizes exactly one authorization_details type (mission_resource_access), so it implements only the refusal limb, which is exactly this row's own observation.normative and assertion (\"refusal\"): recognition is a whitelist (@spec evaluate.ts step 5), so any other type never matches by resource/actions and falls through to the pre-existing out_of_authority path. The cited tests prove an unrecognized type and an absent type member both refuse rather than pass through, plus a mixed-authority_set case (an unrecognized-type entry alongside a valid entry for the same resource/actions) proving the unrecognized entry is skipped rather than short-circuiting the match, and a positive control (same file) proving the recognized-type case still permits. Defense in depth beyond evaluateInner's own check: AuthorityEntry.type is also a closed TypeScript literal (\"mission_resource_access\") both in policy-view.ts and in the AS kernel's own AuthorityEntry (src/services/authorization-server/src/kernel/types.ts), and the transaction-authorization admission path separately refuses any other authorization_details type at admission (src/demo/src/stack.ts's operationProfiles comment: \"an entry naming any other type is refused at admission rather than read structurally\"); the whitelist check above is no longer relying solely on those upstream closures."
+   "notes": "The text carries two MUSTs: evaluate under the other type's own runtime semantics, and refuse if the PDP does not understand or cannot enforce them. The PDP recognizes exactly one authorization_details type (mission_resource_access), so it implements only the refusal limb, which is exactly this row's own observation.normative and assertion (\"refusal\"): recognition is a whitelist (@spec evaluate.ts step 5), so any other type never matches by resource/actions. Author-review finding 3 corrected WHICH refusal it falls through to: draft-mcguinness-mission-authzen.md's normative mapping table (@spec authzen#failure-condition-coverage) keeps \"Action outside the Authority Set\" (`out_of_authority`) and \"Unsupported authorization_details type\" (`unsupported_authorization_type`) as two different failure kinds, not two degrees of one; an entry matching this request's resource/actions under an unrecognized type is the second kind, so step 5 now denies unsupported_authorization_type there, reserving out_of_authority for a genuine absence of any matching entry regardless of type. The cited tests prove an unrecognized type and an absent type member both deny unsupported_authorization_type rather than pass through or misclassify as out_of_authority, a side-by-side case contrasting the two denial reasons on otherwise-identical requests, a mixed-authority_set case (an unrecognized-type entry alongside a valid entry for the same resource/actions) proving the unrecognized entry is skipped rather than short-circuiting the match (skip-not-shortcircuit unaffected by the classification fix), and a positive control (same file) proving the recognized-type case still permits. Defense in depth beyond evaluateInner's own check: AuthorityEntry.type is also a closed TypeScript literal (\"mission_resource_access\") both in policy-view.ts and in the AS kernel's own AuthorityEntry (src/services/authorization-server/src/kernel/types.ts), and the transaction-authorization admission path separately refuses any other authorization_details type at admission (src/demo/src/stack.ts's operationProfiles comment: \"an entry naming any other type is refused at admission rather than read structurally\"); the whitelist check above is no longer relying solely on those upstream closures. No authzen-anchored ledger row exists for this specific mapping-table identifier assignment (the only failure-condition-coverage row, exactly-one-carrier, asserts the table's carrier-exhaustiveness across all conditions, not any one row's specific identifier), so this stays cited only under its runtime#input-authority anchor."
   },
   {
    "id": "runtime.decision-inputs.capability-drift-refusal",

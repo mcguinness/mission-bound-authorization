@@ -91,7 +91,8 @@ export type DenialReason =
   | "mission_inactive"
   | "actor_invalid"
   | "constraint_exceeded"
-  | "action_approval_required";
+  | "action_approval_required"
+  | "unsupported_authorization_type";
 
 export interface Decision {
   decision: boolean;
@@ -235,7 +236,6 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // MISSION_RESOURCE_ACCESS_TYPE never matches by resource/actions alone,
   // even if the AS admission layer's type closure ever broke upstream (a
   // new entry type admitted, a deserialization change). It falls through
-  // to the same out_of_authority refusal as a never-approved entry,
   // fail-closed by construction, never by an explicit blocklist entry
   // that could omit a case.
   const entry: AuthorityEntry | undefined = view.authority_set.find(
@@ -244,7 +244,28 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
       e.resource === req.context.audience &&
       e.actions.includes(req.action.name),
   );
-  if (!entry) return deny("out_of_authority");
+  if (!entry) {
+    // @spec authzen#failure-condition-coverage: the mapping table keeps
+    // `out_of_authority` ("Action outside the Authority Set") and
+    // `unsupported_authorization_type` ("Unsupported authorization_details
+    // type") as two different failure kinds, not two degrees of the same
+    // one: the first means the PDP understood the entry and it was
+    // insufficient; the second means the PDP could not evaluate the
+    // entry's semantics at all. An entry that matches this request's
+    // resource/actions under a type other than MISSION_RESOURCE_ACCESS_TYPE
+    // is exactly the second case. This arm is reached only when no
+    // RECOGNIZED-type entry matched above, so skip-not-shortcircuit is
+    // unaffected: a mixed authority_set with a valid recognized entry
+    // elsewhere for the same resource/actions still permits there.
+    const unrecognizedTypeMatch = view.authority_set.some(
+      (e) =>
+        e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
+        e.resource === req.context.audience &&
+        e.actions.includes(req.action.name),
+    );
+    if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
+    return deny("out_of_authority");
+  }
 
   // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
   //     containment delta covers this (resource, action) pair, so the issuer
