@@ -542,6 +542,19 @@ this profile's shape. Its claims:
   alongside the local subject and never in place of it. Never the
   Approver.
 
+  Copying `subject_token`'s verified `sub` directly is sound only
+  when its issuer and this Authorization Server's own issuer identify
+  the same subject namespace; the value MAY then be copied unchanged.
+  Otherwise the TAS MUST maintain its own injective mapping from
+  `subject_token`'s issuer-qualified (`iss`, `sub`) into its
+  namespace and emit the mapped value; a missing, ambiguous, stale,
+  or disabled mapping MUST be refused rather than guessed. Where the
+  Origin Principal profile applies, that mapped identity and
+  `mission.subject` MUST resolve to the same destination-local
+  principal, consistent with that profile's destination mapping rule
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); a conflict
+  between them MUST be refused the same way.
+
 `client_id`:
 : REQUIRED. The client authenticated at the transaction endpoint
   ({{RFC8693}} Section 4.3). The upstream client and the executing
