@@ -536,11 +536,17 @@ export class McpPaymentsServer {
     return TOOLS.filter((t) => granted.has(t.action));
   }
 
-  /** Read-only tool call: enforce then execute. */
+  /**
+   * Read-only tool call: enforce then execute. For a `bindsVendorScope`
+   * read (list_invoices), `beforeReverify` is a test hook to mutate Mission
+   * state in the decision->execute window, mirroring {@link callWriteTool}'s
+   * hook of the same name for the write path's TOCTOU reverification.
+   */
   async callReadTool(
     tool: string,
     args: Record<string, unknown>,
     token: TokenFacts,
+    beforeReverify?: () => void,
   ): Promise<{
     ok: boolean;
     result?: unknown;
@@ -557,6 +563,16 @@ export class McpPaymentsServer {
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
+    }
+    if (res.listEffective) {
+      beforeReverify?.();
+      // @spec runtime#read-binding — reverify the bound list read's
+      // normalized parameters immediately before execution, exactly as
+      // callWriteTool/callTransactionTool already do for a write.
+      const digest = res.decision?.context.parameter_digest as string | undefined;
+      if (!digest || !this.deps.pep.reverifyList(res.listEffective, digest, token)) {
+        return { ok: false, refusal_reason: "parameter_mismatch" };
+      }
     }
     return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
   }

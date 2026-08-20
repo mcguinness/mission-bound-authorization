@@ -22,7 +22,13 @@ import {
   relationForAction,
   stalenessBoundSeconds,
 } from "@mission/pdp";
-import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
+import {
+  buildEffectiveParams,
+  buildListEffectiveParams,
+  type EffectiveParams,
+  type ListEffectiveParams,
+  parameterDigest,
+} from "./effective-params.js";
 import type { EvidenceStore } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { signChallenge } from "./txn-challenge.js";
@@ -131,6 +137,33 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
 const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
 
 /**
+ * @spec runtime#read-binding — the pure normal-form derivation for a bound
+ * `list_invoices` read, over the CURRENT matched entry and the caller's
+ * (possibly absent) `vendor_id`. Used at decision time (against the entry
+ * `enforceInner` just matched) and again at {@link Pep.reverifyList} (against
+ * a freshly loaded entry), so a change to the Mission's own authority between
+ * those two calls recomputes a DIFFERENT normal form rather than silently
+ * repeating the stale one. `requestedVendorId`'s in-scope test mirrors the
+ * FGA/entry-constraint check the request goes on to face: a requested vendor
+ * that is (no longer) in the entry's `constraints.vendors` normalizes to an
+ * EMPTY scope, never to `[requestedVendorId]` regardless of authority.
+ */
+function deriveVendorScope(
+  entry: AuthorityEntry | undefined,
+  requestedVendorId: string | undefined,
+): { vendor_scope: string[]; vendor_scope_source: "requested" | "entry" | "all" } {
+  const allowedVendors = entry?.constraints?.vendors;
+  if (requestedVendorId !== undefined) {
+    const inScope = !allowedVendors || allowedVendors.includes(requestedVendorId);
+    return { vendor_scope: inScope ? [requestedVendorId] : [], vendor_scope_source: "requested" };
+  }
+  if (allowedVendors) {
+    return { vendor_scope: [...allowedVendors].sort(), vendor_scope_source: "entry" };
+  }
+  return { vendor_scope: [], vendor_scope_source: "all" };
+}
+
+/**
  * @spec runtime#decision-output — the permit's decision CONDITIONS: the
  * declarative constraints on RELYING on the permit that the draft names
  * verbatim ("a request binding, a validity bound, a use limit"), which map
@@ -234,6 +267,14 @@ export interface EnforceResult {
   denial_reason?: string;
   refusal_reason?: string;
   effective?: EffectiveParams;
+  /**
+   * @spec runtime#read-binding — present on a permitted `bindsVendorScope`
+   * action (list_invoices): the NORMALIZED parameters `parameter_digest`
+   * binds on the wire. `Pep.reverifyList` recomputes this same normal form
+   * immediately before execution and refuses on a mismatch, the read-binding
+   * counterpart of `effective`/{@link Pep.reverify} for a write.
+   */
+  listEffective?: ListEffectiveParams;
   /**
    * @spec runtime#read-binding — present on a permitted `bindsVendorScope`
    * action (list_invoices): the vendor ids the bound result set is limited
@@ -378,6 +419,8 @@ export class Pep {
 
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
+    let listEffective: ListEffectiveParams | undefined;
+    let listDigest: string | undefined;
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: EvaluationRequest["resource"] = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
@@ -395,20 +438,30 @@ export class Pep {
       // ... request a bulk or export-like result ... MUST bind those
       // parameters. A deployment MUST NOT classify such a read as not
       // materially affecting the resource set." list_invoices without
-      // vendor_id is exactly that bulk form; binding it means the returned
-      // set never exceeds the Mission's own Authority Set entry.
+      // vendor_id is exactly that bulk form. `deriveVendorScope` is this
+      // action's Operation Profile: it normalizes (entry, requested vendor_id)
+      // to the canonical form above, which is what actually enters
+      // `parameter_digest` below -- previously nothing did, so no digest ever
+      // reached the PDP request or the reverification the write/transaction
+      // paths already perform.
       const entry = view.authority_set.find(
         (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
       );
-      const allowedVendors = entry?.constraints?.vendors;
       const requestedVendorId = args.vendor_id !== undefined ? String(args.vendor_id) : undefined;
+      const scope = deriveVendorScope(entry, requestedVendorId);
+      listEffective = buildListEffectiveParams({ action: mapping.action, resource: CANONICAL_RESOURCE, ...scope });
+      listDigest = parameterDigest(listEffective);
+      // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
+      // additional authorization-enforcement control, not the binding itself:
+      // "all" (unconstrained entry) filters nothing (undefined = every
+      // vendor), the other two sources filter to exactly the normalized scope.
+      listVendorScope = scope.vendor_scope_source === "all" ? undefined : scope.vendor_scope;
       if (requestedVendorId !== undefined) {
         // A named vendor_id binds through the SAME vendor-constraint check
         // every invoice-scoped action here uses (out-of-scope -> denied
         // out_of_authority at the FGA step below, same as get_invoice).
         resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
-        listVendorScope = [requestedVendorId];
-      } else if (allowedVendors) {
+      } else if (scope.vendor_scope_source === "entry") {
         // Bulk form, vendor-constrained entry: bind the RESULT SET to the
         // entry's own scope (never the unconstrained store). The set-level
         // authority is the Mission Record's own entry.constraints.vendors,
@@ -428,8 +481,7 @@ export class Pep {
         // authzen#decision-evidence-object), so a verifier resolving that
         // digest sees the true multi-vendor scope even though this
         // in-process check only named one of its members.
-        listVendorScope = allowedVendors;
-        const representative = allowedVendors[0] ?? UNSCOPED_VENDOR_OBJECT;
+        const representative = scope.vendor_scope[0] ?? UNSCOPED_VENDOR_OBJECT;
         resourceObj = { type: "vendor", id: representative, properties: { vendor_id: representative } };
       } else {
         // Bulk form, unconstrained entry: already entitled to every vendor,
@@ -458,6 +510,7 @@ export class Pep {
           operation_ref: `tools/${tool}`,
         },
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
+        ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
         ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
@@ -615,6 +668,7 @@ export class Pep {
       permitted: true,
       decision,
       ...(effective ? { effective } : {}),
+      ...(listEffective ? { listEffective } : {}),
       ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
     };
   }
@@ -632,6 +686,39 @@ export class Pep {
       return false;
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource });
+    if (parameterDigest(fresh) !== expectedDigest) {
+      this.recordRefusal(token, "parameter_mismatch", effective.action);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * @spec runtime#read-binding (parameter binding / TOCTOU): the list-read
+   * counterpart of {@link reverify}. The authoritative source for a bound
+   * list read's normal form is the Mission's OWN authority-set entry, not
+   * the payments store, so this re-loads the CURRENT MissionView (never the
+   * one `enforceInner` matched) and recomputes {@link deriveVendorScope}
+   * against it. A Mission-authority change landing in the decision->execute
+   * window (a narrower successor entry, containment, the entry disappearing)
+   * recomputes a DIFFERENT normal form and is caught here as a digest
+   * mismatch, refused, never executed on the stale scope the permit was
+   * decided against. `requestedVendorId` is recovered from `effective` itself
+   * (present, as `vendor_scope[0]`, exactly when `vendor_scope_source` is
+   * `"requested"`), so no separate input needs to be threaded through.
+   */
+  reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
+    const view = this.deps.loadView(token.mission.id);
+    const entry = view?.authority_set.find(
+      (e) => e.resource === effective.resource && e.actions.includes(effective.action),
+    );
+    const requestedVendorId =
+      effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
+    const fresh = buildListEffectiveParams({
+      action: effective.action,
+      resource: effective.resource,
+      ...deriveVendorScope(entry, requestedVendorId),
+    });
     if (parameterDigest(fresh) !== expectedDigest) {
       this.recordRefusal(token, "parameter_mismatch", effective.action);
       return false;

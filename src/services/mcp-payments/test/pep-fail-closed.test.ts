@@ -191,6 +191,109 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     const invoices = res.result as Array<{ vendor_id: string }>;
     expect(invoices.map((i) => i.vendor_id)).toEqual(["acme"]);
   });
+
+  // @spec runtime#read-binding (finding 1, #612 author review) -- result-set
+  // filtering alone is not Runtime parameter binding: a `parameter_digest`
+  // must actually enter the PDP request/Decision Evidence, and it must be
+  // reverified immediately before execution exactly as the write/transaction
+  // paths already do. These three tests prove the digest binding, the
+  // omitted-vendor_id normal form, and the reverification, respectively.
+
+  it("a permitted bound read's parameter_digest enters the PDP request and Decision Evidence (list_invoices now builds an Operation Profile, not just a result filter)", async () => {
+    const { server, evidence } = await build({
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.list"],
+      constraints: { vendors: ["acme", "globex"] },
+    });
+    const res = await server.callReadTool("list_invoices", {}, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    const dec = evidence.forMission(missionId).find((e) => e.kind === "decision");
+    // Before this fix, list_invoices never built `effective`, so no
+    // parameter_digest ever entered the request or the retained record.
+    expect(dec?.parameter_digest).toBeDefined();
+    expect(dec?.parameter_digest).toMatch(/^sha-256:/);
+  });
+
+  it("the omitted-vendor_id normal form distinguishes an entry's OWN allowlist from the unconstrained 'all' marker, even when both enumerate the same vendors and serve the identical result set", async () => {
+    const constrained = await build({
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.list"],
+      constraints: { vendors: ["acme", "globex", "initech"] }, // == every seeded vendor
+    });
+    const unconstrained = await build({
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.list"],
+    });
+    const resA = await constrained.server.callReadTool("list_invoices", {}, TOKEN);
+    const resB = await unconstrained.server.callReadTool("list_invoices", {}, TOKEN);
+    expect(resA.ok, JSON.stringify(resA)).toBe(true);
+    expect(resB.ok, JSON.stringify(resB)).toBe(true);
+    const vendorsOf = (r: typeof resA) =>
+      (r.result as Array<{ vendor_id: string }>).map((i) => i.vendor_id).sort();
+    // Both serve the identical result set...
+    expect(vendorsOf(resA)).toEqual(vendorsOf(resB));
+    // ...but the canonical normal form -- and so parameter_digest -- never
+    // collapses the two: a vendor-constrained entry (source "entry") and the
+    // explicit all-in-scope marker (source "all") are distinct normal forms
+    // regardless of what they happen to enumerate.
+    const digestOf = (store: typeof constrained.evidence) =>
+      store.forMission(missionId).find((e) => e.kind === "decision")?.parameter_digest;
+    const digestA = digestOf(constrained.evidence);
+    const digestB = digestOf(unconstrained.evidence);
+    expect(digestA).toBeDefined();
+    expect(digestB).toBeDefined();
+    expect(digestA).not.toBe(digestB);
+  });
+
+  it("a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)", async () => {
+    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    let current: MissionView = {
+      id: missionId,
+      issuer: ISSUER,
+      state: "active",
+      version: 1,
+      authority_hash: "sha-256:g1hash",
+      authority_set: [
+        {
+          type: "mission_resource_access",
+          resource: CANONICAL_RESOURCE,
+          actions: ["payments:invoice.list"],
+          constraints: { vendors: ["acme", "globex"] },
+        },
+      ],
+    };
+    const payments = seedPayments();
+    const evidence = new EvidenceStore();
+    const card = { name: "payments", tools: ["list_invoices"] };
+    const loadView = (id: string) => (id === missionId ? current : undefined);
+    const pep = new Pep({
+      payments,
+      evidence,
+      fga: conn.fga,
+      modelId: conn.modelId,
+      loadView,
+      instanceEpoch: "epoch-1",
+      sourceDigest: sourceDigestOf(card),
+    });
+    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER, serverCard: card });
+
+    const res = await server.callReadTool("list_invoices", {}, TOKEN, () => {
+      // Mid-flight, exactly in the decision->execute window: the Mission's
+      // own entry narrows from [acme, globex] to [acme] -- mirroring how
+      // callWriteTool's beforeReverify mutates the payments store for a
+      // write's TOCTOU proof.
+      current = {
+        ...current,
+        authority_set: [{ ...(current.authority_set[0] as never), constraints: { vendors: ["acme"] } }],
+      };
+    });
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("parameter_mismatch");
+    expect(res.result).toBeUndefined();
+  });
 });
 
 describe("GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output)", () => {
