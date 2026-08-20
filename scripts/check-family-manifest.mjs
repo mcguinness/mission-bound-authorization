@@ -494,7 +494,7 @@ function main() {
     // "stable" (unmarked inline) or the literal word (table cells), and
     // "experimental"/"sketch" verbatim, or "guide" for informational. Checks,
     // in order: (m-a) inline "[`slug`](url) (word)" suffix badges;
-    // (m-b) the trailing "Maturity" column of a menu table; (m-c) that
+    // (m-b) the trailing "Maturity" or "Family maturity" column of a menu table; (m-c) that
     // every non-stable draft is shown correctly by one of those two forms,
     // or, failing that, by the expected word appearing as a parenthetical
     // elsewhere in a table row that links the slug (how the Baseline
@@ -522,7 +522,8 @@ function main() {
 
     const menuTables = parseMarkdownTables(menuRegion);
     for (const table of menuTables) {
-      if (table.headerCells[table.headerCells.length - 1] !== "Maturity") continue;
+      const lastHeader = table.headerCells[table.headerCells.length - 1];
+    if (lastHeader !== "Maturity" && lastHeader !== "Family maturity") continue;
       for (const row of table.rows) {
         const linked = slugsLinkedInRow(row.cells);
         if (linked.size === 0) continue;
