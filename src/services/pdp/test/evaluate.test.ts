@@ -132,6 +132,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
           action_class: "external_commitment",
           parameter_digest: "sha-256:pd2",
+          freshness: { observed_at: NOW.toISOString(), source: "status" },
         },
       }),
       opts(view()),
