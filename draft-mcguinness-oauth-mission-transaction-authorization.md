@@ -528,9 +528,13 @@ this profile's shape. Its claims:
   Never a list and never any other value.
 
 `sub`:
-: REQUIRED. The verified effective subject: the Mission's subject or,
-  where the Origin Principal profile applies, the origin principal.
-  Never the Approver.
+: REQUIRED. The destination-local subject: the verified subject of
+  the presented `subject_token`, under this Authorization Server's
+  own subject semantics. Where the Origin Principal profile applies
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), the
+  issuer-qualified origin principal travels in `mission.subject`,
+  alongside the local subject and never in place of it. Never the
+  Approver.
 
 `client_id`:
 : REQUIRED. The client authenticated at the transaction endpoint
