@@ -35,8 +35,8 @@
     "content_sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "700499b5e01daec50a4ce5c7a2a15fc543d29a99",
-    "content_sha256": "a42687e945a9b9fecd442a9130b81c952f640fea87633d10f5540322dae032db"
+    "revision": "6349e05ce34ff39b7195efa810778745f9336221",
+    "content_sha256": "e1a6d728c9a24ec5c868f5c4afd17024d6031d8ec4bd54f873d0dbc46fd7f6bb"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
@@ -2753,7 +2753,7 @@
    "id": "txn-authorization.token.identity-projection",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "transaction-token",
-   "text": "REQUIRED. The verified effective subject: the Mission's subject or, where the Origin Principal profile applies, the origin principal. Never the Approver.",
+   "text": "REQUIRED. The destination-local subject: the verified subject of the presented `subject_token`, under this Authorization Server's own subject semantics.",
    "role": "TAS",
    "strength": "MUST",
    "applicability": {
@@ -2763,7 +2763,7 @@
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the token's sub is always the verified effective subject (the Mission subject or, under the Origin Principal profile, the origin principal), never the Approver; client_id is the client authenticated at the transaction endpoint, and act is present whenever requester or actor context existed on subject_token or the challenge, since the upstream client and the executing agent may be different parties"
+    "normative": "the token's sub is always the destination-local subject of the verified subject_token, never the Approver and never a flattened origin principal; where the Origin Principal profile applies the issuer-qualified origin principal travels in mission.subject alongside the local subject; client_id is the client authenticated at the transaction endpoint, and act is present whenever requester or actor context existed on subject_token or the challenge"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -2783,6 +2783,12 @@
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "client identification (@spec txn-authorization#challenge-redemption) > resolves the authenticated client from its own assertion, never from another client's record",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "origin principal vs the local subject (@spec txn-authorization#transaction-token) > mints the LOCAL subject and preserves the origin principal, and the decision sees both",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
