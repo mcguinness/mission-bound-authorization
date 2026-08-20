@@ -101,7 +101,14 @@ export class GateError extends Error {
       | "mission_not_active"
       | "mission_expired"
       | "derivation_cap_exhausted"
-      | "authority_contained",
+      // @spec issuance-grant#effective-set-projection (#617 review 2) — an
+      // empty effective set is refused BY ITS CAUSE: `authority_contained`
+      // only where Containment CAUSALLY removed the authority,
+      // `authority_exhausted` where the Mission has nothing to derive with the
+      // overlay taken away. Both refuse `invalid_grant` at the wire; the
+      // Containment denial reason rides only the former.
+      | "authority_contained"
+      | "authority_exhausted",
     message: string,
   ) {
     super(message);
@@ -961,16 +968,26 @@ export class MissionKernel {
   gateDerivation(id: string): MissionRecord {
     const record = this.gateActiveLineage(id);
     // Effective Authority Set gate (#589): token derivation draws on the
-    // EFFECTIVE set; a Mission with authority to begin with but nothing left
-    // in its current effective set has nothing left to derive. Gated on
-    // `record.authority_set.length > 0`, never on `record.containment`
-    // presence: effectiveAuthoritySet already yields the approved set
-    // unchanged when nothing narrows it, so an empty authority_set (nothing
-    // approved to begin with) is the only way this reads empty without SOME
-    // mechanism (containment today, discharge or a future one later) having
-    // narrowed it, and that mechanism need not be containment for this gate
-    // to apply.
-    if (record.authority_set.length > 0 && this.effectiveAuthoritySet(record).length === 0) {
+    // EFFECTIVE set, so a Mission with nothing left in its current effective
+    // set has nothing left to derive. Never gated on `record.containment`
+    // presence: effectiveAuthoritySet already yields the approved set unchanged
+    // when nothing narrows it, and the mechanism that emptied it need not be
+    // containment for the gate to apply.
+    //
+    // @spec issuance-grant#effective-set-projection (#617 review 2) — refuse BY
+    // CAUSE. Recompute the effective set with the containment overlay REMOVED:
+    // if that is empty too, containment is not what removed the authority
+    // (`authority_exhausted`); only a non-empty no-overlay set collapsing under
+    // the overlay is `authority_contained`, which is the condition Containment's
+    // `authority_contained` denial reason may be attributed to. Today
+    // containment is the only overlay effectiveAuthoritySet composes, so the
+    // exhausted branch means an empty approved set; the branch is structural for
+    // the next mechanism (discharge), which will not live in `containment`.
+    if (this.effectiveAuthoritySet(record).length === 0) {
+      const { containment: _overlay, ...withoutOverlay } = record;
+      if (this.effectiveAuthoritySet(withoutOverlay).length === 0) {
+        throw new GateError("authority_exhausted", `mission ${id} has no effective authority to derive`);
+      }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
     if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {
