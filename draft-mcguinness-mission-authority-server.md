@@ -1157,7 +1157,7 @@ issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
 or native Mission-bound issuance restores cryptographic derivation.
 A path claiming the Enterprise profile's high-consequence credential
 property MUST use Mission-bound issuance: an acting credential
-satisfying the credential-mission-bound equivalence of the Mission
+satisfying the mission-credential-bound composition of the Mission
 Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).
 A deployment without it still claims the runtime and join
 capabilities its paths actually have, and states the difference in
@@ -1848,10 +1848,11 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
 - **Mission-bound issuance for the high-consequence classes.** For
   the high-consequence action classes
   ({{I-D.draft-mcguinness-mission-runtime}}) the PDP MUST require an
-  acting credential satisfying the credential-mission-bound
-  equivalence of the Mission Binding Properties
-  ({{I-D.draft-mcguinness-mission-architecture}}), with sender
-  constraint end to end; a Join Assertion does not satisfy it, and
+  acting credential satisfying the mission-credential-bound
+  composition of the Mission Binding Properties
+  ({{I-D.draft-mcguinness-mission-architecture}}): the
+  credential-mission-bound equivalence plus presenter-key-bound
+  possession, end to end; a Join Assertion does not satisfy it, and
   absence denies rather than falling back to a mapping or asserted
   join. Where the Mission Issuance Grant
   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) is the
@@ -2139,7 +2140,7 @@ A **Mission-joining PDP**:
 - verifies the subject join and the client join before evaluating
   authority, and denies with `mission_mismatch` on any join failure;
 - for a high-consequence path under the Enterprise profile, requires
-  the credential-mission-bound acting credential and denies on its
+  the mission-credential-bound acting credential and denies on its
   absence, never falling back to a mapping or asserted join
   ({{enterprise-profile}});
 - evaluates joined actions under the runtime profile's decision
