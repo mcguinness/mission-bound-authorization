@@ -162,6 +162,39 @@ export type FreshDecision = (
   input: FreshDecisionInput,
 ) => Promise<{ decision: "permit" | "deny"; reason?: string }>;
 
+/**
+ * @spec txn-authorization#subject-namespaces — the configured namespace
+ * policy: which `subject_token` issuers this TAS accepts, whether each shares
+ * its own subject namespace, and the injective issuer-qualified mapping for
+ * every accepted foreign namespace. Acceptance is configuration, never
+ * inferred from request data. `establish` returns the destination-local
+ * subject and the identity/version of the policy that produced it, or
+ * undefined for an identity this TAS does not accept (an unaccepted issuer,
+ * or a missing, ambiguous, stale, or disabled mapping): the caller refuses.
+ */
+export interface SubjectNamespacePolicy {
+  establish(identity: { iss: string; sub: string }): { subject: string; policy: string } | undefined;
+  /**
+   * @spec txn-authorization#subject-establishment step 3 — the destination
+   * mapping for an issuer-qualified origin principal, where the deployment
+   * maintains one. When present, a mission whose `subject` maps to a
+   * DIFFERENT destination-local principal than the established subject is
+   * refused (co-resolution). Absent, the deployment has no origin mapping and
+   * co-resolution has nothing further to compare beyond the Mission-invariant
+   * equality of step 2.
+   */
+  resolveOrigin?(origin: { iss: string; sub: string }): string | undefined;
+}
+
+/** The default policy: this Authorization Server's own issuer is the one
+ *  same-namespace issuer, and no foreign namespace is accepted. */
+export function ownIssuerNamespace(issuer: string): SubjectNamespacePolicy {
+  return {
+    establish: (identity) =>
+      identity.iss === issuer ? { subject: identity.sub, policy: "same-namespace:own-issuer" } : undefined,
+  };
+}
+
 export interface TxnAuthorizationOptions {
   /** The accepted Challenge-Issuing Resources and their published keys. */
   challengeIssuers: ChallengeIssuers;
@@ -194,6 +227,11 @@ export interface TxnAuthorizationOptions {
    * and it is refused at admission rather than interpreted structurally.
    */
   operationProfiles: OperationProfileRegistry;
+  /**
+   * @spec txn-authorization#subject-namespaces — defaults to
+   * {@link ownIssuerNamespace}: only this AS's own issuer, same namespace.
+   */
+  subjectNamespaces?: SubjectNamespacePolicy;
   /** The pending-workflow table; defaulted per provider instance when unset. */
   store?: TxnWorkflowStore;
 }
@@ -362,11 +400,19 @@ async function admit(
   let subject: Record<string, unknown>;
   try {
     ({ payload: subject } = (await jwtVerify(subjectToken, createLocalJWKSet(deps.publicJwks as never), {
-      issuer: deps.issuer,
       typ: "at+jwt",
     })) as { payload: Record<string, unknown> });
   } catch {
     fail(ctx, 400, "invalid_grant", "subject_token did not verify");
+    return;
+  }
+  // @spec txn-authorization#subject-establishment step 1 — the credential's
+  // issuer-qualified identity. The signature above proves who SIGNED it; which
+  // issuers this TAS accepts, and under which namespace, is the configured
+  // policy's decision at step 2, never an inference from the request.
+  const subjectIss = subject.iss;
+  if (typeof subjectIss !== "string" || !subjectIss) {
+    fail(ctx, 400, "invalid_grant", "subject_token carries no issuer");
     return;
   }
   // @spec txn-authorization#challenge-redemption step 1 — the credential's
@@ -457,14 +503,34 @@ async function admit(
   //    ancestor's requirement is gated here even where deployment policy is
   //    silent about the action. The constraint is monotonic: either source
   //    alone establishes it, and neither can shed the other's.
-  // @spec mission#the-mission-claim — the workflow's subject is the
-  // `subject_token`'s OWN `sub`: the principal in THIS Authorization Server's
-  // namespace, which is what the transaction token's `sub` means. The
-  // issuer-qualified origin principal stays in `mission.subject`, preserved
-  // verbatim on the copied claim; flattening it into `sub` would put a foreign
-  // namespace's identifier in a local OAuth subject and lose the qualification
-  // the cross-domain profile exists to keep.
-  const subjectId = String(subject.sub ?? "");
+  // @spec txn-authorization#subject-establishment steps 2 and 3 — the
+  // destination-local subject comes from the configured namespace policy
+  // applied to the issuer-qualified identity: copied unchanged for a
+  // same-namespace issuer, injectively mapped for an accepted foreign one,
+  // refused otherwise. The issuer-qualified origin principal stays in
+  // `mission.subject`, preserved verbatim on the copied claim; flattening it
+  // into `sub` would put a foreign namespace's identifier in a local OAuth
+  // subject and lose the qualification the cross-domain profile exists to
+  // keep.
+  const namespaces = txn.subjectNamespaces ?? ownIssuerNamespace(deps.issuer);
+  const sourceSub = String(subject.sub ?? "");
+  const established = namespaces.establish({ iss: subjectIss, sub: sourceSub });
+  if (!established) {
+    fail(ctx, 400, "invalid_grant", "subject_token issuer is not accepted by namespace policy");
+    return;
+  }
+  const subjectId = established.subject;
+  // Step 3 co-resolution, where the deployment maintains an origin mapping:
+  // an origin principal that maps to a DIFFERENT destination-local principal
+  // than the one just established is a conflict, refused rather than blended.
+  const originPrincipal = challenge.mission.subject;
+  if (originPrincipal && namespaces.resolveOrigin) {
+    const resolved = namespaces.resolveOrigin(originPrincipal);
+    if (resolved !== undefined && resolved !== subjectId) {
+      fail(ctx, 400, "invalid_grant", "origin principal and local subject resolve to different principals");
+      return;
+    }
+  }
   const entryRequiresApproval =
     requiresActionApproval(subjectAuthority, challenge.iss, action) ||
     requiresActionApproval(effective, challenge.iss, action);
@@ -504,6 +570,12 @@ async function admit(
     // deployment-declared lifetime, NOT the challenge's remaining window.
     expiresAtS: nowS + txn.workflowLifetimeSeconds,
     subjectTokenExpS: typeof subject.exp === "number" ? subject.exp : nowS,
+    // @spec txn-authorization#subject-establishment step 4 — the source
+    // identity and the policy that produced the pinned subject, persisted so
+    // completion can re-resolve the CURRENT policy against them.
+    subjectTokenIss: subjectIss,
+    subjectTokenSub: sourceSub,
+    subjectPolicy: established.policy,
     subjectTokenJti: subjectJti,
     missionExpS: Math.floor(Date.parse(active.expires_at) / 1000),
     // Actor context from EITHER upstream carrier; its presence is what makes
@@ -823,6 +895,19 @@ async function completionChecks(
   }
   if (!(await deps.subjectTokenLive(wf.subjectTokenJti))) {
     return { ok: false, error: "access_denied", description: "subject_token is no longer live" };
+  }
+  // @spec txn-authorization#subject-establishment step 5 — the CURRENT
+  // namespace policy, resolved against the persisted source identity, must
+  // still produce the pinned subject: a mapping removed, disabled, or
+  // repointed since admission refuses here, before the fresh decision and on
+  // the post-decision pass again, never silently minting under a subject the
+  // deployment no longer stands behind.
+  const currentSubject = (txn.subjectNamespaces ?? ownIssuerNamespace(deps.issuer)).establish({
+    iss: wf.subjectTokenIss,
+    sub: wf.subjectTokenSub,
+  });
+  if (!currentSubject || currentSubject.subject !== wf.subject) {
+    return { ok: false, error: "access_denied", description: "subject mapping is no longer current" };
   }
 
   let gated: MissionRecord;
