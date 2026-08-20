@@ -43,6 +43,8 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   I-D.draft-mcguinness-oauth-mission-transaction-authorization:
     title: "Mission Transaction Authorization Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
@@ -51,16 +53,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-
-informative:
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
     target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
@@ -493,90 +485,36 @@ to obtain the private mission blob.
 
 ## Transaction Authorization {#transaction-authorization}
 
-An operation under an action-bound approval requirement can be hosted
-in this binding under the transaction authorization profile
-({{I-D.draft-mcguinness-oauth-mission-transaction-authorization}}).
-This section discharges that profile's Carrier Binding Floor with
-AAuth-native mechanisms.  A deployment that does not provide one of
-these mechanisms does not host the flow: absence is fail-closed, and
-no other AAuth mechanism substitutes for a missing obligation.
+This binding does not claim the transaction authorization capability.
+The Carrier Binding Floor of
+{{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} names
+the slots a binding must provide to host action-bound transaction
+authorization, and several have no native home in AAuth or R3 today.
+Consistent with this document's rule that it adds no new AAuth wire
+members, it defines no extensions to close them; this section records
+the status informatively, so the gap is legible rather than implied.
 
-Challenge carrier:
-: The AAuth-Requirement challenge carrying a signed resource token.
-  For this flow the resource token additionally commits to the native
-  reference (`mission_s256` within the approver's namespace), the
-  runtime `parameter_digest`
-  ({{I-D.draft-mcguinness-mission-runtime}}), and the presenter key,
-  all derived from the resource's own state.  A verifier resolves the
-  resource's challenge-signing keys from the resource's published
-  AAuth metadata, never from the request.
+| Requirement | Native today | Missing home |
+| --- | --- | --- |
+| Challenge carrier | The AAuth-Requirement challenge with a signed resource token | Members committing to the concrete parameters, the mission reference, and the presenter key |
+| Operation identity | R3 vocabulary definitions, content-addressed | Definition versioning and supersession |
+| Parameter commitment | The content-addressed R3 per-call document | A defined parameter-commitment member |
+| Workflow handle | None: `r3_s256` is a content address, and intentionally identical calls share it | A transaction-instance identifier with its own lifetime and admission idempotency |
+| Result class | None: the per-call result is an ordinary `aa-auth+jwt` | A class every verifier can distinguish, with single use semantic to the class |
+| At most one result | R3 single-uses one issued token | An issuance guard giving one admitted transaction at most one result |
+| Possession | AAuth proof of possession | An execution proof bound to the presented artifact itself |
+| Current-state source | Conditional: the management status operation where deployed ({{I-D.draft-mcguinness-mission-aauth-management}}) | An unconditional source on the execution path |
+| Failure vocabulary | Proposal pending, denied, and expired states | None |
+| Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | None |
+{: title="Transaction authorization requirements: native and missing"}
 
-Operation identity:
-: A resource-owned R3 vocabulary definition
-  ({{I-D.draft-hardt-aauth-r3}}), identified by the resource and the
-  definition's version.  The content-addressed definition document
-  gives the operation the same exact-byte commitment the mission blob
-  has ({{reference}}).  A superseded definition version resolves only
-  for workflows admitted under it.
-
-One canonicalization:
-: The R3 per-call proposal document carries the runtime
-  `parameter_digest` as a member computed from the resource's
-  authoritative state, and the document's content address commits to
-  it.  This binding defines no second canonicalization.  Where R3
-  does not define a member this discharge names, the binding carries
-  it as an extension member of the same document; the commitment and
-  verification rules are unchanged.
-
-Workflow handle:
-: The R3 proposal identifier.  The pending proposal carries its own
-  deployment-declared lifetime, independent of challenge expiry;
-  repeated initial submission of one (resource, challenge identifier,
-  agent, presenter key) resolves to the one proposal; at most one
-  per-call auth token exists per resource-scoped transaction,
-  returned stably.
-
-Approval and fresh decision:
-: The PS adjudicates the approval against the complete transaction:
-  the resource, the transaction identifier, the native reference, the
-  operation identity and the exact requested operation, the
-  `parameter_digest`, both identities, the requesting agent, and the
-  presenter key.  Adjudication never issues.  The per-call auth token
-  is minted only by a fresh decision at completion that re-observes
-  the mission (`active`, within `expires_at`, per {{lifecycle}}), the
-  person token's validity, and resource policy.
-
-Result class:
-: The per-call auth token, under a token class distinguishable from
-  every other token class of this binding.  Single use is semantic to
-  the class.  The token is sender-constrained and bound to the single
-  challenging resource, carries no approval object and no raw
-  parameters, and is never acceptable as a person token or as a
-  general resource authorization.
-
-Offline verification and consumption:
-: The resource verifies the per-call token locally against the
-  proposal it retained, recomputing `parameter_digest` from its own
-  state, and consumes the resource-scoped transaction atomically and
-  linearizably across every replica capable of executing the
-  operation, failing closed when the consumption store is
-  unavailable.
-
-Identity projection:
-: The token's subject is the resource-local subject the person token
-  names.  The originating identity stays in mission context under the
-  approver's namespace, never substituted for the local subject.  The
-  acting agent is attribution, never authority.
-
-Possession:
-: Possession of the presenter key is proven at redemption and at
-  execution, and the execution proof binds to the presented per-call
-  token itself, not only to the key.
-
-Failure vocabulary:
-: The proposal's native pending, denied, and expired states carry the
-  workflow.  This binding defines no second vocabulary for that
-  surface.
+A deployment could claim the capability only after the missing homes
+exist upstream and this binding additionally claims State-Observable
+unconditionally on the execution path (today conditional), and either
+Structured Authority or an equivalent resource-owned evaluation of the
+operation commitment (today not supported).  Until then the execution
+gate and the authority evaluation the transaction invariants require
+have no source in this binding, and hosting the flow is unsupported.
 
 ## Reference Propagation {#ref-propagation}
 
@@ -705,10 +643,8 @@ if it:
 An implementation conforms as a **mission-aware Resource or Access
 Server** if it preserves and validates the native reference as required
 by AAuth and does not claim to have evaluated the private mission
-description.  One that hosts transaction authorization does so only
-with every obligation of {{transaction-authorization}} discharged, and
-refuses to host the flow otherwise.  Support by a Resource or Access
-Server is not required for agent-and-PS conformance.
+description.  Support by a Resource or Access Server is not required for
+agent-and-PS conformance.
 
 This document intentionally makes no "full" or "partial" provision
 claim.  Conformance states which capabilities are present; it does not
