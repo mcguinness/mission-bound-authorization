@@ -448,13 +448,19 @@ require. This profile adds, in order:
 5. obtaining or resolving a governed approval from an acceptable
    independent Approver or policy authority, bound to `txn`, the
    operation identity, `parameter_digest`, the resource, the Mission,
-   the origin principal, and the presenter key;
+   the destination-local subject and, where the Origin Principal
+   profile applies
+   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), the
+   issuer-qualified origin principal, and the presenter key;
 6. verifying the approval's status, scope, grant time, maximum age,
    and `approved_until`; and
 7. running a fresh authorization decision using the verified approval
    as context together with current Mission state, `subject_token`
-   validity, client and key binding, principal entitlement, resource
-   policy, and the concrete parameter inputs or attributes.
+   validity, client and key binding, resource policy, and the concrete
+   parameter inputs or attributes; the decision consumes the
+   destination-local subject and, where present, the issuer-qualified
+   origin principal as distinct inputs and revalidates their current
+   mapping and entitlement.
 
 Any denial ends the flow. Completion of step 6 alone MUST NOT trigger
 token issuance and MUST NOT bypass step 7.
@@ -1066,10 +1072,11 @@ challenge, `subject_token` presentation, approval, fresh decision, and
 one execution; delegated constraint preservation and an attempted
 removal of `requires_action_approval`; step-up presented without
 transaction approval; an approval valid for a changed amount,
-recipient, resource, action, Mission, origin principal, actor,
-audience, or presenter key; an approval complete but Authority Set,
-entitlement, or resource policy denying; a missing or changed
-`parameter_digest` and a different canonicalization; a pending
+recipient, resource, action, Mission, destination-local subject,
+origin principal, actor, audience, or presenter key; an approval
+complete but Authority Set, entitlement, or resource policy denying;
+a missing or changed `parameter_digest` and a different
+canonicalization; a pending
 workflow that outlives its challenge and is later approved; repeated
 initial submission of the same challenge returning one workflow;
 challenge replay, single-replica token replay, and two distinct token
