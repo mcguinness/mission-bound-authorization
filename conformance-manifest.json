@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "20ff893ed5325000aaf6fe2640b2b079219f14f9",
-    "content_sha256": "bf6cb049e918b5eb6f9c52d7c2963f201293dd33a5f4201b9222f5b82003654e"
+    "revision": "64eeea86dbe9ce535542deccbf1c3158149ad8cf",
+    "content_sha256": "3c6c28eca353333de2127f99c6ad3a3157b7994425b3712f71c24ba2bfed359e"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
@@ -2112,6 +2112,126 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.join.stronger-claim-requires-issuance",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the credential-mission-bound equivalence of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the stronger credential-bound high-consequence claim is available only through Mission-bound issuance; no residual_risks disclosure and no Join Assertion substitutes for it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.join.issuance-required-high-consequence",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "the PDP MUST require an acting credential satisfying the credential-mission-bound equivalence of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}), with sender constraint end to end",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an ordinary token plus a valid Join Assertion is rejected on a high-consequence Enterprise path: only a credential-mission-bound, end-to-end sender-constrained acting credential evaluates"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.join.no-silent-fallback",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "a Join Assertion does not satisfy it, and absence denies rather than falling back to a mapping or asserted join",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a high-consequence path missing the required credential property denies; it never silently downgrades to a weaker join mode"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.join.assertion-below-tier",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "For every joined governed path below the high-consequence tier the PDP MUST require one.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "below the high-consequence tier the Enterprise profile still requires a Join Assertion on every joined governed path"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.enterprise.issuance-grant-cnf",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "the grant MUST carry `cnf` and redemption MUST produce an access token sender-constrained to that same key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Issuance Grant discharging the high-consequence property is cnf-bound and its redeemed token is sender-constrained to the same key: no bearer interval opens between grant and action"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "mas.join.claim-isolation",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "enterprise-profile",
+   "text": "The Enterprise claim is made per covered Authorization Server, resource, and action path; a mixed estate's weaker paths never inherit it from the deployment's name.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "in a mixed estate the Enterprise high-consequence claim attaches to the covered paths only; uncovered paths carry their own weaker claims"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "txn-authorization.challenge.not-client-supplied",
