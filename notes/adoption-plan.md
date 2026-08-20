@@ -114,7 +114,21 @@ names its sets by document rather than pick number, and points to High-Assurance
 condition-based; the shelf dissolved (proof pair to the evidence pick, the guide to pick 1,
 a small evaluations list remains); and the validator gains menu-layer checks (slug
 coverage, maturity-display agreement, pick-reference resolution, floor-referenced pairing)
-so the menu's own claims are machine-checked, not just the matrix. The two-layer principle is unchanged: the menu is presentation, the
+so the menu's own claims are machine-checked, not just the matrix. A second
+structural review round then replaced the pick framing with composition rules: the top
+layer is outcome-first (Start: one outcome per row with required package, claimable
+result, and stated limitation; Compose: capability tables grouped by architectural axis,
+each declaring its semantic type: choose-one, add-if-needed, Requires, Builds-on;
+Evaluate: experimental work), "level" is reserved for the four Mission Assurance Levels,
+runtime and runtime-evidence present as one package (evidence is not independently
+declinable), portable proof splits into its four distinct questions (runtime records,
+Receipt, Mandate, Audit transparency), the maturity column is labeled family draft
+maturity and explicitly not standards status (upstream status, coverage, and deployment
+experience are separate signals), baseline profiles read as provisional until the v0
+gate passes, and AAuth management renders as a companion outside the base binding. The
+matrix's missing adopter facts (applicable bindings, hard prerequisites, incompatible
+combinations, claim effects, machine-backed) remain the Retrofit-wave metadata spike;
+the hand-authored Requires/Builds-on cells are its interim form. The two-layer principle is unchanged: the menu is presentation, the
 collapsed 41-row matrix remains the machine-validated layer carrying zone, track, group,
 and per-document triggers, and the validator's placement checks bind to the matrix. Zones
 and tracks stay authoritative in the manifest; the menu never regroups the catalog or the

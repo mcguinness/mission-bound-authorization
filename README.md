@@ -59,152 +59,147 @@ chapter by chapter, for readers who want the why before the wire.
 
 ## The adoption map
 
-Ten picks across two menus. **Level 1 lays down Mission-based
-authorization**; **Level 2 grows breadth and depth across use cases**.
-Each pick is one decision; a table row is one orderable option, taken
-independently unless the row says it builds on another. Readiness is
-one vocabulary everywhere, taken from the family manifest: **stable**
-(unmarked), **experimental**, and **sketch**; a document whose
-manifest maturity is informational is a **guide**, which explains and
-never defines a mechanism. The full per-document matrix (zone, track,
-group, and the one-sentence trigger for pulling each document) is in
-the collapsed section below. Bundle contents and minimum conformance
-profile are not synonymous; the profile matrix in
-[notes/adoption-plan.md](notes/adoption-plan.md) draws the line
-between them.
+The map is the entry point: choose an outcome, then compose
+capabilities by use case. It never invents vocabulary: "level" below
+always means the four Mission Assurance Levels (Baseline Issuance,
+Runtime-Enforced, Governed Agent, High-Assurance Agent; "What to
+deploy" is their view), and maturity words are the family manifest's
+own (**stable**, **experimental**, **sketch**, with informational
+documents shown as **guide**). Family draft maturity is repository
+maturity, not standards status: upstream dependency status lives in
+"Dependency stability" below, implementation coverage in the
+conformance ledger (`conformance-manifest.json`), and no deployment
+experience is claimed anywhere yet. The full per-document matrix
+(zone, track, group, one-sentence trigger) is in the collapsed
+section below.
 
-### Level 1: the necessary pieces
+Read the [`mission-architecture`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (guide) first: the Mission model,
+invariants, and assurance levels everything else cites. Reviewers
+auditing a deployment read [`mission-security-model`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) (guide), the one
+consolidated trust and blast-radius view.
 
-The model, a binding to carry it, and, for estates that enforce at
-the point of use, runtime and evidence. Pick 2 alone is the issuance
-floor: Mission-based authorization exists there. Picks 3 and 4 are
-what the Runtime-Enforced baseline adds.
+### Start: choose an outcome and binding
 
-**1. Read the [`mission-architecture`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (guide).** The Mission
-model, invariants, and assurance levels everything else cites. When
-you are reviewing rather than building,
-[`mission-security-model`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) (guide) is the one consolidated trust and
-blast-radius view.
+One row is one outcome. The required package is fixed; partial
+adoption of a package changes what may be claimed.
 
-**2. Pick your binding.** The protocol that carries the Mission.
-
-| Binding | Documents | Maturity |
-|---|---|---|
-| OAuth 2.0, the default | [`oauth-mission`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) | stable |
-| AAuth | [`mission-substrate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html), [`mission-aauth`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html), [`mission-aauth-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html); optional [`aauth-mission-expiry`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html) | stable |
-| Standalone authority server | [`mission-authority-server`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html); [`oauth-mission-issuance-grant`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html) joins it to an existing AS | stable |
-| UMA 2.0 or GNAP | [`mission-uma`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html), [`mission-gnap`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | sketch |
-
-**3. Pick your runtime.** An issuance-only estate stops after pick 2.
-Point-of-use enforcement adds four documents: [`mission-substrate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
-(the kernel contract, shared by every binding),
-[`oauth-mission-status`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) (live Mission state beyond token expiry),
-[`mission-runtime`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html) (the enforcement contract), and
-[`mission-authzen`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html) (the AuthZEN wire mapping for the PDP). Status,
-runtime, and authzen root in the OAuth core; a non-OAuth binding has
-no published runtime path yet.
-
-**4. Pick your evidence.** [`mission-runtime-evidence`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html) makes every
-enforcement decision a durable, verifiable record. When outside
-verifiers must check proof without trusting issuer logs, add the
-portable pair: [`mission-audit`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) and [`mission-mandate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html).
-
-### Level 2: breadth and depth
-
-How Missions are shaped and approved, how work fans out, how
-authority moves in flight, and how the estate is operated. Order by
-use case; nothing here is required to start. This level is written
-against the OAuth binding, the one path with published baselines. On
-another binding, take the Mission components whose Substrate
-declarations your binding satisfies (checkable per document) and skip
-the OAuth extensions (the `oauth-mission-` documents).
-
-**5. Shape your Mission.** How tightly the approved authority is
-derived from what the agent asked for.
-
-| Option | Documents | What it adds | Maturity |
+| Desired outcome | Required package | What may be claimed | Important limitation |
 |---|---|---|---|
-| Declared Intent | the core's Mission Intent | A declared purpose, approved as proposed and bound to the tokens | stable |
-| Shaped Intent | add [`mission-shaping`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html) | A defined prompt-to-Intent path with policy hooks before approval | guide |
-| Pinned catalog | add [`mission-capability-binding`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) | Actions pinned to catalog identity where discovery can drift | stable |
-| Pre-approved ceiling | add [`oauth-mission-template`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) | Consent once to a ceiling for machine-speed dispatch | experimental |
+| OAuth governed issuance | [`oauth-mission`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the core) | Baseline Issuance, subject to its proof obligations | No action-time enforcement |
+| OAuth point-of-use enforcement | [`mission-substrate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html), [`oauth-mission`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html), [`oauth-mission-status`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html), [`mission-runtime`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html), [`mission-runtime-evidence`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html), [`mission-authzen`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html) | Runtime-Enforced for the declared scope | Requires complete PEP coverage of that scope; runtime and runtime-evidence are one package, since every consequential decision and refusal must produce evidence |
+| Standalone estate governance | [`mission-authority-server`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) plus status, runtime, runtime-evidence, and a decision binding; [`oauth-mission-issuance-grant`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html) to add issuance gating | Runtime-Enforced through Mission Join | No Mission-bound token or issuance gate unless issuance-grant is added |
+| AAuth Mission Context | [`mission-substrate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html), [`mission-aauth`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | The binding's declared native capabilities and access modes | Not the OAuth Authority Set or the OAuth assurance ladder |
 
-**6. Pick your approval complexity.** How humans grant, and how much
-of the grant you can prove later.
+The AuthZEN document is the family's published decision-API binding;
+another specified decision binding can satisfy runtime conformance,
+but the result is not the published baseline. UMA 2.0 and GNAP are
+separate sketch alternatives in the Evaluate section.
 
-| Option | Documents | What it adds | Maturity |
+### Compose: add capabilities by use case
+
+Each table states its semantics. "Choose one" rows are alternative
+modes; "add if needed" rows are orthogonal; "Requires" and "Builds
+on" are stated per row and are hard.
+
+**Approval transport** (choose one per Mission class; the core's
+interactive consent is the default):
+
+| Mode | Documents | Semantics | Family maturity |
 |---|---|---|---|
-| Interactive consent | the core alone | A human approves the Mission before issuance | stable |
-| Evidenced approval | add [`oauth-mission-consent-evidence`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html) | Proof of what the Approver actually saw | stable |
-| Asynchronous review | add [`oauth-mission-approval`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html) | Approval as a human review queue, not an immediate decision | stable |
-| Approval provenance | add [`mission-approval-governance`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-approval-governance.html) | Authenticated, policy-backed provenance for the approval itself | stable |
-| Narrowing review | add [`oauth-mission-approval-revision`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval-revision.html) to Asynchronous review | Reviewers narrow a proposal instead of approve-or-deny | experimental |
+| Interactive consent | the core alone | A human approves before issuance | stable |
+| Asynchronous review | [`oauth-mission-approval`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html) | A human review queue, not an immediate decision | stable |
+| Pre-approved ceiling | [`oauth-mission-template`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) | Consent once to a ceiling for machine-speed dispatch | experimental |
 
-**7. Pick your delegation.** A single agent needs nothing more.
+**Approval and provenance evidence** (add if needed; orthogonal):
 
-| Need | Documents | What it adds | Maturity |
+| Capability | Documents | Semantics | Family maturity |
 |---|---|---|---|
-| Sub-agents | [`oauth-mission-child-delegation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html) | A sub-agent's own Mission, with cascade termination | stable |
-| Another trust domain | [`oauth-mission-cross-domain`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html) | Another domain's AS honors the Mission | stable |
-| Deep fan-out | [`oauth-mission-attenuation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html) | Offline narrowing without an AS round-trip per hop | experimental |
-| Across organizations | [`oauth-mission-cross-org-delegation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) | An attenuation chain crossing organizational trust domains | experimental |
+| Consent evidence | [`oauth-mission-consent-evidence`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html) | Proof of what the Approver actually saw | stable |
+| Approval provenance | [`mission-approval-governance`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-approval-governance.html) | Authenticated, policy-backed provenance for the approval itself | stable |
+| Narrowing review | [`oauth-mission-approval-revision`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval-revision.html) | Builds on Asynchronous review: reviewers narrow instead of approve-or-deny | experimental |
+| Intent shaping | [`mission-shaping`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html) | The client-side path from prompt to candidate Intent | guide |
 
-**8. Run your agent.** What the agent itself does when the Mission
-changes under it.
+**Lifecycle evolution** (add if needed; every row builds on the
+status document's lifecycle semantics):
 
-| Need | Documents | What it adds | Maturity |
-|---|---|---|---|
-| Session continuity | [`mission-harness`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html) | The stop a restartable agent needs when the Mission dies | stable |
-| Safe unwind | [`mission-orchestration`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) | In-flight work unwinds when the Mission ends mid-workflow | experimental |
-
-**9. Adjust authority in flight.** How approved authority moves after
-approval. These are directions, not a ladder; the floor's status
-document already covers observe and revoke.
-
-| Direction | Documents | What it adds | Maturity |
+| Capability | Documents | Semantics | Family maturity |
 |---|---|---|---|
 | Widen | [`oauth-mission-expansion`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.html) | Mid-task widening through fresh approval | stable |
-| Meet the unknown | [`mission-discovery`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) | An open-world agent reaches resources its approval never named | experimental |
+| Push notice | [`oauth-mission-signals`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) | Builds on Status: push state changes, bootstrap and recover through Status | stable |
 | Narrow | [`oauth-mission-containment`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) floor-referenced* | Narrow a live Mission on a protected event instead of ending it | experimental |
 | Draw down | [`oauth-mission-progressive`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html) | Policy-bounded drawdown when authority cannot be enumerated up front | experimental |
-| Cap | [`mission-metering`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html) floor-referenced* | Cumulative caps: budget, calls, duration, egress | experimental |
+| Open-world adjudication | [`mission-discovery`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) | Resources approval never named; may deny, expand, or draw down, composing with the rows above | experimental |
+| Cumulative caps | [`mission-metering`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html) floor-referenced* | Budget, calls, duration, egress | experimental |
+| AAuth expiry profile | [`aauth-mission-expiry`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html) | Builds on the AAuth binding: a citable expires_at profile | stable |
 
 floor-referenced*: the floor's conditional text names these two by
 property (narrowing, cumulative caps), so each receives active-tier
 responsiveness for that property while the document stays
 experimental.
 
-**10. Operate the fleet.**
+**Delegation and cross-domain projection** (distinct questions:
+delegation creates subordinate authority, projection makes existing
+authority legible elsewhere):
 
-| Need | Documents | What it adds | Maturity |
+| Capability | Documents | Semantics | Family maturity |
 |---|---|---|---|
-| Push notice | [`oauth-mission-signals`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) | State changes pushed to consumers instead of per-Mission polling | stable |
-| Fleet lifecycle | [`oauth-mission-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) | Enumeration and bulk lifecycle for operators | stable |
+| Sub-agents | [`oauth-mission-child-delegation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html) | A sub-agent's own Mission with cascade termination | stable |
+| Offline narrowing | [`oauth-mission-attenuation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html) | Narrowing without an AS round-trip per hop | experimental |
+| Cross-domain projection | [`oauth-mission-cross-domain`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html) | Another trust domain's AS honors the Mission; projection, not delegation | stable |
+| Cross-organizational chains | [`oauth-mission-cross-org-delegation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) | Requires an attenuation chain and composes with cross-domain trust | experimental |
+| Continuity across hops | [`oauth-mission-continuation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) | Authorized work continues across hops or time without re-presented credentials | experimental |
 
-On the AAuth binding, [`mission-aauth-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html) from pick 2 is
-the fleet-lifecycle counterpart.
+**Runtime and agent control** (add if needed; harness and
+orchestration are complementary, not alternatives):
 
-**The evaluations.** Experimental work that names a stable path to
-prefer where one exists: [`oauth-mission-continuation`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) (experimental),
-[`oauth-mission-work-products`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-work-products.html) (experimental), and the [`mission-aam`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aam.html) (sketch)
+| Capability | Documents | Semantics | Family maturity |
+|---|---|---|---|
+| Session-continuity stop | [`mission-harness`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html) | A restartable agent stops when the Mission dies | stable |
+| Safe unwind | [`mission-orchestration`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) | In-flight work unwinds when the Mission ends mid-workflow | experimental |
+| Capability identity | [`mission-capability-binding`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) | Requires core, runtime, and authzen: actions pinned to catalog identity where discovery can drift | stable |
+
+**Portable proof and transparency** (four different questions, never
+one bundle):
+
+| Question | Documents | Semantics | Family maturity |
+|---|---|---|---|
+| What did enforcement decide? | [`mission-runtime-evidence`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html) (already in the runtime package) | Decision, refusal, and execution records | stable |
+| Portable proof about an action? | the Mission Receipt, defined in [`mission-runtime-evidence`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html) | Portable evidence about a single action | stable |
+| Portable proof about the Mission? | [`mission-mandate`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html) | Portable evidence of the Mission's committed facts | stable |
+| Existence and inclusion? | [`mission-audit`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) | Transparency registration; never makes the underlying assertion true and is not required to verify a signature | stable |
+
+**Fleet operations** (add if needed):
+
+| Capability | Documents | Semantics | Family maturity |
+|---|---|---|---|
+| OAuth fleet lifecycle | [`oauth-mission-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) | Enumeration and bulk lifecycle for operators | stable |
+| AAuth management companion | [`mission-aauth-management`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html) | The AAuth binding's status, termination, and delegation-tree queries; a companion, not part of the base binding | stable |
+
+### Evaluate: experimental work
+
+Each names a stable path to prefer where one exists:
+[`oauth-mission-transaction-authorization`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html) (experimental) (fresh per-action
+authorization, verifiable offline; also the provisional transaction
+assurance extension below), [`oauth-mission-work-products`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-work-products.html) (experimental)
+(artifacts crossing Missions carry provenance, never authority), the
+[`mission-uma`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) (sketch) and [`mission-gnap`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) (sketch) binding sketches (separate
+alternatives, evaluated per deployment), and the [`mission-aam`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aam.html) (sketch)
 vocabulary mapping.
 
-**The baseline menu.** The published conformance baselines are exact
-document sets. The two extensions branch from the floor
-independently; they do not stack on each other.
+### Provisional baseline profiles
 
-| Baseline | The document set | What it gives |
+Profile definitions are provisional until v0 proper passes its
+publication gate: the only current bundle is `v0-preview.1`,
+exploratory and carrying no conformance-coverage claims. The two
+extensions branch from the runtime package independently; they do not
+stack.
+
+| Profile | The document set | What it gives |
 |---|---|---|
-| Issuance Baseline | the core by itself | Approval bound durably to the tokens it issues |
-| Runtime-Enforced Baseline | the six-document floor: substrate, core, status, runtime, runtime-evidence, authzen | Point-of-use checks with durable evidence |
-| Governed Agent add-ons | the floor plus harness and consent-evidence | Session-continuity stop and proof of what the Approver saw |
-| Transaction assurance (experimental) | the floor plus [`oauth-mission-transaction-authorization`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html) | Fresh per-action authorization, verifiable offline |
-
-The family's four Mission Assurance Levels (Baseline Issuance,
-Runtime-Enforced, Governed Agent, High-Assurance Agent) are the
-deployment ladder these baselines realize. High-Assurance Agent adds
-custody and freshness conditions rather than documents, so it has no
-row here; see "What to deploy" below.
+| Issuance Baseline (provisional) | the core by itself | Approval bound durably to the tokens it issues |
+| Runtime-Enforced Baseline (provisional) | the six-document runtime package | Point-of-use checks with durable evidence |
+| Governed Agent add-ons | the runtime package plus harness and consent-evidence | Session-continuity stop and proof of what the Approver saw |
+| Transaction assurance (experimental) | the runtime package plus [`oauth-mission-transaction-authorization`](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html) | Fresh per-action authorization, verifiable offline |
 
 <details>
 <summary>Full adoption matrix (41 documents)</summary>
