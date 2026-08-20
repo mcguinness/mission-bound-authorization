@@ -41,6 +41,10 @@
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
     "content_sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
+   },
+   "draft-mcguinness-oauth-mission-issuance-grant.md": {
+    "revision": "695f48418fbefc6c967b331e5059d7adb68c0db8",
+    "content_sha256": "b6bb36eb3381c93da0554b00b9fa83230af74bf7b93cda34d4996d15316bb692"
    }
   }
  },
@@ -128,7 +132,8 @@
    "substrate.credential-bound",
    "substrate.authorized-context-correlation",
    "substrate.independently-verifiable",
-   "substrate.portable-evidence"
+   "substrate.portable-evidence",
+   "issuance-grant.state-integration"
   ]
  },
  "profiles": [
@@ -12019,6 +12024,165 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.redemption",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A consuming AS with a Mission-state integration MUST, at redemption and at every refresh, resolve the Mission's current state and Effective Authority Set through the Mission Status operation",
+   "facet": "redemption",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at grant redemption, a consuming AS that has a Mission-state integration resolves current Mission state and the Effective Authority Set and refuses a non-active Mission, then projects issued authority through that set before minting; no issuance-grant redemption path exists in this implementation (verified by grep: no issuance-grant/grant-redemption code in src), so this facet is unimplemented rather than untested"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No issuance-grant redemption endpoint exists in src (inventoried #589): the profile's Grant Minter/Consuming AS redemption flow is spec-only here. Refresh re-projection (the sibling facet) is implemented and tested; this row stays todo until a redemption path is built."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.refresh",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A consuming AS with a Mission-state integration MUST, at redemption and at every refresh, resolve the Mission's current state and Effective Authority Set through the Mission Status operation",
+   "facet": "refresh",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on every refresh, the consuming AS projects the refresh family's own recorded authority through the Mission's current Effective Authority Set (kernel/derive.ts projectRarThroughMission, called unconditionally from provider.ts's rarForRefreshTokenResponse hook and never bypassed on an absent containment record); a partial narrowing issues only the remainder, a full collapse (the family's own ceiling, which may be narrower than the Mission's whole authority_set) refuses invalid_grant, and an active Mission's still-VALID Status List bit does not prevent the narrowing, since the projection never consults that bit"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > full containment (#589): containing exactly the FAMILY's own narrower ceiling fails the refresh invalid_grant, even though the Mission's wider authority_set is not fully contained",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > full containment (#589): containing the WHOLE resource fails a CODE-FLOW refresh invalid_grant (authority fully contained)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > #589: an active Mission with a still-VALID Status List bit still narrows on refresh (the bit alone is insufficient)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.fail-closed-source",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A source that is unavailable, fails verification, or reports a state `version` older than one already observed for this Mission fails this projection closed: the consuming AS refuses `invalid_grant`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Effective Authority Set source that is unavailable, unverifiable, or reports a stale/rolled-back state version fails the projection closed (invalid_grant, retryable) rather than being treated as authority exhaustion; unimplemented because no issuance-grant consuming-AS-to-external-Status-source integration exists in src (the demo kernel is the single authoritative record, read fresh on every call, so no unavailable/stale-external-source scenario is constructible against it)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Requires an external, cacheable authority source (the not-yet-built issuance-grant consuming AS calling the MAS's Mission Status operation over the network); this repo's single-process kernel has no such source to fail. Todo pending that build."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.no-re-widening",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A refresh family's issued authority MUST NOT widen across refreshes within the same Mission: the consuming AS atomically narrows its own stored ceiling on every refresh, or retains the highest Mission state `version` it has observed and rejects a source reporting a lower one as a rollback.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh family's issued authority never widens across a sequence of refreshes spanning multiple containment narrowings within the same Mission: the Mission's state version strictly increases and each refresh's projected remainder is a subset of the previous one, ending in invalid_grant once fully contained",
+    "local": "the test proves the invariant this single-process kernel guarantees by construction (every refresh re-reads the live, monotonically-narrowing kernel record; there is no external cache or replica that could feed back a stale, wider read), not an actual rollback ATTEMPT against a stale source: that scenario has no constructible case here (same gap as the fail-closed-source row) and would need the not-yet-built issuance-grant external-consuming-AS path to exercise the rollback-rejection half of this rule directly"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > #589: a refresh family never re-widens across a contain sequence; the Mission's state version is monotonic and every refresh observes the current (never a rolled-back) one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.pre-scope-projection",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "This projection precedes scope projection above: an AS that models authority as `scope` maps the narrowed remainder, never the grant's original set.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS that models authority as scope instead of RFC 9396 authorization_details maps the Effective-Authority-Set-narrowed remainder to scope, never the grant's original, unprojected set, so scope mapping cannot erase the narrowing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No scope-projection mode exists in src for this profile: the demo consuming AS models Mission authority as authorization_details (RFC 9396) throughout and never projects to scope. Todo pending a scope-projection implementation."
+  },
+  {
+   "id": "issuance-grant.effective-set-projection.claim-gate",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "effective-set-projection",
+   "text": "A consuming AS that cannot perform this projection MUST NOT claim containment- or discharge-aware issuance.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consuming AS incapable of the Effective Authority Set projection (no Mission-state integration, or one that cannot resolve current authorization_details and state version) does not claim containment- or discharge-aware issuance in its conformance statement"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A deployment-conformance/documentation-level statement (what a deployment MAY claim), not a runtime behavior this demo AS exposes a checkable surface for (it has no discovery member asserting containment/discharge-aware issuance to validate against). Todo pending such a claim surface."
   }
  ]
 }

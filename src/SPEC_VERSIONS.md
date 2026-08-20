@@ -297,6 +297,34 @@ this matrix and the `@spec` tags to the affected code and tests.
   (`services/authorization-server/test/{containment,containment-pdp-e2e,async-delegation}.test.ts`,
   `services/pdp/test/evaluate.test.ts`,
   `packages/mission-signals/test/containment-commit.test.ts`.)
+- Effective Authority Set projection, never bypassed (#589, following the
+  `draft-mcguinness-oauth-mission-issuance-grant` review that generalized the
+  refresh-path rar conformance fix above beyond containment): the prior fix's
+  two call sites (`provider.ts`'s `rarThroughContainment`,
+  `continuation-grant.ts`'s `projectRarThroughEffective`) each skipped
+  `effectiveAuthoritySet` entirely when `record.containment` was absent, so a
+  future narrowing mechanism that does not set that field (discharge) would
+  have been silently unprojected. Extracted into one shared primitive,
+  `kernel/derive.ts` `projectRarThroughMission(kernel, record, rar)`: it
+  always calls through `effectiveAuthoritySet` once a Mission resolves (that
+  function's own fast path already yields the approved set unchanged when
+  nothing narrows it, so the no-containment case is now a computed no-op, not
+  a bypassed one) and reports `{projected, collapsed}`, `collapsed` true
+  exactly when a non-empty rar projects to an empty one. Both call sites use
+  it; `provider.ts`'s code/refresh rar projection now throws `invalid_grant`
+  on `collapsed` (previously a silent 200 with empty `authorization_details`),
+  which the async-delegation family path in particular had no other check
+  catching (it re-gates refresh with `gateActive`, not `gateDerivation`, so
+  the mission-wide `authority_contained` gate never ran for it).
+  `kernel.ts`'s `gateDerivation` full-containment gate is generalized the
+  same way (`record.authority_set.length > 0`, not `record.containment`
+  presence); behavior-preserving today, future-proofed for the next
+  mechanism. New tests prove the family-level collapse (narrower than the
+  Mission's whole `authority_set`) is caught where a mission-wide-only check
+  would miss it, that a still-VALID Status List bit does not prevent the
+  narrowing, and that the Mission's state `version` stays monotonic (no
+  re-widening) across a multi-step contain-then-refresh sequence.
+  (`services/authorization-server/test/async-delegation.test.ts`.)
 - Unified cross-enforcement evidence base (`authzen#decision-evidence-object`):
   `EvidenceBase` gains the optional `emitter` (`id` + `role`, roles `pdp`/`pep`/
   `executor` plus the coordinated companion roles `harness`/`egress`) and a
