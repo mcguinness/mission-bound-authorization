@@ -68,6 +68,14 @@ normative:
 informative:
   RFC8725:
   RFC8693:
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -170,9 +178,11 @@ where its cost is warranted
 This document uses Mission, Mission Intent, Authority Set, Mission
 Issuer, the `mission` claim, the subset rule, and the integrity
 anchors (`intent_hash`, `authority_hash`) as the core defines them,
-and Mission Authority Server (MAS), Mission Join, and the Enterprise
+Mission Authority Server (MAS), Mission Join, and the Enterprise
 Mapping Contract as {{I-D.draft-mcguinness-mission-authority-server}}
-defines them. It additionally uses:
+defines them, and Effective Authority Set as
+{{I-D.draft-mcguinness-oauth-mission-status}} defines it. It
+additionally uses:
 
 Issuance join:
 : The integration this document defines: a MAS-approved Mission
@@ -496,20 +506,10 @@ On success the consuming AS mints tokens under these rules:
   redemption-time state check, an issued access token's own lifetime is
   the window in which a revoked Mission's token keeps working at the
   token layer.
-- **State at redemption.** A consuming AS that has a Mission-state
-  integration (the one its refresh gating uses) SHOULD re-check Mission
-  state at redemption and refuse when the Mission is not established
-  `active`, so a Mission revoked between minting and redemption yields
-  no fresh access token; an AS with no state integration relies on the
-  grant's `active`-at-minting gate and the short access-token lifetime
-  above.
-- **Refresh is state-gated.** A consuming AS MUST NOT issue refresh
-  tokens unless it gates each refresh on current Mission state. That
-  gate resolves state through the Mission Status operation
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) or the MAS's state
-  surface within a published staleness bound, and refuses when the
-  Mission is not established as `active`. A consuming AS without a
-  state integration MUST NOT issue refresh tokens under a grant.
+- **Effective Authority Set projection.** Redemption and every
+  refresh are gated on current Mission state and projected through
+  the Mission's current Effective Authority Set, per
+  {{effective-set-projection}}.
 - **No re-approval.** The approval event already occurred at the
   Mission Issuer. The consuming AS MUST NOT prompt the Subject or
   any user for consent at redemption.
@@ -519,6 +519,62 @@ issued refresh token (state-gated) or a fresh grant (state-gated at
 minting); either way, every path to new authority re-enters a
 Mission-state gate, which is the issuance-gate kill switch this
 profile restores.
+
+## Effective Authority Set Projection {#effective-set-projection}
+
+A consuming AS with a Mission-state integration MUST, at redemption
+and at every refresh, resolve the Mission's current state and
+Effective Authority Set through the Mission Status operation
+({{I-D.draft-mcguinness-oauth-mission-status}}) or an equivalent
+authenticated, audience-scoped authority source, within a published
+staleness bound, and refuse when the Mission is not established
+`active`. Where the Mission is `active`, the consuming AS projects
+issued authority through the current Effective Authority Set: the
+intersection of the grant's `authorization_details` (on refresh, the
+refresh family's own ceiling), any narrower authority the client
+requests at the token endpoint, that Effective Authority Set, and the
+consuming AS's own policy, which narrows only, per the subset rule
+above. A partial intersection issues only the remainder. An empty
+intersection refuses `invalid_grant` ({{redemption-errors}}), and MAY
+carry Containment's `authority_contained` denial reason where
+Containment is composed
+({{I-D.draft-mcguinness-oauth-mission-containment}}). This projection
+precedes scope projection above: an AS that models authority as
+`scope` maps the narrowed remainder, never the grant's original set.
+
+The source for this projection is an authenticated, audience-scoped
+Mission Status Response, queried with this AS's own audience,
+carrying current `authorization_details` and the Mission's state
+`version` ({{I-D.draft-mcguinness-oauth-mission-status}}). An active
+Mission state, or a Status List VALID bit, does not alone satisfy
+this: containment and discharge narrow an active Mission without
+moving its lifecycle state, and the Status List's bit carries no
+`authorization_details` at all.
+
+A source that is unavailable, fails verification, or reports a state
+`version` older than one already observed for this Mission fails this
+projection closed: the consuming AS refuses `invalid_grant`
+({{redemption-errors}}) and leaves its stored ceiling unchanged,
+never treating the outage as authority exhaustion. Unlike an empty
+intersection, this refusal is retryable per the deployment's declared
+state-recovery policy, and the AS SHOULD distinguish it in
+`error_description` as {{redemption-errors}} already does for the
+dead-Mission case.
+
+A refresh family's issued authority MUST NOT widen across refreshes
+within the same Mission: the consuming AS atomically narrows its own
+stored ceiling on every refresh, or retains the highest Mission state
+`version` it has observed and rejects a source reporting a lower one
+as a rollback.
+
+A consuming AS without a Mission-state integration MUST NOT issue
+refresh tokens under a grant, and relies instead on the grant's
+`active`-at-minting gate and the short access-token lifetime above. A
+consuming AS that issues refresh tokens strengthens that integration
+from a lifecycle-state check to this authority-capable form:
+reporting Mission state alone no longer suffices. A consuming AS
+that cannot perform this projection MUST NOT claim containment- or
+discharge-aware issuance.
 
 ## Redemption Errors {#redemption-errors}
 
@@ -538,6 +594,8 @@ problem from a dead Mission:
 | authenticated client is not the grant's `client_id` | `invalid_grant` |
 | `cnf` proof of possession fails | `invalid_grant` |
 | refresh refused because the Mission is not `active` | `invalid_grant` |
+| the current Effective Authority Set intersection is empty ({{effective-set-projection}}) | `invalid_grant` |
+| the Effective Authority Set source is unavailable, unverifiable, or reports a rolled-back state version ({{effective-set-projection}}) | `invalid_grant` |
 
 The distinction the client needs is "get a fresh grant" versus "the
 Mission is dead." Most `invalid_grant` cases are the former: the client
@@ -567,9 +625,9 @@ cannot be replayed into a second authorization request.
 
 The grant's window is not re-evaluated at code exchange; the issued
 authorization code carries its own lifetime from there. All
-remaining redemption rules (subset, lifetime, state-gated refresh,
-no re-approval, and the error mapping of {{redemption-errors}})
-apply at the token request unchanged.
+remaining redemption rules (subset, lifetime, Effective Authority Set
+projection, no re-approval, and the error mapping of
+{{redemption-errors}}) apply at the token request unchanged.
 
 This carriage serves user-delegated Missions
 ({{I-D.draft-mcguinness-oauth-mission}}), where an authenticated
@@ -646,7 +704,8 @@ full:
 - verbatim `mission` claim carriage;
 - subset-bounded minting;
 - `expires_at` capping;
-- state-gated refresh or no refresh;
+- Effective Authority Set projection at redemption and refresh, or no
+  refresh ({{effective-set-projection}});
 - no re-approval; and
 - the redemption error mapping of {{redemption-errors}}.
 
@@ -708,8 +767,11 @@ type.
 the moment of state commit. Outstanding tokens end at the earlier of
 their own expiry and the consuming AS's next state-gated refresh;
 where the runtime layer is deployed, the PDP's re-check bounds
-outstanding-token use independently. A deployment states the refresh
-staleness bound it publishes ({{conformance}}).
+outstanding-token use independently. A refresh re-projects through
+the Effective Authority Set ({{effective-set-projection}}), so a
+Mission contained or discharged between issuance and refresh does
+not renew its original, now-narrowed authority. A deployment states
+the refresh staleness bound it publishes ({{conformance}}).
 
 **Consent integrity.** The approval the grant rests on was rendered
 and committed at the Mission Issuer under the core's rules and,
