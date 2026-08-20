@@ -1,11 +1,15 @@
 /**
- * @spec runtime#input-resource-policy (resource-policy-fail-closed)
  * @spec runtime#input-actor (actor-context-required-and-not-shortcut)
  * @spec runtime#input-time (mission-expires-at-refusal)
  *
  * Unconditional (no live OpenFGA needed): every case supplies a stub `Fga`
  * satisfying only the one method `evaluate` calls, so this file never skips.
  * Wave 2 slice A, decision-inputs cluster.
+ *
+ * The first describe block below is NOT a Resource-policy test (see its own
+ * comment): evaluate() has no Resource-policy input independent of Mission
+ * authority, so it carries no `@spec runtime#input-resource-policy` citation
+ * and is uncited in the conformance manifest.
  */
 
 import { describe, expect, it } from "vitest";
@@ -52,25 +56,24 @@ const optsWith = (fga: Fga, v: MissionView = view()) => ({
   relationForAction,
 });
 
-describe("Resource policy is a fail-closed AND with Mission authority (@spec runtime#input-resource-policy)", () => {
-  it("authority and constraints permit, but the Resource-policy/FGA check denies -> the action still fails closed", async () => {
-    // Mission authority alone would permit: the entry matches, and there is no
-    // vendor constraint to exclude the target, so the contextual tuple is
-    // derived and step 6's fga.checkWithContext is actually reached. A stub
-    // that denies there models "Resource policy MAY be evaluated by the PDP
-    // ... as a composed local authorization step" (@spec runtime#input-resource-policy)
-    // refusing despite Mission authority permitting.
+describe("the FGA dependency call denying fails the action closed (not a Resource-policy test)", () => {
+  it("authority and constraints permit, but the FGA check denies -> the action still fails closed", async () => {
+    // NOT a Resource-policy test. The entry matches and there is no vendor
+    // constraint to exclude the target, so the contextual tuple is derived
+    // and step 6's fga.checkWithContext is reached and stubbed to deny. That
+    // call IS the Mission-authority projection: policy-view.ts's
+    // deriveContextualTuples grants `mission:<id>` the relation directly from
+    // the matched Authority Set entry, and checkWithContext verifies that
+    // ephemeral grant, so a denial here is Mission authority itself failing
+    // closed on its own backing check, never an independent Resource policy
+    // (@spec runtime#input-resource-policy) conjunct: no such conjunct
+    // exists anywhere in this PDP. This is a dependency-fail-closed
+    // regression test, left uncited in the conformance manifest.
     const denyingFga = { checkWithContext: async () => false } as unknown as Fga;
     const dec = await evaluate(req(), optsWith(denyingFga));
     expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
   });
-
-  // The complementary arm (Mission authority denies while Resource policy is
-  // unreached or would permit) is already exercised by evaluate.test.ts's
-  // "out-of-authority action -> deny out_of_authority"; both arms together
-  // give the row's fail-closed AND, so it is mapped alongside this test in
-  // the manifest rather than re-asserted here.
 });
 
 describe("Actor context: a malformed act chain entry is refused (@spec runtime#input-actor)", () => {

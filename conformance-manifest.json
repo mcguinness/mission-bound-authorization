@@ -4111,22 +4111,9 @@
     "normative": "an action proceeds only when both Mission authority and Resource policy permit it; either one refusing fails the action closed"
    },
    "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
-     "name": "Resource policy is a fail-closed AND with Mission authority (@spec runtime#input-resource-policy) > authority and constraints permit, but the Resource-policy/FGA check denies -> the action still fails closed",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority",
-     "level": "endpoint",
-     "surface": "decision-request"
-    }
-   ],
-   "notes": "Both arms of the fail-closed AND are covered: Mission authority permitting while the Resource-policy/FGA check (fga.checkWithContext, the composed local authorization step this deployment uses) denies still fails closed (new unconditional test); Mission authority denying already fails closed regardless of Resource policy (existing, CI-only live-OpenFGA test, reused here rather than duplicated)."
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No independent Resource-policy conjunct exists to test: fga.checkWithContext is the Mission-authority projection itself (contextual tuples derived from the matched Authority Set entry via policy-view.ts's deriveContextualTuples, keyed mission:<id>), not a composed local authorization step separate from Mission authority. A prior mapping to evaluate-decision-inputs.test.ts's stub-FGA-denies case mislabeled that dependency-fail-closed case as the Resource-policy arm; the test has been renamed to an honest dependency-fail-closed claim and left uncited (see the file's docblock and describe title). The other candidate mapping, evaluate.test.ts's out-of-authority test, is already full tested evidence on runtime.decision-inputs.authority-entry-and-subset-required and exercises no Resource-policy input either, so remapping it here would only relabel the authority row's evidence, not add information about the conjunction: a gap of kind, not degree, so todo rather than partial. Full coverage needs an independent Resource-policy hook (a PDP-side check or a PEP-local policy step distinct from the Mission-authority/FGA check) plus a truth-table test with separately controlled Mission-authority and Resource-policy outcomes."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
