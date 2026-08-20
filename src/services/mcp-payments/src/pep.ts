@@ -98,16 +98,37 @@ export interface ActionMapping {
   action: string;
   actionClass?: "irreversible_action" | "external_commitment";
   needsInvoice: boolean;
+  /**
+   * @spec runtime#read-binding — this action's unfiltered form requests a
+   * bulk, cross-vendor result, which the read-binding floor MUST bind: a
+   * supplied `vendor_id` binds through the ordinary vendor-constraint check
+   * every invoice-scoped action uses; absent one, the returned set binds to
+   * the matched Authority Set entry's OWN vendor scope, never the
+   * unconstrained store (see the `bindsVendorScope` branch in
+   * {@link Pep.enforceInner}).
+   */
+  bindsVendorScope?: boolean;
 }
 
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
-  list_invoices: { action: "payments:invoice.list", needsInvoice: false },
+  list_invoices: { action: "payments:invoice.list", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", needsInvoice: true },
   lookup_vendor: { action: "payments:vendor.read", needsInvoice: false },
   schedule_payment: { action: "payments:payment.schedule", needsInvoice: true },
   execute_wire_transfer: { action: "payments:payment.execute", actionClass: "irreversible_action", needsInvoice: true },
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", needsInvoice: true },
 };
+
+/**
+ * @spec runtime#read-binding — synthetic FGA check object for a bulk
+ * `list_invoices` request under an entry with NO `vendors` constraint at
+ * all (entitled to every vendor already). There is no specific vendor to
+ * name, and no FGA object type here supports a wildcard check target, so
+ * this fixed placeholder stands in for "the entry's own scope, whatever it
+ * is" under the same contextual-tuple pattern every other action uses
+ * (the injected tuple names exactly the object being checked).
+ */
+const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
 
 export interface PepDeps {
   payments: PaymentsStore;
@@ -186,6 +207,14 @@ export interface EnforceResult {
   denial_reason?: string;
   refusal_reason?: string;
   effective?: EffectiveParams;
+  /**
+   * @spec runtime#read-binding — present on a permitted `bindsVendorScope`
+   * action (list_invoices): the vendor ids the bound result set is limited
+   * to. Absent only when the matched entry carries no vendor constraint and
+   * the caller requested no `vendor_id` (entitled to, and requesting, every
+   * vendor already).
+   */
+  list_vendor_scope?: string[];
   /** Present on a requestable denial: the ARAP access-request context. */
   access_request?: { endpoint: string; denial_binding: string; binding_token: string; expires_at: string };
   /**
@@ -324,6 +353,7 @@ export class Pep {
     let effective: EffectiveParams | undefined;
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: EvaluationRequest["resource"] = { type: "server", id: CANONICAL_RESOURCE };
+    let listVendorScope: string[] | undefined;
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
@@ -333,6 +363,39 @@ export class Pep {
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE });
       amount = effective.amount;
       resourceObj = { type: "invoice", id: invoice.id, properties: { vendor_id: vendor.id } };
+    } else if (mapping.bindsVendorScope) {
+      // @spec runtime#read-binding — "a consequential read whose parameters
+      // ... request a bulk or export-like result ... MUST bind those
+      // parameters. A deployment MUST NOT classify such a read as not
+      // materially affecting the resource set." list_invoices without
+      // vendor_id is exactly that bulk form; binding it means the returned
+      // set never exceeds the Mission's own Authority Set entry.
+      const entry = view.authority_set.find(
+        (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
+      );
+      const allowedVendors = entry?.constraints?.vendors;
+      const requestedVendorId = args.vendor_id !== undefined ? String(args.vendor_id) : undefined;
+      if (requestedVendorId !== undefined) {
+        // A named vendor_id binds through the SAME vendor-constraint check
+        // every invoice-scoped action here uses (out-of-scope -> denied
+        // out_of_authority at the FGA step below, same as get_invoice).
+        resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
+        listVendorScope = [requestedVendorId];
+      } else if (allowedVendors) {
+        // Bulk form, vendor-constrained entry: bind the RESULT SET to the
+        // entry's own scope (never the unconstrained store). The set-level
+        // authority already comes from the entry match above; one member of
+        // the allowlist stands in for the per-object FGA check that every
+        // other action performs, so an empty allowlist still denies below.
+        listVendorScope = allowedVendors;
+        const representative = allowedVendors[0] ?? UNSCOPED_VENDOR_OBJECT;
+        resourceObj = { type: "vendor", id: representative, properties: { vendor_id: representative } };
+      } else {
+        // Bulk form, unconstrained entry: already entitled to every vendor,
+        // so the read is bound to that full, documented scope, not an
+        // accident of the tool's default arguments.
+        resourceObj = { type: "vendor", id: UNSCOPED_VENDOR_OBJECT, properties: {} };
+      }
     }
 
     const req: EvaluationRequest = {
@@ -485,7 +548,12 @@ export class Pep {
       }
       return result;
     }
-    return { permitted: true, decision, ...(effective ? { effective } : {}) };
+    return {
+      permitted: true,
+      decision,
+      ...(effective ? { effective } : {}),
+      ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
+    };
   }
 
   /**

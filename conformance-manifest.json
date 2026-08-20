@@ -4815,8 +4815,28 @@
     "normative": "a consequential read whose parameters materially change the resource set or disclosure risk requires parameter binding"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > no vendor_id, vendor-constrained entry: returns only the constraint's vendors, never the whole store",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused out_of_authority, not silently filtered",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id inside the entry's vendor constraint is permitted and bound to exactly that vendor",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> out_of_authority; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope rather than the unconstrained store."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -4837,8 +4857,28 @@
     "normative": "a cross-tenant, bulk or export-like, or field/destination-selecting consequential read is never classified as not materially affecting the resource set, and its parameters are bound"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > no vendor_id, vendor-constrained entry: returns only the constraint's vendors, never the whole store",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > no vendor_id, unconstrained entry: still returns every vendor's invoices (capability-preserving, not a forced narrowing)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused out_of_authority, not silently filtered",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Before #610's fix, list_invoices without vendor_id was classified as an ordinary unbound read (the bulk/cross-vendor form was never distinguished from a single-object read). It is now bound: a vendor-constrained entry narrows the bulk result to its own vendor scope (never the whole store) and refuses a named vendor_id outside that scope; an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
