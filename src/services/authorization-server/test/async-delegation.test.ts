@@ -447,6 +447,45 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
   });
 
+  it("full containment (#589): containing exactly the FAMILY's own narrower ceiling fails the refresh invalid_grant, even though the Mission's wider authority_set is not fully contained", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    expect(first.authorization_details).toEqual(confinedAuthority());
+
+    // Contain exactly the family's own capability (invoice.read only). The
+    // Mission still holds remittance.send, so the MISSION-WIDE effective set
+    // is NOT empty (a mission-level-only check, like the pre-#589
+    // gateDerivation gate, would miss this): only the FAMILY's narrower
+    // ceiling has collapsed.
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-async-full-family",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    expect(as.kernel.effectiveAuthoritySet(as.kernel.get(missionId) as never)).not.toEqual([]);
+
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+
+    // A retry with the SAME (already rotated-and-discarded) refresh token
+    // also fails closed via oidc-provider's ordinary reuse detection,
+    // independent of the containment check above: the family is never
+    // resurrected by retrying.
+    const retry = await refreshFamily(first.refresh_token);
+    const retryBody = (await retry.json()) as { error?: string };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(400);
+    expect(retryBody.error).toBe("invalid_grant");
+  });
+
   it("contain, then refresh the CODE-FLOW mission grant: same conformance on the approval grant's copied rar", async () => {
     const { missionId, missionRefreshToken } = await issueBaseMission();
     containRemittance(missionId, "ce-code-1");
@@ -456,6 +495,95 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(body.authorization_details).toEqual(withoutRemittance(missionId));
     const payload = decodeJwt(body.access_token as string);
     expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
+  });
+
+  it("full containment (#589): containing the WHOLE resource fails a CODE-FLOW refresh invalid_grant (authority fully contained)", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-code-full",
+      },
+      remove: [{ resource: RESOURCE }],
+    });
+    expect(as.kernel.effectiveAuthoritySet(as.kernel.get(missionId) as never)).toEqual([]);
+
+    const res = await refreshFamily(missionRefreshToken, codeDpop);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+
+  it("#589: a refresh family never re-widens across a contain sequence; the Mission's state version is monotonic and every refresh observes the current (never a rolled-back) one", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    const v0 = as.kernel.get(missionId)?.version as number;
+
+    containRemittance(missionId, "ce-async-mono-1");
+    const v1 = as.kernel.get(missionId)?.version as number;
+    expect(v1).toBeGreaterThan(v0);
+
+    const res1 = await refreshFamily(first.refresh_token);
+    const body1 = (await res1.json()) as { refresh_token?: string; authorization_details?: unknown; error?: string };
+    expect(res1.status, JSON.stringify(body1)).toBe(200);
+    expect(body1.authorization_details).toEqual(withoutRemittance(missionId));
+
+    // A second, independent narrowing: the version advances again, and the
+    // NEXT refresh's projected remainder is a subset of the FIRST refresh's
+    // remainder, never a superset. The kernel always recomputes from the
+    // pristine grant ceiling through the CURRENT (monotonically narrowing)
+    // effective set, so there is no separate "ceiling" value that a stale
+    // read could roll back: every refresh observes the live, strictly
+    // monotonic state version, which is what "retains the highest observed
+    // version" reduces to when there is exactly one authoritative record and
+    // no external cache in front of it (disclosed in the accompanying report:
+    // true rollback defense against a STALE EXTERNAL source has no
+    // constructible scenario in this single-process kernel; it matters for
+    // the not-yet-implemented issuance-grant external-consuming-AS path).
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-async-mono-2",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    const v2 = as.kernel.get(missionId)?.version as number;
+    expect(v2).toBeGreaterThan(v1);
+
+    const res2 = await refreshFamily(body1.refresh_token as string);
+    const body2 = (await res2.json()) as { error?: string };
+    expect(res2.status, JSON.stringify(body2)).toBe(400);
+    expect(body2.error).toBe("invalid_grant"); // now fully contained: never a re-widened 200
+  });
+
+  it("#589: an active Mission with a still-VALID Status List bit still narrows on refresh (the bit alone is insufficient)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    const idx = as.kernel.participateInStatusList(missionId);
+
+    containRemittance(missionId, "ce-async-statuslist");
+
+    // Lifecycle state is untouched by containment: the Mission is still
+    // `active`, so its Status List bit is still VALID (0x00).
+    const record = as.kernel.get(missionId) as NonNullable<ReturnType<typeof as.kernel.get>>;
+    expect(record.state).toBe("active");
+    expect(idx).toBeGreaterThanOrEqual(0);
+
+    // Despite the VALID bit, the refresh still narrows: the coarse two-bit
+    // lifecycle signal does not observe containment, but the Effective
+    // Authority Set projection (which does not consult the Status List bit
+    // at all) still does.
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(withoutRemittance(missionId));
   });
 
   it("regression: a no-containment mission's refresh is byte-identical to issuance (fast path)", async () => {

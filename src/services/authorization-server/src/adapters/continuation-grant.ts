@@ -36,7 +36,7 @@ import {
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
-import { isSubsetSet, projectThroughEffective } from "../kernel/derive.js";
+import { isSubsetSet, projectRarThroughMission } from "../kernel/derive.js";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
@@ -796,22 +796,23 @@ async function deliverAsyncDelegationFamily(
 }
 
 /**
- * @spec continuation#transport-async (containment conformance) — project a
- * family grant's issuance-time rar through the Mission's CURRENT effective set
- * (approved minus contained) for a RESUMED delivery, exactly as the provider's
- * rarThroughContainment does for refresh responses. No containment -> the same
- * array (fast path). The narrowing itself is {@link projectThroughEffective}
- * (shared with provider.ts and the introspection credential/Mission-authority
- * intersection, @spec mission#introspection): actions-only narrowing, nothing
- * inherited from the target.
+ * @spec continuation#transport-async (containment conformance), issuance-
+ * grant#effective-set-projection (#589) — project a family grant's
+ * issuance-time rar through the Mission's CURRENT effective set for a
+ * RESUMED delivery, via the shared {@link projectRarThroughMission}
+ * primitive (also used by provider.ts's code/refresh rar projection): NEVER
+ * bypassed on an absent containment record, since the primitive itself
+ * yields the unchanged set (a computed no-op) when nothing currently
+ * narrows the Mission. The caller below (recoverAsyncDelegation) reports a
+ * full collapse as `invalid_grant`, matching provider.ts's throw for the
+ * same condition on the ordinary refresh path.
  */
 function projectRarThroughEffective(
   kernel: AdapterOptions["kernel"],
   record: MissionRecord,
   rar: AuthorityEntry[],
 ): AuthorityEntry[] {
-  if (!record.containment) return rar;
-  return projectThroughEffective(rar, kernel.effectiveAuthoritySet(record));
+  return projectRarThroughMission(kernel, record, rar).projected;
 }
 
 /**

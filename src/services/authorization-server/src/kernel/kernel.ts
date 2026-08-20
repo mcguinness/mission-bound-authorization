@@ -960,9 +960,17 @@ export class MissionKernel {
    */
   gateDerivation(id: string): MissionRecord {
     const record = this.gateActiveLineage(id);
-    // Containment gate: token derivation draws on the EFFECTIVE set; a fully
-    // contained Mission (empty effective set) has nothing left to derive.
-    if (record.containment && this.effectiveAuthoritySet(record).length === 0) {
+    // Effective Authority Set gate (#589): token derivation draws on the
+    // EFFECTIVE set; a Mission with authority to begin with but nothing left
+    // in its current effective set has nothing left to derive. Gated on
+    // `record.authority_set.length > 0`, never on `record.containment`
+    // presence: effectiveAuthoritySet already yields the approved set
+    // unchanged when nothing narrows it, so an empty authority_set (nothing
+    // approved to begin with) is the only way this reads empty without SOME
+    // mechanism (containment today, discharge or a future one later) having
+    // narrowed it, and that mechanism need not be containment for this gate
+    // to apply.
+    if (record.authority_set.length > 0 && this.effectiveAuthoritySet(record).length === 0) {
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
     if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {

@@ -98,7 +98,7 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
-import { isSubsetSet, projectThroughEffective } from "../kernel/derive.js";
+import { isSubsetSet, projectRarThroughMission, projectThroughEffective } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
@@ -323,16 +323,27 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // token introspects active:false" footgun.
   opts.tokenIssuanceStore ??= new TokenIssuanceStore();
 
-  // Containment refresh-path conformance: a stored oidc grant copies its rar
-  // at issuance, so a refresh (or a late code redemption) could echo a
-  // capability contained AFTER issuance ("derivation MUST NOT carry a
-  // contained capability"). Token-response rar resolution therefore
-  // re-projects the grant's rar through the Mission's EFFECTIVE authority set
-  // (approved minus contained). The Mission resolves from the grant like the
-  // async path does: a Mission approval grant via kernel.findByGrant, else a
-  // per-delegation family grant via the family store. A grant belonging to no
-  // Mission, or to a Mission with no containment, passes through UNCHANGED
-  // (the same object: byte-identical fast path).
+  // Effective Authority Set projection (#589): a stored oidc grant copies its
+  // rar at issuance, so a refresh (or a late code redemption) could echo
+  // capability the Mission's current effective set no longer carries
+  // (containment's "derivation MUST NOT carry a contained capability", and,
+  // structurally, any future narrowing mechanism the kernel composes into
+  // effectiveAuthoritySet). Token-response rar resolution therefore ALWAYS
+  // re-projects the grant's rar through {@link projectRarThroughMission} once
+  // a Mission resolves; it is never skipped on an absent containment record
+  // (that record's absence means the mechanism narrows nothing, not that the
+  // projection itself is skipped). The Mission resolves from the grant like
+  // the async path does: a Mission approval grant via kernel.findByGrant,
+  // else a per-delegation family grant via the family store. A grant
+  // belonging to no Mission has no narrowing mechanism to apply and passes
+  // through UNCHANGED; a Mission with nothing currently narrowed reaches the
+  // same unchanged result THROUGH the primitive (a computed no-op, not a
+  // bypassed one). A non-empty rar collapsing to empty is full narrowing:
+  // the credential's authority is now entirely contained (or otherwise gone),
+  // and every path that carries the grant's rar (an initial code exchange
+  // reached late, or any refresh) MUST fail closed rather than echo an empty
+  // authorization_details with a 200 (@spec containment#derivation-gating,
+  // issuance-grant#effective-set-projection).
   const rarThroughContainment = (grant?: { jti?: string; rar?: unknown }): unknown => {
     const rar = grant?.rar;
     if (!Array.isArray(rar) || !grant?.jti) return rar;
@@ -341,23 +352,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
       const fam = opts.familyStore?.resolve(grant.jti);
       record = fam ? kernel.get(fam.missionId) : undefined;
     }
-    if (!record?.containment) return rar;
-    const effective = kernel.effectiveAuthoritySet(record);
-    const filtered: unknown[] = [];
-    for (const detail of rar as Array<{ resource?: string; actions?: string[] }>) {
-      const eff = effective.find((e) => e.resource === detail.resource);
-      if (!eff) continue; // the whole entry is contained
-      if (Array.isArray(detail.actions)) {
-        const actions = detail.actions.filter((a) => eff.actions.includes(a));
-        if (actions.length === 0) continue; // every action contained
-        if (actions.length !== detail.actions.length) {
-          filtered.push({ ...detail, actions });
-          continue;
-        }
-      }
-      filtered.push(detail);
+    if (!record) return rar; // no Mission: no narrowing mechanism applies
+    const { projected, collapsed } = projectRarThroughMission(kernel, record, rar as AuthorityEntry[]);
+    if (collapsed) {
+      throw new errors.InvalidGrant("mission-bound credential authority is fully contained");
     }
-    return filtered;
+    return projected;
   };
 
   const configuration: Configuration = {

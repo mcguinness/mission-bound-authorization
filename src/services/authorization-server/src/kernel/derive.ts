@@ -11,7 +11,7 @@
 import { compareAmounts, isValidAmount } from "@mission/core";
 import type { JsonValue } from "@mission/core";
 import { IntentError } from "./intent.js";
-import type { AuthorityEntry, DelegateMatcher, MissionIntent } from "./types.js";
+import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
 
 /**
  * @spec mission#common-constraints — every `constraints` member name the core
@@ -416,4 +416,38 @@ export function projectThroughEffective(
     out.push(actions.length === detail.actions.length ? detail : { ...detail, actions });
   }
   return out;
+}
+
+/**
+ * @spec containment#derivation-gating, status#effective-authority-set,
+ * issuance-grant#effective-set-projection (issue #589) — the Effective
+ * Authority Set projection PRIMITIVE for an already-issued credential's
+ * `rar`: project it through the Mission's CURRENT effective set
+ * ({@link MissionKernel.effectiveAuthoritySet}, via the `kernel` passed in),
+ * which composes every issuer-held narrowing mechanism the kernel runs
+ * (today: containment; structured so discharge and future mechanisms slot
+ * in there without a caller-side change). NEVER bypassed on an absent
+ * containment record: `effectiveAuthoritySet` already returns the approved
+ * set unchanged when nothing narrows it, so calling through unconditionally
+ * is a no-op for an unnarrowed Mission and stays live for every future
+ * mechanism that computation composes. A caller MUST resolve `record` first
+ * (a grant with no resolvable Mission carries no narrowing mechanism, which
+ * is a different case from a Mission with nothing currently narrowed) and
+ * MUST NOT special-case that resolution on `record.containment` presence.
+ *
+ * `collapsed` is true exactly when a non-empty `rar` projects to an empty
+ * one: the credential's authority is now entirely contained (or otherwise
+ * narrowed away). Reported rather than thrown, so callers on different
+ * surfaces (a throwing OAuth grant hook vs. a reporting delivery path)
+ * choose their own failure shape; both current call sites (provider.ts's
+ * code/refresh rar projection, continuation-grant.ts's resumed-delivery
+ * projection) treat a `collapsed` result as `invalid_grant`.
+ */
+export function projectRarThroughMission(
+  kernel: { effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[] },
+  record: MissionRecord,
+  rar: readonly AuthorityEntry[],
+): { projected: AuthorityEntry[]; collapsed: boolean } {
+  const projected = projectThroughEffective(rar, kernel.effectiveAuthoritySet(record));
+  return { projected, collapsed: rar.length > 0 && projected.length === 0 };
 }
