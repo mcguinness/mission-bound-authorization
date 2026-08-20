@@ -1011,6 +1011,11 @@ describe("approval bound to the whole transaction (@spec txn-authorization#chall
     expect(binding.txn).toBe(txn);
     expect(binding.mission.id).toBe(missionId);
     expect(binding.operation_type).toBe("mission_resource_access");
+    // The destination-local subject is bound; this fixture's Mission carries
+    // no origin principal, so the Origin Principal profile's half is absent
+    // rather than one identity standing in for the other.
+    expect(binding.subject).toBe("alice");
+    expect(binding.origin_principal).toBeUndefined();
     expect(binding.client_id).toBe("ap-agent");
     expect(binding.cnf_jkt).toBe(dpopJkt);
     expect(binding.parameter_digest).toBe(`sha-256:${txn}`);
@@ -1344,6 +1349,235 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
     expect((claims.mission as { subject: unknown }).subject).toEqual(ORIGIN);
     // The fresh decision saw both identities.
     expect(decisions).toEqual([{ subject: LOCAL_SUB, originPrincipal: ORIGIN }]);
+  });
+});
+
+/**
+ * @spec txn-authorization#challenge-redemption steps 5 and 7,
+ * #transaction-token — the dual-identity fail-closed paths (#588 review,
+ * finding 3). Each test below is the negative mirror of one clause the
+ * review's six-step algorithm requires: flattening the origin principal into
+ * `sub` never happens, a subject_token this AS never signed is refused
+ * (today's fail-closed default for the namespace-mapping "otherwise" branch
+ * {{transaction-token}} now defines: only a same-issuer subject_token is
+ * accepted, so the injective foreign-issuer mapping branch itself has no
+ * code path here yet), a challenge and subject_token that disagree about the
+ * origin principal for one local subject are refused before any approval
+ * opens, an approval bound to a different identity than the workflow pinned
+ * is refused, and a post-admission identity substitution is refused when the
+ * workflow reaches completion.
+ */
+describe("dual identity fail-closed paths (@spec txn-authorization#challenge-redemption, #transaction-token)", () => {
+  const ORIGIN = { iss: "https://partner.example", sub: "origin-alice" };
+  const LOCAL_SUB = "alice-local";
+
+  /**
+   * The same in-test rig as "origin principal vs the local subject" above
+   * (own AS/RS/TAS keys, own workflow store), parameterized so each test
+   * below can vary exactly one thing: the subject_token's issuer or signing
+   * key, the origin principal it carries vs. the one the challenge carries,
+   * or a mutation applied to the binding the ARS actually stores.
+   */
+  async function harness(opts: {
+    txn: string;
+    subjectTokenIssuer?: string;
+    subjectTokenKid?: string;
+    subjectTokenSigningKey?: CryptoKey;
+    subjectTokenOrigin?: { iss: string; sub: string };
+    challengeOrigin?: { iss: string; sub: string };
+    bindingMutate?: (b: TxnApprovalBinding) => TxnApprovalBinding;
+  }): Promise<{
+    admit: () => Promise<{ status: number; body: Record<string, unknown> }>;
+    complete: (txaId: string) => Promise<{ status: number; body: Record<string, unknown> }>;
+    workflows: TxnWorkflowStore;
+  }> {
+    const asKeys = await generateKeyPair("ES256", { extractable: true });
+    const rsKeys = await generateKeyPair("ES256", { extractable: true });
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "local-at", alg: "ES256" } as JWK;
+    const rsPub = { ...(await exportJWK(rsKeys.publicKey)), kid: "local-rs", alg: "ES256" } as JWK;
+
+    const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[] };
+    const requested = record.authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+
+    const subjectOrigin = opts.subjectTokenOrigin ?? ORIGIN;
+    const challengeOrigin = opts.challengeOrigin ?? subjectOrigin;
+
+    const subjectToken = await new SignJWT({
+      sub: LOCAL_SUB,
+      client_id: "ap-agent",
+      cnf: { jkt: dpopJkt },
+      mission: { ...missionClaim, subject: subjectOrigin },
+      authorization_details: requested,
+    })
+      .setProtectedHeader({ alg: "ES256", kid: opts.subjectTokenKid ?? "local-at", typ: "at+jwt" })
+      .setIssuer(opts.subjectTokenIssuer ?? ISSUER)
+      .setAudience(RESOURCE)
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .setJti(`at_${crypto.randomUUID()}`)
+      .sign(opts.subjectTokenSigningKey ?? asKeys.privateKey);
+
+    const challenge = await signChallenge(
+      {
+        txn: opts.txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${opts.txn}`,
+        mission: { ...missionClaim, subject: challengeOrigin },
+      },
+      rsKeys.privateKey,
+      "local-rs",
+    );
+
+    const localArs = {
+      openForTxn: (input: {
+        txn: string;
+        resource: string;
+        missionId: string;
+        action: string;
+        parameter_digest: string;
+        subject: string;
+        requires_action_approval: boolean;
+        binding: TxnApprovalBinding;
+        binding_digest: string;
+      }) => {
+        if (!opts.bindingMutate) return ars.openForTxn(input);
+        const mutated = opts.bindingMutate(input.binding);
+        return ars.openForTxn({ ...input, binding: mutated, binding_digest: txnApprovalBindingDigest(mutated) });
+      },
+      getTask: (taskId: string) => ars.getTask(taskId),
+    };
+    const deps = {
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+      publicJwks: { keys: [asPub] },
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(),
+      txn: {
+        challengeIssuers: new Map([
+          [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
+        ]) as ChallengeIssuers,
+        ars: localArs,
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        tokenKey: txnKeys.privateKey,
+        tokenKid: "local-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+        freshDecision: async () => ({ decision: "permit" as const }),
+      },
+    };
+    const workflows = newTxnWorkflows();
+
+    return {
+      admit: async () =>
+        (await callTransactionEndpoint(deps, workflows, {
+          transaction_challenge: challenge,
+          subject_token: subjectToken,
+          subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+        })) as { status: number; body: Record<string, unknown> },
+      complete: async (txaId: string) =>
+        (await callTransactionEndpoint(deps, workflows, {
+          transaction_authorization_id: txaId,
+        })) as { status: number; body: Record<string, unknown> },
+      workflows,
+    };
+  }
+
+  it("never flattens the origin principal's sub into the token's local sub", async () => {
+    const txn = "txn_dual_no_flatten";
+    const { admit, complete } = await harness({ txn });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const txaId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const issued = await complete(txaId);
+    expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+    const claims = decodeJwt((issued.body as { access_token: string }).access_token);
+    expect(claims.sub).toBe(LOCAL_SUB);
+    expect(claims.sub).not.toBe(ORIGIN.sub);
+    expect((claims.mission as { subject: unknown }).subject).toEqual(ORIGIN);
+  });
+
+  it("refuses a subject_token from an issuer this Authorization Server never signed for", async () => {
+    const txn = "txn_dual_foreign_issuer";
+    // @spec txn-authorization#transaction-token — this is today's fail-closed
+    // default for the "otherwise" branch of the namespace rule: a
+    // subject_token whose issuer this AS did not itself mint is refused
+    // outright, rather than mapped through an injective registry. The rule
+    // permits either outcome; this deployment has not built the mapping
+    // registry, so refusal is the conforming behavior it falls back to.
+    const { admit } = await harness({
+      txn,
+      subjectTokenIssuer: "https://foreign-tas.example",
+      subjectTokenKid: "foreign-tas",
+    });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(400);
+    expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
+    expect((admitted.body as { error_description?: string }).error_description).toBe(
+      "subject_token did not verify",
+    );
+  });
+
+  it("refuses when the challenge and subject_token disagree about the origin principal for one local subject", async () => {
+    const txn = "txn_dual_origin_mismatch";
+    const OTHER_ORIGIN = { iss: "https://partner.example", sub: "origin-mallory" };
+    const { admit } = await harness({ txn, subjectTokenOrigin: ORIGIN, challengeOrigin: OTHER_ORIGIN });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(400);
+    expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
+    expect((admitted.body as { error_description?: string }).error_description).toBe(
+      "challenge mission does not match subject_token",
+    );
+  });
+
+  it("refuses an approval bound to a different origin principal than the workflow pinned", async () => {
+    const txn = "txn_dual_approval_wrong_origin";
+    const { admit, complete } = await harness({
+      txn,
+      bindingMutate: (b) => ({ ...b, origin_principal: { iss: ORIGIN.iss, sub: "origin-eve" } }),
+    });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const txaId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const completed = await complete(txaId);
+    expect(completed.status, JSON.stringify(completed.body)).toBe(400);
+    expect((completed.body as { error?: string }).error).toBe("access_denied");
+    expect((completed.body as { error_description?: string }).error_description).toMatch(
+      /not bound to this transaction/,
+    );
+  });
+
+  it("refuses when the workflow's pinned local subject changes between admission and completion", async () => {
+    // Driven through the workflow STORE directly, not the wire: the poll
+    // request carries only transaction_authorization_id, so no wire request
+    // can resubmit a different identity at completion. This proves the
+    // completion-time binding recompute -- not merely the ARS's own copy --
+    // refuses a post-admission substitution, whichever of the two pinned
+    // identities it hits; the local subject is exercised here because it is
+    // the simpler column to mutate directly, and the recompute
+    // (approvalBindingFor) treats both identities identically.
+    const txn = "txn_dual_identity_drift";
+    const { admit, complete, workflows } = await harness({ txn });
+    const admitted = await admit();
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const txaId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    workflows.db.prepare("UPDATE txn_workflows SET subject = ? WHERE id = ?").run("mallory-local", txaId);
+    const completed = await complete(txaId);
+    expect(completed.status, JSON.stringify(completed.body)).toBe(400);
+    expect((completed.body as { error?: string }).error).toBe("access_denied");
+    expect((completed.body as { error_description?: string }).error_description).toMatch(
+      /not bound to this transaction/,
+    );
   });
 });
 
