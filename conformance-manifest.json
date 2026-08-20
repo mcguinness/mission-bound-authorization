@@ -2904,7 +2904,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Deployment-declaration duty (AS role): no Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against (`grep -rln \"Enforcement Scope Statement\" src` finds only comments referencing the concept, never a config, schema, or module implementing one). Nothing to assert without fabricating the artifact this row presupposes."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -2925,8 +2926,22 @@
     "normative": "an irreversible, external-commitment, or privileged-administration action is always gated by a PDP permit, never left ungated by classification"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "high-consequence actions are always gated by a PDP permit, never left ungated by classification (@spec runtime#classification) > execute_wire_transfer (irreversible_action) always reaches a PDP decision: refused without authority, permitted-with-decision-evidence with it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "high-consequence actions are always gated by a PDP permit, never left ungated by classification (@spec runtime#classification) > send_remittance_email (external_commitment) always reaches a PDP decision: refused without authority, permitted-with-decision-evidence with it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Picked up by the resource-operation-surface slice this row's prior note deferred to (#594 wave 2 slice B). \"Gated\" is observed at the PEP/RS boundary, not inside evaluate(): for both high-consequence classes this deployment maps to a tool (irreversible_action: execute_wire_transfer; external_commitment: send_remittance_email), a call without authority is refused with zero execution, and a call with authority produces an actual PDP decision (Decision Evidence recorded for that exact action), so the PDP is demonstrably consulted rather than bypassed. Kept partial, not tested: the row's surface stays decision-request (a PDP-role row; not reclassified by this slice, see the token-validation role-misfit row's note for why), and this deployment defines no privileged_administration action, so that third high-consequence class has no tool to exercise the same proof against."
   },
   {
    "id": "runtime.classification.no-lowering-below-resource-floor",
@@ -2948,7 +2963,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: classification assignment (whether purpose or deployment policy lowers an action's class) happens in the PEP's static action-to-class map (mcp-payments/src/pep.ts), never inside evaluate(), which receives action_class as an already-decided opaque label and has no classifier or floor table of its own. No lowering mechanism exists in evaluate.ts to exercise."
   },
   {
    "id": "runtime.classification.no-evasion-and-write-floor",
@@ -2969,9 +2985,16 @@
     "normative": "an action classified consequential write or higher is gated and parameter-bound as the classification table requires, and classification cannot be used to escape that"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Duplicate observable of runtime.classification.high-consequence-must-be-gated for the top three classes; rowed separately because it additionally covers the consequential-write floor and the anti-evasion rule."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-classification.test.ts",
+     "name": "classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification) > no action_class label, including the high-consequence and unrecognized ones, opens a bypass around the authority-entry-match gate",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the PDP's own share: action_class is opaque to evaluateInner (used only to pick a staleness bound, permit TTL/single_use, and approval-required dispatch) and no value of it skips or loosens the authority-entry-match, containment, FGA, amount, or approval gates. NOT tested: that a PEP actually invokes the PDP at all for a consequential-write-or-higher action (a PEP-placement / complete-mediation concern outside evaluate()'s pure-function boundary), and the parameter-binding half (\"and bound\") is tracked separately under runtime.permit-binding.must-bind-list (already partial)."
   },
   {
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
@@ -2994,7 +3017,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Antecedent unreachable in this codebase: applicability names capability runtime.discovered-catalog, and no argument-dependent classifier exists anywhere (grep across src/services and src/packages for classifier/action_class/mission_action_class_floors finds only the static per-tool action_class label in mcp-payments/src/pep.ts and its pass-through in evaluate.ts; no component ever classifies an invocation from its normalized parameters). Nothing to test without fabricating a classifier the deployment does not have."
   },
   {
    "id": "runtime.classification.class-floor-metadata-not-lowered",
@@ -3017,7 +3041,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Antecedent unreachable: applicability names capability runtime.discovered-catalog. mission_action_class_floors (RFC 9728 protected resource metadata) is not read, stored, or referenced anywhere in src/services/pdp or src/services/mcp-payments; MissionView and AuthorityEntry (policy-view.ts) carry no floor member for evaluateInner to consult."
   },
   {
    "id": "runtime.classification.unknown-floor-value-high-consequence",
@@ -3040,7 +3065,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Antecedent unreachable, same capability and evidence as class-floor-metadata-not-lowered: there is no mission_action_class_floors consumption path in this deployment, so there is no PDP code path that could receive an unrecognized floor value to fail closed on."
   },
   {
    "id": "runtime.action-approval.refusal-without-fresh-approval",
@@ -3126,7 +3152,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: this SHOULD binds the deployment's choice of which actions its requiresActionApproval predicate covers (an AS/deployment configuration decision, role AS), not the PDP's per-request enforcement of that predicate once wired (which is exercised by runtime.compromise-resistant.action-bound-approval-condition and the existing entry-driven action-approval tests). The reference deployment's own predicate (src/demo/src/stack.ts) requires approval only for payments:remittance.send, not for payments:payment.execute (irreversible_action); whether that is a justified SHOULD departure is a deployment-policy judgment call, not something evaluate() can assert."
   },
   {
    "id": "runtime.action-approval.reparameterization-invalidates",
@@ -3147,8 +3174,16 @@
     "normative": "an action-bound approval is reverified against the concrete parameters at execution, and a parameter change after approval invalidates it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "an action-bound approval is reverified against the concrete parameters, and a parameter change after approval invalidates it (@spec runtime#action-approval) > an approval whose digest matched the parameters at approval time no longer satisfies the gate once the record changes underneath it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Asserted: the re-decide arm. An entry-constrained approval permits schedule_payment against the invoice's current parameters (via pep.enforce()); the invoice is then mutated (reparameterization); presenting the identical, unchanged approval object to a FRESH pep.enforce() call denies action_approval_required, because evaluate()'s action-approval check recomputes parameter_digest fresh and compares it to the approval's stored digest -- and nothing executes on either call. NOT asserted: the anchor's TOCTOU-at-time-of-use clause -- reverifying the SAME single permitted attempt via Pep.reverify() immediately before execution, the way parameter-binding.must-bind-and-reverify does for an ordinary permit. That path is not reachable through any public server API for an approval-gated action: callWriteTool/callTransactionTool take no actionApproval parameter (only Pep.enforce() does, and it has no execution step of its own), and Pep.reverify() itself has no approval parameter at all -- it only re-checks the generic parameter_digest, with no notion of the approval object. Two calls to enforce() is the only approval-specific reverification this codebase's public surface offers."
   },
   {
    "id": "runtime.action-approval.approval-not-bearer-grant",
@@ -3169,8 +3204,21 @@
     "normative": "presenting an action-bound approval does not itself authorize the action; the fresh runtime decision remains authoritative and the approval carries no standing authority beyond the one action"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > an action outside the entry's approved actions is denied out_of_authority identically, whether or not a valid fresh approval is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > a valid approval permits once but is not a standing grant: the identical action, decided fresh without it, denies action_approval_required again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "runtime.pep-placement.last-controllable-boundary",
@@ -3191,8 +3239,16 @@
     "normative": "the PEP evaluating a consequential action sits at the last point before the action can still be stopped"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "the PEP sits at the last controllable boundary before the action (@spec runtime#pep-placement) > a parameter change in the window between decision and connector commit is caught immediately before commit, not upstream of it",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "A parameter change injected exactly in the decision->connector-commit window (via the beforeCommit hook) is caught by reverify() immediately before the commit, never slipping past into the connector: the boundary that can still stop the action sits at that last point, not at the earlier decision."
   },
   {
    "id": "runtime.pep-placement.catalog-filter-not-substitute",
@@ -3213,8 +3269,16 @@
     "normative": "filtering a tool catalog by the caller's authority does not exempt an invoked tool call from the per-call runtime gate"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "a tool-catalog filter is not a substitute for the runtime gate (@spec runtime#pep-placement) > a tool absent from tools/list because it is ungranted is still refused by the runtime gate when called directly, never executed",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "execute_wire_transfer is absent from tools/list (least-exposure filtering) for a token whose Mission grants only invoice.read, yet calling it directly still reaches the SAME runtime gate: refused out_of_authority, zero ledger effect, and FGA never consulted (a throwing FGA stub proves the gate short-circuited on the authority-entry match, not on a reached-and-passed check)."
   },
   {
    "id": "runtime.pep-placement.no-pep-no-claim",
@@ -3236,7 +3300,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Deployment-declaration duty (AS role), same artifact gap as runtime.conformance.no-claim-outside-declared-scope: no Enforcement Scope Statement exists to check the MUST NOT against. Vacuously true of this reference deployment on inspection: TOOL_ACTIONS in mcp-payments/src/pep.ts routes all six tools through the same enforce() dispatch, so none bypasses a PEP by construction. runtime.classification.high-consequence-must-be-gated demonstrates that directly for the two high-consequence entries (execute_wire_transfer, send_remittance_email); runtime.rs-profile.no-claim-without-pep is no longer cited here (author review finding 2 downgraded it to partial: its mappings cover one of the six declared operations and inspect no RS conformance claim, so it is not itself direct demonstration for the other four). A vacuous antecedent is not evidence for the declaration duty itself."
   },
   {
    "id": "runtime.custody.mediated-credential-sender-constrained",
@@ -3259,7 +3324,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.mediated-execution is not implemented: every code path and test (mcp-http-transport.ts's dpopFetch(credential, dpopKeys, extraHeaders)) has the CALLING AGENT generate and hold the DPoP private key and sign its own proofs; there is no mediating-PEP-side key-custody component sitting between the agent and the resource. Every Mission-bound token here IS sender-constrained (cnf.jkt required, enforced in validateToken/validateMissionToken), but that is ordinary DPoP, not the capability this row conditions on."
   },
   {
    "id": "runtime.custody.should-hold-key-in-pep",
@@ -3282,7 +3348,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Same runtime.mediated-execution gap as runtime.custody.mediated-credential-sender-constrained: there is no mediating-PEP key-custody component in this codebase for the key to be held IN, so there is nothing to distinguish 'held in the PEP' from 'held in the agent' -- the agent always holds it."
   },
   {
    "id": "runtime.custody.high-consequence-must-be-mediated-for-claim",
@@ -3305,7 +3372,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.compromise-resistant is not implemented (see runtime.custody.mediated-credential-sender-constrained): this deployment makes no agent-compromise-resistant claim, so the MUST this row states for that claim has no deployment posture to check it against."
   },
   {
    "id": "runtime.custody.replica-topology-should-be-stated",
@@ -3350,7 +3418,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No evidence-signing key exists anywhere in this codebase: EvidenceStore.record() (services/mcp-payments/src/evidence.ts) stamps trace_id/at and pushes a plain object, and its own header comment states signing and SCITT registration are M10 future work. There is no signing key for a decision to (mis)treat as a grant, so this row's MUST NOT has no code path to falsify -- covers all five agent-isolated-evidence-emission rows below plus negative-conformance.evidence-emission-should-demonstrate, which depends on the same missing capability."
   },
   {
    "id": "runtime.evidence-emission.isolated-construction-condition",
@@ -3373,7 +3442,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.agent-isolated-evidence-emission is not implemented: there is no evidence-signing key at all (see runtime.evidence-emission.signing-key-not-authority), so there is no key-custody boundary to assert non-exportability or inaccessibility against."
   },
   {
    "id": "runtime.evidence-emission.no-caller-supplied-record-or-relabeling",
@@ -3396,7 +3466,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Same gap as runtime.evidence-emission.isolated-construction-condition: no signing operation exists for a caller to submit a complete object or digest to, so there is nothing to refuse."
   },
   {
    "id": "runtime.evidence-emission.key-separation-should-and-not-inferred",
@@ -3418,7 +3489,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Unconditional SHOULD, but there is no evidence-signing key to compare for cryptographic distinctness against the deployment's authority-bearing keys (sender-constraint, token-issuance, approval); see runtime.evidence-emission.signing-key-not-authority."
   },
   {
    "id": "runtime.evidence-emission.should-cover-every-high-consequence-emitter",
@@ -3464,7 +3536,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.agent-isolated-evidence-emission is not implemented: there is no isolated signer to become unavailable and no fallback path to prove absent; see runtime.evidence-emission.signing-key-not-authority."
   },
   {
    "id": "runtime.evidence-emission.no-misrepresenting-continuous-satisfaction",
@@ -3582,8 +3655,22 @@
     "normative": "a Resource Server that only validates the access token, with no PEP able to refuse before execution, does not claim this runtime profile for that operation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "every consequential operation passes through a PEP that can refuse it after token validation and before execution (@spec runtime#rs-runtime-profile) > a denied consequential operation never executes: zero connector side effects",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "every consequential operation passes through a PEP that can refuse it after token validation and before execution (@spec runtime#rs-runtime-profile) > a permitted consequential operation is preceded by an actual PDP decision, not a bypass into a permit",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Both arms: an operation with no matching authority denies with zero connector side effects (and FGA never consulted, ruling out a PEP that merely rubber-stamps), and an operation WITH authority is preceded by an actual recorded PDP decision rather than executing on a bypass -- so 'a PEP that can refuse... before execution' is genuinely in the path both ways, not merely present when convenient. These two mappings pass already-validated TokenFacts straight in, so they do not themselves assert the 'after token validation' ordering; that half is covered separately by the token-validation.establish-validity-before-use and token-validation.audience-and-pop rows. Kept partial, not tested: both mappings exercise one operation, execute_wire_transfer, out of the six the RS declares in src/services/mcp-payments/src/server.ts's TOOLS array (list_invoices, get_invoice, lookup_vendor, schedule_payment, execute_wire_transfer, send_remittance_email); this claim is a Resource Server conformance claim over EVERY operation the deployment claims the profile for, and nothing here inspects that claim or enumerates the other five. Full coverage needs: an Enforcement Scope Statement artifact naming the claimed operations (evidence.ts carries only an optional scope_statement_digest slot for joining a record back to a published statement after the fact; no statement is ever published or checked against here); a test inventorying every operation the claim covers, not one representative tool; and, for each, verification of the token-validation -> PEP-decision -> effect ordering, including the refusal case producing zero effect."
   },
   {
    "id": "runtime.token-validation.establish-validity-before-use",
@@ -3604,8 +3691,28 @@
     "normative": "the PEP validates the access token for the protected resource and request before using any of its claims as decision inputs"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token signed by an untrusted key is refused outright, before any of its mission/cnf claims are used",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "mediated MCP channel (harness duty 2: no bypass) > 3b: a tampered credential (bad signature) is denied at the channel with no PEP evidence",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -3626,8 +3733,28 @@
     "normative": "a Resource Server PEP refuses a token whose audience does not name it, and verifies proof-of-possession before treating cnf as authenticated"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll)."
   },
   {
    "id": "runtime.token-validation.no-unverified-claims-and-missing-mission-refusal",
@@ -3648,8 +3775,22 @@
     "normative": "a PEP never forwards unverified token claims to the PDP for a decision, refuses before runtime evaluation when token validation fails, and likewise refuses a token lacking a mission claim on an operation requiring Mission governance unless the deployment establishes the Mission binding externally"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token missing the mission claim is refused at the channel before any PDP decision is requested, with zero evidence produced",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "mediated MCP channel (harness duty 2: no bypass) > 3b: a tampered credential (bad signature) is denied at the channel with no PEP evidence",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Both MUSTs are now fully asserted, but at the PEP/RS resource-operation boundary, not inside a PDP unit test (this row's original misfit reasoning stands: evaluate() is never invoked on either path, so there is no decision-request event to observe). runtime-refusal-backlog.test.ts's new test signs a token with no `mission` claim, drives it through the full in-memory mediated channel, and shows the call denies invalid_credential with ZERO evidence recorded -- proving evaluate() (and so the PDP) was never asked, not merely that the caller's return value says false. mcp-channel.test.ts's 3b (CI-only) shows the same for a bad-signature token. Kept partial rather than tested: the checker's endpoint-level coverage rule requires a mapping whose surface matches the row's OWN declared surface (decision-request) for `tested`, and reclassifying this row's surface to resource-operation to reach it is a separate, deliberate manifest-structure decision this slice defers rather than makes as a side effect of adding tests (see the Wave 2 PR description)."
   },
   {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
@@ -3671,7 +3812,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path in this deployment: mcp-payments/src/pep.ts calls evaluate() as a direct in-process function call (grep confirms no HTTP/RPC hop, no signed decision-request envelope, no channel-authentication check anywhere in src/services/pdp). PEP and PDP are the same component here, so there is no decision-request channel to integrity-protect or mutually authenticate, and evaluate() performs no caller-provenance check on its EvaluationRequest argument. Testing this meaningfully needs a genuinely separated PEP/PDP topology, which this reference deployment does not have."
   },
   {
    "id": "runtime.token-validation.minimize-claims-sent-should",
@@ -3749,8 +3891,34 @@
     "normative": "a PDP deny is terminal for the attempted action, and each required gate (authority, metering, action-bound approval) is independently necessary; none grants, widens, or restores another"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > an action outside the entry's approved actions is denied out_of_authority identically, whether or not a valid fresh approval is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "entry-driven action approval (@spec txn-authorization#applicability) > denies an action the matched entry gates even when deployment policy does not",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "a PDP deny is terminal for the attempted action: no execution, and no proceeding on an earlier permit once the decision changes (@spec runtime#decision) > a previously issued permit is never consulted by a later call: authority withdrawn denies afresh and the action never executes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Gate independence is asserted directly for three pairs (approval present does not rescue a missing authority match; authority and FGA passing does not rescue a stale freshness failure; authority and FGA passing does not rescue a missing required approval, the CI-only live-OpenFGA test reused from evaluate.test.ts), and each deny is additionally shown to carry no permit-shaped fields (permit_expires_at, entry_digest), so the PEP has nothing actionable to proceed on. A PEP-side test now adds: a genuinely valid, freshly obtained permit is held locally and never reached again once authority is withdrawn -- the SAME action, re-evaluated after the withdrawal, denies afresh with nothing executed, showing the PEP has no code path from an earlier decision object back into an execution. Kept partial, not tested: this shows the deny is not overridden by a PRIOR permit and that nothing executes on the deny, but not a literal retry/re-presentation semantic over time, nor an exhaustive proof that no cache exists anywhere in the codebase -- \"the PEP MUST refuse the action; a deny is terminal\" is closer to fully asserted than before, but still short of the bar for tested."
   },
   {
    "id": "runtime.decision.conditions-and-obligations-enforceable",
@@ -3772,7 +3940,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: evaluate() emits fixed, ad hoc permit fields (permit_expires_at, single_use, entry_digest, parameter_digest), not an extensible, named conditions/obligations list a consumer could recognize or fail to recognize. Whether an enforcing PEP recognizes a given permit member is entirely the PEP's own interpretation logic, which this PDP-only evaluate() has no code path to exercise. Re-evaluated for the PEP side (#594 wave 2 slice B): pep.ts's enforceInner (src/services/mcp-payments/src/pep.ts) does not implement the PEP-side half either, and in the OPPOSITE polarity from what this row requires -- it reads specific named decision.context members it expects (parameter_digest, decision_id, entry_digest, permit_expires_at) and silently ignores anything else, rather than enumerating recognized members and treating an unrecognized one as making the permit unusable. Left todo rather than tested against a gap: writing a test would either fabricate an \"unrecognized condition\" the PDP never actually emits, or assert the current silent-ignore behavior as if it satisfied the row, which it does not."
   },
   {
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
@@ -3837,7 +4006,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: terminal_when / discharge is not implemented anywhere in this codebase (grep across src/services and src/packages finds only forward-looking comments in mission-signals noting \"No kernel funnel commits an entry discharge yet\"). evaluateInner has no discharge-state input or check."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",
@@ -3895,7 +4065,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit / antecedent unreachable at the PDP: AuthorityEntry.type is a closed TypeScript literal (\"mission_resource_access\") both in policy-view.ts (the PDP's own view) and in the AS kernel's own AuthorityEntry (src/services/authorization-server/src/kernel/types.ts); the transaction-authorization admission path separately refuses any other authorization_details type at admission (src/demo/src/stack.ts's operationProfiles comment: \"an entry naming any other type is refused at admission rather than read structurally\"). No entry of another type can ever reach MissionView.authority_set, so evaluate() never sees the case this row governs; the real enforcement locus is the AS/admission layer, out of this PDP-only slice. Worth flagging separately: evaluateInner's own entry-match predicate (step 5) matches on resource+actions shape alone and never inspects entry.type, so if this whitelist ever broke upstream, the PDP itself would not catch it; that is a structural observation for a follow-up, not something a passing test can honestly assert today."
   },
   {
    "id": "runtime.decision-inputs.capability-drift-refusal",
@@ -3918,7 +4089,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: no discovered-catalog capability digest concept (extracted-definition digest, whole-source digest) exists anywhere in src/services/pdp or src/services/mcp-payments; AuthorityEntry and MissionView carry no such member."
   },
   {
    "id": "runtime.decision-inputs.resource-policy-fail-closed",
@@ -3940,7 +4112,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No independent Resource-policy conjunct exists to test: fga.checkWithContext is the Mission-authority projection itself (contextual tuples derived from the matched Authority Set entry via policy-view.ts's deriveContextualTuples, keyed mission:<id>), not a composed local authorization step separate from Mission authority. A prior mapping to evaluate-decision-inputs.test.ts's stub-FGA-denies case mislabeled that dependency-fail-closed case as the Resource-policy arm; the test has been renamed to an honest dependency-fail-closed claim and left uncited (see the file's docblock and describe title). The other candidate mapping, evaluate.test.ts's out-of-authority test, is already full tested evidence on runtime.decision-inputs.authority-entry-and-subset-required and exercises no Resource-policy input either, so remapping it here would only relabel the authority row's evidence, not add information about the conjunction: a gap of kind, not degree, so todo rather than partial. Full coverage needs an independent Resource-policy hook (a PDP-side check or a PEP-local policy step distinct from the Mission-authority/FGA check) plus a truth-table test with separately controlled Mission-authority and Resource-policy outcomes."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
@@ -3991,8 +4164,16 @@
     "normative": "a decision under delegation evaluates the authenticated act chain and refuses a missing or malformed one; client_id alone is never treated as the immediate actor when an act chain is present"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
+     "name": "Actor context: a malformed act chain entry is refused (@spec runtime#input-actor) > a context.actor.act entry missing iss (or sub) is refused as actor_invalid, never silently accepted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the malformed-chain arm only. NOT tested: the missing-chain arm (evaluateInner only validates context.actor when the PEP supplies it at all, \"if (req.context.actor)\"; whether the PEP correctly builds context.actor.act from a token's act claim whenever delegation is genuinely in effect is a token-to-context construction duty of the PEP, outside evaluate()'s pure boundary) and \"client_id alone is never treated as the immediate actor\" (this deployment's FGA subject is the Mission itself, mission:<id>, never the actor or client_id, so there is no code path where client_id could be substituted for an actor to test against)."
   },
   {
    "id": "runtime.decision-inputs.no-authority-expansion-via-actor",
@@ -4036,7 +4217,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: EvaluationRequest's context (evaluate.ts) carries no token-expiry field of any kind; evaluateInner never reads or checks one. Token expiry is the PEP's pre-PDP token-validation duty ({{token-validation}}); nothing in the decision context represents it for the PDP to re-check."
   },
   {
    "id": "runtime.decision-inputs.mission-expires-at-refusal",
@@ -4058,8 +4240,16 @@
     "normative": "a Mission state source reporting expires_at passed, or the Mission expired, refuses the action independent of the token's own exp"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
+     "name": "Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time) > a Mission state of expired refuses the action; evaluate() has no token-exp input to depend on in the first place",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the \"or reports the Mission expired\" arm: a Mission state of \"expired\" refuses via the active-state gate, trivially independent of the token's own exp since evaluate() has no token-exp input in the first place. NOT tested (no code path): the other arm, \"where a Mission state source does expose it [expires_at]\"; MissionView carries no expires_at member and evaluateInner never reads one."
   },
   {
    "id": "runtime.decision-inputs.active-state-required",
@@ -4147,7 +4337,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: EvaluationRequest's context carries no history-predicate or evidence-store-reachability input of any kind; evaluateInner never reads or checks one. History evaluation ({{input-history}}) is not implemented in this PDP."
   },
   {
    "id": "runtime.mission-binding.externally-established-must-verify",
@@ -4169,7 +4360,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: this deployment implements only the credential-carried Mission-binding mode (mcp-payments/src/pep.ts takes the Mission id from the validated token's mission claim before calling loadView); there is no externally-established mode, no binding-profile join, and no credential material evaluate() checks a supplied Mission reference against. The existing view_inconsistent check (req.context.mission.id/authority_hash vs. the already-loaded view) only compares two server-held values for the credential-carried mode; it is not \"verify that reference against the acting credential under a join a binding profile defines,\" so mapping it here would be a neighboring-clause reuse rather than a real assertion of this row's clause."
   },
   {
    "id": "runtime.state-freshness.must-define-state-source",
@@ -4816,7 +5008,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Implementation gap, not merely untested: list_invoices (mcp-payments/src/pep.ts's TOOL_ACTIONS, `needsInvoice: false`) returns every invoice across every vendor when called with no vendor_id (payments-store.ts's PaymentsStore.listInvoices falls back to `SELECT * FROM invoices` unfiltered) -- a bulk, unfiltered consequential read -- yet the PEP never builds effective params or a parameter_digest for it, because `needsInvoice: false` skips that branch in Pep.enforceInner entirely, regardless of the arguments presented. The floor this row states is not met by the current mapping; there is no binding behavior to assert."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -4838,7 +5031,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Same gap as runtime.read-binding.must-require-binding-for-material-reads: list_invoices' bulk/export-shaped read (no vendor_id -> every invoice across every vendor) is classified `needsInvoice: false` unconditionally in mcp-payments/src/pep.ts's TOOL_ACTIONS, with no per-invocation classifier at all -- the MUST NOT this row states is not honored by the current mapping, so there is nothing conformant to demonstrate."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -4860,7 +5054,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "No code path: AuthorityEntry.constraints is a closed type (max_amount, vendors, requires_action_approval only) in both policy-view.ts and the AS kernel's own AuthorityEntry, and MissionView carries no controls or cumulative-consumption member at all; evaluateInner has no metering/cumulative-consumption logic to fail closed from. The experimental metering companion (draft-mcguinness-mission-metering) that would define the bound machinery is not implemented in this codebase."
   },
   {
    "id": "runtime.metering.no-advertising-unperformed-enforcement",
@@ -5127,8 +5322,16 @@
     "normative": "runtime enforcement evidence is append-only and integrity-protected under a mechanism the enforcement scope names; an individually signed JSON record should use the evidence_envelope JWS convention rather than a record-specific signing scheme"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Reuses the same test already mapped to evidence.refusal.per-attempt-immutable-append-only (draft-mcguinness-mission-runtime-evidence.md#pre-decision-refusal): EvidenceStore.record() only ever pushes (a retried failure yields a second, distinct record whose earlier sibling's content is unchanged, a structuredClone snapshot compare rather than reference identity), and there is no public API to amend or delete a prior entry. NOT tested: 'integrity-protected... the enforcement scope MUST name the mechanism' -- EvidenceStore retains plain, unsigned objects (no hash-linking, no signing; see runtime.evidence-emission.signing-key-not-authority), so there is no integrity-protection mechanism to name or exercise, only the append-only structural half of this MUST."
   },
   {
    "id": "runtime.record-integrity.no-raw-parameters-in-record",
@@ -5195,7 +5398,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.compromise-resistant is not implemented, and its key-custody condition presupposes runtime.mediated-execution, which is also not implemented: every code path has the calling agent generate and hold the DPoP private key itself (mcp-http-transport.ts's dpopFetch(credential, dpopKeys, ...)); there is no mediating-PEP-side key-custody component to generate a key in or transfer one out of. See runtime.custody.mediated-credential-sender-constrained."
   },
   {
    "id": "runtime.compromise-resistant.action-bound-approval-condition",
@@ -5217,8 +5421,22 @@
     "normative": "under the agent-compromise-resistant claim, every high-consequence action requires an action-bound approval"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compromise-resistant.test.ts",
+     "name": "action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant) > each of the three high-consequence classes is denied action_approval_required with no approval presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compromise-resistant.test.ts",
+     "name": "action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant) > each of the three high-consequence classes permits once a valid fresh action-bound approval matching the parameters is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Tested the PDP's enforcement mechanism for exactly the three high-consequence class labels, one at a time: denied action_approval_required with no approval, permitted with a valid fresh one, for irreversible_action, external_commitment, and privileged_administration. NOT tested: whether a real deployment's requiresActionApproval predicate is in fact wired to cover every action it actually assigns to these three classes (deployment-wide policy completeness is a configuration-audit matter, outside evaluate()'s pure-function boundary)."
   },
   {
    "id": "runtime.compromise-resistant.independent-rendering-condition",
@@ -5241,7 +5459,8 @@
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.compromise-resistant is not implemented (see runtime.compromise-resistant.key-custody-condition), and there is no rendering/disclosure component for action-bound approvals in mcp-payments at all: ActionApprovalInput is opaque data the caller supplies to Pep.enforce(); no code renders a disclosure to an Approver from the bound normalized parameters, agent-composed or otherwise."
   },
   {
    "id": "runtime.compromise-resistant.active-freshness-condition",
@@ -5264,7 +5483,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Misfit for a PDP-only unit test: this MUST binds which state-source mechanism a deployment wires up (an AS/deployment architecture choice, role AS), not evaluate()'s own behavior; context.freshness is an opaque optional input evaluate() neither requires nor characterizes as \"active\" vs. \"token-lifetime\". Separately worth flagging: evaluateInner skips the freshness check entirely when context.freshness is absent (\"if (req.context.freshness)\", evaluate.ts step 3), so a PEP that simply omits it gets no staleness enforcement at all for a high-consequence action, not even a token-lifetime fallback; that is a live gap worth a follow-up, not something this row's todo status should paper over."
   },
   {
    "id": "runtime.compromise-resistant.unmet-condition-blocks-claim",
@@ -5386,7 +5606,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "runtime.trifecta-containment is not implemented: no taint-tracking or tainted-content predicate exists anywhere in mcp-payments (`grep -rln \"taint\" src/services/mcp-payments/src` is empty). send_remittance_email and execute_wire_transfer are gated by ordinary classification and action-approval only, never by content provenance, so there is no tainted/untainted distinction for this row's MUST to act on. (The sibling condition, external-communication-mediated-condition, IS tested via the egress gate in services/agent -- a different component from mcp-payments -- but that covers mediation of the channel, not the taint predicate this row states.)"
   },
   {
    "id": "runtime.trifecta-containment.external-communication-mediated-condition",
@@ -5470,7 +5691,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Depends entirely on runtime.agent-isolated-evidence-emission, which is unimplemented (no evidence-signing key exists at all; see runtime.evidence-emission.signing-key-not-authority): the bypass-attempt table (key export, caller-supplied record, misdirected signature, cross-emitter key use, signer-unavailability fallback) has no signing path in this codebase to attack or demonstrate refusing."
   },
   {
    "id": "runtime.decision-api-binding.custom-binding-must-be-specified",
@@ -5535,8 +5757,16 @@
     "normative": "a permit's resource, audience, tenant, and operation bindings are never relaxed to let it be presented across a boundary it was not issued for"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
+     "name": "a decision bound to one resource is never honored at another (@spec runtime#security-considerations, Confused Deputy Across Resources) > an authority entry scoped to a different resource is never matched at this resource's boundary, and FGA is never consulted for it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax."
   },
   {
    "id": "runtime.idempotency.retransmission-returns-prior-decision",
