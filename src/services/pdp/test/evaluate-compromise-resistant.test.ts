@@ -47,6 +47,10 @@ const reqFor = (actionClass: string, approval?: ActionApproval): EvaluationReque
     mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
     action_class: actionClass,
     parameter_digest: "sha-256:pd",
+    // Fresh state so a high-consequence class clears step 3 and this test
+    // keeps exercising the gate it names (step 8's action-bound approval),
+    // never the freshness gate (@spec runtime#state-freshness).
+    freshness: { observed_at: NOW.toISOString(), source: "status" },
     ...(approval ? { action_approval: approval } : {}),
   },
 });
@@ -63,6 +67,7 @@ const optsFor = (actionClass: string) => ({
   requiresActionApproval: (_action: string, ac: string | undefined) => ac === actionClass,
   maxApprovalAgeSeconds: 300,
   relationForAction,
+  allowedFreshnessSources: new Set(["status"]),
 });
 
 describe("action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant)", () => {

@@ -65,6 +65,11 @@ let payments: PaymentsStore;
 let evidence: EvidenceStore;
 let server: McpPaymentsServer;
 
+/** @spec runtime#state-freshness: a synchronous live read, freshness-
+ *  stamped at this read (Finding 1); "load_view" declared trusted below. */
+const loadViewFor = (v: MissionView) => (id: string) =>
+  id === v.id ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined;
+
 d("M4 core enforcement tier", () => {
   beforeAll(async () => {
     const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
@@ -92,14 +97,15 @@ d("M4 core enforcement tier", () => {
       evidence,
       fga,
       modelId,
-      loadView: (id) => (id === VIEW.id ? VIEW : undefined),
+      loadView: loadViewFor(VIEW),
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf(card),
+      allowedFreshnessSources: new Set(["load_view"]),
     });
     server = new McpPaymentsServer({
       pep,
       payments,
-      loadView: (id) => (id === VIEW.id ? VIEW : undefined),
+      loadView: loadViewFor(VIEW),
       jwks: { keys: [] },
       issuer: ISSUER,
       serverCard: card,
@@ -237,14 +243,15 @@ d("M4 core enforcement tier", () => {
       evidence,
       fga,
       modelId,
-      loadView: (id) => (id === containedView.id ? containedView : undefined),
+      loadView: loadViewFor(containedView),
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf(card),
+      allowedFreshnessSources: new Set(["load_view"]),
     });
     const containedServer = new McpPaymentsServer({
       pep,
       payments,
-      loadView: (id) => (id === containedView.id ? containedView : undefined),
+      loadView: loadViewFor(containedView),
       jwks: { keys: [] },
       issuer: ISSUER,
       serverCard: card,

@@ -28,6 +28,7 @@ import {
   createHttpMediatedClient,
   type DpopKeys,
   EvidenceStore,
+  type LoadedView,
   McpPaymentsServer,
   type MediatedToolResult,
   PaymentsStore,
@@ -359,6 +360,9 @@ export async function composeStack(opts: {
   const revokedInstances = new Set<string>();
 
   // The PDP's view of a mission (in a real deployment fetched from AS/Status).
+  // Exposed on ComposedStack for inspection (agent-run.ts's kill-switch poll);
+  // callers that need a PDP decision use `loadView` below instead, which pairs
+  // this with the freshness of the read.
   const viewFor = (missionId: string): MissionView | undefined => {
     const r = kernel.get(missionId);
     if (!r) return undefined;
@@ -384,13 +388,32 @@ export async function composeStack(opts: {
     };
   };
 
+  // @spec runtime#state-freshness: this deployment's trusted state sources
+  // (its Enforcement Scope Statement would publish this list formally; none
+  // exists yet, so it is declared here instead). The demo stack has exactly
+  // one: `loadView`'s own synchronous live read of the kernel via `viewFor`,
+  // named after the `loadView` dependency it fulfills. A deployment adding
+  // Mission Status or Lifecycle Signals would list those sources here too.
+  const ALLOWED_FRESHNESS_SOURCES = new Set(["load_view"]);
+
+  // The PDP's dependency-injected loader (@spec runtime#state-freshness):
+  // pairs `viewFor`'s live read with the freshness of THIS read. `viewFor` is
+  // synchronous with no caching layer, so this call's own wall-clock time is
+  // the honest `observed_at` -- the loader asserts it, and the PEP only ever
+  // propagates what it asserts, never re-stamping its own clock (Finding 1).
+  const loadView = (missionId: string): LoadedView | undefined => {
+    const view = viewFor(missionId);
+    if (!view) return undefined;
+    return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
+  };
+
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
     evidence,
     fga,
     modelId,
-    loadView: viewFor,
+    loadView,
     instanceEpoch: "demo-epoch",
     sourceDigest: sourceDigestOf({ name: "payments" }),
     revokedInstances,
@@ -402,6 +425,7 @@ export async function composeStack(opts: {
     // approval and issues a txn-token. The approval is never an agent input.
     requiresActionApproval: (action) => action === "payments:remittance.send",
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
+    allowedFreshnessSources: ALLOWED_FRESHNESS_SOURCES,
     ...(challengeSigner ? { challengeSigner } : {}),
   });
 
@@ -409,7 +433,7 @@ export async function composeStack(opts: {
   const server = new McpPaymentsServer({
     pep,
     payments,
-    loadView: viewFor,
+    loadView,
     jwks: serverJwks,
     issuer,
     serverCard: { name: "payments" },

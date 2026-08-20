@@ -34,6 +34,7 @@ export {
 export {
   Pep,
   type PepDeps,
+  type LoadedView,
   type RequestSignals,
   type TokenFacts,
   type TxnCredential,

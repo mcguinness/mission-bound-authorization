@@ -13,7 +13,33 @@ import { AUTHORITY_ENTRY_TYP, compareAmounts, computeAnchor, isValidAmount } fro
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
-import { type AuthorityEntry, deriveContextualTuples, type MissionView, policyViewId } from "./policy-view.js";
+import {
+  type AuthorityEntry,
+  deriveContextualTuples,
+  MISSION_RESOURCE_ACCESS_TYPE,
+  type MissionView,
+  policyViewId,
+} from "./policy-view.js";
+
+/**
+ * @spec runtime#classification — the high-consequence classes (a closed
+ * set the draft defines by predicate: irreversible, external-commitment,
+ * privileged-administration). @spec runtime#state-freshness — these are
+ * the classes for which "the state source MUST be an active freshness
+ * mechanism", never token-lifetime expiry alone; below this floor, token
+ * expiry is itself a conforming state source, so absence of
+ * `context.freshness` is not by itself a fail-closed signal there.
+ */
+const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
+
+/**
+ * @spec runtime#state-freshness: the default allowed future skew for
+ * `observed_at`, seconds. Small enough to absorb ordinary clock drift
+ * between a state source and the PDP without meaningfully widening even the
+ * tightest published staleness bound (30s for irreversible_action);
+ * configurable per deployment via `EvaluateOptions.freshnessSkewToleranceSeconds`.
+ */
+const DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS = 5;
 
 /** @spec authzen#context-approval */
 export interface ActionApproval {
@@ -23,6 +49,21 @@ export interface ActionApproval {
   approved_until?: string;
   parameter_digest: string;
   state?: string;
+}
+
+/**
+ * @spec runtime#state-freshness: a Mission state observation, asserted by
+ * whichever state source produced it (a status call, introspection, a
+ * Lifecycle Signal, or a loader's own live read). `observed_at` MUST be the
+ * time the source actually read authoritative state, never the time a later
+ * consumer happened to use the observation; that is what keeps a cached or
+ * relayed observation honestly stale instead of relabeled fresh at
+ * consumption (Finding 1). `source` names the mechanism, checked against the
+ * deployment's configured set (below).
+ */
+export interface Freshness {
+  observed_at: string;
+  source: string;
 }
 
 export interface EvaluationRequest {
@@ -42,7 +83,7 @@ export interface EvaluationRequest {
     audience: string; // matched against the approved entry's resource
     mission: { id: string; authority_hash: string; policy_view_id?: string };
     actor?: ContextActor;
-    freshness?: { observed_at: string; source: string };
+    freshness?: Freshness;
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
@@ -58,7 +99,8 @@ export type DenialReason =
   | "mission_inactive"
   | "actor_invalid"
   | "constraint_exceeded"
-  | "action_approval_required";
+  | "action_approval_required"
+  | "unsupported_authorization_type";
 
 export interface Decision {
   decision: boolean;
@@ -80,6 +122,22 @@ export interface EvaluateOptions {
   maxApprovalAgeSeconds?: number;
   /** For requestable denials: sign the PDP denial binding + the ARS endpoint. */
   requestable?: { sign: CryptoKey; kid: string; endpoint: string };
+  /**
+   * @spec runtime#state-freshness: "A runtime deployment MUST define the
+   * Mission state source it trusts for each enforcement scope." A presented
+   * `context.freshness.source` outside this set is untrusted, denied the
+   * same way as a stale or malformed observation. Omitting this option
+   * denies every presented freshness: absent a declared set, no source is
+   * trusted, never the reverse (fail closed on missing config, not open).
+   */
+  allowedFreshnessSources?: ReadonlySet<string>;
+  /**
+   * @spec runtime#state-freshness: allowed future clock skew for
+   * `observed_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
+   * Beyond this, a future-dated observation denies rather than passing
+   * through on the negative age it produces.
+   */
+  freshnessSkewToleranceSeconds?: number;
 }
 
 let decisionCounter = 0;
@@ -144,9 +202,38 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   if (view.state !== "active") return deny("mission_inactive");
 
   // 3. Freshness against the staleness bound (@spec: stale_state).
+  // @spec runtime#state-freshness: "The PDP MUST refuse a consequential
+  // action when it cannot establish, within the deployment's published
+  // staleness bound, that the Mission is `active`." An absent
+  // `context.freshness` on a high-consequence action class means Mission
+  // state cannot be established at all, which is not weaker than state
+  // established-but-stale: it MUST fail closed the same way, never pass
+  // through as if no staleness bound applied. Below the high-consequence
+  // floor the draft treats token-lifetime expiry as itself a conforming
+  // state source, so an absent member there is not by itself a refusal.
   if (req.context.freshness) {
-    const ageMs = now().getTime() - Date.parse(req.context.freshness.observed_at);
-    if (ageMs > opts.stalenessBoundSeconds(actionClass) * 1000) return deny("stale_state");
+    const observedAtMs = Date.parse(req.context.freshness.observed_at);
+    const ageMs = now().getTime() - observedAtMs;
+    const skewToleranceMs =
+      (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
+    const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
+    // A malformed timestamp (non-finite), one dated far enough in the future
+    // to be fabricated rather than ordinary clock drift, or a source outside
+    // the deployment's declared set: none of these let the PDP actually
+    // establish Mission state from this observation, so each denies the same
+    // way as present-but-stale (@spec runtime#state-freshness, "cannot
+    // establish ... within the staleness bound"), never permits on an
+    // unverifiable input.
+    if (
+      !Number.isFinite(observedAtMs) ||
+      ageMs < -skewToleranceMs ||
+      ageMs > opts.stalenessBoundSeconds(actionClass) * 1000 ||
+      !sourceTrusted
+    ) {
+      return deny("stale_state");
+    }
+  } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
+    return deny("stale_state");
   }
 
   // 4. Actor chain shape/consistency (@spec: actor_invalid).
@@ -160,10 +247,44 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
 
   // 5. Authority entry match: the approved entry's resource is matched
   //    against context.audience (NOT the AuthZEN resource member).
+  // @spec runtime#input-authority — "For any other `authorization_details`
+  // type, the PDP MUST evaluate the action under that type's documented
+  // runtime semantics and MUST refuse if it does not understand or cannot
+  // enforce those semantics." The PDP understands exactly one type, so
+  // recognition is a whitelist: an entry whose `type` is not
+  // MISSION_RESOURCE_ACCESS_TYPE never matches by resource/actions alone,
+  // even if the AS admission layer's type closure ever broke upstream (a
+  // new entry type admitted, a deserialization change). It falls through
+  // fail-closed by construction, never by an explicit blocklist entry
+  // that could omit a case.
   const entry: AuthorityEntry | undefined = view.authority_set.find(
-    (e) => e.resource === req.context.audience && e.actions.includes(req.action.name),
+    (e) =>
+      e.type === MISSION_RESOURCE_ACCESS_TYPE &&
+      e.resource === req.context.audience &&
+      e.actions.includes(req.action.name),
   );
-  if (!entry) return deny("out_of_authority");
+  if (!entry) {
+    // @spec authzen#failure-condition-coverage: the mapping table keeps
+    // `out_of_authority` ("Action outside the Authority Set") and
+    // `unsupported_authorization_type` ("Unsupported authorization_details
+    // type") as two different failure kinds, not two degrees of the same
+    // one: the first means the PDP understood the entry and it was
+    // insufficient; the second means the PDP could not evaluate the
+    // entry's semantics at all. An entry that matches this request's
+    // resource/actions under a type other than MISSION_RESOURCE_ACCESS_TYPE
+    // is exactly the second case. This arm is reached only when no
+    // RECOGNIZED-type entry matched above, so skip-not-shortcircuit is
+    // unaffected: a mixed authority_set with a valid recognized entry
+    // elsewhere for the same resource/actions still permits there.
+    const unrecognizedTypeMatch = view.authority_set.some(
+      (e) =>
+        e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
+        e.resource === req.context.audience &&
+        e.actions.includes(req.action.name),
+    );
+    if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
+    return deny("out_of_authority");
+  }
 
   // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
   //     containment delta covers this (resource, action) pair, so the issuer

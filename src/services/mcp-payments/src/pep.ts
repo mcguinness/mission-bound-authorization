@@ -18,6 +18,7 @@ import {
   evaluate,
   type EvaluationRequest,
   type Fga,
+  type Freshness,
   type MissionView,
   relationForAction,
   stalenessBoundSeconds,
@@ -182,19 +183,46 @@ function deriveVendorScope(
  */
 const RECOGNIZED_CONDITIONS = new Set(["parameter_digest", "valid_until", "use_limit"]);
 
+/**
+ * @spec runtime#state-freshness: a loaded MissionView paired with the
+ * authenticated freshness of the read that produced it. `freshness.observed_at`
+ * MUST be the time the loader itself read authoritative state, not the time
+ * of the `loadView` call that returns it; the two coincide for a synchronous
+ * live read (the current production loader) and diverge the moment a cache
+ * sits in front of one, in which case the cached observation time travels
+ * with the data. The PEP propagates this verbatim; it never stamps its own
+ * clock over it (Finding 1).
+ */
+export interface LoadedView {
+  view: MissionView;
+  freshness: Freshness;
+}
+
 export interface PepDeps {
   payments: PaymentsStore;
   evidence: EvidenceStore;
   fga: Fga;
   modelId: string;
-  /** The PDP's view of a mission (in a real deployment fetched from AS/Status). */
-  loadView: (missionId: string) => MissionView | undefined;
+  /**
+   * The PDP's view of a mission plus the state source's own freshness
+   * assertion (in a real deployment fetched from AS/Status). The loader
+   * asserts `freshness`; the PEP only propagates it (@spec
+   * runtime#state-freshness).
+   */
+  loadView: (missionId: string) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
   sourceDigest: string;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
+  /**
+   * @spec runtime#state-freshness: "A runtime deployment MUST define the
+   * Mission state source it trusts for each enforcement scope." The
+   * mechanisms this deployment trusts as `context.freshness.source`; forwarded
+   * to the PDP's `allowedFreshnessSources` unchanged.
+   */
+  allowedFreshnessSources?: ReadonlySet<string>;
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
@@ -380,8 +408,9 @@ export class Pep {
     const mapping = this.toolAction(tool);
     if (!mapping) return this.refuse(token, "unknown_tool", tool);
 
-    const view = this.deps.loadView(token.mission.id);
-    if (!view) return this.refuse(token, "unknown_mission", mapping.action);
+    const loaded = this.deps.loadView(token.mission.id);
+    if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
+    const { view, freshness } = loaded;
 
     // @spec attenuation#mission-binding-check: when the credential is an
     // Attenuating Agent Token chain, the effective authority is the leaf's
@@ -494,6 +523,16 @@ export class Pep {
       context: {
         audience: CANONICAL_RESOURCE,
         mission: { id: view.id, authority_hash: token.mission.authority_hash },
+        // @spec runtime#state-freshness: `freshness` is the loader's OWN
+        // assertion of when it read authoritative state, propagated exactly
+        // as `loadView` returned it. The PEP never stamps its own clock here
+        // (Finding 1): doing so would relabel a cached or relayed
+        // observation as fresh at the moment it happened to be consumed,
+        // rather than at the moment it was actually read. Supplying it keeps
+        // a high-consequence action class (irreversible_action,
+        // external_commitment) from being denied `stale_state` merely for
+        // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
+        freshness,
         actor: buildContextActor({
           ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
           ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
@@ -523,6 +562,7 @@ export class Pep {
       ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
+      ...(this.deps.allowedFreshnessSources ? { allowedFreshnessSources: this.deps.allowedFreshnessSources } : {}),
     });
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
@@ -720,8 +760,8 @@ export class Pep {
    * `"requested"`), so no separate input needs to be threaded through.
    */
   reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
-    const view = this.deps.loadView(token.mission.id);
-    const entry = view?.authority_set.find(
+    const loaded = this.deps.loadView(token.mission.id);
+    const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
     );
     const requestedVendorId =

@@ -117,8 +117,22 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
-  const loadView = (id: string) => (id === VIEW.id ? VIEW : undefined);
-  const pep = new Pep({ payments, evidence, fga, modelId, loadView, instanceEpoch: "epoch-1", sourceDigest: sourceDigestOf(card) });
+  // @spec runtime#state-freshness: a synchronous live read, freshness-
+  // stamped at this read (Finding 1); "load_view" declared trusted below.
+  const loadView = (id: string) =>
+    id === VIEW.id
+      ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      : undefined;
+  const pep = new Pep({
+    payments,
+    evidence,
+    fga,
+    modelId,
+    loadView,
+    instanceEpoch: "epoch-1",
+    sourceDigest: sourceDigestOf(card),
+    allowedFreshnessSources: new Set(["load_view"]),
+  });
   const server = new McpPaymentsServer({
     pep,
     payments,
