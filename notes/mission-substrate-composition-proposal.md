@@ -1215,6 +1215,14 @@ Four specifications or components publish provider claims:
 | Payment policy adapter | Structured Authority; Authority Provenance | Payment API actions and constraints under payment-policy-v3 |
 | Payment gateway PEP/PDP | Authorized Context Correlation; Action-Time Enforcement; Evidence Continuity | `schedule_payment` and `release_payment` routes |
 
+With the #554 Statement migration, the first two providers' rows are
+the AAuth binding's own published Statement: Lifecycle-Gated
+Authorization from the base Statement, and State-Observable under its
+Mission Management activation condition. The payment-policy adapter
+and the gateway's correlation join remain deployment-local provider
+claims; nothing in this composition implies every provider claim
+becomes binding-owned.
+
 The Action-Enforced consumer profile requires current state, target-applicable
 authority, an authorized join, an effect-boundary decision, and decision evidence.
 The deployment declaration names all four providers and the payment routes:

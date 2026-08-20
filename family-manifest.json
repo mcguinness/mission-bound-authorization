@@ -108,6 +108,7 @@
    "is_published_core": false,
    "deps": [
     "draft-mcguinness-aauth-mission-expiry",
+    "draft-mcguinness-mission-aauth-management",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission-transaction-authorization"
    ]
