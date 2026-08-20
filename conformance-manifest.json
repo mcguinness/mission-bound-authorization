@@ -3655,7 +3655,7 @@
     "normative": "a Resource Server that only validates the access token, with no PEP able to refuse before execution, does not claim this runtime profile for that operation"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/runtime-refusal-backlog.test.ts",
@@ -3670,7 +3670,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Both arms: an operation with no matching authority denies with zero connector side effects (and FGA never consulted, ruling out a PEP that merely rubber-stamps), and an operation WITH authority is preceded by an actual recorded PDP decision rather than executing on a bypass -- so 'a PEP that can refuse... before execution' is genuinely in the path both ways, not merely present when convenient. These two mappings pass already-validated TokenFacts straight in, so they do not themselves assert the 'after token validation' ordering; that half is covered separately by the token-validation.establish-validity-before-use and token-validation.audience-and-pop rows."
+   "notes": "Both arms: an operation with no matching authority denies with zero connector side effects (and FGA never consulted, ruling out a PEP that merely rubber-stamps), and an operation WITH authority is preceded by an actual recorded PDP decision rather than executing on a bypass -- so 'a PEP that can refuse... before execution' is genuinely in the path both ways, not merely present when convenient. These two mappings pass already-validated TokenFacts straight in, so they do not themselves assert the 'after token validation' ordering; that half is covered separately by the token-validation.establish-validity-before-use and token-validation.audience-and-pop rows. Kept partial, not tested: both mappings exercise one operation, execute_wire_transfer, out of the six the RS declares in src/services/mcp-payments/src/server.ts's TOOLS array (list_invoices, get_invoice, lookup_vendor, schedule_payment, execute_wire_transfer, send_remittance_email); this claim is a Resource Server conformance claim over EVERY operation the deployment claims the profile for, and nothing here inspects that claim or enumerates the other five. Full coverage needs: an Enforcement Scope Statement artifact naming the claimed operations (evidence.ts carries only an optional scope_statement_digest slot for joining a record back to a published statement after the fact; no statement is ever published or checked against here); a test inventorying every operation the claim covers, not one representative tool; and, for each, verification of the token-validation -> PEP-decision -> effect ordering, including the refusal case producing zero effect."
   },
   {
    "id": "runtime.token-validation.establish-validity-before-use",
