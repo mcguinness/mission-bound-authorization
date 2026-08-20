@@ -81,10 +81,13 @@ export interface ValidatedContinuation {
   jti: string;
 }
 
-/** (iss, jti) replay cache; reuse `newReplayCache()` from instance-assertion.ts. */
+/**
+ * (iss, jti) replay cache; reuse `newReplayCache()` from instance-assertion.ts.
+ * The validator only ever CHECKS (`seen`): recording is the redeeming caller's
+ * duty, atomic with issuance (#617 review 1).
+ */
 interface ReplayCache {
   seen: (iss: string, jti: string) => boolean;
-  record: (iss: string, jti: string) => void;
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -213,12 +216,20 @@ export async function validateContinuationAssertion(
     }
   }
 
-  // 9. Single-use jti (per iss); record on success.
+  // 9. Single-use jti (per iss): CHECK ONLY.
+  //
+  // @spec issuance-grant#effective-set-projection (#617 review 1) —
+  // "consumption is atomic with issuance". Validation checks the `jti` is
+  // unseen; RECORDING belongs to the caller, atomically with successful
+  // issuance ({@link ReplayCache.recordOnce}, continuation-grant.ts step 11).
+  // Recording here (the prior behavior) consumed a single-use assertion on
+  // EVERY later failure, including a transient authority-source outage and a
+  // Mission gate refusal that a retry would pass, permanently burning a
+  // credential whose authorization was intact.
   const jti = payload.jti;
   if (typeof jti !== "string" || ctx.replay.seen(issuer.iss, jti)) {
     throw new ContinuationAssertionError("invalid_grant", "assertion replay or missing jti");
   }
-  ctx.replay.record(issuer.iss, jti);
 
   return {
     iss: issuer.iss,

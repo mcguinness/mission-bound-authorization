@@ -38,7 +38,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
-import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -300,8 +300,29 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
   });
 }
 
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the injected
+ * authority source's outage switch. Set to a message to make every Effective
+ * Authority Set resolution raise the TRANSIENT class; undefined delegates to
+ * the kernel (byte-identical to the un-injected default, which is what every
+ * other test in this file exercises).
+ */
+let sourceOutage: string | undefined;
+
+const RETRY_AFTER_SECONDS = 7;
+
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    authoritySource: {
+      effectiveAuthoritySet: (record) => {
+        if (sourceOutage !== undefined) throw new SourceUnavailableError(sourceOutage);
+        return as.kernel.effectiveAuthoritySet(record);
+      },
+    },
+    stateRecoveryRetryAfter: RETRY_AFTER_SECONDS,
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   childClientKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
@@ -601,6 +622,104 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(JSON.stringify(decodeJwt(body.access_token as string).authorization_details)).toBe(
       JSON.stringify(decodeJwt(first.access_token).authorization_details),
     );
+  });
+});
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+ * TRANSIENT authority-source class. An unavailable, unverifiable, or
+ * rolled-back source says nothing about the credential's authority, so the
+ * refusal is `temporarily_unavailable` with HTTP 503 (machine-readable, not an
+ * `error_description` to parse) and it consumes NOTHING: the presented
+ * credential is retryable exactly as held.
+ */
+describe("transient authority-source failure (@spec issuance-grant#effective-set-projection)", () => {
+  it("on refresh: refuses temporarily_unavailable (503 + Retry-After) and consumes neither the presented refresh token nor its rotation; the SAME token then succeeds", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    expect(typeof first.refresh_token).toBe("string");
+
+    sourceOutage = "mission status source unreachable";
+    let res: Response;
+    try {
+      res = await refreshFamily(first.refresh_token);
+    } finally {
+      sourceOutage = undefined;
+    }
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(503);
+    expect(body.error).toBe("temporarily_unavailable");
+    // NOT server_error: OIDCProviderError computes expose = status < 500, and
+    // err_out.js replaces a non-exposed error with a generic server_error body.
+    expect(body.error_description).toMatch(/unreachable/);
+    expect(res.headers.get("retry-after")).toBe(String(RETRY_AFTER_SECONDS));
+
+    // The refusal landed in rotateRefreshToken, BEFORE refreshToken.consume()
+    // and before the rotated token was saved, so the client's own credential is
+    // untouched: the SAME refresh token still redeems once the source recovers.
+    // (A refusal thrown from the rar hook or extraTokenClaims instead would have
+    // consumed it, and this retry would fail "refresh token already used".)
+    const retry = await refreshFamily(first.refresh_token);
+    const retryBody = (await retry.json()) as {
+      access_token?: string;
+      refresh_token?: string;
+      authorization_details?: unknown;
+      error?: string;
+    };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    expect(retryBody.authorization_details).toEqual(as.kernel.get(missionId)?.authority_set);
+    expect(typeof retryBody.refresh_token).toBe("string");
+    expect(retryBody.refresh_token).not.toBe(first.refresh_token); // rotation happened NOW, not then
+  });
+
+  it("at the initial exchange: refuses 503 before the idempotency reservation, so the SAME creation_request_id still redeems", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const creationRequestId = crypto.randomUUID();
+
+    sourceOutage = "mission status source returned a rolled-back state version";
+    let res: Response;
+    try {
+      res = await asyncDelegate(baseAccessToken, { creationRequestId });
+    } finally {
+      sourceOutage = undefined;
+    }
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(503);
+    expect(body.error).toBe("temporarily_unavailable");
+    expect(body.error_description).toMatch(/rolled-back/);
+    expect(res.headers.get("retry-after")).toBe(String(RETRY_AFTER_SECONDS));
+
+    // Nothing was consumed: no reservation, no family, no derivation count, so
+    // the retry is a FIRST presentation of that creation_request_id, not a
+    // recovery of a failed one (which would replay the stored refusal).
+    const retry = await asyncDelegate(baseAccessToken, { creationRequestId });
+    const retryBody = (await retry.json()) as { refresh_token?: string; error?: string };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    expect(typeof retryBody.refresh_token).toBe("string");
+  });
+
+  it("the permanent class is unaffected: a fully narrowed family still refuses invalid_grant with 400, never 503", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+    };
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "ce-transient-contrast",
+      },
+      remove: [{ resource: RESOURCE }],
+    });
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(res.headers.get("retry-after")).toBeNull();
   });
 });
 

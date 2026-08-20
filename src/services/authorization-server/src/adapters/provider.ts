@@ -98,7 +98,13 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
-import { isSubsetSet, projectRarThroughMission, projectThroughEffective } from "../kernel/derive.js";
+import {
+  type EffectiveAuthoritySource,
+  isSubsetSet,
+  projectRarThroughMission,
+  projectThroughEffective,
+  SourceUnavailableError,
+} from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
@@ -281,6 +287,24 @@ export interface AdapterOptions {
    * access token silently introspecting bare `active: false`.
    */
   tokenIssuanceStore?: TokenIssuanceStore;
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+   * Effective Authority Set resolution seam ({@link EffectiveAuthoritySource}).
+   * Defaults to the local kernel, which IS the authoritative record here. A
+   * consuming AS whose source is remote (a MAS Mission Status client) injects
+   * it and raises {@link SourceUnavailableError} for the TRANSIENT class
+   * (unreachable, unverifiable, rolled-back state `version`), which the token
+   * endpoint refuses `temporarily_unavailable` with HTTP 503 instead of
+   * `invalid_grant`, consuming neither the presented grant nor the refresh
+   * token.
+   */
+  authoritySource?: EffectiveAuthoritySource;
+  /**
+   * @spec issuance-grant#effective-set-projection — the `Retry-After` value
+   * (seconds) stamped on a `temporarily_unavailable` refusal: the deployment's
+   * declared state-recovery policy. Defaults to 5.
+   */
+  stateRecoveryRetryAfter?: number;
 }
 
 /**
@@ -307,6 +331,30 @@ interface KoaCtx {
   res: ServerResponse;
   set: (name: string, value: string) => void;
   get: (name: string) => string;
+}
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+ * token-endpoint refusal for the TRANSIENT authority-source class: the OAuth
+ * `temporarily_unavailable` error code with HTTP status 503, which a client
+ * reads as "retry this same credential" WITHOUT parsing `error_description`.
+ *
+ * Two oidc-provider mechanics are pinned here. Its own
+ * `errors.TemporarilyUnavailable` is a 400 (the E() factory pins 400 for every
+ * generated code), so the status is set explicitly; and
+ * `OIDCProviderError` computes `expose = status < 500`, while
+ * lib/helpers/err_out.js replaces every non-exposed error with a generic
+ * `server_error` body, so `expose` is re-asserted or the 503 would render as
+ * `server_error`. `Retry-After` cannot ride the error object (the error
+ * handler renders a body, never headers); the middleware in buildProvider
+ * stamps it.
+ */
+export function sourceUnavailableError(description: string): errors.OIDCProviderError {
+  const err = new errors.TemporarilyUnavailable(description);
+  err.status = 503;
+  err.statusCode = 503;
+  err.expose = true;
+  return err;
 }
 
 export function buildProvider(opts: AdapterOptions): Provider {
@@ -344,7 +392,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // reached late, or any refresh) MUST fail closed rather than echo an empty
   // authorization_details with a 200 (@spec containment#derivation-gating,
   // issuance-grant#effective-set-projection).
-  const rarThroughContainment = (grant?: { jti?: string; rar?: unknown }): unknown => {
+  // @spec issuance-grant#effective-set-projection (#617 review 1) — the
+  // authority source: the local kernel unless a deployment injects a remote
+  // one. Resolution is NOT memoized per request: a remote source owns its own
+  // cache and published staleness bound, so two resolutions in one token
+  // response are that source's concern, not this adapter's.
+  const authoritySource: EffectiveAuthoritySource = opts.authoritySource ?? kernel;
+  const rarThroughEffectiveSet = (grant?: { jti?: string; rar?: unknown }): unknown => {
     const rar = grant?.rar;
     if (!Array.isArray(rar) || !grant?.jti) return rar;
     let record = kernel.findByGrant(grant.jti);
@@ -353,11 +407,54 @@ export function buildProvider(opts: AdapterOptions): Provider {
       record = fam ? kernel.get(fam.missionId) : undefined;
     }
     if (!record) return rar; // no Mission: no narrowing mechanism applies
-    const { projected, collapsed } = projectRarThroughMission(kernel, record, rar as AuthorityEntry[]);
+    const { projected, collapsed } = projectMissionRar(record, rar as AuthorityEntry[]);
     if (collapsed) {
       throw new errors.InvalidGrant("mission-bound credential authority is fully contained");
     }
     return projected;
+  };
+
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 1) — project
+   * through the source, mapping the TRANSIENT class to
+   * `temporarily_unavailable` (HTTP 503) rather than letting it read as a
+   * collapse. A source outage says nothing about the credential's authority.
+   */
+  function projectMissionRar(
+    record: MissionRecord,
+    rar: AuthorityEntry[],
+  ): { projected: AuthorityEntry[]; collapsed: boolean } {
+    try {
+      return projectRarThroughMission(authoritySource, record, rar);
+    } catch (e) {
+      if (e instanceof SourceUnavailableError) throw sourceUnavailableError(e.message);
+      throw e;
+    }
+  }
+
+  /**
+   * @spec issuance-grant#effective-set-projection (#617 review 1) — resolve
+   * the authority source for a grant BEFORE oidc-provider consumes anything,
+   * so a transient outage refuses without spending the presented credential.
+   * The resolved set is deliberately discarded: this is the availability
+   * resolution, and the value is re-resolved at projection time (the source
+   * owns its own staleness bound). A grant that resolves to no Mission has no
+   * source to consult.
+   */
+  const probeAuthoritySource = (grantId?: string): void => {
+    if (!grantId) return;
+    let record = kernel.findByGrant(grantId);
+    if (!record) {
+      const fam = opts.familyStore?.resolve(grantId);
+      record = fam ? kernel.get(fam.missionId) : undefined;
+    }
+    if (!record) return;
+    try {
+      authoritySource.effectiveAuthoritySet(record);
+    } catch (e) {
+      if (e instanceof SourceUnavailableError) throw sourceUnavailableError(e.message);
+      throw e;
+    }
   };
 
   const configuration: Configuration = {
@@ -401,9 +498,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
         rarForAuthorizationCode: (ctx: { oidc: { grant?: { rar?: unknown } } }) =>
           ctx.oidc.grant?.rar as never,
         rarForCodeResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
-          rarThroughContainment(ctx.oidc.grant) as never,
+          rarThroughEffectiveSet(ctx.oidc.grant) as never,
         rarForRefreshTokenResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
-          rarThroughContainment(ctx.oidc.grant) as never,
+          rarThroughEffectiveSet(ctx.oidc.grant) as never,
         types: {
           mission_resource_access: {
             // @spec mission#authority-proposal — a client MAY submit entries of
@@ -596,6 +693,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
           ttlPercentagePassed(): number;
         };
       }).RefreshToken;
+      // @spec issuance-grant#effective-set-projection (#617 review 1) — the
+      // PRE-CONSUMPTION authority-source resolution, and the ONLY seam where a
+      // transient failure can refuse a refresh without spending the presented
+      // credential. oidc-provider's refresh_token grant awaits this hook
+      // (lib/actions/grants/refresh_token.js 9.10.0 L133-135) BEFORE
+      // refreshToken.consume() (L137) and long before the rar hook (L212) and
+      // at.save() -> extraTokenClaims (L216); a throw from either of those
+      // lands after the presented token is already consumed and a rotated one
+      // saved, which is exactly the "MUST NOT consume or rotate the presented
+      // refresh token" the profile forbids. Resolving here makes the 503 land
+      // at L135 instead, leaving the client's refresh token usable for a retry.
+      probeAuthoritySource(rt?.grantId);
       if (rt?.grantId && opts.familyStore?.resolve(rt.grantId)) return true;
       // Default: lib/helpers/defaults.js rotateRefreshToken (oidc-provider 9.10.0,
       // L528-546) — cap rotation at 1 year, rotate non-sender-constrained public
@@ -746,6 +855,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
       "deferral_code",
     ]),
   );
+
+  // @spec issuance-grant#effective-set-projection (#617 review 1) — stamp
+  // `Retry-After` on the transient refusal. oidc-provider's error handler
+  // renders a body from the error object and never reads headers off it, so
+  // the header is applied here: Provider#use splices each middleware BEFORE
+  // the internal route dispatcher, so this wrapper observes the rendered
+  // response body of every route, custom grant included. An explicit
+  // Retry-After set by a handler wins.
+  provider.use(async (ctx, next) => {
+    await next();
+    const body = ctx.body as { error?: unknown } | undefined;
+    if (body?.error === "temporarily_unavailable" && !ctx.response.get("Retry-After")) {
+      ctx.set("Retry-After", String(opts.stateRecoveryRetryAfter ?? 5));
+    }
+  });
 
   provider.use(makeRoutes(provider, opts));
   return provider;

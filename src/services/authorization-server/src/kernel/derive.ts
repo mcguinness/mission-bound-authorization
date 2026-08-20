@@ -419,11 +419,41 @@ export function projectThroughEffective(
 }
 
 /**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — the
+ * Mission-state / Effective Authority Set RESOLUTION SEAM. The projection's
+ * input is "the Mission's current Effective Authority Set", resolved through
+ * the Mission Status operation or an equivalent authenticated, audience-scoped
+ * source. In this deployment the local kernel IS that source (it structurally
+ * satisfies this interface), but the seam is explicit so a consuming AS can
+ * inject a remote one, which owns its own caching and published staleness
+ * bound.
+ */
+export interface EffectiveAuthoritySource {
+  effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[];
+}
+
+/**
+ * @spec issuance-grant#effective-set-projection (#617 review 1) — a TRANSIENT
+ * authority-source failure: the source is unavailable, failed verification, or
+ * reported a rolled-back state `version`. It is NEVER authority exhaustion, so
+ * it must not surface as `invalid_grant` (which tells a client its
+ * authorization is gone) and must not consume a single-use credential: the
+ * profile maps it to `temporarily_unavailable` with HTTP 503 at the token
+ * endpoint, leaving the presented grant or refresh token retryable. A source
+ * raises this instead of returning an empty set, which would be
+ * indistinguishable from a fully narrowed Mission.
+ */
+export class SourceUnavailableError extends Error {}
+
+/**
  * @spec containment#derivation-gating, status#effective-authority-set,
  * issuance-grant#effective-set-projection (issue #589) — the Effective
  * Authority Set projection PRIMITIVE for an already-issued credential's
- * `rar`: project it through the Mission's CURRENT effective set
- * ({@link MissionKernel.effectiveAuthoritySet}, via the `kernel` passed in),
+ * `rar`: project it through the Mission's CURRENT effective set (resolved
+ * through the {@link EffectiveAuthoritySource} passed in, the local kernel
+ * unless a deployment injects a remote one; a {@link SourceUnavailableError}
+ * from it propagates to the caller as the TRANSIENT class, never as a
+ * collapse),
  * which composes every issuer-held narrowing mechanism the kernel runs
  * (today: containment; structured so discharge and future mechanisms slot
  * in there without a caller-side change). NEVER bypassed on an absent
@@ -444,10 +474,10 @@ export function projectThroughEffective(
  * projection) treat a `collapsed` result as `invalid_grant`.
  */
 export function projectRarThroughMission(
-  kernel: { effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[] },
+  source: EffectiveAuthoritySource,
   record: MissionRecord,
   rar: readonly AuthorityEntry[],
 ): { projected: AuthorityEntry[]; collapsed: boolean } {
-  const projected = projectThroughEffective(rar, kernel.effectiveAuthoritySet(record));
+  const projected = projectThroughEffective(rar, source.effectiveAuthoritySet(record));
   return { projected, collapsed: rar.length > 0 && projected.length === 0 };
 }

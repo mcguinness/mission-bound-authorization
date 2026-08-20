@@ -206,10 +206,17 @@ describe("validateContinuationAssertion — rejects", () => {
     ).rejects.toThrow(/missing act/);
   });
 
-  it("a replayed jti", async () => {
+  it("a jti the redeeming caller already consumed", async () => {
+    // @spec issuance-grant#effective-set-projection (#617 review 1) — the
+    // validator CHECKS single-use and records nothing: consumption is the
+    // caller's, atomic with successful issuance (continuation-grant.ts step
+    // 11). So a first validation does NOT burn the assertion; recordOnce does.
     const shared = ctx();
     const assertion = await mintICA();
-    await validateContinuationAssertion(assertion, shared); // records the jti
+    const first = await validateContinuationAssertion(assertion, shared);
+    expect(shared.replay.seen(first.iss, first.jti)).toBe(false);
+    expect(shared.replay.recordOnce(first.iss, first.jti)).toBe(true);
+    expect(shared.replay.recordOnce(first.iss, first.jti)).toBe(false); // the atomic loser
     await expect(validateContinuationAssertion(assertion, shared)).rejects.toThrow(/replay/);
   });
 });
