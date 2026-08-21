@@ -17,7 +17,12 @@ import {
 } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import type Provider from "oidc-provider";
-import { buildProvider, type ProtectedEventSource, type TxnArs } from "./adapters/provider.js";
+import {
+  buildProvider,
+  type ProtectedEventSource,
+  type ServiceTokenPrincipal,
+  type TxnArs,
+} from "./adapters/provider.js";
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
@@ -27,6 +32,7 @@ import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
 import type { EffectiveAuthoritySource } from "./kernel/derive.js";
+import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
@@ -51,6 +57,13 @@ export {
   type IngestionEvidenceInput,
 } from "./kernel/issuer-evidence.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
+export {
+  DEFAULT_SERVICE_TOKEN_PRINCIPALS,
+  MISSION_DISCHARGE_SCOPE,
+  MISSION_LIFECYCLE_SCOPE,
+  MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+  type ServiceTokenPrincipal,
+} from "./adapters/provider.js";
 export {
   DEFAULT_MAX_EVIDENCE_ENTRIES,
   DEFAULT_MAX_EVIDENCE_ENTRY_BYTES,
@@ -77,6 +90,41 @@ export {
   projectThroughEffective,
   SourceUnavailableError,
 } from "./kernel/derive.js";
+export {
+  assertDischargePoliciesResolvable,
+  conditionDigest,
+  conditionsNoBroader,
+  DISCHARGE_EVENT_ID_RE,
+  DISCHARGE_POLICY_RE,
+  type DischargeAssertion,
+  type DischargeAuthorityMapping,
+  type DischargeAuthorityPolicy,
+  dischargeAssertionFingerprint,
+  DischargeConflictError,
+  DischargeNotFoundError,
+  type DischargeOutcome,
+  type DischargeRefusalReason,
+  type DischargeRequest,
+  type DischargeResult,
+  entryDigest,
+  EVIDENCE_REF_MAX_CHARS,
+  mappingPermits,
+  resolveConditionMapping,
+  terminalWhenOf,
+  unionConditions,
+} from "./kernel/discharge.js";
+export {
+  DEFAULT_DISCHARGE_EVENT_TTL_S,
+  DEFAULT_LIFECYCLE_NONCE_TTL_S,
+  type DischargeEventAudit,
+  type DischargeEventKey,
+  DischargeEventStore,
+  LIFECYCLE_ENDPOINT_KEY,
+  type LifecycleNonceKey,
+  LifecycleResponseStore,
+  type StoredDischargeEvent,
+  type StoredLifecycleResponse,
+} from "./kernel/lifecycle-idempotency.js";
 export {
   missionResourceAccessProfile,
   type OperationProfile,
@@ -492,6 +540,23 @@ export async function buildAuthorizationServer(opts: {
   authoritySource?: EffectiveAuthoritySource;
   /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
   stateRecoveryRetryAfter?: number;
+  /**
+   * @spec status#discharge-authority — additional service-token principals and
+   * their scopes, merged OVER the shipped dev token (which carries both
+   * `mission_lifecycle` and `mission_discharge`). A test registers a
+   * lifecycle-only token to prove the two grants do not imply one another.
+   */
+  serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
+  /**
+   * @spec status#discharge-authority — the issuer-held discharge-authority
+   * policy handed to the kernel: which principals may assert which
+   * `event_type`, resolved through a condition's `discharge_policy` selector or
+   * the baseline mapping. Absent (the default) FAILS CLOSED: no condition can
+   * enter a record and no discharge is ever authorized.
+   */
+  dischargeAuthority?: DischargeAuthorityPolicy;
+  /** @spec status#discharge-idempotency — event-dedup retention override (seconds). */
+  dischargeEventRetentionSeconds?: number;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -587,6 +652,14 @@ export async function buildAuthorizationServer(opts: {
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
     // only containOnEvent reads it (the manual contain path is unaffected).
     containmentPolicy: CONTAINMENT_POLICY as never,
+    // @spec status#discharge-authority — the issuer-held discharge-authority
+    // policy. Absent as shipped: no deployment config declares a
+    // `terminal_when` mapping, so the completion capability stays off and fails
+    // closed until one does.
+    ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
+    ...(opts.dischargeEventRetentionSeconds !== undefined
+      ? { dischargeEventRetentionSeconds: opts.dischargeEventRetentionSeconds }
+      : {}),
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS-asserted
     // actor-type registry, config-shipped and optionally extended by the caller.
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
@@ -680,6 +753,11 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
     introspectionPrincipals: INTROSPECTION_PRINCIPALS,
+    // @spec status#discharge-authority — service-token principals and their
+    // scopes; merged over the default (the dev token holds both grants).
+    ...(opts.serviceTokenPrincipals
+      ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
+      : {}),
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
     // @spec txn-authorization#challenge-redemption — the endpoint's
     // configuration, assembled from the caller's deployment inputs plus this

@@ -16,10 +16,11 @@
  * in-process); stream verification / heartbeat liveness and its staleness
  * fallback; automatic Mission Status refetch on a detected version gap or a
  * detected rematerialization need (this module detects each condition only;
- * the refetch itself, and the `mission_capabilities_supported` delivery gate
- * for an undeclared stream, are the consumer's/issuer's job); and the
+ * the refetch itself is the consumer's job); and the
  * `suspend_until` / `on_expiry` / `tenant` members (no model exists in the
- * kernel). The demo stack signal wiring is also deferred; the emitter is
+ * kernel). The `mission_capabilities_supported` delivery gate
+ * ({@link MissionSignalEmitter}) is implemented: a stream that has not
+ * declared `authority_changed` is not delivered a discharge commit's event. The demo stack signal wiring is also deferred; the emitter is
  * injectable at the authorization-server construction site (its
  * `onLifecycleCommit` option).
  */
@@ -476,9 +477,29 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   };
 }
 
-/** A consumer this issuer emits to, identified by its registered audience. */
+/**
+ * @spec signals#discharge-compatibility — the one value this document defines
+ * for the receiver-supplied `mission_capabilities_supported` member of the SSF
+ * Stream Configuration object: support for the `authority_changed`
+ * rematerialization rule.
+ */
+export const AUTHORITY_CHANGED_CAPABILITY = "authority_changed";
+
+/**
+ * A consumer this issuer emits to, identified by its registered audience.
+ *
+ * @spec signals#discharge-compatibility — `mission_capabilities_supported` is
+ * the receiver's declared capability list from its Stream Configuration. A
+ * consumer that has NOT declared {@link AUTHORITY_CHANGED_CAPABILITY} is not
+ * delivered an event whose effective-authority change is represented by
+ * `authority_changed` ALONE (a discharge commit): such a consumer ignores the
+ * unknown member, accepts an in-order active-to-active version increment, and
+ * keeps a stale Authority Set, exactly the failure the member exists to
+ * prevent. Absent means it declared nothing.
+ */
 export interface SignalConsumer {
   audience: string;
+  mission_capabilities_supported?: string[];
 }
 
 export interface EmitterOptions {
@@ -512,6 +533,30 @@ export class MissionSignalEmitter {
     this.onDeliver(receiver.audience, (set) => receiver.verifyAndApply(set));
   }
 
+  /**
+   * @spec signals#discharge-compatibility — the delivery GATE. The bound events
+   * are exactly those whose effective-authority change is represented by
+   * `authority_changed` alone: a commit that set the discriminator WITHOUT
+   * advancing `containment_version` (a discharge commit). An event whose
+   * narrowing is also represented by a `containment_version` ADVANCE follows the
+   * containment profile's existing delivery rules unchanged, and every event
+   * that narrows nothing is unaffected.
+   *
+   * Provenance comes from the kernel's own commit-time discriminator
+   * ({@link LifecycleCommit.containment_advanced}), never from emitter-side
+   * version history: an in-memory cursor does not survive restart, and a
+   * fresh emitter would either mistake a discharge on a previously contained
+   * Mission (unchanged `containment_version`) for the first containment
+   * advance — delivering an `authority_changed`-only narrowing to a consumer
+   * that never declared the capability — or withhold a real containment
+   * event first observed above version 1.
+   */
+  private deliverable(commit: LifecycleCommit, consumer: SignalConsumer): boolean {
+    if (commit.authority_changed !== true) return true;
+    if (commit.containment_advanced === true) return true;
+    return (consumer.mission_capabilities_supported ?? []).includes(AUTHORITY_CHANGED_CAPABILITY);
+  }
+
   /** Register a raw delivery sink for an audience (e.g. an HTTP push, deferred). */
   onDeliver(audience: string, deliver: (set: string) => unknown): void {
     this.deliveries.push({ audience, deliver });
@@ -523,6 +568,9 @@ export class MissionSignalEmitter {
    */
   readonly onCommit = (commit: LifecycleCommit): void => {
     for (const consumer of this.opts.consumers) {
+      // @spec signals#discharge-compatibility — an undeclared stream is not
+      // delivered an event whose narrowing rides `authority_changed` alone.
+      if (!this.deliverable(commit, consumer)) continue;
       this.inflight.push(this.emitOne(commit, consumer.audience));
     }
   };

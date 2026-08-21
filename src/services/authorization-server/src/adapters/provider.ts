@@ -4,7 +4,7 @@
  * Wiring facts verified by the pre-flight spike (src/spikes/SPIKE-REPORT.md).
  */
 
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
@@ -99,6 +99,18 @@ import {
 } from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
 import {
+  DIGEST_PREFIX,
+  DISCHARGE_EVENT_ID_RE,
+  DischargeConflictError,
+  DischargeNotFoundError,
+  EVIDENCE_REF_MAX_CHARS,
+} from "../kernel/discharge.js";
+import {
+  LIFECYCLE_ENDPOINT_KEY,
+  type LifecycleNonceKey,
+  LifecycleResponseStore,
+} from "../kernel/lifecycle-idempotency.js";
+import {
   type EffectiveAuthoritySource,
   isSubsetSet,
   projectRarThroughMission,
@@ -147,9 +159,58 @@ import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
  */
 export const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 
+/**
+ * @spec status#mission-status-authentication — the scope the four Mission-state
+ * lifecycle operations (`revoke`, `suspend`, `resume`, `complete`, and this
+ * deployment's `contain`) require at the Mission Lifecycle endpoint.
+ */
+export const MISSION_LIFECYCLE_SCOPE = "mission_lifecycle";
+
+/**
+ * @spec status#discharge-authority — the DISTINCT scope `discharge` requires.
+ * Possession of {@link MISSION_LIFECYCLE_SCOPE}, or being the Mission's
+ * Subject, Approver, or an administrator, MUST NOT by itself imply it: a
+ * `terminal_when` condition is asserted by a resource or event authority, not by
+ * whoever may revoke, suspend, resume, or complete the Mission.
+ */
+export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
+
+/**
+ * A registered service-token caller of the AS's operational surfaces: the
+ * principal identity the AS records and checks discharge authority against, and
+ * the scopes the token carries. This is the minimal stand-in for the profile's
+ * mTLS / sender-constrained-token / private-key-JWT mechanism set; what matters
+ * for conformance is that the two grants are DISTINCT and neither implies the
+ * other.
+ */
+export interface ServiceTokenPrincipal {
+  principal_id: string;
+  scopes: string[];
+}
+
+/**
+ * The shipped dev token carries BOTH grants, so every existing operational
+ * caller keeps working; a deployment (or a test proving non-implication)
+ * registers additional tokens, which are merged OVER this default.
+ */
+export const DEFAULT_SERVICE_TOKEN_PRINCIPALS: Readonly<Record<string, ServiceTokenPrincipal>> = {
+  [DEV_SERVICE_TOKEN]: {
+    principal_id: "svc:console",
+    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_DISCHARGE_SCOPE],
+  },
+};
+
 export interface AdapterOptions {
   issuer: string;
   kernel: MissionKernel;
+  /**
+   * @spec status#discharge-authority — service-token principals and their
+   * scopes, merged OVER {@link DEFAULT_SERVICE_TOKEN_PRINCIPALS}. A caller
+   * holding `mission_lifecycle` alone is refused `discharge` with the
+   * endpoint's `not_found` (an authorization failure never distinguishes
+   * itself, @spec status#discharge-anti-oracle).
+   */
+  serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   clients: Record<string, unknown>[];
   jwks: { keys: Record<string, unknown>[] };
   publicJwks: { keys: Record<string, unknown>[] };
@@ -1393,14 +1454,47 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     return undefined;
   };
 
-  const requireServiceToken = (ctx: KoaCtx): boolean => {
-    if (ctx.get("x-service-token") !== DEV_SERVICE_TOKEN) {
+  // Null-prototype registry + own-property lookup below: a presented token
+  // must NEVER authenticate through an inherited Object.prototype name
+  // (`__proto__`, `constructor`, `toString`, ...), which a plain object
+  // lookup would resolve for an unregistered token.
+  const serviceTokenPrincipals: Record<string, ServiceTokenPrincipal> = Object.assign(
+    Object.create(null) as Record<string, ServiceTokenPrincipal>,
+    DEFAULT_SERVICE_TOKEN_PRINCIPALS,
+    opts.serviceTokenPrincipals ?? {},
+  );
+
+  /**
+   * @spec status#mission-status-authentication, status#discharge-authority —
+   * AUTHENTICATE the operational caller and resolve the principal its token is
+   * registered for, with the scopes that token carries. AUTHENTICATION failure
+   * (an absent or unregistered token) is the endpoint's only `unauthorized`
+   * (401); every AUTHORIZATION failure is the caller's to discover as
+   * `not_found`, decided per operation against these scopes.
+   */
+  const authenticateService = (ctx: KoaCtx): ServiceTokenPrincipal | undefined => {
+    const presented = ctx.get("x-service-token");
+    const principal =
+      presented && Object.hasOwn(serviceTokenPrincipals, presented)
+        ? serviceTokenPrincipals[presented]
+        : undefined;
+    if (!principal) {
       ctx.status = 401;
       ctx.body = { error: "unauthorized" };
-      return false;
+      return undefined;
     }
-    return true;
+    return principal;
   };
+
+  const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
+
+  /**
+   * @spec status#discharge-idempotency — the lifecycle endpoint's `nonce`
+   * replay store, constructed once per provider on the kernel's own database.
+   */
+  const lifecycleResponses = new LifecycleResponseStore(kernel.db, {
+    now: () => kernel.nowDate(),
+  });
 
   return async (ctx: KoaCtx, next: () => Promise<void>) => {
     // --- Approval interaction (minimal approver surface + headless path) ---
@@ -1463,20 +1557,30 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // --- Signed Status (@spec status#mission-status-response) ---
     const statusMatch = ctx.path.match(/^\/missions\/([^/]+)\/status$/);
     if (statusMatch && ctx.method === "GET") {
-      if (!requireServiceToken(ctx)) return;
+      const principal = authenticateService(ctx);
+      if (!principal) return;
+      const statusNonce = str(ctx.query.nonce);
       try {
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
           ...optional("audience", str(ctx.query.audience)),
-          ...optional("nonce", str(ctx.query.nonce)),
-          requester: "svc:console",
+          ...optional("nonce", statusNonce),
+          requester: principal.principal_id,
         });
         ctx.status = 200;
-        ctx.set("content-type", "application/mission-status-response+jwt");
+        ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
       } catch {
+        // @spec status#mission-status-errors, status#mission-status-anti-oracle
+        // — one not-found shape for the unknown and the invisible reference,
+        // echoing the request's `nonce` when it carried one.
         ctx.status = 404;
-        ctx.body = { error: "unknown_mission" };
+        ctx.set("cache-control", "no-store");
+        ctx.body = {
+          error: "not_found",
+          error_description: "Mission reference is not found or not visible.",
+          ...(statusNonce ? { nonce: statusNonce } : {}),
+        };
       }
       return;
     }
@@ -1514,8 +1618,103 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // --- Lifecycle operations (@spec status#legal-transitions) ---
     const lifecycleMatch = ctx.path.match(/^\/missions\/([^/]+)\/lifecycle$/);
     if (lifecycleMatch && ctx.method === "POST") {
-      if (!requireServiceToken(ctx)) return;
-      const body = await readJsonBody(ctx.req);
+      const principal = authenticateService(ctx);
+      if (!principal) return;
+      const missionId = lifecycleMatch[1] as string;
+      // Read the body ONCE and keep the digest of the exact bytes: the `nonce`
+      // rule of @spec status#idempotency is byte-identity of the request.
+      const { body, digest } = await readBodyWithDigest(ctx.req);
+      const rawNonce = body.nonce;
+      const nonce =
+        typeof rawNonce === "string" && rawNonce.length > 0 && rawNonce.length <= 255
+          ? rawNonce
+          : undefined;
+      const nonceKey: LifecycleNonceKey | undefined = nonce
+        ? {
+            endpoint: LIFECYCLE_ENDPOINT_KEY,
+            principal: principal.principal_id,
+            missionId,
+            nonce,
+          }
+        : undefined;
+      /**
+       * @spec status#mission-status-errors — send and, when the request carried
+       * a well-formed `nonce`, REMEMBER this response for that nonce. The store
+       * is first-writer-wins, so a later divergent-retry refusal never
+       * overwrites the response a retransmission must replay.
+       */
+      const send = (status: number, contentType: string, text: string): void => {
+        ctx.status = status;
+        ctx.set("content-type", contentType);
+        ctx.set("cache-control", "no-store");
+        ctx.body = text;
+        if (nonceKey) {
+          lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
+        }
+      };
+      const sendJson = (status: number, json: Record<string, unknown>): void =>
+        send(status, "application/json", JSON.stringify(json));
+      /**
+       * @spec status#mission-status-errors, status#discharge-anti-oracle — the
+       * ONE not-found shape every unknown, invisible, and unauthorized reference
+       * collapses to. `error_description` is diagnostic and identical across the
+       * cases; `nonce` is echoed whenever the request carried a well-formed one.
+       */
+      const sendNotFound = (): void =>
+        sendJson(404, {
+          error: "not_found",
+          error_description: "Mission reference is not found or not visible.",
+          ...(nonce ? { nonce } : {}),
+        });
+      const sendInvalidRequest = (description: string, echoNonce = true): void =>
+        sendJson(400, {
+          error: "invalid_request",
+          error_description: description,
+          // A request whose `nonce` is absent or malformed echoes none.
+          ...(echoNonce && nonce ? { nonce } : {}),
+        });
+      // @spec status#idempotency — the retransmission rule, evaluated FIRST:
+      // it governs the HTTP exchange, before any operation is re-executed.
+      if (nonceKey) {
+        const stored = lifecycleResponses.find(nonceKey);
+        if (stored) {
+          if (stored.requestDigest !== digest) {
+            // Never answered with the unrelated original response.
+            sendInvalidRequest("nonce was already used with a different request");
+            return;
+          }
+          ctx.status = stored.status;
+          ctx.set("content-type", stored.contentType);
+          ctx.set("cache-control", "no-store");
+          ctx.body = stored.body;
+          return;
+        }
+      }
+      // @spec status#discharge-operation — the fifth operation: it changes no
+      // Mission state, so it is handled entirely outside the state machine
+      // below, under its own DISTINCT authority.
+      if (body.operation === "discharge") {
+        await handleDischarge({
+          kernel,
+          principal,
+          missionId,
+          body,
+          ...(nonce !== undefined ? { nonce } : {}),
+          sendJws: (jws) => send(200, MISSION_STATUS_RESPONSE_MEDIA_TYPE, jws),
+          sendJson,
+          sendNotFound,
+          sendInvalidRequest,
+        });
+        return;
+      }
+      // @spec status#mission-status-errors — every other operation is a
+      // Mission-state transition and requires the lifecycle grant; an
+      // authenticated caller without it is refused with the endpoint's
+      // not-found shape (the profile's Authorization section), never a 403.
+      if (!principal.scopes.includes(MISSION_LIFECYCLE_SCOPE)) {
+        sendNotFound();
+        return;
+      }
       try {
         // Mission Containment: a metadata-only commit (state unchanged, version
         // incremented) carrying `{ event, remove }`. Mirrors the other
@@ -1535,14 +1734,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             !Array.isArray(remove) ||
             remove.length === 0
           ) {
-            ctx.status = 400;
-            ctx.body = {
-              error: "invalid_request",
-              error_description: "contain requires event {type, source, observed_at, event_id} and a non-empty remove[]",
-            };
+            sendInvalidRequest(
+              "contain requires event {type, source, observed_at, event_id} and a non-empty remove[]",
+            );
             return;
           }
-          const { record, evidence } = kernel.contain(lifecycleMatch[1] as string, {
+          const { record, evidence } = kernel.contain(missionId, {
             event: {
               type: event.type,
               source: event.source,
@@ -1554,34 +1751,34 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // Retain the returned Containment Evidence issuer-side (break-glass
           // path: its evidence `policy` is "manual"). Previously discarded.
           opts.issuerEvidence?.retainContainment(evidence);
-          ctx.status = 200;
-          ctx.body = {
+          sendJson(200, {
             id: record.id,
             state: record.state,
             version: record.version,
             containment_version: record.containment?.containment_version ?? 0,
-          };
+          });
           return;
         }
-        const record = kernel.transition(
-          lifecycleMatch[1] as string,
-          body.operation as LifecycleOperation,
-        );
+        const record = kernel.transition(missionId, body.operation as LifecycleOperation);
         // Revocation/terminal states also revoke the OAuth grant so refresh
         // fails structurally, not just by gating.
         if (record.state !== "active" && record.state !== "suspended" && record.grant_id) {
           const grant = await provider.Grant.find(record.grant_id);
           await grant?.destroy();
         }
-        ctx.status = 200;
-        ctx.body = { id: record.id, state: record.state, version: record.version };
+        sendJson(200, { id: record.id, state: record.state, version: record.version });
       } catch (e) {
         if (e instanceof LifecycleConflictError) {
-          ctx.status = 409;
-          ctx.body = { error: "conflict", error_description: e.message };
+          sendJson(409, {
+            error: "conflict",
+            error_description: e.message,
+            ...(nonce ? { nonce } : {}),
+          });
         } else {
-          ctx.status = 404;
-          ctx.body = { error: "unknown_mission" };
+          // @spec status#mission-status-errors — the endpoint's vocabulary is
+          // `not_found` (the same body an unauthorized reference gets), never a
+          // distinguishing symbol of its own.
+          sendNotFound();
         }
       }
       return;
@@ -2566,6 +2763,190 @@ function optional<T>(key: string, value: T | undefined): Record<string, T> {
 
 function str(v: string | string[] | undefined): string | undefined {
   return typeof v === "string" ? v : undefined;
+}
+
+/** @spec status#mission-status-response — the signed Status envelope's media type. */
+export const MISSION_STATUS_RESPONSE_MEDIA_TYPE = "application/mission-status-response+jwt";
+
+/**
+ * @spec status#discharge-operation ("observed_at") — the caller's asserted
+ * observation time is validated for syntax and REASONABLE CLOCK BOUNDS only,
+ * never as trusted ordering or freshness. One day either side of the AS's own
+ * clock; the AS records its own commit time as `received_at` regardless.
+ */
+const OBSERVED_AT_SKEW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * A prefixed digest of the family's only defined algorithm: exactly 32 bytes,
+ * base64url without padding (43 characters). Anything looser admits values no
+ * digest computation can ever match.
+ */
+const FAMILY_DIGEST_RE = /^sha-256:[A-Za-z0-9_-]{43}$/;
+function isFamilyDigest(value: unknown): value is string {
+  return typeof value === "string" && FAMILY_DIGEST_RE.test(value);
+}
+
+/**
+ * Strict RFC 3339 date-time shape, gated BEFORE `Date.parse`: the platform
+ * parser accepts many non-RFC3339 forms (bare dates, RFC 2822 strings) that
+ * the wire contract does not.
+ */
+const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
+
+/**
+ * @spec status#discharge-operation, status#discharge-anti-oracle,
+ * status#discharge-result — the `discharge` operation on the Mission Lifecycle
+ * endpoint. Request-shape failures are `invalid_request`; the six selector,
+ * membership, and target-authorization refusals are ONE `not_found`; a divergent
+ * re-assertion of the same event tuple is `conflict`; success is the endpoint's
+ * signed Mission Status Response envelope carrying `discharge_result` as a
+ * sibling of `mission`.
+ */
+async function handleDischarge(input: {
+  kernel: MissionKernel;
+  principal: ServiceTokenPrincipal;
+  missionId: string;
+  body: Record<string, unknown>;
+  nonce?: string;
+  sendJws: (jws: string) => void;
+  sendJson: (status: number, json: Record<string, unknown>) => void;
+  sendNotFound: () => void;
+  sendInvalidRequest: (description: string, echoNonce?: boolean) => void;
+}): Promise<void> {
+  const { kernel, principal, missionId, body, nonce } = input;
+  // @spec status#discharge-operation — `nonce` is REQUIRED, and a request whose
+  // nonce is absent or malformed is refused with NO nonce echoed.
+  if (nonce === undefined) {
+    input.sendInvalidRequest("discharge requires a well-formed nonce", false);
+    return;
+  }
+  // @spec status#discharge-authority — the DISTINCT grant, checked before any
+  // selector work. A caller holding only `mission_lifecycle` (or acting as the
+  // Subject, Approver, or an administrator) is refused with the same
+  // indistinguishable not-found body every unauthorized reference gets.
+  if (!principal.scopes.includes(MISSION_DISCHARGE_SCOPE)) {
+    input.sendNotFound();
+    return;
+  }
+  const entryDigestValue = body.entry_digest;
+  const conditionDigestValue = body.condition_digest;
+  const eventType = body.event_type;
+  const eventId = body.event_id;
+  if (!isFamilyDigest(entryDigestValue)) {
+    input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
+    return;
+  }
+  if (!isFamilyDigest(conditionDigestValue)) {
+    input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
+    return;
+  }
+  if (typeof eventType !== "string" || eventType.length === 0) {
+    input.sendInvalidRequest("event_type must be a non-empty string");
+    return;
+  }
+  if (typeof eventId !== "string" || !DISCHARGE_EVENT_ID_RE.test(eventId)) {
+    input.sendInvalidRequest("event_id must be 1*128 ALPHA / DIGIT / '-' / '_' / ':' / '.'");
+    return;
+  }
+  // `reason` belongs to the state-changing operations; discharge records its own
+  // request members in audit, so carrying it is an invalid member combination.
+  if (body.reason !== undefined) {
+    input.sendInvalidRequest("reason is not used by discharge");
+    return;
+  }
+  const evidenceRef = body.evidence_ref;
+  if (evidenceRef !== undefined) {
+    if (typeof evidenceRef !== "string" || evidenceRef.length > EVIDENCE_REF_MAX_CHARS) {
+      input.sendInvalidRequest(`evidence_ref must be a URI of at most ${EVIDENCE_REF_MAX_CHARS} characters`);
+      return;
+    }
+    try {
+      new URL(evidenceRef);
+    } catch {
+      input.sendInvalidRequest("evidence_ref must be a URI");
+      return;
+    }
+  }
+  const evidenceDigest = body.evidence_digest;
+  if (evidenceDigest !== undefined && !isFamilyDigest(evidenceDigest)) {
+    input.sendInvalidRequest("evidence_digest must be a sha-256: prefixed digest");
+    return;
+  }
+  const observedAt = body.observed_at;
+  if (observedAt !== undefined) {
+    const parsed =
+      typeof observedAt === "string" && RFC3339_RE.test(observedAt) ? Date.parse(observedAt) : Number.NaN;
+    if (Number.isNaN(parsed) || Math.abs(parsed - kernel.nowDate().getTime()) > OBSERVED_AT_SKEW_MS) {
+      input.sendInvalidRequest("observed_at must be an RFC 3339 date-time within reasonable clock bounds");
+      return;
+    }
+  }
+  try {
+    const { result } = kernel.discharge(missionId, {
+      // The AUTHENTICATED discharge authority, never a request-supplied value.
+      authority: principal.principal_id,
+      entry_digest: entryDigestValue,
+      condition_digest: conditionDigestValue,
+      event_type: eventType,
+      event_id: eventId,
+      ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
+      ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
+      ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
+    });
+    // @spec status#discharge-result — the endpoint's existing signed envelope,
+    // state-only (the request carries no `audience`), echoing this request's own
+    // nonce: the durable acknowledgement an at-least-once sender stops retrying
+    // against.
+    const jws = await kernel.signedStatus(missionId, {
+      requester: principal.principal_id,
+      nonce,
+      dischargeResult: result,
+    });
+    input.sendJws(jws);
+  } catch (e) {
+    if (e instanceof DischargeNotFoundError) {
+      // All six refusal classes, indistinguishable on the wire; the reason is
+      // recorded issuer-side only (e.reason).
+      input.sendNotFound();
+      return;
+    }
+    if (e instanceof DischargeConflictError) {
+      input.sendJson(409, { error: "conflict", error_description: e.message, nonce });
+      return;
+    }
+    throw e;
+  }
+}
+
+/**
+ * @spec status#idempotency — read the body ONCE, returning both the parsed
+ * members and the digest of the EXACT bytes received. The `nonce` retry rule is
+ * byte-identity of the request, so the comparison must be over what arrived,
+ * not over a re-serialization of the parse.
+ */
+async function readBodyWithDigest(
+  req: IncomingMessage,
+): Promise<{ body: Record<string, unknown>; digest: string }> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  const bytes = Buffer.concat(chunks);
+  const digest = `${DIGEST_PREFIX}${createHash("sha256").update(bytes).digest("base64url")}`;
+  const text = bytes.toString("utf8");
+  if (!text) return { body: {}, digest };
+  try {
+    const parsed: unknown = JSON.parse(text);
+    // A valid-JSON body that is not an object (`null`, an array, a number, a
+    // string) must land as an EMPTY member set — request-shape validation
+    // then refuses it as `invalid_request` — never reach member access and
+    // turn into a 500.
+    const body =
+      parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    return { body, digest };
+  } catch {
+    return { body: Object.fromEntries(new URLSearchParams(text)), digest };
+  }
 }
 
 /** Read a raw text body (e.g. a compact JWS protected-event report). */

@@ -10,6 +10,7 @@
 
 import { compareAmounts, isValidAmount } from "@mission/core";
 import type { JsonValue } from "@mission/core";
+import { conditionsNoBroader, unionConditions } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
 
@@ -32,10 +33,24 @@ const REGISTERED_COMMON_CONSTRAINTS = new Set([
   "data_classification",
   "allowed_tools",
   "requires_action_approval",
+  // @spec status#terminal-when — a specification-defined Common Constraint
+  // registered by the Status profile (its completion capability), IMPLEMENTED
+  // below: entry completion conditions, narrowed by union.
+  "terminal_when",
 ]);
 
-/** Common Constraint keys this derivation engine implements narrowing for. */
-const IMPLEMENTED_COMMON_CONSTRAINTS = new Set(["max_amount", "requires_action_approval"]);
+/**
+ * Common Constraint keys this derivation engine implements narrowing for.
+ * `terminal_when` (@spec status#terminal-when) joins them: its narrowing is the
+ * UNION of the two condition arrays ({@link unionConditions}), the direction
+ * the subset rule fixes (a candidate must carry every reference condition and
+ * MAY add more).
+ */
+const IMPLEMENTED_COMMON_CONSTRAINTS = new Set([
+  "max_amount",
+  "requires_action_approval",
+  "terminal_when",
+]);
 
 /**
  * @spec mission#common-constraints — FAIL CLOSED (refuse the derivation)
@@ -129,6 +144,17 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   if (ceiling.constraints?.requires_action_approval === true || proposal.constraints?.requires_action_approval === true) {
     constraints.requires_action_approval = true;
   }
+  // @spec status#terminal-when, status#subset-extension — monotonic UNION: the
+  // derived entry carries every completion condition either operand names, so a
+  // ceiling condition cannot be shed by a proposal that omits it and a proposal
+  // MAY add its own (an added condition only discharges sooner, a narrowing).
+  // Deduplicated by condition identity and sorted by canonical bytes, so the
+  // derived array is reproducible.
+  const conditions = unionConditions(
+    proposal.constraints?.terminal_when,
+    ceiling.constraints?.terminal_when,
+  );
+  if (conditions) constraints.terminal_when = conditions;
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
   if (delegation) entry.delegation = delegation;
@@ -321,6 +347,13 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
       candidate.constraints?.requires_action_approval !== true) {
     return false;
   }
+  // @spec status#subset-extension — a derived entry carries every parent
+  // completion condition unchanged and MAY add more: dropping or altering one
+  // WIDENS (a verifier cannot tell from opaque event types whether a changed
+  // condition discharges earlier or later), so it is not a subset.
+  if (!conditionsNoBroader(candidate.constraints?.terminal_when, granted.constraints?.terminal_when)) {
+    return false;
+  }
   // @spec attenuation#delegation, child-delegation#attenuation — delegation is a
   // GRANT and NARROWS: the direction is the OPPOSITE of the constraint rules
   // above. A candidate that OMITS delegation the grantor has is strictly
@@ -387,7 +420,14 @@ export function isSubsetSet(candidate: AuthorityEntry[], granted: AuthorityEntry
  * {@link projectThroughEffective}, which drops such a fragment rather than
  * guessing at, or silently discarding, a narrowing it cannot evaluate.
  */
-const PROJECTABLE_CONSTRAINTS = new Set(["max_amount", "vendors", "requires_action_approval"]);
+const PROJECTABLE_CONSTRAINTS = new Set([
+  "max_amount",
+  "vendors",
+  "requires_action_approval",
+  // @spec status#terminal-when — projectable: the fragment carries the UNION of
+  // both sides' conditions, which is no broader than either.
+  "terminal_when",
+]);
 
 function onlyProjectableConstraints(constraints: AuthorityEntry["constraints"]): boolean {
   if (!constraints) return true;
@@ -505,6 +545,20 @@ function intersectForProjection(
   ) {
     constraints.requires_action_approval = true;
   }
+  // @spec status#terminal-when — the union of both sides' completion
+  // conditions: the fragment stays a subset of both (each side's conditions are
+  // all present). A malformed condition makes the pairing unprovable, and this
+  // projection is fail-closed-by-DROPPING rather than throwing.
+  let conditions: NonNullable<AuthorityEntry["constraints"]>["terminal_when"];
+  try {
+    conditions = unionConditions(
+      candidate.constraints?.terminal_when,
+      effective.constraints?.terminal_when,
+    );
+  } catch {
+    return null;
+  }
+  if (conditions) constraints.terminal_when = conditions;
   const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);

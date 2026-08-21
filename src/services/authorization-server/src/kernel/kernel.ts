@@ -16,6 +16,22 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import {
+  assertDischargePoliciesResolvable,
+  conditionDigest,
+  type DischargeAuthorityPolicy,
+  dischargeAssertionFingerprint,
+  DischargeConflictError,
+  DischargeNotFoundError,
+  type DischargeRequest,
+  type DischargeResult,
+  entryDigest,
+  mappingPermits,
+  resolveConditionMapping,
+  terminalWhenOf,
+} from "./discharge.js";
+import { DischargeMappingPinStore } from "./discharge-pin-store.js";
+import { DischargeEventStore, type DischargeEventKey } from "./lifecycle-idempotency.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -38,6 +54,7 @@ import {
   type ApprovalBasis,
   type AuthorityEntry,
   type ContainmentEventRecord,
+  type DischargedEntry,
   type IntentSubmissionEvidenceEntry,
   type IntentSubmissionEvidenceFact,
   LEGAL_TRANSITIONS,
@@ -91,6 +108,7 @@ CREATE TABLE IF NOT EXISTS missions (
   template_json TEXT,
   projected_from TEXT,
   containment_json TEXT,
+  discharged_json TEXT,
   submission_evidence_json TEXT
 ) STRICT;
 `;
@@ -152,6 +170,21 @@ export interface KernelOptions {
    * unaffected). Absent means every event fails closed at containOnEvent.
    */
   containmentPolicy?: ContainmentPolicy;
+  /**
+   * @spec status#discharge-authority — the ISSUER-HELD discharge-authority
+   * policy (the map from a `discharge_policy` selector, or a bare `event_type`,
+   * to the principals that may assert it). OPTIONAL and FAIL CLOSED: absent, no
+   * condition's selector resolves, so a `terminal_when` condition cannot enter a
+   * record at all and every `discharge` delivery joins the `not_found` collapse.
+   */
+  dischargeAuthority?: DischargeAuthorityPolicy;
+  /**
+   * @spec status#discharge-idempotency ("Retention") — override the event-dedup
+   * retention window (seconds); defaults to the published retry horizon. A test
+   * shortens it to prove that a repeated assertion after eviction is processed
+   * fresh against the monotonic latch.
+   */
+  dischargeEventRetentionSeconds?: number;
   now?: () => Date;
   /**
    * @spec status#mission-status-anti-oracle — Status List index allocator.
@@ -189,6 +222,18 @@ export class MissionKernel {
    * purged Mission-bound grant as an ordinary one and fail OPEN.
    */
   readonly missionBoundGrants: MissionBoundGrantStore;
+  /**
+   * @spec status#discharge-idempotency — the durable event-dedup store, on THIS
+   * kernel's database so an event row commits in the same transaction as the
+   * latch it records (@spec status#discharge-operation, "Atomicity").
+   */
+  readonly dischargeEvents: DischargeEventStore;
+  /**
+   * @spec status#discharge-authority — the pinned mapping per condition,
+   * written in `insertRecord`'s transaction and the ONLY resolution discharge
+   * target authorization reads (never the live policy).
+   */
+  readonly dischargePins: DischargeMappingPinStore;
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
@@ -197,6 +242,13 @@ export class MissionKernel {
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
+    this.dischargeEvents = new DischargeEventStore(this.db, {
+      now: this.now,
+      ...(opts.dischargeEventRetentionSeconds !== undefined
+        ? { retentionSeconds: opts.dischargeEventRetentionSeconds }
+        : {}),
+    });
+    this.dischargePins = new DischargeMappingPinStore(this.db);
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -247,7 +299,14 @@ export class MissionKernel {
   }
 
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    return deriveAuthoritySet(intent, this.opts.policy, proposal);
+    const derived = deriveAuthoritySet(intent, this.opts.policy, proposal);
+    // @spec status#discharge-authority — resolve every `discharge_policy`
+    // selector the derived entries carry, refusing the derivation when one maps
+    // to nothing. Early and typed here (an IntentError the submission carriers
+    // already map); `insertRecord` re-checks as the single record funnel, which
+    // also covers child creation (a requested subset, never a fresh derivation).
+    assertDischargePoliciesResolvable(derived, this.opts.dischargeAuthority);
+    return derived;
   }
 
   /** @spec mission#authority-proposal — intake of the submitted proposal. */
@@ -342,8 +401,15 @@ export class MissionKernel {
     return record;
   }
 
-  /** Insert a full record (shared by approve and expansion). */
+  /** Insert a full record (shared by approve, expansion, template dispatch, and
+   *  child creation): the single Mission-record creation funnel. */
   insertRecord(record: MissionRecord): void {
+    // @spec status#discharge-authority — the LAST point at which a
+    // `terminal_when` condition can enter an immutable Mission-record entry: the
+    // AS resolves and validates every selector here, whatever built the set
+    // (derivation, a child's requested subset, a template's double
+    // intersection), and refuses the creation when one maps to nothing.
+    assertDischargePoliciesResolvable(record.authority_set, this.opts.dischargeAuthority);
     withTransaction(this.db, () => {
       this.db
         .prepare(
@@ -401,6 +467,29 @@ export class MissionKernel {
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
         );
+      // @spec status#discharge-authority — bind the RESOLVED mapping
+      // (identifier, version, and content) to this exact entry_digest +
+      // condition_digest, in the SAME transaction as the record: discharge
+      // target authorization reads this pin, never the live policy, so a
+      // later policy edit cannot retroactively change who may discharge an
+      // already-approved entry.
+      for (const entry of record.authority_set) {
+        const conditions = terminalWhenOf(entry);
+        if (!conditions) continue;
+        const eDigest = entryDigest(record.issuer, entry);
+        for (const condition of conditions) {
+          const mapping = resolveConditionMapping(this.opts.dischargeAuthority, condition);
+          // Unreachable: assertDischargePoliciesResolvable above refused any
+          // condition that maps to nothing. Guarded anyway so a future
+          // reordering fails the creation, never creates an unpinned record.
+          if (!mapping) {
+            throw new Error(
+              `no discharge-authority mapping resolvable for event_type '${condition.event_type}' at pin time`,
+            );
+          }
+          this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
+        }
+      }
     });
     // The activating event: version 1, no prior_state. Shared by approve() and
     // expansion; the commit is built from the persisted row.
@@ -842,7 +931,7 @@ export class MissionKernel {
     // is passed explicitly (never inferred from prior === state).
     const fresh = this.get(record.id);
     if (!fresh) throw new Error(`unknown mission: ${id}`);
-    this.emitCommit(fresh, fresh.state, undefined, authorityChanged);
+    this.emitCommit(fresh, fresh.state, undefined, authorityChanged, true);
     // @spec child-delegation#child-state — containment propagates entry-wise to
     // existing children justified by the now-contained parent entry, so a child
     // cannot keep deriving contained authority while the parent stays `active`.
@@ -908,19 +997,356 @@ export class MissionKernel {
   }
 
   /**
-   * The Mission's EFFECTIVE Authority Set: the approved set minus the
-   * containment overlay. An entry whose actions are all contained (or whose
-   * resource is contained with no `actions` member) is dropped; otherwise the
-   * contained actions are filtered out. FAST PATH: a Mission with no
-   * containment returns the approved set as-is (byte-identical behavior).
-   * `authority_hash` always commits the approved set; containment is evaluated
-   * state, never a new hash.
+   * @spec status#discharge-operation — the ENTRY DISCHARGE funnel: commit that a
+   * `terminal_when` completion condition of one Mission-record entry has fired.
+   * It changes NO Mission-level state (a deployment that also tracks all-entry
+   * completion invokes `complete` separately) and produces one monotonic latch
+   * on the entry's equivalence class, one version increment, one result record,
+   * and one notification.
+   *
+   * VALIDATION ORDER IS NORMATIVE (@spec status#discharge-anti-oracle): selector
+   * existence (`mission_id`, `entry_digest`, `condition_digest` all resolve, the
+   * entry carries `terminal_when`, `event_type` matches the named condition),
+   * then condition membership (the condition is looked up INSIDE the named
+   * entry, so membership is the same lookup), then target authorization, and
+   * only then is a terminal Mission distinguished. All six refusals raise {@link
+   * DischargeNotFoundError}, which the endpoint collapses to one `not_found`, so
+   * a terminal Mission is never a selector-existence oracle and an unauthorized
+   * caller learns nothing about the selectors.
+   *
+   * The expiry clock runs FIRST (as `contain` does), so a Mission past its
+   * `expires_at` reaches `terminal_noop` rather than latching.
+   *
+   * @spec status#discharge-operation ("No `expected_version`") — there is no
+   * stale-version guard: a refusal would delay a safety-reducing operation. The
+   * digest selectors and the idempotency rules are the guards instead.
+   */
+  discharge(id: string, input: DischargeRequest): { record: MissionRecord; result: DischargeResult } {
+    const found = this.get(id);
+    if (!found) throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${id}`);
+    const record = this.applyExpiry(found);
+    // --- selector existence + condition membership ---
+    // Every entry resolving to `entry_digest` is byte-identical (that is what
+    // the digest means), so the first one carries the conditions of them all.
+    const entry = record.authority_set.find(
+      (e) => entryDigest(record.issuer, e) === input.entry_digest,
+    );
+    if (!entry) {
+      throw new DischargeNotFoundError("unknown_entry", `no entry with digest ${input.entry_digest}`);
+    }
+    const conditions = terminalWhenOf(entry);
+    if (!conditions) {
+      throw new DischargeNotFoundError("no_terminal_when", "entry carries no terminal_when");
+    }
+    const condition = conditions.find((c) => conditionDigest(c) === input.condition_digest);
+    if (!condition) {
+      throw new DischargeNotFoundError(
+        "unknown_condition",
+        `entry has no condition with digest ${input.condition_digest}`,
+      );
+    }
+    if (condition.event_type !== input.event_type) {
+      throw new DischargeNotFoundError(
+        "event_type_mismatch",
+        "event_type does not match the condition condition_digest names",
+      );
+    }
+    // --- target authorization (@spec status#discharge-authority) ---
+    // Against the mapping PINNED when this condition entered the record
+    // (identifier, version, and resolved content), never the live policy: an
+    // edit to the policy after approval must not retroactively change who may
+    // discharge an already-approved entry.
+    const mapping = this.dischargePins.find(record.id, input.entry_digest, input.condition_digest);
+    if (!mapping) {
+      throw new DischargeNotFoundError(
+        "unpinned_mapping",
+        "no discharge-authority mapping was pinned for this condition at record creation",
+      );
+    }
+    if (!mappingPermits(mapping, input.authority, input.event_type)) {
+      throw new DischargeNotFoundError(
+        "unauthorized_target",
+        `${input.authority} is not a discharge authority for '${input.event_type}' on this condition`,
+      );
+    }
+    const selectors = {
+      entry_digest: input.entry_digest,
+      condition_digest: input.condition_digest,
+      event_id: input.event_id,
+    };
+    // --- event-level dedup (@spec status#discharge-idempotency) ---
+    // Scoped by the five-part tuple and qualified by the assertion fingerprint.
+    // Evaluated BEFORE the terminal check: an at-least-once sender's retry under
+    // a fresh nonce must recover the ORIGINAL outcome and versions even after
+    // the Mission has since gone terminal. `nonce` is the endpoint's own retry
+    // key and is deliberately outside the fingerprint, so it never reaches here.
+    const eventKey: DischargeEventKey = {
+      authority: input.authority,
+      missionId: record.id,
+      entryDigest: input.entry_digest,
+      conditionDigest: input.condition_digest,
+      eventId: input.event_id,
+    };
+    const fingerprint = dischargeAssertionFingerprint({
+      mission_id: record.id,
+      entry_digest: input.entry_digest,
+      condition_digest: input.condition_digest,
+      event_type: input.event_type,
+      event_id: input.event_id,
+      ...(input.evidence_ref !== undefined ? { evidence_ref: input.evidence_ref } : {}),
+      ...(input.evidence_digest !== undefined ? { evidence_digest: input.evidence_digest } : {}),
+      ...(input.observed_at !== undefined ? { observed_at: input.observed_at } : {}),
+    });
+    const recorded = this.dischargeEvents.find(eventKey);
+    if (recorded) {
+      if (recorded.fingerprint !== fingerprint) {
+        throw new DischargeConflictError(
+          `event_id ${input.event_id} was already asserted against this target with a different assertion`,
+        );
+      }
+      // No state-changing work: no re-latch, no version increment. The caller
+      // signs a FRESH envelope echoing the new nonce and carrying this stored
+      // outcome with the versions the original commit produced.
+      return {
+        record,
+        result: {
+          ...selectors,
+          outcome: recorded.outcome,
+          prior_version: recorded.priorVersion,
+          current_version: recorded.currentVersion,
+        },
+      };
+    }
+    const audit = {
+      receivedAt: this.now().toISOString(),
+      ...(input.evidence_ref !== undefined ? { evidenceRef: input.evidence_ref } : {}),
+      ...(input.evidence_digest !== undefined ? { evidenceDigest: input.evidence_digest } : {}),
+      ...(input.observed_at !== undefined ? { observedAt: input.observed_at } : {}),
+    };
+    // --- terminal states: acknowledged, never a transition ---
+    if (TERMINAL_STATES.has(record.state)) {
+      const result: DischargeResult = {
+        ...selectors,
+        outcome: "terminal_noop",
+        prior_version: record.version,
+        current_version: record.version,
+      };
+      // Recorded like `already_discharged` below (@spec
+      // status#discharge-idempotency): a fresh-nonce replay of THIS occurrence
+      // must recover this stored outcome and these versions, and the same
+      // tuple re-asserted with a DIFFERENT fingerprint must be `conflict` —
+      // neither holds if the terminal acknowledgement bypasses the event
+      // store.
+      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit);
+      return { record, result };
+    }
+    // --- the monotonic latch: `active` OR `suspended` (a suspended Mission
+    // still narrows monotonically). A later delivery presenting any valid
+    // condition against an already-latched entry, a sibling condition or the
+    // same condition under a different event_id, is acknowledged
+    // already_discharged and never re-latches or re-increments.
+    if (record.discharged?.some((d) => d.entry_digest === input.entry_digest)) {
+      const result: DischargeResult = {
+        ...selectors,
+        outcome: "already_discharged",
+        prior_version: record.version,
+        current_version: record.version,
+      };
+      // Recorded even though it commits no latch: a later replay of THIS
+      // occurrence must report the versions this delivery saw, not whatever the
+      // Mission's version has since become through unrelated transitions.
+      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit);
+      return { record, result };
+    }
+    let result!: DischargeResult;
+    const fresh = this.latchDischarge(
+      record,
+      [
+        {
+          entry_digest: input.entry_digest,
+          condition_digest: input.condition_digest,
+          event_type: input.event_type,
+          event_id: input.event_id,
+        },
+      ],
+      (committed) => {
+        result = {
+          ...selectors,
+          outcome: "discharged",
+          prior_version: record.version,
+          current_version: committed.version,
+        };
+        // In the SAME transaction as the latch and the version increment
+        // (@spec status#discharge-operation, "Atomicity").
+        this.dischargeEvents.recordInCallerTx(eventKey, fingerprint, result, audit);
+      },
+    );
+    return { record: fresh, result };
+  }
+
+  /**
+   * @spec status#discharge-operation ("Atomicity"), status#determining — commit
+   * one or more entry latches on ONE record as a single unit: the latch rows,
+   * the version increment, and the durable propagation work (the lifecycle
+   * commit the Status List republisher and Mission Signals ride) share one
+   * transaction, so no subscriber can observe an enqueue without the latch. The
+   * commit is metadata-only (`prior_state` EQUALS `state`, `version`
+   * incremented), the same shape `contain` produces.
+   *
+   * @spec signals#lifecycle-event — `authority_changed` is computed HERE from
+   * the effective set before/after and passed explicitly, never inferred from
+   * the metadata-only shape: an entry already fully contained contributes
+   * nothing to the effective set, so latching it narrows nothing and the
+   * discriminator stays absent.
+   *
+   * Several latches commit together when one propagated narrowing covers more
+   * than one of a child's entries: one transition, one version increment, one
+   * notification, mirroring the equivalence-class rule for duplicate entries.
+   */
+  private latchDischarge(
+    record: MissionRecord,
+    latches: ReadonlyArray<Omit<DischargedEntry, "discharged_at">>,
+    /**
+     * Runs INSIDE the commit transaction, after the persisted row is read and
+     * before the lifecycle fan-out: how the event-dedup row (and any future
+     * result record) joins this one unit.
+     */
+    accompany?: (committed: MissionRecord) => void,
+  ): MissionRecord {
+    const nowIso = this.now().toISOString();
+    const next: DischargedEntry[] = [
+      ...(record.discharged ?? []),
+      ...latches.map((l) => ({ ...l, discharged_at: nowIso })),
+    ];
+    // Belt-and-suspenders (the `contain` idiom): the latch is structurally
+    // removal-only, but assert the effective set really only narrowed.
+    const priorEffective = this.effectiveAuthoritySet(record);
+    const newEffective = this.effectiveAuthoritySet({ ...record, discharged: next });
+    if (!isSubsetSet(newEffective, priorEffective)) {
+      throw new Error(
+        `discharge for ${record.id} would widen the effective set (monotonicity violated)`,
+      );
+    }
+    const authorityChanged = !isSubsetSet(priorEffective, newEffective);
+    const fresh = withTransaction(this.db, () => {
+      this.db
+        .prepare("UPDATE missions SET discharged_json = ?, version = version + 1 WHERE id = ?")
+        .run(JSON.stringify(next), record.id);
+      const committed = this.get(record.id);
+      if (!committed) throw new Error(`unknown mission: ${record.id}`);
+      accompany?.(committed);
+      // Inside the unit deliberately: the signal enqueue commits with the latch
+      // (@spec status#discharge-operation, "Atomicity"). Nothing after the
+      // fan-out can fail the transaction, so the hook cannot fire on a rollback.
+      this.emitCommit(committed, committed.state, undefined, authorityChanged);
+      return committed;
+    });
+    // @spec status#discharge-operation ("Atomicity") — entry-wise propagation to
+    // an already-justified Child Mission. Materialization is not claimed atomic
+    // with the commit above; running it synchronously here closes the gap
+    // entirely, so no child derivation can fall between the two.
+    for (const latch of latches) {
+      this.propagateDischargeToChildren(fresh, latch);
+    }
+    return fresh;
+  }
+
+  /**
+   * @spec status#discharge-operation ("Atomicity"), child-delegation#child-state
+   * — propagate a committed discharge entry-wise to the parent's existing
+   * children, so a Child Mission already justified by the discharged parent
+   * entry cannot keep deriving it while both Missions stay `active`.
+   *
+   * The MATCHING RULE is exact rather than resource-keyed (the containment
+   * precedent's rule, which had no finer key available): a child entry is
+   * justified by the discharged parent entry when it shares the resource AND
+   * carries the very condition that fired, identified by `condition_digest`. The
+   * subset rule guarantees the child carries every parent condition unchanged
+   * (@spec status#subset-extension), so the condition is present exactly on the
+   * child entries the parent entry justified. A child's latch is keyed by the
+   * CHILD's own `entry_digest`: the child entry is narrower, so it is a
+   * different immutable entry with a different commitment.
+   *
+   * A terminal child cannot derive and is skipped (the {@link cascadeChildren}
+   * gate). Recursion rides {@link latchDischarge} itself, so a grandchild
+   * justified transitively picks up the same narrowing in generation order; the
+   * per-record latch is idempotent by `entry_digest`, so a replay at any level
+   * is safe. The parent's and the children's lifecycle states are never touched:
+   * discharge only ever narrows effective authority.
+   */
+  private propagateDischargeToChildren(
+    parent: MissionRecord,
+    latch: Omit<DischargedEntry, "discharged_at">,
+  ): void {
+    const parentEntry = parent.authority_set.find(
+      (e) => entryDigest(parent.issuer, e) === latch.entry_digest,
+    );
+    if (!parentEntry) return;
+    for (const child of this.findChildren(parent.id)) {
+      const fresh = this.applyExpiry(child);
+      if (TERMINAL_STATES.has(fresh.state)) continue;
+      const already = new Set((fresh.discharged ?? []).map((d) => d.entry_digest));
+      const seen = new Set<string>();
+      const latches: Array<Omit<DischargedEntry, "discharged_at">> = [];
+      for (const childEntry of fresh.authority_set) {
+        if (childEntry.resource !== parentEntry.resource) continue;
+        const conditions = terminalWhenOf(childEntry);
+        if (!conditions?.some((c) => conditionDigest(c) === latch.condition_digest)) continue;
+        const digest = entryDigest(fresh.issuer, childEntry);
+        if (already.has(digest) || seen.has(digest)) continue;
+        seen.add(digest);
+        latches.push({
+          entry_digest: digest,
+          condition_digest: latch.condition_digest,
+          event_type: latch.event_type,
+          event_id: latch.event_id,
+        });
+      }
+      if (latches.length > 0) this.latchDischarge(fresh, latches);
+    }
+  }
+
+  /**
+   * @spec status#visibility, runtime#input-authority — the committed discharge
+   * latches as entry commitments, for a consumer that materializes a policy view
+   * from this AS (a PDP's `discharged` input). Empty when nothing is discharged.
+   */
+  dischargedEntryDigests(record: MissionRecord): string[] {
+    return (record.discharged ?? []).map((d) => d.entry_digest);
+  }
+
+  /**
+   * The Mission's EFFECTIVE Authority Set: the approved set minus the issuer-held
+   * narrowing overlays, which are TWO (#569: this method is the single
+   * composition point every derivation, projection, and Status surface draws on):
+   *  - DISCHARGE (@spec status#discharge, status#visibility): an entry whose
+   *    `entry_digest` carries a committed latch is dropped outright. The digest
+   *    is computed over the APPROVED entry, before any containment rewrite, both
+   *    because `entry_digest` is defined over the immutable Mission-record entry
+   *    and because a partially-contained entry's narrowed `actions` would digest
+   *    to something else. This is also what makes the latch an equivalence-class
+   *    latch: every byte-identical entry shares the digest and vanishes together.
+   *  - CONTAINMENT: an entry whose actions are all contained (or whose resource
+   *    is contained with no `actions` member) is dropped; otherwise the contained
+   *    actions are filtered out.
+   * FAST PATH: a Mission with NEITHER overlay returns the approved set as-is
+   * (byte-identical behavior). `authority_hash` always commits the approved set;
+   * both overlays are evaluated state, never a new hash.
    */
   effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[] {
     const containment = record.containment;
-    if (!containment) return record.authority_set;
+    const discharged = record.discharged;
+    if (!containment && !discharged?.length) return record.authority_set;
+    const dischargedDigests = new Set((discharged ?? []).map((d) => d.entry_digest));
     const out: AuthorityEntry[] = [];
     for (const entry of record.authority_set) {
+      if (dischargedDigests.size > 0 && dischargedDigests.has(entryDigest(record.issuer, entry))) {
+        continue; // discharged -> no longer derivable, and omitted from every report
+      }
+      if (!containment) {
+        out.push(entry);
+        continue;
+      }
       const contained = containment.contained.find((c) => c.resource === entry.resource);
       if (!contained) {
         out.push(entry);
@@ -1123,7 +1549,19 @@ export class MissionKernel {
    */
   async signedStatus(
     id: string,
-    opts: { audience?: string; requester: string; nonce?: string; freshnessSeconds?: number },
+    opts: {
+      audience?: string;
+      requester: string;
+      nonce?: string;
+      freshnessSeconds?: number;
+      /**
+       * @spec status#discharge-result — the `discharge_result` object a
+       * `discharge` delivery's response carries as a SIBLING of `mission` in
+       * this same envelope. Absent on every other request, so the Status
+       * response shape is unchanged for them.
+       */
+      dischargeResult?: DischargeResult;
+    },
   ): Promise<string> {
     const record = this.applyExpiry(this.mustGet(id));
     const nowS = Math.floor(this.now().getTime() / 1000);
@@ -1149,6 +1587,7 @@ export class MissionKernel {
     };
     if (opts.nonce) payload.nonce = opts.nonce;
     if (scoped) payload.authorization_details = scoped;
+    if (opts.dischargeResult) payload.discharge_result = opts.dischargeResult;
     return new SignJWT(payload)
       .setProtectedHeader({ alg: "ES256", kid: this.opts.statusKid, typ: "mission-status-response+jwt" })
       .setIssuer(this.opts.issuer)
@@ -1229,6 +1668,7 @@ export class MissionKernel {
     prior?: MissionState,
     successor?: string,
     authorityChanged = false,
+    containmentAdvanced = false,
   ): void {
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
@@ -1242,6 +1682,10 @@ export class MissionKernel {
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
+      // @spec signals#discharge-compatibility — provenance, set ONLY by the
+      // one funnel that advances containment_version (`contain`); the Signals
+      // gate must never have to reconstruct this from version history.
+      ...(containmentAdvanced ? { containment_advanced: true } : {}),
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),
@@ -1297,6 +1741,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // Absent means no containment was ever applied; written only by contain().
     ...(row.containment_json
       ? { containment: JSON.parse(row.containment_json as string) as MissionContainment }
+      : {}),
+    // @spec status#discharge — absent means nothing was ever discharged;
+    // written only by the discharge funnel (`latchDischarge`).
+    ...(row.discharged_json
+      ? { discharged: JSON.parse(row.discharged_json as string) as DischargedEntry[] }
       : {}),
   };
 }

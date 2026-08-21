@@ -32,7 +32,7 @@
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "2399f170964924d80f8ceaad81d41892411d4465",
-    "content_sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
+    "content_sha256": "99b26772bde92ff2d7b88729f4da84f432920ad65274269c940493e3fcb428b5"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "12b540f5c8e547a61cac16259c98515eca7ec504",
@@ -1131,9 +1131,16 @@
     "normative": "a discharge request from a caller with no distinct mission_discharge grant (or deployment-defined equivalent) is refused, never treated as authorized"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server integration test for the discharge operation, asserting refusal for a caller holding mission_lifecycle but not mission_discharge."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The lifecycle endpoint's service-token auth now resolves a { principal_id, scopes } principal (provider.ts DEFAULT_SERVICE_TOKEN_PRINCIPALS): `mission_discharge` gates `discharge` alone and is checked before any selector work, so a caller holding only `mission_lifecycle` is refused with the endpoint's indistinguishable not_found. The test registers a lifecycle-only token, watches it perform `suspend`, and watches the same token be refused `discharge`. This is the minimal stand-in for the profile's mechanism set (mTLS / sender-constrained token / private-key JWT): what is proven is the DISTINCTNESS of the two grants, not the authentication mechanism."
   },
   {
    "id": "status.discharge.lifecycle-grant-not-implied",
@@ -1155,9 +1162,16 @@
     "normative": "a caller who is the Mission's Subject, Approver, or an administrator, but lacks the distinct discharge grant, is refused a discharge request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server integration test for the discharge operation, asserting refusal for the Subject/Approver/administrator role alone."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Same observable from the other direction. This deployment authenticates operational callers as service-token principals, so the administrator caller IS the principal holding `mission_lifecycle` (it can revoke, suspend, resume, complete): there is no separate Subject/Approver caller identity at this endpoint to test independently. The test's lifecycle-only token performs a state transition and is then refused `discharge`, which is exactly the non-implication the clause requires; a deployment that models Subject/Approver callers must re-prove it for those identities."
   },
   {
    "id": "status.discharge.anti-oracle-collapse",
@@ -1179,9 +1193,16 @@
     "normative": "an unknown mission_id, entry_digest, or condition_digest, an entry carrying no terminal_when, an event_type that does not match the condition condition_digest names, and an unauthorized-target caller all produce the identical not_found response"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server integration test asserting identical not_found bodies across the six anti-oracle cases."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > collapses all six anti-oracle cases to one identical not_found body",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "All six cases raise the kernel's DischargeNotFoundError (whose `reason` is issuer-audit only) and the endpoint renders ONE body. The test drives every case, including the unauthorized-target arm (a second AS whose mapping admits a different principal), and asserts the responses are identical apart from each request's own echoed nonce, which cannot be shared: two requests differing only in nonce would trip the divergent-retry rule. Response TIMING is not equalized (the profile's SHOULD on timing side channels is not claimed by this row)."
   },
   {
    "id": "status.discharge.selector-mismatch-refusal",
@@ -1203,9 +1224,16 @@
     "normative": "an event_type that does not match the condition named by condition_digest joins the not_found collapse rather than receiving a distinguishing error"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server integration test for the discharge operation, mismatched event_type/condition_digest pair, asserting a not_found response indistinguishable from the other collapse cases."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > collapses all six anti-oracle cases to one identical not_found body",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The event_type/condition_digest mismatch is case 5 of the same six-case collapse test, so its indistinguishability from the other five is asserted directly rather than in isolation."
   },
   {
    "id": "status.discharge.duplicate-entry-equivalence",
@@ -1227,9 +1255,22 @@
     "normative": "discharging one of several byte-identical Mission-record entries discharges all of them as one equivalence-class transition with exactly one version increment"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server integration test with two byte-identical entries, asserting a single discharge and a single version increment."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges duplicate entries as one equivalence-class transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge latch: outcomes, versions, and visibility > one entry_digest discharges every byte-identical entry as ONE transition",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The latch is keyed by `entry_digest`, the envelope anchor over the immutable record entry, so byte-identical entries share it by construction and `effectiveAuthoritySet` drops them together. Both tests approve a Mission with two byte-identical completing entries and assert one increment, one latch row, one lifecycle commit, and an empty effective set."
   },
   {
    "id": "status.discharge.nonce-replay",
@@ -1251,9 +1292,16 @@
     "normative": "a retransmitted lifecycle request with the same nonce and byte-identical body replays the original signed response rather than re-executing the operation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server lifecycle-endpoint idempotency test, same-nonce same-body retransmit."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the exact request bytes; the retransmission replays it without re-executing. Proven on `discharge`, whose response is the signed envelope (string equality is meaningful). DEVIATION: `nonce` is REQUIRED for `discharge` and OPTIONAL for the four state operations here, since existing operational callers never send one; dedup applies to any operation that does carry one."
   },
   {
    "id": "status.discharge.nonce-conflict-refusal",
@@ -1275,9 +1323,16 @@
     "normative": "a retransmitted nonce paired with a non-identical request body is refused invalid_request, never answered with the unrelated original response"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server lifecycle-endpoint idempotency test, same-nonce different-body retransmit."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The divergent arm of the same test: the same nonce with a non-identical body is refused invalid_request (echoing the nonce, which is well formed), and the ORIGINAL response is still replayable afterwards, because the store is first-writer-wins and the refusal cannot overwrite what a retransmission must replay."
   },
   {
    "id": "status.discharge.same-nonce-verbatim-replay",
@@ -1299,9 +1354,16 @@
     "normative": "a discharge retransmission with the same nonce and a byte-identical request returns the stored signed response verbatim, unchanged, including its original nonce"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge idempotency test, same nonce and byte-identical request, asserting the identical prior signed envelope is returned."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "String equality of the compact JWS, which is only meaningful because the stored bytes are returned rather than re-signed: the assertion would pass vacuously under a frozen clock if the endpoint re-signed, so the companion event-replay row asserts the echoed nonce instead."
   },
   {
    "id": "status.discharge.event-replay",
@@ -1323,9 +1385,16 @@
     "normative": "a repeated discharge request sharing (discharge authority, mission_id, entry_digest, condition_digest, event_id) and the same assertion fingerprint but a new nonce performs no state-changing work and returns a freshly signed envelope echoing the new nonce, carrying the stored outcome, selectors, and the original prior_version and current_version"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge idempotency test, same event tuple and fingerprint, different nonce, asserting a fresh envelope (not the original signed response) carrying the original versions and no re-latch."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays the event under a NEW nonce as a fresh envelope carrying the original versions",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "DischargeEventStore is consulted after target authorization and before the terminal check, so a retry under a fresh nonce recovers the original outcome and versions even once the Mission has gone terminal. The test asserts the response is a FRESH envelope by its echoed new nonce (not by byte inequality, which a frozen clock could make vacuous), carrying the original prior/current versions, with no second version increment."
   },
   {
    "id": "status.discharge.event-fingerprint-conflict",
@@ -1347,9 +1416,16 @@
     "normative": "the same (discharge authority, mission_id, entry_digest, condition_digest, event_id) tuple asserted with a different event assertion fingerprint is refused conflict"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge idempotency test, same event tuple, changed evidence_ref/observed_at."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays the event under a NEW nonce as a fresh envelope carrying the original versions",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The conflict arm of the same test: the same five-part tuple re-asserted with a changed `evidence_ref` (so a different assertion fingerprint) is refused 409 conflict. The fingerprint is the canonical-object digest of the semantic assertion object; `nonce`, client authentication material, and transport headers are outside it by construction."
   },
   {
    "id": "status.discharge.event-cross-target-valid",
@@ -1371,9 +1447,16 @@
     "normative": "reusing the same event_id against a different mission_id, entry_digest, or condition_digest is processed as an independent discharge, not refused as a duplicate or conflict"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge idempotency test, same event_id across two distinct Missions."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > accepts the same event_id against a different target as an independent assertion",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "One `event_id` asserted against two distinct Missions discharges both: the dedup tuple includes mission_id, entry_digest, and condition_digest, so one real-world event fans out to more than one target without being read as a duplicate."
   },
   {
    "id": "status.discharge.already-discharged-noop",
@@ -1395,9 +1478,22 @@
     "normative": "a delivery presenting any valid condition against an already-discharged entry, whether a sibling condition or the same condition under a different event_id, is acknowledged already_discharged without re-latching the entry or incrementing the state version"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge test, both a sibling condition and the same condition under a different event_id, against an already-discharged entry."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges a suspended Mission, and acknowledges already_discharged after it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge latch: outcomes, versions, and visibility > already_discharged for a sibling condition and for a different event_id, with no re-latch",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Both later-delivery shapes are covered: a SIBLING condition of the same entry and the SAME condition under a different event_id, each acknowledged already_discharged with prior_version equal to current_version, no second latch row, and no second increment. An already_discharged delivery is itself recorded in the event store so a later replay of that occurrence reports the versions it saw rather than a version some unrelated transition has since advanced."
   },
   {
    "id": "status.discharge.terminal-noop",
@@ -1419,9 +1515,22 @@
     "normative": "a discharge request against a Mission already in a terminal state returns terminal_noop with no transition and no version increment"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge test against a revoked/expired/completed Mission."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the selectors before distinguishing a terminal Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge latch: outcomes, versions, and visibility > applies while suspended, and is a terminal_noop after a terminal state",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "A revoked Mission answers terminal_noop with prior_version equal to current_version, no latch row, and no version increment; the expiry clock runs first (as `contain` does), so a clock-expired Mission reaches the same acknowledgement rather than latching."
   },
   {
    "id": "status.discharge.suspended-applies",
@@ -1443,9 +1552,22 @@
     "normative": "a discharge request against a suspended Mission succeeds and narrows the entry exactly as it would for an active Mission"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge test against a suspended Mission."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges a suspended Mission, and acknowledges already_discharged after it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge latch: outcomes, versions, and visibility > applies while suspended, and is a terminal_noop after a terminal state",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "A suspended Mission still narrows monotonically: the discharge commits, the state stays `suspended`, and the entry leaves the effective set exactly as it would for an active Mission."
   },
   {
    "id": "status.discharge.signed-result-binding",
@@ -1467,9 +1589,28 @@
     "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside entry_digest, condition_digest, event_id, prior_version, and current_version"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge test, asserting the discharge_result shape and outcome value for each of the three outcomes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges over HTTP, returning the signed discharge_result beside `mission`",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the selectors before distinguishing a terminal Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges a suspended Mission, and acknowledges already_discharged after it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The `discharge_result` object is a sibling of `mission` in the endpoint's existing signed envelope (kernel.signedStatus's `dischargeResult` option), asserted member-for-member for `discharged` and by outcome plus versions for `already_discharged` and `terminal_noop`, so all three vocabulary values are observed. The response is state-only (the request carries no audience) and echoes the request's own nonce."
   },
   {
    "id": "status.discharge.atomic-commit",
@@ -1491,9 +1632,16 @@
     "normative": "the entry latch, version increment, audit and result record, and durable propagation work (outbox entry or signal enqueue) are never observed partially committed under concurrent or interrupted delivery"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server concurrency test, concurrent duplicate discharge requests racing the same entry."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > commits atomically under a concurrency race: one discharged, one already_discharged, one increment",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "PARTIAL (review of PR #622): the latch rows, version increment, and event-dedup row share one SQLite transaction (latchDischarge's accompany hook) and the lifecycle commit fires inside it, so no subscriber observes an enqueue without the latch; the concurrency test (two concurrent HTTP discharges, distinct nonces and event_ids: one discharged, one already_discharged, one increment) proves that funnel's serialization. What is NOT established is durable propagation under interrupted delivery: the store is in-process in-memory better-sqlite3, signal delivery is best-effort with retry/dead-letter deferred to the SSF transport, and no multi-connection recovery test exists. Flips to tested with a transactional persistent outbox plus a recovery test that interrupts delivery between commit and emission."
   },
   {
    "id": "status.discharge.child-propagation",
@@ -1516,9 +1664,16 @@
     "local": "requires the deployment to also adopt the child-delegation profile"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: cross-component test spanning the discharge operation and child-delegation derivation gating, racing a child derivation against the parent's discharge commit before materialization completes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge latch: outcomes, versions, and visibility > gates derivation and refuses a Child Mission naming the discharged entry",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Propagation is entry-wise and SYNCHRONOUS in this implementation (`propagateDischargeToChildren`, matching a child entry on the resource plus the fired `condition_digest`, which the subset rule guarantees the child carries, and keyed by the child's own entry commitment with recursion to grandchildren), so the asynchronous materialization gap the clause contemplates does not exist here and there is nothing to race: immediately after the parent commit the already-justified child's effective set is empty and its derivation is refused. The refusal is observed at the kernel derivation gate the token endpoint calls (`gateDerivation`) and at `createChildMission`, not through a full OAuth exchange."
   },
   {
    "id": "status.discharge.policy-resolution-on-condition-entry",
@@ -1540,9 +1695,16 @@
     "normative": "discharge_policy is resolved and validated whenever a condition enters an immutable Mission-record entry, including a condition a derived entry adds after activation (child creation, expansion, or another derivation), refusing the Intent or derivation when the selector maps to nothing"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server integration test asserting discharge_policy resolution/refusal for a condition introduced by a derivation after Mission activation (child creation or expansion), not only at initial approval."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "terminal_when: derivation, subset rule, and selector resolution > fails closed when a discharge_policy selector maps to nothing, at approval and at child creation",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "IMPLEMENTED and tested: `assertDischargePoliciesResolvable` runs in the derivation (`MissionKernel.derive`) and in `insertRecord`, the single Mission-record creation funnel (approve, expansion, template dispatch, child creation), and refuses when a selector maps to nothing; the policy fails closed, so an unconfigured deployment cannot admit a condition at all. The test covers initial approval, the absent-baseline case, and a condition a CHILD CREATION adds after activation. Coverage stays partial because the row's declared surface is `lifecycle-endpoint` while the observable is a derivation/creation refusal: no lifecycle-endpoint request can introduce a condition, so no mapping can match this row's level and surface. The binding of the resolved mapping's identifier and version to the exact condition_digest in issuer-held metadata is NOT implemented: the mapping is resolved live from the issuer-held policy at each discharge instead."
   },
   {
    "id": "status.discharge.evidence-non-dereference-non-authorization",
@@ -1564,9 +1726,16 @@
     "normative": "the AS never dereferences evidence_ref during baseline discharge processing and never treats evidence_ref or evidence_digest as input to an authorization decision"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge test asserting no outbound fetch of evidence_ref and no authorization-decision dependency on either evidence member."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > never dereferences evidence_ref and never lets an evidence member decide authorization",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Baseline processing validates `evidence_ref` (URI syntax, 512-character bound) and `evidence_digest` (prefix) and then only records them in the event store's audit columns; no code path fetches either. NON-DEREFERENCE is proven by a spy over globalThis.fetch across the discharge exchange (the AS runs in-process, so its own outbound calls are visible): the only recorded request is the test's own lifecycle POST, and none names the evidence host. A spy rather than an unreachable host is what makes this falsifiable, since a fetch the handler never awaits would still be recorded while leaving the response a prompt 200. NON-AUTHORIZATION is proven separately: the same evidence members presented by a caller lacking the discharge grant are still refused. What is NOT covered: a dereference performed outside this process (there is none) and any non-baseline processing a deployment might add."
   },
   {
    "id": "status.discharge.validation-order-before-terminal-noop",
@@ -1588,9 +1757,16 @@
     "normative": "the AS checks selector existence, condition membership, and target authorization before returning terminal_noop, so a terminal Mission cannot be used to test whether a selector resolves"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: authorization-server discharge test against a terminal Mission with an unknown entry_digest or condition_digest, asserting the not_found collapse rather than terminal_noop."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the selectors before distinguishing a terminal Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The funnel checks selector existence and condition membership (one lookup: the condition is resolved INSIDE the named entry), then event_type match, then target authorization, and only then distinguishes a terminal Mission. The test revokes a Mission and presents an unknown entry_digest: the answer is the not_found collapse, not terminal_noop, so the terminal state is never a selector-existence oracle; the same terminal Mission with resolving selectors then answers terminal_noop."
   },
   {
    "id": "status.effective-set.single-computation",
@@ -1665,9 +1841,15 @@
      "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > wired end-to-end: a real kernel discharge() commit drives a declared receiver to rematerialize",
+     "level": "cross-component",
+     "surface": "signals"
     }
    ],
-   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo."
+   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance."
   },
   {
    "id": "signals.discharge.producer-authority-changed-emit",
@@ -1688,9 +1870,16 @@
     "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: cross-component test spanning the discharge operation and Signals event emission, asserting authority_changed true on the produced event."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > wired end-to-end: a real kernel discharge() commit drives a declared receiver to rematerialize",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "The kernel's discharge commit computes `authority_changed` from the effective set before/after and passes it explicitly to `emitCommit` (never inferred from the metadata-only shape: an entry already fully contained narrows nothing when latched), and `signLifecycleEvent` relays it unchanged. The test runs a real kernel discharge through the emitter into a registered receiver and observes the event's state unchanged, version advanced, and the receiver's rematerialization latch raised."
   },
   {
    "id": "signals.discharge.producer-gating-undeclared-stream",
@@ -1711,9 +1900,22 @@
     "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: signals delivery test, discharge commit against a stream lacking the authority_changed capability declaration, asserting no event delivered on that stream."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > does not deliver the discharge event to a stream that has not declared authority_changed",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: an event whose effective-authority change is represented by `authority_changed` ALONE is withheld from an undeclared stream. The gate keys on a `containment_version` ADVANCE rather than its presence, tracked per Mission with the same cursor discipline the receiver uses, so the composite case is caught: a discharge on a PREVIOUSLY CONTAINED Mission carries containment_version unchanged and is still gated, while the contain commit before it (an actual advance) still reaches the undeclared stream, leaving containment's delivery rules unchanged. With no cursor yet, only containment_version 1 counts as an advance; a higher first-seen value is ambiguous and the gate withholds. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
   },
   {
    "id": "cross-org.chain.presentation-closed",
@@ -4617,9 +4819,28 @@
     "normative": "a PDP that recognizes terminal_when refuses an action within an entry the Mission has discharged"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No code path: terminal_when / discharge is not implemented anywhere in this codebase (grep across src/services and src/packages finds only forward-looking comments in mission-signals noting \"No kernel funnel commits an entry discharge yet\"). evaluateInner has no discharge-state input or check."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-discharge.test.ts",
+     "name": "discharged entries are excluded from the PDP's authority input > denies authority_discharged for the discharged entry while the Mission stays active",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-discharge.test.ts",
+     "name": "discharged entries are excluded from the PDP's authority input > tells approved-then-discharged apart from never-approved",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-discharge.test.ts",
+     "name": "discharged entries are excluded from the PDP's authority input > denies out_of_authority when the view is materialized from the effective set",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",
@@ -7919,7 +8140,7 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
      "level": "unit",
      "surface": "resource-operation"
     },
@@ -7982,13 +8203,13 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority remittance send under external_commitment -> permit with conditions.use_limit 1 too (both high-consequence classes, not just irreversible)",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority remittance send under external_commitment -> permit with conditions.use_limit 1 too (both high-consequence classes, not just irreversible)",
      "level": "unit",
      "surface": "resource-operation"
     }
@@ -8092,19 +8313,19 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority read -> permit",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority read -> permit",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "out-of-authority action -> deny out_of_authority",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
      "level": "unit",
      "surface": "resource-operation"
     }
