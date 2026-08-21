@@ -2180,9 +2180,9 @@ Table of Contents
        AS.
 
    6.  Where a particular AS later becomes natively Mission-aware, it
-       adds the core's own issuance for its resources, while the MAS
-       record, lifecycle, and authority model continue to govern the
-       rest of the estate.
+       adds the OAuth binding's own issuance for its resources, while
+       the MAS record, lifecycle, and authority model continue to govern
+       the rest of the estate.
 
    A deployment stops at the phase its risk warrants; nothing above the
    floor is required to begin, and the MAS remains the enduring control

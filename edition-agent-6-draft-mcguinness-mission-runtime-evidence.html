@@ -1387,13 +1387,14 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">This document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> as the data model for every
 record it defines. JCS canonicalization <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> applies wherever
-an integrity hash is computed, under the canonicalization rules of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; this document does not
+an integrity hash is computed, under the substrate's default
+commitment construction
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>); this document does not
 define a second canonicalization.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the
-integrity-anchor encoded form of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: <code>sha-256:</code> followed by the
-base64url, no-padding encoding of the digest. Every digest this
+<p id="section-2-3">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the encoded
+form of the substrate's default commitment construction
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): <code>sha-256:</code> followed by
+the base64url, no-padding encoding of the digest. Every digest this
 document defines (<code>evaluation_request_digest</code>, <code>entry_digest</code>,
 <code>effective_parameter_digest</code>, the Mission Receipt's evidence-reference
 and chain-predecessor digests, <a href="#mission-receipt" class="auto internal xref">Section 6</a>) is a
@@ -2939,8 +2940,8 @@ profile that needs it defines it here.<a href="#section-6.2-5.12.1" class="pilcr
 <code>digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.3-2.4">
             <p id="section-6.3-2.4.1"><span class="bcp14">REQUIRED</span>. A string. A <code>sha-256:</code> prefixed digest, classified under
-the core's commitment taxonomy
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) as a canonical-object
+the substrate's default commitment construction
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>) as a canonical-object
 digest for a JSON evidence record and a raw-octet digest for a
 JWS- or JWT-shaped artifact. For a JSON evidence record the digest
 input is the exact canonical bytes the convention fixes for that

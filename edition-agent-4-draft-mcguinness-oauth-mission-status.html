@@ -1573,7 +1573,7 @@ credential's <code>mission.issuer</code>. The endpoint <span class="bcp14">MUST<
 <code>mission_id</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.2">
             <p id="section-3.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The canonical Mission Identifier, named per the
-core's external-surface convention
+issuance profile's external-surface convention
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -1815,7 +1815,7 @@ the Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="c
                 <p id="section-3.4-10.2.2.3.1"><code>state</code>: the current Mission lifecycle state. The authoritative
 state space is the issuance profile's
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle
-and Gating"): the core states <code>active</code>, <code>revoked</code>, <code>expired</code>, this
+and Gating"): the issuance profile states <code>active</code>, <code>revoked</code>, <code>expired</code>, this
 profile's <code>suspended</code> and <code>completed</code> when the Mission Lifecycle
 endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>) is deployed, and any
 further state a companion profile defines and the deployment runs
@@ -2343,7 +2343,7 @@ form-urlencoded body:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <code>mission_id</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.2">
             <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The canonical Mission Identifier, named per the
-core's external-surface convention
+issuance profile's external-surface convention
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -3330,7 +3330,7 @@ new requirement on the issuance profile: it defines one <span class="bcp14">OPTI
 entry member and the rules for handling it. A deployment claims the
 completion capability only when it issues or consumes entries
 carrying <code>terminal_when</code>. The capability is newer and less exercised
-than the issuance core and the runtime layer, and is not required by
+than baseline issuance and runtime enforcement, and is not required by
 any Mission Assurance Level; its entry-discharge details may change.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The issuance profile gates issuance on Mission state but has no
 notion of an approved entry being <strong>done</strong>. A Mission granted
@@ -4106,7 +4106,7 @@ its <code>jwks_uri</code>. The AS <span class="bcp14">MUST</span> keep the publi
 has signed such a response under resolvable in its <code>jwks_uri</code> for at
 least the Mission record retention period, so an archived
 <code>application/mission-status-response+jwt</code> remains verifiable for
-audit and dispute. This is the core's retired-key rule
+audit and dispute. This is the issuance profile's retired-key rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with the record retention
 period as the bound. A key known or suspected
 compromised is the exception: the AS removes it, and the Mandate

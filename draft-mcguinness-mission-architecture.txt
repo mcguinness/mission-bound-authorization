@@ -619,14 +619,14 @@ Table of Contents
 
    *Only active permits*:  Issuance, refresh, and reliance require the
       exact state active; every other state, including an unrecognized
-      one, fails safe (the core's Mission Lifecycle and Gating section).
-      In AAuth, only PS operations and the PS-asserted and federated
-      authorization paths are structurally gated; identity-based and
-      resource-managed decisions do not pass through the PS.  On the
-      gated paths the gate covers requests whose resource token carries
-      the validated Mission Reference; a stripped reference yields a
-      missionless request, bounded by the binding's downgrade rules
-      ([I-D.draft-mcguinness-mission-aauth]).
+      one, fails safe (the OAuth binding's Mission Lifecycle and Gating
+      section).  In AAuth, only PS operations and the PS-asserted and
+      federated authorization paths are structurally gated; identity-
+      based and resource-managed decisions do not pass through the PS.
+      On the gated paths the gate covers requests whose resource token
+      carries the validated Mission Reference; a stripped reference
+      yields a missionless request, bounded by the binding's downgrade
+      rules ([I-D.draft-mcguinness-mission-aauth]).
 
    *Authority only narrows*:  Derived tokens, delegated child Missions,
       attenuated tokens, and cross-domain projections carry subsets;
@@ -685,8 +685,8 @@ Table of Contents
    own Authority Set. This is a reading of the invariants above, not an
    eighth invariant; carrying that boundary through non-transitive
    Mission-to-Mission handoff is the Mission Work Products companion's
-   role ([I-D.draft-mcguinness-oauth-mission-work-products]).  The core
-   states that rule in its "Authority Does Not Propagate With
+   role ([I-D.draft-mcguinness-oauth-mission-work-products]).  The OAuth
+   binding states that rule in its "Authority Does Not Propagate With
    Information" section ([I-D.draft-mcguinness-oauth-mission]); that
    section, not this summary, is the normative text this passage tracks.
 
@@ -780,8 +780,8 @@ Table of Contents
 
    Resource Server:  The protected resource.  In the OAuth binding it
       enforces statelessly from the token and can check the mission
-      claim (the core's Resource Server Enforcement section); in the
-      standalone binding the token carries no Mission signal, and
+      claim (the OAuth binding's Resource Server Enforcement section);
+      in the standalone binding the token carries no Mission signal, and
       Mission properties reach it only through the enforcement path.
 
    PEP and PDP:  The PEP sits at the last controllable boundary before
@@ -1014,9 +1014,9 @@ Table of Contents
    as client_id, is an authorization subject, never an attribution
    subject, and attribution stays per-instance through the instance
    substrate, which forbids a sender-constraint key shared across a
-   client's instances.  The core's controls.max_derivations is the
-   explicit fan-out ceiling, and consumption bounds attach at Mission
-   grain, so a swarm shares one budget
+   client's instances.  The OAuth binding's controls.max_derivations is
+   the explicit fan-out ceiling, and consumption bounds attach at
+   Mission grain, so a swarm shares one budget
    ([I-D.draft-mcguinness-mission-metering]).
 
    The decision ladder:
@@ -2343,7 +2343,7 @@ Table of Contents
    federated access have a PS lifecycle gate for new authorization;
    identity-based and resource-managed access do not.  Its native auth
    token is Mission-referenced, not the strong Mission-bound credential
-   defined by the OAuth core.
+   defined by the OAuth binding.
 
    The levels, cumulative:
 
@@ -2568,10 +2568,10 @@ Table of Contents
    +========+============+=====================================================+==================================================+=====================================================+
    |Rung    |Binding     |Property                                             |Stops at commit                                   |Runs to its own bound                                |
    +========+============+=====================================================+==================================================+=====================================================+
-   |Baseline|OAuth core, |Baseline, a new-derivation kill                      |New derivation, delegation, cross-domain          |Tokens already issued, to exp; a cross-domain        |
-   |Issuance|structured- |([I-D.draft-mcguinness-oauth-mission-containment],   |projection, and offline attenuation roots minted  |projection grant already redeemed and an offline     |
-   |        |authority   |Section "Containment Properties")                    |after the transition                              |attenuation root already minted before the           |
-   |        |            |                                                     |([I-D.draft-mcguinness-oauth-mission-containment],|transition, each to its own lifetime or del_max_depth|
+   |Baseline|OAuth       |Baseline, a new-derivation kill                      |New derivation, delegation, cross-domain          |Tokens already issued, to exp; a cross-domain        |
+   |Issuance|binding,    |([I-D.draft-mcguinness-oauth-mission-containment],   |projection, and offline attenuation roots minted  |projection grant already redeemed and an offline     |
+   |        |structured- |Section "Containment Properties")                    |after the transition                              |attenuation root already minted before the           |
+   |        |authority   |                                                     |([I-D.draft-mcguinness-oauth-mission-containment],|transition, each to its own lifetime or del_max_depth|
    |        |            |                                                     |Section "Derivation Gating")                      |([I-D.draft-mcguinness-oauth-mission-containment],   |
    |        |            |                                                     |                                                  |Section "The Materialized-Capability Residual"); a   |
    |        |            |                                                     |                                                  |consequential read under the token-lifetime default, |
@@ -3215,7 +3215,7 @@ Table of Contents
    AAuth supplies the first four natively (its expires_at member carries
    the reliance bound), with its lifecycle gate scoped to PS endpoints
    and PS-mediated paths carrying the validated reference.  The OAuth
-   core supplies the structured-authority layer as well.  Runtime and
+   binding supplies the structured-authority layer as well.  Runtime and
    portable evidence remain separately claimed capabilities; the
    requirements below unpack the family mechanisms without implying
    every binding implements every one.

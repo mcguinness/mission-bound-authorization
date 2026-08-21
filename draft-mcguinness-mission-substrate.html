@@ -1753,7 +1753,7 @@ binding that proves the old and new values commit to the same
 object, producer behavior during the transition, verifier selection
 and downgrade behavior when recognition sets differ, and the
 transition procedure itself.<a href="#section-3.4.1-6" class="pilcrow">¶</a></p>
-<p id="section-3.4.1-7">Core's Integrity Anchor Test Vectors
+<p id="section-3.4.1-7">The OAuth binding's Integrity Anchor Test Vectors
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) give a byte-level worked
 example of the envelope-anchor species alone (<code>intent_hash</code>,
 <code>proposal_hash</code>, <code>authority_hash</code>); an implementation can check its
@@ -1860,7 +1860,7 @@ expiry is bounded by or disclosed with the Approved Context.<a href="#section-3.
 stated bound <span class="bcp14">SHOULD NOT</span> exceed the interval the Mission's purpose
 requires.  This floor requires no consumer-facing freshness source: a binding whose
 credential lifetimes sit inside the Mission's own bound satisfies it
-unmodified, as the OAuth core's stateless baseline does.  The bound
+unmodified, as the OAuth binding's stateless baseline does.  The bound
 gives the non-active transition of <a href="#basic-gate" class="auto internal xref">Section 3.6</a> its force: a party
 who causes a Mission to become non-active is assured that reliance
 under the Mission ends within the stated interval.<a href="#section-3.7-3" class="pilcrow">¶</a></p>
@@ -2857,7 +2857,7 @@ kernel requirements.<a href="#appendix-A.3-3" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">This appendix is normative for documents of the Mission-Bound
 Authorization family and informative for every other adopter.  An
 adopter outside the family does not need it.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
-<p id="appendix-B-2">The family's earlier documents, including the published OAuth core
+<p id="appendix-B-2">The family's earlier documents, including the published OAuth binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), use the vocabulary this
 contract was generalized from.  The terms correspond as follows:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <span id="name-family-vocabulary-mapping"></span><table class="center" id="table-3">
@@ -2904,14 +2904,14 @@ contract was generalized from.  The terms correspond as follows:<a href="#append
       </table>
 <p id="appendix-B-4">A family document that maps its own vocabulary to the kernel's <span class="bcp14">MUST</span>
 use these correspondences.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
-<p id="appendix-B-5">The authority-role map (<a href="#authority-roles" class="auto internal xref">Section 3.2</a>) aligns with the core's
+<p id="appendix-B-5">The authority-role map (<a href="#authority-roles" class="auto internal xref">Section 3.2</a>) aligns with the OAuth binding's
 Authority Sources: the <code>authority_source</code> record member and its three
 sources (user-delegated, service-owned, organizational) are the OAuth
 binding's realization of the authority-source authority role, and its
 source ceiling is that role's assertion staying within the named
 source's authority.<a href="#appendix-B-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-6">Precedence is scoped, not global.  For the OAuth-native binding, the
-core's definitions govern that mapping; this document governs the
+OAuth binding's definitions govern that mapping; this document governs the
 kernel and capability vocabulary.  Neither document depends
 normatively on the other.<a href="#appendix-B-6" class="pilcrow">¶</a></p>
 <div id="oauth-statement">
@@ -2921,11 +2921,11 @@ normatively on the other.<a href="#appendix-B-6" class="pilcrow">¶</a></p>
         </h3>
 <p id="appendix-B.1-1">This section is the Mission Substrate Statement of the OAuth Mission
 binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), hosted here so the
-core remains self-contained with no companion normative dependency.
-It applies to the core's editor's-draft lineage and to the kernel and
-capability vocabulary of this document.  The core's own definitions
+OAuth binding remains self-contained with no companion normative dependency.
+It applies to the OAuth binding's editor's-draft lineage and to the kernel and
+capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this Statement claims no property the
-core does not define.<a href="#appendix-B.1-1" class="pilcrow">¶</a></p>
+OAuth binding does not define.<a href="#appendix-B.1-1" class="pilcrow">¶</a></p>
 <p id="appendix-B.1-2">For the kernel:<a href="#appendix-B.1-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="appendix-B.1-3">
 <li id="appendix-B.1-3.1">
@@ -2942,7 +2942,7 @@ trust (AS metadata and published keys).<a href="#appendix-B.1-3.2.1" class="pilc
 </li>
           <li id="appendix-B.1-3.3">
             <p id="appendix-B.1-3.3.1">The Actor handle is the authenticated OAuth client at approval;
-the external Subject is fixed by the core's injective mapping;
+the external Subject is fixed by the OAuth binding's injective mapping;
 delegates ride the <code>act</code> chain; child and successor lineage is
 recorded through the parent and predecessor members; actor-type
 classification uses <code>sub_profile</code> and instance assertions where
@@ -2957,7 +2957,7 @@ immutable members; commitments are the typed integrity anchors
 change obtains a new approval through an expansion successor.<a href="#appendix-B.1-3.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-B.1-3.5">
-            <p id="appendix-B.1-3.5.1">The approval ceremony is the core's approval event: authenticated
+            <p id="appendix-B.1-3.5.1">The approval ceremony is the OAuth binding's approval event: authenticated
 Approver, the distinct-approver rule for write-bearing Missions,
 rendering of the derived Authority Set and the effective expiry,
 and atomic record commit, with deferred, interactive, and dispatch
@@ -3077,7 +3077,7 @@ unresolvable reference, a failed anchor verification, and an unknown
 <code>authorization_details</code> type fail closed; where a row's activation
 condition does not hold, the property is not supplied and a consumer
 <span class="bcp14">MUST NOT</span> rely on it.<a href="#appendix-B.1-6" class="pilcrow">¶</a></p>
-<p id="appendix-B.1-7">Core's three <span class="bcp14">OPTIONAL</span> capabilities, named in its Conformance section
+<p id="appendix-B.1-7">The OAuth binding's three <span class="bcp14">OPTIONAL</span> capabilities, named in its Conformance section
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), are implementation roles:
 surfaces an implementation may or may not offer, each independent of
 the others. The capability table above states scoped guarantee

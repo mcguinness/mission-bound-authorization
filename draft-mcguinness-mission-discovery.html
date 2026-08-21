@@ -1248,8 +1248,7 @@ every step, and evidenced at every binding.<a href="#section-abstract-1" class="
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
 <p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile", here
-"the core") commits a Mission's authority at the approval event, over
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") commits a Mission's authority at the approval event, over
 resources the Authority Set names. An open-world agent breaks that
 premise: given a task, it meets resources, tools, and services the
 approval could not enumerate, and some substrates invert the
@@ -1304,7 +1303,7 @@ appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶<
 <ul class="normal">
 <li class="normal" id="section-3-3.1">
           <p id="section-3-3.1.1">Mission, Authority Set, Mission Issuer, the subset rule, and the
-integrity anchors as the core defines them, and imports the
+integrity anchors as the OAuth binding defines them, and imports the
 substrate's default commitment construction normatively
 (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): of the digests this
 document defines, <code>resource_metadata_digest</code> and
@@ -1458,7 +1457,7 @@ floor of this document applies within it unchanged.<a href="#section-5-4" class=
 agent chose what to meet, and content it ingested may have chosen
 for it. Every rule in this document is written against that fact,
 and no member of an encounter request derives, widens, or gates
-authority by itself, per the core's inert-input rule.<a href="#section-5-5" class="pilcrow">¶</a></p>
+authority by itself, per the OAuth binding's inert-input rule.<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="resource-identity">
@@ -1901,8 +1900,8 @@ It is registrable in a transparency log on the Mission's feed
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), and its members make an
 encounter reproducible: what was met, what it claimed, what was
 sought, what was drawn against, and under what taint.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">An illustrative bound encounter (this Mission is not the core
-walkthrough's):<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-4">An illustrative bound encounter (this Mission is not the one from
+the OAuth binding's walkthrough):<a href="#section-10-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-10-5">
 <pre>
 {

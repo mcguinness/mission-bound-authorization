@@ -274,7 +274,7 @@ Table of Contents
    urlencoded body containing:
 
    mission_id:  REQUIRED.  A string.  The canonical Mission Identifier,
-      named per the core's external-surface convention
+      named per the issuance profile's external-surface convention
       ([I-D.draft-mcguinness-oauth-mission]).
 
    audience:  CONDITIONAL.  A string.  The audience identifier of the
@@ -480,9 +480,9 @@ Table of Contents
       -  state: the current Mission lifecycle state.  The authoritative
          state space is the issuance profile's
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-         Lifecycle and Gating"): the core states active, revoked,
-         expired, this profile's suspended and completed when the
-         Mission Lifecycle endpoint (Section 6) is deployed, and any
+         Lifecycle and Gating"): the issuance profile states active,
+         revoked, expired, this profile's suspended and completed when
+         the Mission Lifecycle endpoint (Section 6) is deployed, and any
          further state a companion profile defines and the deployment
          runs (for example superseded, defined by the Mission Expansion
          profile ([I-D.draft-mcguinness-oauth-mission-expansion]) for an
@@ -904,7 +904,7 @@ Table of Contents
    urlencoded body:
 
    mission_id:  REQUIRED.  A string.  The canonical Mission Identifier,
-      named per the core's external-surface convention
+      named per the issuance profile's external-surface convention
       ([I-D.draft-mcguinness-oauth-mission]).
 
    operation:  REQUIRED.  A string.  One of revoke, suspend, resume,
@@ -1584,8 +1584,9 @@ Table of Contents
    entry member and the rules for handling it.  A deployment claims the
    completion capability only when it issues or consumes entries
    carrying terminal_when.  The capability is newer and less exercised
-   than the issuance core and the runtime layer, and is not required by
-   any Mission Assurance Level; its entry-discharge details may change.
+   than baseline issuance and runtime enforcement, and is not required
+   by any Mission Assurance Level; its entry-discharge details may
+   change.
 
    The issuance profile gates issuance on Mission state but has no
    notion of an approved entry being *done*. A Mission granted authority
@@ -2211,7 +2212,7 @@ Table of Contents
    signed such a response under resolvable in its jwks_uri for at least
    the Mission record retention period, so an archived application/
    mission-status-response+jwt remains verifiable for audit and dispute.
-   This is the core's retired-key rule
+   This is the issuance profile's retired-key rule
    ([I-D.draft-mcguinness-oauth-mission]), with the record retention
    period as the bound.  A key known or suspected compromised is the
    exception: the AS removes it, and the Mandate profile's compromise-

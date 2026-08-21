@@ -13,8 +13,9 @@ mediation layer, a trust ratchet, task templates with capability
 ceilings, and an agent activity log, plus a grant review loop as a
 supporting system. This document maps each component onto
 Mission-Bound Authorization: every component is realized by an
-existing mechanism of the family, so the model's reference scenario
-runs end to end in Mission vocabulary with no new protocol surface.
+existing mechanism of the family's OAuth lane, so the model's
+reference scenario runs end to end in Mission vocabulary with no new
+protocol surface.
 The mapping also states what it deliberately does not adopt (the
 grant review loop, which has no standing grants to stand over) and
 the honesty boundaries any deployment of it inherits. 
@@ -1096,8 +1097,9 @@ mediation layer, a trust ratchet, task templates with capability
 ceilings, and an agent activity log, plus a grant review loop as a
 supporting system. This document maps each component onto
 Mission-Bound Authorization: every component is realized by an
-existing mechanism of the family, so the model's reference scenario
-runs end to end in Mission vocabulary with no new protocol surface.
+existing mechanism of the family's OAuth lane, so the model's
+reference scenario runs end to end in Mission vocabulary with no new
+protocol surface.
 The mapping also states what it deliberately does not adopt (the
 grant review loop, which has no standing grants to stand over) and
 the honesty boundaries any deployment of it inherits.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1245,11 +1247,15 @@ Task-Scoped Access Engine, a Mediation Layer, and a Trust Ratchet),
 two structuring surfaces (task templates with capability ceilings,
 and an Agent Activity Log), and one supporting process (a Grant
 Review Loop).<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">Mission-Bound Authorization
+<p id="section-1-2">The Mission model's OAuth binding and its companions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, with the companions cited
 throughout; the family map is
-<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) realizes each of the
-six components as a first-class mechanism it already defines. This document is that mapping, stated
+<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) realize each of the
+six components as a first-class mechanism already defined. The
+mapping is expressed on the OAuth lane, as the Conformance section
+scopes precisely; a peer binding maps only the components its
+declared capabilities and companions support, realized and omitted
+components named per that section's rule. This document is that mapping, stated
 in both vocabularies: which Mission mechanism realizes each AAM
 component, how the model's reference scenario (a nightly
 reconciliation job with one human-gated external communication) runs

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-21T19:02:00Z
-Source repository commit: da0ddc8a1e7404c83d0724c2eee65f794dbfc0ab
+Generated: 2026-08-21T20:29:37Z
+Source repository commit: 1894404e317e460a58c7fd464396144e86d8cfd6
 Member count: 9
 
 Reading order:
@@ -645,14 +645,14 @@ Table of Contents
 
    *Only active permits*:  Issuance, refresh, and reliance require the
       exact state active; every other state, including an unrecognized
-      one, fails safe (the core's Mission Lifecycle and Gating section).
-      In AAuth, only PS operations and the PS-asserted and federated
-      authorization paths are structurally gated; identity-based and
-      resource-managed decisions do not pass through the PS.  On the
-      gated paths the gate covers requests whose resource token carries
-      the validated Mission Reference; a stripped reference yields a
-      missionless request, bounded by the binding's downgrade rules
-      ([I-D.draft-mcguinness-mission-aauth]).
+      one, fails safe (the OAuth binding's Mission Lifecycle and Gating
+      section).  In AAuth, only PS operations and the PS-asserted and
+      federated authorization paths are structurally gated; identity-
+      based and resource-managed decisions do not pass through the PS.
+      On the gated paths the gate covers requests whose resource token
+      carries the validated Mission Reference; a stripped reference
+      yields a missionless request, bounded by the binding's downgrade
+      rules ([I-D.draft-mcguinness-mission-aauth]).
 
    *Authority only narrows*:  Derived tokens, delegated child Missions,
       attenuated tokens, and cross-domain projections carry subsets;
@@ -711,8 +711,8 @@ Table of Contents
    own Authority Set. This is a reading of the invariants above, not an
    eighth invariant; carrying that boundary through non-transitive
    Mission-to-Mission handoff is the Mission Work Products companion's
-   role ([I-D.draft-mcguinness-oauth-mission-work-products]).  The core
-   states that rule in its "Authority Does Not Propagate With
+   role ([I-D.draft-mcguinness-oauth-mission-work-products]).  The OAuth
+   binding states that rule in its "Authority Does Not Propagate With
    Information" section ([I-D.draft-mcguinness-oauth-mission]); that
    section, not this summary, is the normative text this passage tracks.
 
@@ -806,8 +806,8 @@ Table of Contents
 
    Resource Server:  The protected resource.  In the OAuth binding it
       enforces statelessly from the token and can check the mission
-      claim (the core's Resource Server Enforcement section); in the
-      standalone binding the token carries no Mission signal, and
+      claim (the OAuth binding's Resource Server Enforcement section);
+      in the standalone binding the token carries no Mission signal, and
       Mission properties reach it only through the enforcement path.
 
    PEP and PDP:  The PEP sits at the last controllable boundary before
@@ -1040,9 +1040,9 @@ Table of Contents
    as client_id, is an authorization subject, never an attribution
    subject, and attribution stays per-instance through the instance
    substrate, which forbids a sender-constraint key shared across a
-   client's instances.  The core's controls.max_derivations is the
-   explicit fan-out ceiling, and consumption bounds attach at Mission
-   grain, so a swarm shares one budget
+   client's instances.  The OAuth binding's controls.max_derivations is
+   the explicit fan-out ceiling, and consumption bounds attach at
+   Mission grain, so a swarm shares one budget
    ([I-D.draft-mcguinness-mission-metering]).
 
    The decision ladder:
@@ -2369,7 +2369,7 @@ Table of Contents
    federated access have a PS lifecycle gate for new authorization;
    identity-based and resource-managed access do not.  Its native auth
    token is Mission-referenced, not the strong Mission-bound credential
-   defined by the OAuth core.
+   defined by the OAuth binding.
 
    The levels, cumulative:
 
@@ -2594,10 +2594,10 @@ Table of Contents
    +========+============+=====================================================+==================================================+=====================================================+
    |Rung    |Binding     |Property                                             |Stops at commit                                   |Runs to its own bound                                |
    +========+============+=====================================================+==================================================+=====================================================+
-   |Baseline|OAuth core, |Baseline, a new-derivation kill                      |New derivation, delegation, cross-domain          |Tokens already issued, to exp; a cross-domain        |
-   |Issuance|structured- |([I-D.draft-mcguinness-oauth-mission-containment],   |projection, and offline attenuation roots minted  |projection grant already redeemed and an offline     |
-   |        |authority   |Section "Containment Properties")                    |after the transition                              |attenuation root already minted before the           |
-   |        |            |                                                     |([I-D.draft-mcguinness-oauth-mission-containment],|transition, each to its own lifetime or del_max_depth|
+   |Baseline|OAuth       |Baseline, a new-derivation kill                      |New derivation, delegation, cross-domain          |Tokens already issued, to exp; a cross-domain        |
+   |Issuance|binding,    |([I-D.draft-mcguinness-oauth-mission-containment],   |projection, and offline attenuation roots minted  |projection grant already redeemed and an offline     |
+   |        |structured- |Section "Containment Properties")                    |after the transition                              |attenuation root already minted before the           |
+   |        |authority   |                                                     |([I-D.draft-mcguinness-oauth-mission-containment],|transition, each to its own lifetime or del_max_depth|
    |        |            |                                                     |Section "Derivation Gating")                      |([I-D.draft-mcguinness-oauth-mission-containment],   |
    |        |            |                                                     |                                                  |Section "The Materialized-Capability Residual"); a   |
    |        |            |                                                     |                                                  |consequential read under the token-lifetime default, |
@@ -3241,7 +3241,7 @@ Table of Contents
    AAuth supplies the first four natively (its expires_at member carries
    the reliance bound), with its lifecycle gate scoped to PS endpoints
    and PS-mediated paths carrying the validated reference.  The OAuth
-   core supplies the structured-authority layer as well.  Runtime and
+   binding supplies the structured-authority layer as well.  Runtime and
    portable evidence remain separately claimed capabilities; the
    requirements below unpack the family mechanisms without implying
    every binding implements every one.
@@ -4325,7 +4325,7 @@ Table of Contents
    behavior when recognition sets differ, and the transition procedure
    itself.
 
-   Core's Integrity Anchor Test Vectors
+   The OAuth binding's Integrity Anchor Test Vectors
    ([I-D.draft-mcguinness-oauth-mission]) give a byte-level worked
    example of the envelope-anchor species alone (intent_hash,
    proposal_hash, authority_hash); an implementation can check its own
@@ -4414,10 +4414,10 @@ Table of Contents
    stated bound SHOULD NOT exceed the interval the Mission's purpose
    requires.  This floor requires no consumer-facing freshness source: a
    binding whose credential lifetimes sit inside the Mission's own bound
-   satisfies it unmodified, as the OAuth core's stateless baseline does.
-   The bound gives the non-active transition of Section 3.6 its force: a
-   party who causes a Mission to become non-active is assured that
-   reliance under the Mission ends within the stated interval.
+   satisfies it unmodified, as the OAuth binding's stateless baseline
+   does.  The bound gives the non-active transition of Section 3.6 its
+   force: a party who causes a Mission to become non-active is assured
+   that reliance under the Mission ends within the stated interval.
 
 3.8.  Context Propagation
 
@@ -5259,7 +5259,7 @@ Appendix B.  Mission-Bound Authorization Family Use
    Authorization family and informative for every other adopter.  An
    adopter outside the family does not need it.
 
-   The family's earlier documents, including the published OAuth core
+   The family's earlier documents, including the published OAuth binding
    ([I-D.draft-mcguinness-oauth-mission]), use the vocabulary this
    contract was generalized from.  The terms correspond as follows:
 
@@ -5294,27 +5294,27 @@ Appendix B.  Mission-Bound Authorization Family Use
    A family document that maps its own vocabulary to the kernel's MUST
    use these correspondences.
 
-   The authority-role map (Section 3.2) aligns with the core's Authority
-   Sources: the authority_source record member and its three sources
-   (user-delegated, service-owned, organizational) are the OAuth
+   The authority-role map (Section 3.2) aligns with the OAuth binding's
+   Authority Sources: the authority_source record member and its three
+   sources (user-delegated, service-owned, organizational) are the OAuth
    binding's realization of the authority-source authority role, and its
    source ceiling is that role's assertion staying within the named
    source's authority.
 
    Precedence is scoped, not global.  For the OAuth-native binding, the
-   core's definitions govern that mapping; this document governs the
-   kernel and capability vocabulary.  Neither document depends
-   normatively on the other.
+   OAuth binding's definitions govern that mapping; this document
+   governs the kernel and capability vocabulary.  Neither document
+   depends normatively on the other.
 
 B.1.  OAuth Mission Binding Statement
 
    This section is the Mission Substrate Statement of the OAuth Mission
    binding ([I-D.draft-mcguinness-oauth-mission]), hosted here so the
-   core remains self-contained with no companion normative dependency.
-   It applies to the core's editor's-draft lineage and to the kernel and
-   capability vocabulary of this document.  The core's own definitions
-   govern every mapped construct; this Statement claims no property the
-   core does not define.
+   OAuth binding remains self-contained with no companion normative
+   dependency.  It applies to the OAuth binding's editor's-draft lineage
+   and to the kernel and capability vocabulary of this document.  The
+   OAuth binding's own definitions govern every mapped construct; this
+   Statement claims no property the OAuth binding does not define.
 
    For the kernel:
 
@@ -5329,11 +5329,11 @@ B.1.  OAuth Mission Binding Statement
        trust (AS metadata and published keys).
 
    3.  The Actor handle is the authenticated OAuth client at approval;
-       the external Subject is fixed by the core's injective mapping;
-       delegates ride the act chain; child and successor lineage is
-       recorded through the parent and predecessor members; actor-type
-       classification uses sub_profile and instance assertions where
-       deployed.
+       the external Subject is fixed by the OAuth binding's injective
+       mapping; delegates ride the act chain; child and successor
+       lineage is recorded through the parent and predecessor members;
+       actor-type classification uses sub_profile and instance
+       assertions where deployed.
 
    4.  The Approved Context is the Mission Intent recorded verbatim, the
        recorded authority proposal where one was submitted, and the
@@ -5342,11 +5342,11 @@ B.1.  OAuth Mission Binding Statement
        (intent_hash, proposal_hash, authority_hash); a material change
        obtains a new approval through an expansion successor.
 
-   5.  The approval ceremony is the core's approval event: authenticated
-       Approver, the distinct-approver rule for write-bearing Missions,
-       rendering of the derived Authority Set and the effective expiry,
-       and atomic record commit, with deferred, interactive, and
-       dispatch realizations.
+   5.  The approval ceremony is the OAuth binding's approval event:
+       authenticated Approver, the distinct-approver rule for write-
+       bearing Missions, rendering of the derived Authority Set and the
+       effective expiry, and atomic record commit, with deferred,
+       interactive, and dispatch realizations.
 
    6.  The active predicate is state equal to active, exactly; any other
        value, recognized or not, is non-active; transitions are
@@ -5471,15 +5471,16 @@ B.1.  OAuth Mission Binding Statement
    condition does not hold, the property is not supplied and a consumer
    MUST NOT rely on it.
 
-   Core's three OPTIONAL capabilities, named in its Conformance section
-   ([I-D.draft-mcguinness-oauth-mission]), are implementation roles:
-   surfaces an implementation may or may not offer, each independent of
-   the others.  The capability table above states scoped guarantee
-   claims: properties the OAuth binding supplies and the conditions
-   under which each is supplied.  The two vocabularies answer different
-   questions and are not equivalent; the table below relates them
-   without collapsing one into the other.  Declaring an OPTIONAL role
-   never creates a claim beyond the eight already stated above.
+   The OAuth binding's three OPTIONAL capabilities, named in its
+   Conformance section ([I-D.draft-mcguinness-oauth-mission]), are
+   implementation roles: surfaces an implementation may or may not
+   offer, each independent of the others.  The capability table above
+   states scoped guarantee claims: properties the OAuth binding supplies
+   and the conditions under which each is supplied.  The two
+   vocabularies answer different questions and are not equivalent; the
+   table below relates them without collapsing one into the other.
+   Declaring an OPTIONAL role never creates a claim beyond the eight
+   already stated above.
 
    +===============+===================+===============================+
    | Core OPTIONAL | Substrate         | Relationship                  |
@@ -11802,7 +11803,7 @@ Table of Contents
    urlencoded body containing:
 
    mission_id:  REQUIRED.  A string.  The canonical Mission Identifier,
-      named per the core's external-surface convention
+      named per the issuance profile's external-surface convention
       ([I-D.draft-mcguinness-oauth-mission]).
 
    audience:  CONDITIONAL.  A string.  The audience identifier of the
@@ -12008,9 +12009,9 @@ Table of Contents
       -  state: the current Mission lifecycle state.  The authoritative
          state space is the issuance profile's
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-         Lifecycle and Gating"): the core states active, revoked,
-         expired, this profile's suspended and completed when the
-         Mission Lifecycle endpoint (Section 6) is deployed, and any
+         Lifecycle and Gating"): the issuance profile states active,
+         revoked, expired, this profile's suspended and completed when
+         the Mission Lifecycle endpoint (Section 6) is deployed, and any
          further state a companion profile defines and the deployment
          runs (for example superseded, defined by the Mission Expansion
          profile ([I-D.draft-mcguinness-oauth-mission-expansion]) for an
@@ -12432,7 +12433,7 @@ Table of Contents
    urlencoded body:
 
    mission_id:  REQUIRED.  A string.  The canonical Mission Identifier,
-      named per the core's external-surface convention
+      named per the issuance profile's external-surface convention
       ([I-D.draft-mcguinness-oauth-mission]).
 
    operation:  REQUIRED.  A string.  One of revoke, suspend, resume,
@@ -13112,8 +13113,9 @@ Table of Contents
    entry member and the rules for handling it.  A deployment claims the
    completion capability only when it issues or consumes entries
    carrying terminal_when.  The capability is newer and less exercised
-   than the issuance core and the runtime layer, and is not required by
-   any Mission Assurance Level; its entry-discharge details may change.
+   than baseline issuance and runtime enforcement, and is not required
+   by any Mission Assurance Level; its entry-discharge details may
+   change.
 
    The issuance profile gates issuance on Mission state but has no
    notion of an approved entry being *done*. A Mission granted authority
@@ -13739,7 +13741,7 @@ Table of Contents
    signed such a response under resolvable in its jwks_uri for at least
    the Mission record retention period, so an archived application/
    mission-status-response+jwt remains verifiable for audit and dispute.
-   This is the core's retired-key rule
+   This is the issuance profile's retired-key rule
    ([I-D.draft-mcguinness-oauth-mission]), with the record retention
    period as the bound.  A key known or suspected compromised is the
    exception: the AS removes it, and the Mandate profile's compromise-
@@ -15878,7 +15880,7 @@ Table of Contents
       the ambient-authority gap this profile exists to close.
 
    For a deployment whose access tokens are short-lived and whose
-   issuance and refresh are state-gated per the core
+   issuance and refresh are state-gated per the OAuth binding
    ([I-D.draft-mcguinness-oauth-mission]), the refresh cycle itself is a
    conforming active freshness source for any action class whose
    published staleness bound the token lifetime meets: the issuance gate
@@ -18152,18 +18154,19 @@ Table of Contents
 
    This document uses JSON [RFC8259] as the data model for every record
    it defines.  JCS canonicalization [RFC8785] applies wherever an
-   integrity hash is computed, under the canonicalization rules of
-   [I-D.draft-mcguinness-oauth-mission]; this document does not define a
-   second canonicalization.
+   integrity hash is computed, under the substrate's default commitment
+   construction ([I-D.draft-mcguinness-mission-substrate]); this
+   document does not define a second canonicalization.
 
-   "SHA-256" refers to [RFC6234].  A digest is encoded in the integrity-
-   anchor encoded form of [I-D.draft-mcguinness-oauth-mission]: sha-256:
-   followed by the base64url, no-padding encoding of the digest.  Every
-   digest this document defines (evaluation_request_digest,
-   entry_digest, effective_parameter_digest, the Mission Receipt's
-   evidence-reference and chain-predecessor digests, Section 6) is a
-   canonical-object digest under the substrate's default commitment
-   construction, which this document imports normatively
+   "SHA-256" refers to [RFC6234].  A digest is encoded in the encoded
+   form of the substrate's default commitment construction
+   ([I-D.draft-mcguinness-mission-substrate]): sha-256: followed by the
+   base64url, no-padding encoding of the digest.  Every digest this
+   document defines (evaluation_request_digest, entry_digest,
+   effective_parameter_digest, the Mission Receipt's evidence-reference
+   and chain-predecessor digests, Section 6) is a canonical-object
+   digest under the substrate's default commitment construction, which
+   this document imports normatively
    ([I-D.draft-mcguinness-mission-substrate]), except that an evidence
    reference to a compact-serialized artifact is a raw-octet digest over
    the exact serialization octets (Section 6.3).
@@ -19262,8 +19265,8 @@ Table of Contents
       record+json (Section 12, Section 4, Section 5, Section 4.2).
 
    digest:  REQUIRED.  A string.  A sha-256: prefixed digest, classified
-      under the core's commitment taxonomy
-      ([I-D.draft-mcguinness-oauth-mission]) as a canonical-object
+      under the substrate's default commitment construction
+      ([I-D.draft-mcguinness-mission-substrate]) as a canonical-object
       digest for a JSON evidence record and a raw-octet digest for a
       JWS- or JWT-shaped artifact.  For a JSON evidence record the
       digest input is the exact canonical bytes the convention fixes for
@@ -21706,8 +21709,8 @@ Table of Contents
    Authentication step-up has no dedicated denial-reason value under
    this profile: an in-process step-up rides the obligation on a permit,
    and an RFC 9470 step-up rides the obligation on a resource_policy
-   denial.  The core's mission_denial value step_up_required remains the
-   Resource Server's own challenge-surface signal
+   denial.  The OAuth binding's mission_denial value step_up_required
+   remains the Resource Server's own challenge-surface signal
    ([I-D.draft-mcguinness-oauth-mission]) and composes with, but is not,
    either shape of this obligation.  The requirement is Resource policy,
    never a Mission constraint: the issuance profile's acr is an
@@ -22592,7 +22595,7 @@ Table of Contents
    one coordinated extension member, mission_history (Section 7),
    carries behavioral history predicates and their outcomes and inherits
    that guidance in full: it is subject to the same PII-sink, access-
-   control, and retention treatment as the core record, with no
+   control, and retention treatment as the OAuth binding record, with no
    exemption.  This binding otherwise defines no additional record
    content.
 

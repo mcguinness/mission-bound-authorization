@@ -2454,8 +2454,7 @@ approval event. It <span class="bcp14">MUST</span> commit the issuance profile's
 child Authority Set, <code>intent_hash</code> over the child Mission Intent, and,
 where the exchange carried an authority proposal, <code>proposal_hash</code> over
 it, and
-it <span class="bcp14">MUST</span> produce the immutable, accountable record the core approval
-event produces.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+it <span class="bcp14">MUST</span> produce record the issuance profile's approval.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <p id="section-7.1-5">A Child Mission is created under a parent grant rather than a
 first-party approval (<a href="#issuance-relationship" class="auto internal xref">Section 3</a>), so its human
 accountability is inherited from the Parent Mission's own approval.
@@ -2566,7 +2565,7 @@ over the child Authority Set, not over the parent Authority Set. A
 Resource Server enforces child tokens exactly as Mission-bound tokens:
 the child <code>authority_hash</code> is the immediate authority commitment.<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">Child Mission tokens <span class="bcp14">MUST</span> be sender-constrained to the child actor's
-own key, matching the core's delegated-token posture
+own key, matching the issuance profile's delegated-token posture
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8-4" class="pilcrow">¶</a></p>
 <div id="strict-subset">
 <section id="section-8.1">
@@ -2579,9 +2578,9 @@ child Authority Set and the parent Authority Set with no relaxation.
 "Strict" refers to that no-relaxation requirement, not to inequality:
 per-entry equality is permitted, so a child entry <span class="bcp14">MAY</span> equal a parent
 entry. Each child entry <span class="bcp14">MUST</span> be a subset of some parent entry under the
-core rule, and the <code>delegation</code> narrowing of <a href="#attenuation" class="auto internal xref">Section 8</a> applies in
-addition. A Mission Issuer <span class="bcp14">MUST NOT</span> assume any relaxation the core rule
-does not define: the core's own opt-in hierarchy forms (<code>prefix</code>
+issuance profile's rule, and the <code>delegation</code> narrowing of <a href="#attenuation" class="auto internal xref">Section 8</a> applies in
+addition. A Mission Issuer <span class="bcp14">MUST NOT</span> assume any relaxation the issuance profile's rule
+does not define: the issuance profile's own opt-in hierarchy forms (<code>prefix</code>
 resource containment and <code>.*</code> action families) apply as that rule
 defines them, and nothing beyond them applies.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">If the Mission Issuer cannot prove the child Authority Set is a strict
@@ -2623,7 +2622,7 @@ profile's attenuation rules
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-fan-out-controls" class="section-name selfRef">Fan-Out Controls</a>
       </h2>
 <p id="section-9-1">This profile defines the on-switch for child creation as a member of the
-core's per-entry <code>delegation</code> object. The issuance profile lets a
+issuance profile's per-entry <code>delegation</code> object. The issuance profile lets a
 companion profile define additional <code>delegation</code> members that are policy,
 not authority, are never broadened downstream, and are carried unchanged
 when not understood (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this
@@ -2649,10 +2648,10 @@ Mission.<a href="#section-9-2.2.2.2.1" class="pilcrow">¶</a></p>
 <dt id="section-9-2.2.2.3">
 <code>allowed_child_actors</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-9-2.2.2.4">
-              <p id="section-9-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of matcher objects of the same form as the core's
+              <p id="section-9-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of matcher objects of the same form as the issuance profile's
 <code>allowed_delegates</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 constraining which actors or actor classes may receive a Child
-Mission from this entry. Matchers are evaluated under the core's
+Mission from this entry. Matchers are evaluated under the issuance profile's
 <code>allowed_delegates</code> matching rules, including the rule that a
 <code>{ "sub_profile": ... }</code> matcher is satisfied when its value is
 among the actor's space-separated <code>sub_profile</code> values.<a href="#section-9-2.2.2.4.1" class="pilcrow">¶</a></p>

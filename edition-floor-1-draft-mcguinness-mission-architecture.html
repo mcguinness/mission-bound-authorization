@@ -1941,7 +1941,7 @@ gate authority.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-9-3.4">
           <p id="section-9-3.4.1">Issuance, refresh, and reliance require the exact state <code>active</code>;
 every other state, including an unrecognized one, fails safe (the
-core's Mission Lifecycle and Gating section). In AAuth, only PS
+OAuth binding's Mission Lifecycle and Gating section). In AAuth, only PS
 operations and the PS-asserted and federated authorization paths are
 structurally gated; identity-based and resource-managed decisions do
 not pass through the PS. On the gated paths the gate covers requests
@@ -2024,7 +2024,7 @@ Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
 invariant; carrying that boundary through non-transitive
 Mission-to-Mission handoff is the Mission Work Products companion's
-role (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>). The core
+role (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>). The OAuth binding
 states that rule in its "Authority Does Not Propagate With
 Information" section (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); that
 section, not this summary, is the normative text this passage tracks.<a href="#section-9-6" class="pilcrow">¶</a></p>
@@ -2140,7 +2140,7 @@ decisions (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref
         <dd style="margin-left: 1.5em" id="section-10-2.12">
           <p id="section-10-2.12.1">The protected resource. In the OAuth binding it enforces
 statelessly from the token and can check the <code>mission</code> claim (the
-core's Resource Server Enforcement section); in the standalone
+OAuth binding's Resource Server Enforcement section); in the standalone
 binding the token carries no Mission signal, and Mission properties
 reach it only through the enforcement path.<a href="#section-10-2.12.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2439,7 +2439,7 @@ authorization, instance-grain attribution: the class, the Agent
 Deployment projected as <code>client_id</code>, is an authorization subject,
 never an attribution subject, and attribution stays per-instance
 through the instance substrate, which forbids a sender-constraint
-key shared across a client's instances. The core's
+key shared across a client's instances. The OAuth binding's
 <code>controls.max_derivations</code> is the explicit fan-out ceiling, and
 consumption bounds attach at Mission grain, so a swarm shares one
 budget (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-10.3-1" class="pilcrow">¶</a></p>
@@ -3938,7 +3938,7 @@ deployment states that. Binding is not a level.<a href="#section-16-6" class="pi
 federated access have a PS lifecycle gate for new authorization;
 identity-based and resource-managed access do not. Its native auth token
 is Mission-referenced, not the strong Mission-bound credential defined
-by the OAuth core.<a href="#section-16-7" class="pilcrow">¶</a></p>
+by the OAuth binding.<a href="#section-16-7" class="pilcrow">¶</a></p>
 <p id="section-16-8">The levels, cumulative:<a href="#section-16-8" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-16-9">
         <dt id="section-16-9.1">
@@ -4202,7 +4202,7 @@ profile controls wherever a cell and its citation appear to differ.<a href="#sec
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Baseline Issuance</td>
-              <td class="text-left" rowspan="1" colspan="1">OAuth core, structured-authority</td>
+              <td class="text-left" rowspan="1" colspan="1">OAuth binding, structured-authority</td>
               <td class="text-left" rowspan="1" colspan="1">Baseline, a new-derivation kill (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "Containment Properties")</td>
               <td class="text-left" rowspan="1" colspan="1">New derivation, delegation, cross-domain projection, and offline attenuation roots minted after the transition (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "Derivation Gating")</td>
               <td class="text-left" rowspan="1" colspan="1">Tokens already issued, to <code>exp</code>; a cross-domain projection grant already redeemed and an offline attenuation root already minted before the transition, each to its own lifetime or <code>del_max_depth</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "The Materialized-Capability Residual"); a consequential read under the token-lifetime default, the same bound (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
@@ -4888,7 +4888,7 @@ is reconstructible from evidence joined on the object's identity.<a href="#secti
       </ol>
 <p id="section-19-8">AAuth supplies the first four natively (its <code>expires_at</code> member
 carries the reliance bound), with its lifecycle gate scoped to PS
-endpoints and PS-mediated paths carrying the validated reference. The OAuth core
+endpoints and PS-mediated paths carrying the validated reference. The OAuth binding
 supplies the structured-authority layer as well. Runtime and portable
 evidence remain separately claimed capabilities; the requirements below
 unpack the family mechanisms without implying every binding implements

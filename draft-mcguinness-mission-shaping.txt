@@ -448,13 +448,14 @@ Table of Contents
    the derived Authority Set is the Mission Issuer's product
    (Section 5.2).  Concrete candidate authority (actions, structured
    constraints such as max_amount, delegation) belongs in the authority
-   proposal submitted alongside the Intent, where the core treats it as
-   untrusted proposal input and bounds the derivation to a subset of it
-   ([I-D.draft-mcguinness-oauth-mission]).  A shaper that has resolved
-   such facts (for example, the actions a resource supports, or that the
-   task implies delegated execution) proposes them there and records the
-   same facts in Shaping Evidence (Section 10) for audit only.  Shaping
-   Evidence is never an input the derivation consumes.
+   proposal submitted alongside the Intent, where the OAuth binding
+   treats it as untrusted proposal input and bounds the derivation to a
+   subset of it ([I-D.draft-mcguinness-oauth-mission]).  A shaper that
+   has resolved such facts (for example, the actions a resource
+   supports, or that the task implies delegated execution) proposes them
+   there and records the same facts in Shaping Evidence (Section 10) for
+   audit only.  Shaping Evidence is never an input the derivation
+   consumes.
 
    A sound shaper does not include a resource in the proposal merely
    because the task text implies it might be useful: it has a resolution
