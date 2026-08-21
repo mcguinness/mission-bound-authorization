@@ -39,8 +39,8 @@
     "content_sha256": "8a769d44b6dc559847d60e34b6e966eab0d75c2db921ab93f431f8c880aebefb"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
-    "content_sha256": "10db7988b1d1342efc460d6166016035370659b778651830a35be4970aaa0f84"
+    "revision": "cf8727d1fb9205a796efd38bf125bcb601313bb1",
+    "content_sha256": "67e69e8fcc324b2b90ee5f9001332fbd350e97d648fcb0ec2ad3046f4f606ed4"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
@@ -135,7 +135,8 @@
    "substrate.portable-evidence",
    "issuance-grant.state-integration",
    "mas.enterprise",
-   "core.standing-consent"
+   "core.standing-consent",
+   "core.standing-consent-recency"
   ]
  },
  "profiles": [
@@ -409,12 +410,18 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "intent validation (@spec mission#submission-via-par) > accepts well-formed goal_lang, refuses malformed, and commits it in intent_hash (@spec mission#mission-intent)",
+     "name": "intent validation (@spec mission#submission-via-par) > accepts well-formed goal_lang, refuses malformed with invalid_request, and commits it in intent_hash (@spec mission#mission-intent)",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "intent validation (@spec mission#submission-via-par) > refuses a malformed goal_lang at the Submission-envelope intake with invalid_request (@spec mission#submission-via-par)",
      "level": "unit",
      "surface": "par"
     }
    ],
-   "notes": "Well-formedness is syntactic (RFC 5646 Section 2.1 shape, 35-char acceptance bound); the AS never verifies the prose is in the declared language, per the i18n section."
+   "notes": "Well-formedness is a faithful RFC 5646 Section 2.1 check (langtag/privateuse/grandfathered ABNF plus no-duplicate-singleton/-variant), never a registry validity lookup; the AS never verifies the prose is in the declared language. No length cap beyond the Intent's size bound: RFC 5646 4.4.1's 35 characters is a support floor, not a maximum (review of PR #625). Tests assert the registered invalid_request code per malformed case, including the envelope intake path."
   },
   {
    "id": "core.approval-basis.approved-at-standing-consent",
@@ -437,9 +444,22 @@
     "normative": "a standing-consent activation whose approved_at is absent, or does not match the issuer's retained record of the exact consented version, is refused; the request's own clock value is never accepted uncorroborated"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "New with the #580 core component. No standing-consent basis is implemented in src today (template dispatch exists but records its basis without approved_at); flips when the template/child-delegation companions carry the member and the kernel verifies it. Companion follow-on tracked on the #580 thread."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -450,7 +470,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "core.standing-consent-recency"
    },
    "profiles": [
     "issuance",
@@ -464,7 +484,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared). Mirrors approval-governance's policy-approval recency on the AGR path."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",
