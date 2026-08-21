@@ -16,10 +16,11 @@
  * in-process); stream verification / heartbeat liveness and its staleness
  * fallback; automatic Mission Status refetch on a detected version gap or a
  * detected rematerialization need (this module detects each condition only;
- * the refetch itself, and the `mission_capabilities_supported` delivery gate
- * for an undeclared stream, are the consumer's/issuer's job); and the
+ * the refetch itself is the consumer's job); and the
  * `suspend_until` / `on_expiry` / `tenant` members (no model exists in the
- * kernel). The demo stack signal wiring is also deferred; the emitter is
+ * kernel). The `mission_capabilities_supported` delivery gate
+ * ({@link MissionSignalEmitter}) is implemented: a stream that has not
+ * declared `authority_changed` is not delivered a discharge commit's event. The demo stack signal wiring is also deferred; the emitter is
  * injectable at the authorization-server construction site (its
  * `onLifecycleCommit` option).
  */
@@ -476,9 +477,29 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   };
 }
 
-/** A consumer this issuer emits to, identified by its registered audience. */
+/**
+ * @spec signals#discharge-compatibility — the one value this document defines
+ * for the receiver-supplied `mission_capabilities_supported` member of the SSF
+ * Stream Configuration object: support for the `authority_changed`
+ * rematerialization rule.
+ */
+export const AUTHORITY_CHANGED_CAPABILITY = "authority_changed";
+
+/**
+ * A consumer this issuer emits to, identified by its registered audience.
+ *
+ * @spec signals#discharge-compatibility — `mission_capabilities_supported` is
+ * the receiver's declared capability list from its Stream Configuration. A
+ * consumer that has NOT declared {@link AUTHORITY_CHANGED_CAPABILITY} is not
+ * delivered an event whose effective-authority change is represented by
+ * `authority_changed` ALONE (a discharge commit): such a consumer ignores the
+ * unknown member, accepts an in-order active-to-active version increment, and
+ * keeps a stale Authority Set, exactly the failure the member exists to
+ * prevent. Absent means it declared nothing.
+ */
 export interface SignalConsumer {
   audience: string;
+  mission_capabilities_supported?: string[];
 }
 
 export interface EmitterOptions {
@@ -504,12 +525,45 @@ export interface EmitterOptions {
 export class MissionSignalEmitter {
   private readonly deliveries: Array<{ audience: string; deliver: (set: string) => unknown }> = [];
   private inflight: Array<Promise<void>> = [];
+  /**
+   * @spec signals#discharge-compatibility — the last `containment_version` this
+   * emitter has emitted per Mission, the cursor that decides whether a
+   * narrowing commit is ALSO represented by `containment_version`. It mirrors
+   * the receiver's own cursor ({@link CachedState.containment_version}), and for
+   * the same reason: presence of the member says nothing, an ADVANCE does. A
+   * discharge on a previously-contained Mission carries `containment_version`
+   * unchanged, so the gate below must still catch it.
+   */
+  private readonly emittedContainmentVersion = new Map<string, number>();
 
   constructor(private readonly opts: EmitterOptions) {}
 
   /** Register a receiver to be handed every SET for its own audience. */
   register(receiver: MissionSignalReceiver): void {
     this.onDeliver(receiver.audience, (set) => receiver.verifyAndApply(set));
+  }
+
+  /**
+   * @spec signals#discharge-compatibility — the delivery GATE. The bound events
+   * are exactly those whose effective-authority change is represented by
+   * `authority_changed` alone: a commit that set the discriminator WITHOUT
+   * advancing `containment_version` (a discharge commit). An event whose
+   * narrowing is also represented by a `containment_version` ADVANCE follows the
+   * containment profile's existing delivery rules unchanged, and every event
+   * that narrows nothing is unaffected.
+   */
+  private deliverable(commit: LifecycleCommit, consumer: SignalConsumer): boolean {
+    if (commit.authority_changed !== true) return true;
+    const prior = this.emittedContainmentVersion.get(commit.id);
+    // With no prior observation, only `containment_version` 1 is unambiguously
+    // an advance (the FIRST contain commit, whose delivery rules must not
+    // change). A higher value with no cursor means this emitter missed earlier
+    // commits, which is ambiguous, and a GATE resolves ambiguity by withholding.
+    const containmentAdvanced =
+      commit.containment_version !== undefined &&
+      (prior === undefined ? commit.containment_version === 1 : commit.containment_version > prior);
+    if (containmentAdvanced) return true;
+    return (consumer.mission_capabilities_supported ?? []).includes(AUTHORITY_CHANGED_CAPABILITY);
   }
 
   /** Register a raw delivery sink for an audience (e.g. an HTTP push, deferred). */
@@ -523,7 +577,18 @@ export class MissionSignalEmitter {
    */
   readonly onCommit = (commit: LifecycleCommit): void => {
     for (const consumer of this.opts.consumers) {
+      // @spec signals#discharge-compatibility — an undeclared stream is not
+      // delivered an event whose narrowing rides `authority_changed` alone.
+      if (!this.deliverable(commit, consumer)) continue;
       this.inflight.push(this.emitOne(commit, consumer.audience));
+    }
+    // Advance the cursor once per commit, after every consumer decision, so the
+    // gate reads the same value for all of them.
+    if (commit.containment_version !== undefined) {
+      const prior = this.emittedContainmentVersion.get(commit.id);
+      if (prior === undefined || commit.containment_version > prior) {
+        this.emittedContainmentVersion.set(commit.id, commit.containment_version);
+      }
     }
   };
 
