@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-21T05:50:23Z
-Source repository commit: 2cf105d9aeed93d805034fe625274db7846ba834
+Generated: 2026-08-21T15:01:17Z
+Source repository commit: 3de68756d2e0a19a9314966cf80591b26cc2f0d4
 Member count: 7
 
 Reading order:
@@ -5685,25 +5685,26 @@ Table of Contents
      16.14. Authority Hash Is Not a Mission Identifier
      16.15. Composition and the Effective Ceiling
      16.16. The Containment Materialized-Capability Residual
-   17. Privacy Considerations
-     17.1.  Mission Identifier Correlation
-     17.2.  Token Payload Disclosure
-     17.3.  Intent Retention and Anchor Disclosure
-     17.4.  Third-Party Data Subjects
-     17.5.  Mission Record and Evidence Access
-   18. IANA Considerations
-     18.1.  OAuth Parameters Registration
-     18.2.  OAuth Extensions Error Registration
-     18.3.  The Mission Resource Access Authorization Details Type
-     18.4.  JSON Web Token Claims Registration
-     18.5.  OAuth Token Introspection Response Registration
-     18.6.  OAuth Authorization Server Metadata Registration
-     18.7.  OAuth Protected Resource Metadata Registration
-     18.8.  Common Constraints Registry
-     18.9.  Mission Lifecycle States Registry
-   19. References
-     19.1.  Normative References
-     19.2.  Informative References
+   17. Internationalization Considerations
+   18. Privacy Considerations
+     18.1.  Mission Identifier Correlation
+     18.2.  Token Payload Disclosure
+     18.3.  Intent Retention and Anchor Disclosure
+     18.4.  Third-Party Data Subjects
+     18.5.  Mission Record and Evidence Access
+   19. IANA Considerations
+     19.1.  OAuth Parameters Registration
+     19.2.  OAuth Extensions Error Registration
+     19.3.  The Mission Resource Access Authorization Details Type
+     19.4.  JSON Web Token Claims Registration
+     19.5.  OAuth Token Introspection Response Registration
+     19.6.  OAuth Authorization Server Metadata Registration
+     19.7.  OAuth Protected Resource Metadata Registration
+     19.8.  Common Constraints Registry
+     19.9.  Mission Lifecycle States Registry
+   20. References
+     20.1.  Normative References
+     20.2.  Informative References
    Appendix A.  End-to-End Example (Non-Normative)
      A.1.  Stage 0: Agent Identity (by Reference)
      A.2.  Stage 1: Mission Creation
@@ -6045,7 +6046,7 @@ Table of Contents
       which is a core goal of this document and its companion profiles.
       Pairwise or unlinkable presentation of Mission-bound authority
       works against that anchor and is therefore future work, not a v1
-      property (Section 17.1).
+      property (Section 18.1).
 
 2.  Conventions and Terminology
 
@@ -6270,7 +6271,16 @@ Table of Contents
    goal:  REQUIRED.  A string.  A human-readable statement of the task,
       for rendering to the Approver.  Maximum 4096 characters.  Prose
       here persists on the record and can carry personal data about
-      third parties (Section 17.4).
+      third parties (Section 18.4).
+
+   goal_lang:  OPTIONAL.  A string.  A BCP 47 language tag [RFC5646]
+      declaring the language of the Intent's human-readable members
+      (goal, constraints, success_criteria).  It is disclosure metadata
+      for rendering, committed by intent_hash like every Intent member;
+      it carries no machine semantics and MUST NOT be used to derive,
+      widen, or gate authority.  At submission acceptance, the AS MUST
+      refuse a goal_lang that is not a well-formed language tag with
+      invalid_request (Section 17).
 
    resources:  REQUIRED.  An array of strings.  The target resources the
       task needs, each an absolute URI identifying a protected resource
@@ -6677,7 +6687,7 @@ Table of Contents
       that lacks type, is structurally invalid and refused with
       invalid_request.  The AS MUST refuse an entry whose type it does
       not support, and an entry that fails its type's validation or
-      verification, with invalid_mission_intent_evidence (Section 18).
+      verification, with invalid_mission_intent_evidence (Section 19).
       Evidence presented for admission MUST NOT be silently ignored,
       dropped, or demoted to advisory input: a submission is accepted
       only when every presented entry verified.
@@ -6792,7 +6802,7 @@ Table of Contents
    From the Mission Intent, and from the authority proposal where one
    was submitted (Section 4.2), the AS derives the *Authority Set*: one
    or more [RFC9396] authorization_details entries of type
-   mission_resource_access (Section 18.3).  Derivation is mechanical.
+   mission_resource_access (Section 19.3).  Derivation is mechanical.
    It happens once, at the approval event, over the derivation policy
    then in force, in one of two modes:
 
@@ -7108,7 +7118,7 @@ Table of Contents
    Constraints give independently developed deployments one vocabulary
    they interpret, narrow, and compare identically; further Common
    Constraints are defined by specification under the naming convention
-   of Section 18.8.
+   of Section 19.8.
 
    A Common Constraint definition fixes:
 
@@ -7651,7 +7661,7 @@ Table of Contents
    direct approval (Section 7), or the identifier a Mission-creating
    profile defines) returns the committed effective value unchanged.  On
    OAuth token responses the member is additionally registered as a
-   token-endpoint response parameter (Section 18).  It is informational
+   token-endpoint response parameter (Section 19).  It is informational
    in the same way: presenting it authorizes nothing.
 
 6.2.  Single Accountable Approver
@@ -8004,11 +8014,60 @@ Table of Contents
          committed object, otherwise the committed reference that
          identifies it.  For direct, this Mission's own authority_hash.
 
+      approved_at:  REQUIRED for every standing-consent type; absent for
+         direct, whose approval event carries its own instant
+         (Section 6).  An RFC 3339 date-time: the instant the
+         accountable human approved the exact consented root that
+         root_commitment commits (the template version, the drawdown
+         policy version), not the instant this Mission instance was
+         activated.  The activating issuer MUST verify approved_at
+         against its retained, authenticated record of that standing
+         consent for that exact version; it MUST NOT accept the value as
+         the activating request's own uncorroborated assertion.
+
       For direct, activation.approval_event_id MUST identify a human
       approval event (Section 6).  A companion profile defining a
       standing-consent type MUST make its consent_principal and
       root_commitment trace to an accountable human's approval of the
-      named standing consent, with no fresh approval event per instance.
+      named standing consent, with no fresh approval event per instance,
+      and MUST carry that approval's instant as approved_at.
+
+      *Standing-consent recency.* A deployment MAY declare maximum
+      standing-consent ages (recency ceilings), and MAY declare them per
+      consequence class where it classifies actions; where a declared
+      ceiling applies, activating an instance whose approved_at is older
+      than the ceiling MUST be refused.  Where ceilings are declared,
+      four rules are normative:
+
+      *  The evaluation instant is the atomic Mission-creation commit
+         (Section 6), the same commit that re-checks the effective
+         expiry; a deferred or relocated flow inherits the check at its
+         own creation commit.  Recency is issuance-time eligibility
+         only: a later change to a ceiling, or the passage of time past
+         one, does not retroactively terminate an active Mission (the
+         lifecycle operations exist for that, Section 9.2).
+
+      *  approved_at MUST NOT be later than the evaluation instant
+         beyond the deployment's declared, bounded clock-skew allowance;
+         a future-dated value is refused.
+
+      *  Where ceilings are declared per consequence class, the issuer
+         MUST classify the committed Mission from the derived Authority
+         Set and from any consumption bound the Intent's controls carry,
+         and MUST apply the strictest ceiling across every class
+         present.
+
+      *  The ceilings and the skew allowance MUST be part of the
+         versioned policy the record's policy_version identifies, or a
+         separately versioned declaration retained with it, so an
+         auditor can reproduce the eligibility decision from retained
+         state; a mutable out-of-band statement MUST NOT serve this
+         role.
+
+      The Approval Governance companion defines the analogous bound for
+      its policy-assertion path
+      ([I-D.draft-mcguinness-mission-approval-governance], Section 
+      "Policy-Approval Recency").
 
       approval_basis is provenance: it is recorded alongside approver
       and is not folded into intent_hash or authority_hash
@@ -8674,7 +8733,7 @@ Table of Contents
 
    These three states are the mandatory core of the Mission lifecycle
    state space.  This profile owns that state space and establishes its
-   registry, the Mission Lifecycle States registry (Section 18.9); an
+   registry, the Mission Lifecycle States registry (Section 19.9); an
    OPTIONAL companion profile MAY register an additional state for a
    lifecycle it introduces (for example, a paused or a superseded
    state), but only active ever permits issuance.  A consumer MUST apply
@@ -8728,7 +8787,7 @@ Table of Contents
 
    invalid_grant alone does not tell a client which gate refused.  On a
    refusal under this section the AS SHOULD include, alongside error,
-   the mission_error token-error-response member (Section 18) with one
+   the mission_error token-error-response member (Section 19) with one
    of the values mission_revoked, mission_expired, mission_superseded
    (where a companion defines supersession), or derivations_exhausted.
    The member is diagnostic only: it grants nothing, an unrecognized
@@ -9300,7 +9359,7 @@ Table of Contents
    *  *Lifecycle state.* The lifecycle state space (Section 9) is open
       to additional states registered by companion profiles for
       lifecycles they introduce, in the Mission Lifecycle States
-      registry (Section 18.9).  The forward-compatibility rule in
+      registry (Section 19.9).  The forward-compatibility rule in
       Section 9 keeps this safe regardless: only active permits
       issuance, and a consumer treats every other state, recognized or
       not, as non-active.
@@ -9322,7 +9381,7 @@ Table of Contents
    value space and the mission claim rests on collision-resistant naming
    and the fail-safe rules above rather than on central registration;
    the lifecycle state space is additionally backed by the Mission
-   Lifecycle States registry (Section 18.9).  Section 12.1 states the
+   Lifecycle States registry (Section 19.9).  Section 12.1 states the
    general rule this section's extension points follow.
 
 12.1.  Namespace Taxonomy
@@ -9336,8 +9395,8 @@ Table of Contents
       it itself defines, and every further document that defines a value
       requests that value's registration, carrying any Internet-Draft
       reference as a publication dependency under the registry's policy.
-      Mission Common Constraints (Section 18.8) and Mission Lifecycle
-      States (Section 18.9) are this document's two; the Mission
+      Mission Common Constraints (Section 19.8) and Mission Lifecycle
+      States (Section 19.9) are this document's two; the Mission
       Authority Server Metadata registry and the Mission Denial Reasons
       registry are established where those namespaces are defined.
 
@@ -9429,8 +9488,8 @@ Table of Contents
    advertises it, mirrors those keys and MUST NOT list a type absent
    from them.  The AS MUST publish, within that response, an entry for
    mission_resource_access whose schema validates the object shape
-   Section 18.3 defines, including the Common Constraints structure
-   (Section 5.2); Section 18.3 remains the normative definition, and the
+   Section 19.3 defines, including the Common Constraints structure
+   (Section 5.2); Section 19.3 remains the normative definition, and the
    published schema is its machine-readable form.  Where a deployment
    arranges Mission-bound authorization out of band rather than
    advertising mission_bound_authorization_supported, the supported
@@ -9560,6 +9619,14 @@ Table of Contents
    scope-only Resource Server still operates at the coarse scope level
    (Section 8.2).  This note names a starting point and creates no new
    conformance class.
+
+   This binding's Mission Substrate Statement, the kernel mapping and
+   capability table these surfaces supply to the family's substrate
+   contract, is published in the substrate companion's family appendix
+   ([I-D.draft-mcguinness-mission-substrate], Section "OAuth Mission
+   Binding Statement").  That Statement is informative here: it restates
+   this document, adds no requirement to it, and this document remains
+   self-contained.
 
 16.  Security Considerations
 
@@ -10073,7 +10140,40 @@ Table of Contents
    offline attenuation root lifetimes short, so the residual window is
    one the next lease or re-mint closes.
 
-17.  Privacy Considerations
+17.  Internationalization Considerations
+
+   Mission Intent prose (goal, constraints, success_criteria) is human-
+   readable disclosure, and the Approver's consent is only as good as
+   their comprehension of it. goal_lang (Section 4) declares the
+   language of that prose as a BCP 47 language tag [RFC5646], so an
+   approval surface can render, translate, or route it deliberately
+   rather than by guess.
+
+   Three rules keep the declaration honest:
+
+   *  goal_lang is a syntactic declaration.  The AS validates well-
+      formedness ([RFC5646], Section 2.1) at submission acceptance and
+      refuses a malformed tag invalid_request; it does not verify that
+      the prose is in the declared language, and a consumer MUST NOT
+      treat the tag as a verified property of the text.
+
+   *  Rendering to the Approver follows the consent-binding rules
+      unchanged (Section 16.1): client prose stays inert text in any
+      language and any script, including bidirectional text.  Where the
+      approval surface presents a translation, the rendered disclosure
+      is what the deployment's consent evidence records (Mission Consent
+      Evidence binds one locale, one disclosure, one hash,
+      [I-D.draft-mcguinness-oauth-mission-consent-evidence]); goal_lang
+      declares the source's language and is never a record of what was
+      rendered.
+
+   *  Authority Set entries carry machine-facing identifiers (URIs,
+      action strings, structured constraints), not prose; this document
+      deliberately adds no language-tagged display fields to them.
+      Localizing how authority is explained is the approval surface's
+      duty under Section 16.1, never a property of the committed set.
+
+18.  Privacy Considerations
 
    A Mission Identifier is a correlation handle: a deployment limits
    exposure by giving stable Mission Identifiers only to parties that
@@ -10085,9 +10185,9 @@ Table of Contents
    carry personal data (an originator identity, a consent reference);
    PAR keeps it off the front channel, and the record retains the
    designated verified facts under the same access governance as the
-   rest of the Mission's evidence (Section 17.5).
+   rest of the Mission's evidence (Section 18.5).
 
-17.1.  Mission Identifier Correlation
+18.1.  Mission Identifier Correlation
 
    This document carries a single canonical Mission Identifier on every
    derived token; the companion's cross-domain projection carries it
@@ -10114,7 +10214,7 @@ Table of Contents
    deployment that publishes its posture records the property there
    rather than treating documentation as a separate duty.
 
-17.2.  Token Payload Disclosure
+18.2.  Token Payload Disclosure
 
    The carried constraints and a multi-resource Authority Set disclose
    the shape of the task and its business bounds (for example, an amount
@@ -10124,7 +10224,7 @@ Table of Contents
    document recommends them (Section 8).  The privacy considerations of
    [RFC9396] apply to the carried authorization_details.
 
-17.3.  Intent Retention and Anchor Disclosure
+18.3.  Intent Retention and Anchor Disclosure
 
    The Mission record's Intent members (goal, constraints) are personal-
    data sinks: they carry whatever task description the user supplied.
@@ -10137,7 +10237,7 @@ Table of Contents
    as one when the Intent itself is sensitive; the same confirmation
    channel exists for a candidate proposal against proposal_hash.
 
-17.4.  Third-Party Data Subjects
+18.4.  Third-Party Data Subjects
 
    A task can be about a person who holds no Mission role: in a
    background check, the employer's agent queries a registrar about a
@@ -10170,7 +10270,7 @@ Table of Contents
    submission_evidence facts, including a consent reference.  Whatever
    the member, it persists on the Mission record for its audit horizon
    (Section 7) and concentrates at the AS with the record
-   (Section 17.5), and the committed members are confirmable through the
+   (Section 18.5), and the committed members are confirmable through the
    unsalted anchors by any party holding a candidate value (the
    retention consideration above).  Clients SHOULD reference a third
    party through resource-scoped or pseudonymous identifiers rather than
@@ -10184,7 +10284,7 @@ Table of Contents
    operational Mission record and its audit-horizon retention floor
    (Section 7) are untouched by it.
 
-17.5.  Mission Record and Evidence Access
+18.5.  Mission Record and Evidence Access
 
    The Mission record concentrates the task, its authority, and its
    principals at the AS, and every evidence artifact joins on the
@@ -10197,9 +10297,9 @@ Table of Contents
    Mission reference, and retention is deployment policy bounded below
    by the audit horizon (Section 7).
 
-18.  IANA Considerations
+19.  IANA Considerations
 
-18.1.  OAuth Parameters Registration
+19.1.  OAuth Parameters Registration
 
    This document registers the following in the "OAuth Parameters"
    registry:
@@ -10247,7 +10347,7 @@ Table of Contents
    extensible auth-param space ([RFC6750], Section 8.2), for which no
    IANA registry exists; no action is required for it.
 
-18.2.  OAuth Extensions Error Registration
+19.2.  OAuth Extensions Error Registration
 
    This document registers the following in the "OAuth Extensions Error"
    registry [RFC6749]:
@@ -10267,7 +10367,7 @@ Table of Contents
    endpoint carriage defined by a companion profile, in the token error
    response.
 
-18.3.  The Mission Resource Access Authorization Details Type
+19.3.  The Mission Resource Access Authorization Details Type
 
    mission_resource_access is an authorization_details type per
    [RFC9396] Section 2, defined by this document in Section 5.  RFC 9396
@@ -10277,7 +10377,7 @@ Table of Contents
    action here.  If a registry of authorization details types is
    established in the future, this type SHOULD be registered in it.
 
-18.4.  JSON Web Token Claims Registration
+19.4.  JSON Web Token Claims Registration
 
    This document registers the following in the "JSON Web Token Claims"
    registry:
@@ -10293,7 +10393,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 8.1
 
-18.5.  OAuth Token Introspection Response Registration
+19.5.  OAuth Token Introspection Response Registration
 
    This document registers the following in the "OAuth Token
    Introspection Response" registry ([RFC7662]):
@@ -10311,7 +10411,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 10
 
-18.6.  OAuth Authorization Server Metadata Registration
+19.6.  OAuth Authorization Server Metadata Registration
 
    This document registers the following in the "OAuth Authorization
    Server Metadata" registry ([RFC8414]):
@@ -10325,7 +10425,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 13
 
-18.7.  OAuth Protected Resource Metadata Registration
+19.7.  OAuth Protected Resource Metadata Registration
 
    This document registers the following in the "OAuth Protected
    Resource Metadata" registry ([RFC9728]):
@@ -10348,7 +10448,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 14
 
-18.8.  Common Constraints Registry
+19.8.  Common Constraints Registry
 
    This document establishes the "Mission Common Constraints" registry.
    The registration policy is Specification Required [RFC8126].  A
@@ -10468,7 +10568,7 @@ Table of Contents
    registry, and any other name is either collision-resistant or remains
    deployment-defined and outside the registry.
 
-18.9.  Mission Lifecycle States Registry
+19.9.  Mission Lifecycle States Registry
 
    IANA is requested to create the "Mission Lifecycle States" registry.
    The registration policy is Specification Required [RFC8126].  A
@@ -10533,9 +10633,9 @@ Table of Contents
    Internet-Draft reference as a publication dependency under this
    registry's policy until it is published.
 
-19.  References
+20.  References
 
-19.1.  Normative References
+20.1.  Normative References
 
    [I-D.draft-zehavi-oauth-rar-metadata]
               Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
@@ -10565,6 +10665,10 @@ Table of Contents
    [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
               Encodings", RFC 4648, DOI 10.17487/RFC4648, October 2006,
               <https://www.rfc-editor.org/rfc/rfc4648>.
+
+   [RFC5646]  Phillips, A., Ed. and M. Davis, Ed., "Tags for Identifying
+              Languages", BCP 47, RFC 5646, DOI 10.17487/RFC5646,
+              September 2009, <https://www.rfc-editor.org/rfc/rfc5646>.
 
    [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
               (SHA and SHA-based HMAC and HKDF)", RFC 6234,
@@ -10680,7 +10784,7 @@ Table of Contents
               DOI 10.17487/RFC9728, April 2025,
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
-19.2.  Informative References
+20.2.  Informative References
 
    [AuthZEN.ARAP]
               OpenID Foundation, "OpenID AuthZEN Access Request and
@@ -11247,6 +11351,25 @@ Appendix C.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  goal_lang (OPTIONAL, BCP 47) on the Mission Intent and an
+      Internationalization Considerations section: a syntactic language
+      declaration for the Intent's human-readable prose, committed by
+      intent_hash, refused invalid_request when malformed, with no
+      authority semantics and deliberately no language-tagged display
+      fields on Authority Set entries (#534).
+
+   *  Standing-consent approval instant: approval_basis.approved_at
+      (REQUIRED for every standing-consent type) carries the human
+      approval instant of the exact consented root, verified by the
+      activating issuer from retained state, never accepted as the
+      activating request's own assertion, with deployment-declared
+      recency ceilings mirroring the Approval Governance companion's
+      policy-approval recency (#580).
+
+   *  Informative pointer to the substrate-hosted OAuth Mission Binding
+      Statement from the Conformance section; the core remains self-
+      contained (#551).
 
    *  Requested versus effective expiry: intent.expires_at is the
       client's requested not-after ceiling and the Mission Record's
