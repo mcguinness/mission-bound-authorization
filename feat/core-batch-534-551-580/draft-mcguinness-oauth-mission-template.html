@@ -1723,8 +1723,12 @@ is not the approver. The instance is rooted in the
 <a href="#grant-type" class="auto internal xref">Section 7.2</a>), <code>template_version</code>, and <code>template_hash</code> (the
 <code>template</code> lineage member's fields, <a href="#template-member" class="auto internal xref">Section 7.1</a>), plus
 this Dispatch's <code>dispatch_event_id</code>; <code>activation_actor</code> is the
-Dispatcher, distinct from <code>consent_principal</code>; and
-<code>root_commitment</code> is <code>template_hash</code>. This makes the
+Dispatcher, distinct from <code>consent_principal</code>;
+<code>root_commitment</code> is <code>template_hash</code>; and <code>approved_at</code> (the
+issuance profile's standing-consent requirement) is the instant
+the consenting human approved this exact <code>template_version</code>,
+read from the Mission Issuer's retained template record at
+Dispatch, never from the Dispatch request. This makes the
 approver-of-record shift from a fresh human decision to policy
 adjudication under a prior human consent structured and flagged
 consistently across the family, superseding a bare

@@ -4323,23 +4323,56 @@ approval event (<a href="#approval-event" class="auto internal xref">Section 6</
 standing-consent <code>type</code> <span class="bcp14">MUST</span> make its <code>consent_principal</code> and
 <code>root_commitment</code> trace to an accountable human's approval of the
 named standing consent, with no fresh approval event per instance,
-and <span class="bcp14">MUST</span> carry that approval's instant as <code>approved_at</code>. A
-deployment <span class="bcp14">MAY</span> declare maximum standing-consent ages (recency
-ceilings), per consequence class where it classifies actions;
-where a declared ceiling applies, activating an instance whose
-<code>approved_at</code> is older than the ceiling <span class="bcp14">MUST</span> be refused. The
-Approval Governance companion defines the analogous bound for its
-policy-assertion path
+and <span class="bcp14">MUST</span> carry that approval's instant as <code>approved_at</code>.<a href="#section-7-4.26.3" class="pilcrow">¶</a></p>
+<p id="section-7-4.26.4"><strong>Standing-consent recency.</strong> A deployment <span class="bcp14">MAY</span> declare maximum
+standing-consent ages (recency ceilings), and <span class="bcp14">MAY</span> declare them per
+consequence class where it classifies actions; where a declared
+ceiling applies, activating an instance whose <code>approved_at</code> is
+older than the ceiling <span class="bcp14">MUST</span> be refused. Where ceilings are
+declared, four rules are normative:<a href="#section-7-4.26.4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-4.26.5.1">
+              <p id="section-7-4.26.5.1.1">The evaluation instant is the atomic Mission-creation commit
+(<a href="#approval-event" class="auto internal xref">Section 6</a>), the same commit that re-checks the
+effective expiry; a deferred or relocated flow inherits the
+check at its own creation commit. Recency is issuance-time
+eligibility only: a later change to a ceiling, or the passage of
+time past one, does not retroactively terminate an active
+Mission (the lifecycle operations exist for that,
+<a href="#revocation" class="auto internal xref">Section 9.2</a>).<a href="#section-7-4.26.5.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.26.5.2">
+              <p id="section-7-4.26.5.2.1"><code>approved_at</code> <span class="bcp14">MUST NOT</span> be later than the evaluation instant
+beyond the deployment's declared, bounded clock-skew allowance;
+a future-dated value is refused.<a href="#section-7-4.26.5.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.26.5.3">
+              <p id="section-7-4.26.5.3.1">Where ceilings are declared per consequence class, the issuer
+<span class="bcp14">MUST</span> classify the committed Mission from the derived Authority
+Set and from any consumption bound the Intent's <code>controls</code>
+carry, and <span class="bcp14">MUST</span> apply the strictest ceiling across every class
+present.<a href="#section-7-4.26.5.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.26.5.4">
+              <p id="section-7-4.26.5.4.1">The ceilings and the skew allowance <span class="bcp14">MUST</span> be part of the
+versioned policy the record's <code>policy_version</code> identifies, or a
+separately versioned declaration retained with it, so an auditor
+can reproduce the eligibility decision from retained state; a
+mutable out-of-band statement <span class="bcp14">MUST NOT</span> serve this role.<a href="#section-7-4.26.5.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-4.26.6">The Approval Governance companion defines the analogous bound for
+its policy-assertion path
 (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>, Section
-"Policy-Approval Recency").<a href="#section-7-4.26.3" class="pilcrow">¶</a></p>
-<p id="section-7-4.26.4"><code>approval_basis</code> is provenance: it is recorded alongside <code>approver</code>
+"Policy-Approval Recency").<a href="#section-7-4.26.6" class="pilcrow">¶</a></p>
+<p id="section-7-4.26.7"><code>approval_basis</code> is provenance: it is recorded alongside <code>approver</code>
 and is not folded into <code>intent_hash</code> or <code>authority_hash</code>
 (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>). Neither anchor commits it, and it <span class="bcp14">MUST NOT</span>
 be added to either digest; a profile that commits the Mission
 Record itself covers it under that profile's own anchor. The
 <code>mission</code> claim <span class="bcp14">MAY</span> carry <code>approval_basis.type</code> (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>)
 as a wire signal; it <span class="bcp14">MUST NOT</span> be relied on to grant or widen
-authority.<a href="#section-7-4.26.4" class="pilcrow">¶</a></p>
+authority.<a href="#section-7-4.26.7" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-4.27">

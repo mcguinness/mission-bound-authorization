@@ -2499,13 +2499,42 @@ Table of Contents
       standing-consent type MUST make its consent_principal and
       root_commitment trace to an accountable human's approval of the
       named standing consent, with no fresh approval event per instance,
-      and MUST carry that approval's instant as approved_at.  A
-      deployment MAY declare maximum standing-consent ages (recency
-      ceilings), per consequence class where it classifies actions;
-      where a declared ceiling applies, activating an instance whose
-      approved_at is older than the ceiling MUST be refused.  The
-      Approval Governance companion defines the analogous bound for its
-      policy-assertion path
+      and MUST carry that approval's instant as approved_at.
+
+      *Standing-consent recency.* A deployment MAY declare maximum
+      standing-consent ages (recency ceilings), and MAY declare them per
+      consequence class where it classifies actions; where a declared
+      ceiling applies, activating an instance whose approved_at is older
+      than the ceiling MUST be refused.  Where ceilings are declared,
+      four rules are normative:
+
+      *  The evaluation instant is the atomic Mission-creation commit
+         (Section 6), the same commit that re-checks the effective
+         expiry; a deferred or relocated flow inherits the check at its
+         own creation commit.  Recency is issuance-time eligibility
+         only: a later change to a ceiling, or the passage of time past
+         one, does not retroactively terminate an active Mission (the
+         lifecycle operations exist for that, Section 9.2).
+
+      *  approved_at MUST NOT be later than the evaluation instant
+         beyond the deployment's declared, bounded clock-skew allowance;
+         a future-dated value is refused.
+
+      *  Where ceilings are declared per consequence class, the issuer
+         MUST classify the committed Mission from the derived Authority
+         Set and from any consumption bound the Intent's controls carry,
+         and MUST apply the strictest ceiling across every class
+         present.
+
+      *  The ceilings and the skew allowance MUST be part of the
+         versioned policy the record's policy_version identifies, or a
+         separately versioned declaration retained with it, so an
+         auditor can reproduce the eligibility decision from retained
+         state; a mutable out-of-band statement MUST NOT serve this
+         role.
+
+      The Approval Governance companion defines the analogous bound for
+      its policy-assertion path
       ([I-D.draft-mcguinness-mission-approval-governance], Section 
       "Policy-Approval Recency").
 

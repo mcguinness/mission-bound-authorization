@@ -1440,8 +1440,12 @@ standing-consent <code>approval_basis</code>, under the core profile's open
 drawdown policy identifier, the Mission's <code>drawdown_policy</code> value)
 and <code>policy_version</code> (the deployment's version identifier for that
 policy's content as applied at this adjudication), its
-<code>activation_actor</code> is the requesting client, and its
-<code>root_commitment</code> is the <code>ceiling_hash</code>. The child delegation
+<code>activation_actor</code> is the requesting client, its
+<code>root_commitment</code> is the <code>ceiling_hash</code>, and its <code>approved_at</code> (the
+issuance profile's standing-consent requirement) is the instant the
+Approver consented the ceiling that <code>ceiling_hash</code> commits, read
+from the Mission Issuer's retained record of that consent, never
+from the drawdown request. The child delegation
 profile's <code>policy_drawdown</code> basis
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) is not
 reused: that value names policy-approved child creation, not a
