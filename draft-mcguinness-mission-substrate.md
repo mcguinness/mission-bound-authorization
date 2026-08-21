@@ -57,6 +57,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-uma:
+    title: "Mission-Bound Authorization for UMA 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-gnap:
+    title: "Mission-Bound Authorization for GNAP"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-gnap.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -145,7 +161,7 @@ authority envelope and carry it in an access token
 ({{I-D.draft-mcguinness-oauth-mission}}).  A standalone Mission
 Authority Server (MAS) can manage the relationship without issuing the
 resource credential that exercises authority
-({{I-D.draft-mcguinness-mission-authority-server}}).  An AAuth Policy
+({{I-D.draft-mcguinness-mission-authority-server}}).  An AAuth Person
 Server can keep contextual Mission data private while scopes,
 resource-owned policy, and per-hop authorization decisions provide
 deterministic resource access ({{I-D.draft-mcguinness-mission-aauth}}).
@@ -268,6 +284,19 @@ authority is portable, machine-evaluable, monotonically derived,
 credential-bound, or independently verifiable.  It does mean that no
 reliance derived from a Mission is unbounded ({{bounded-reliance}}).
 
+| Kernel duty | The binding defines |
+| --- | --- |
+| Native reference and Controller ({{reference}}) | A stable, non-reassigned Mission Reference, its uniqueness namespace, how unguessability is met where the reference is disclosed beyond the Controller, and how relying components identify the Controller |
+| Authority roles ({{authority-roles}}) | The authorities responsible for the functions it uses; roles never collapse silently |
+| Actor binding ({{actor-binding}}) | The Actor handle, its authenticated establishment at approval, and how later decisions establish the acting party |
+| Approved context and immutability ({{approved-context}}) | The immutable approved value or a verifiable commitment to it, distinct from mutable operational fields |
+| Approval event ({{approval}}) | A native ceremony that atomically creates an active Mission from an authenticated approval |
+| Basic governance gate ({{basic-gate}}) | An active predicate; positive decisions only while active, and every unrecognized condition fails closed |
+| Bounded reliance ({{bounded-reliance}}) | A stated reliance bound on every positive decision and every Mission-governed artifact |
+| Context propagation ({{propagation}}) | The join between decisions or artifacts and the Mission Reference, and exactly what that join proves |
+| Ordered governance record ({{governance-record}}) | An integrity-protected, ordered, attributable record of governance events |
+{: title="Kernel duties at a glance"}
+
 ## Native Reference and Controller {#reference}
 
 A binding MUST define a Mission Reference that is:
@@ -373,82 +402,8 @@ structured authority.  A binding that retains the Approved Context at
 every governance party satisfies this section through the maintained
 value; a native content address it also uses as the Mission Reference
 is then verification material for parties holding the value, not a
-commitment in place of it.
-
-### Default Commitment Construction {#default-commitment}
-
-A binding MAY satisfy the duties above, for the Approved Context and
-for any other artifact it commits, with the following default
-construction. The OAuth issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
-profiles import it from this section; a binding with a native or
-member-named commitment (a content address, a signed object, a
-digest whose member name fixes the algorithm) remains free to use
-that instead, stating its own algorithm identification and agility
-behavior under the duties above.
-
-The default commits to bytes in one of three species, and a
-specification defining a commitment classifies it:
-
-* **Envelope anchor**: SHA-256 {{RFC6234}} over the JCS {{RFC8785}}
-  canonical bytes of a closed JSON object carrying exactly three
-  members and no others: `typ`, a string naming the committed
-  object, collision-resistant because a namespace the defining
-  specification controls qualifies it; `iss`, a string whose value
-  the defining commitment specifies; and `value`, the committed
-  JSON value.
-* **Canonical-object digest**: SHA-256 over the JCS serialization of
-  a normalized JSON object without the envelope, where protocol
-  context already fixes what is committed.
-* **Raw-octet digest**: SHA-256 over an exact,
-  specification-defined octet sequence, with no canonicalization: a
-  whole artifact as exchanged, or the UTF-8 encoding of a defined
-  scalar value.
-
-The envelope's `iss` is a namespace binding that domain-separates
-commitments across issuing authorities; it does not authenticate
-whoever computed the commitment, which stays a signature or evidence
-property. A digest is encoded as an algorithm prefix followed by the
-base64url, no-padding {{RFC4648}} encoding of the digest: `sha-256:`
-identifies SHA-256, which is mandatory to implement and the only
-algorithm defined.
-
-Every committed JSON value, and the envelope around it, MUST satisfy
-I-JSON {{RFC7493}}, and the party computing or verifying a
-commitment MUST reject non-conformant input before canonicalization:
-externally received JSON destined for commitment is parsed by a
-duplicate-detecting parser, and an object carrying duplicate member
-names is rejected at parse time, before the parsed data model
-exists; string data is valid Unicode, free of the surrogate and
-noncharacter code points I-JSON prohibits, and is preserved
-unchanged; number data supplied to JCS is representable as a finite
-IEEE 754 binary64 value ({{RFC8785}}, Section 3.1). The commitment is over the parsed I-JSON data value,
-not the source text; a value needing exact decimal or large-integer
-semantics rides as a string or under a stricter declared numeric
-domain.
-
-The algorithm prefix is the agility mechanism. A new algorithm
-enters only through a new prefix defined by a referencing
-specification, its name drawn from the Named Information Hash
-Algorithm Registry ({{RFC6920}}). A verifier MUST reject a digest
-whose algorithm prefix it does not recognize and MUST NOT treat an
-unrecognized prefix as `sha-256`. No transition mechanism is
-defined: every commitment a current carrier defines is a single
-prefixed string, and a specification introducing a new prefix MUST
-define the carrier and schema of any parallel commitment, the
-binding that proves the old and new values commit to the same
-object, producer behavior during the transition, verifier selection
-and downgrade behavior when recognition sets differ, and the
-transition procedure itself.
-
-The OAuth binding's Integrity Anchor Test Vectors
-({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
-example of the envelope-anchor species alone (`intent_hash`,
-`proposal_hash`, `authority_hash`); an implementation can check its
-own computation against them. The canonical-object and raw-octet
-species above, the parse-time duplicate-detection rule, the I-JSON
-numeric domain, and the reject-unknown-prefix and no-downgrade
-agility rules remain prose-only: no vector pins them.
+commitment in place of it.  A default construction a binding MAY
+adopt for these duties is defined in {{default-commitment}}.
 
 ## Approval Event {#approval}
 
@@ -576,6 +531,83 @@ This record need not be portable or independently verifiable.  A
 binding that makes either claim also supplies the corresponding
 capability in {{capabilities}}.
 
+# Default Commitment Construction {#default-commitment}
+
+Any specification that defines a commitment, a Mission Substrate
+Binding or an importing profile alike, MAY satisfy the commitment
+duties of {{approved-context}}, for the Approved Context and for any
+other artifact it commits, with the following default construction.
+The OAuth issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
+profiles import it from this section; a specification with a native
+or member-named commitment (a content address, a signed object, a
+digest whose member name fixes the algorithm) remains free to use
+that instead, stating its own algorithm identification and agility
+behavior under the duties of {{approved-context}}.
+
+The default commits to bytes in one of three species, and a
+specification defining a commitment classifies it:
+
+* **Envelope anchor**: SHA-256 {{RFC6234}} over the JCS {{RFC8785}}
+  canonical bytes of a closed JSON object carrying exactly three
+  members and no others: `typ`, a string naming the committed
+  object, collision-resistant because a namespace the defining
+  specification controls qualifies it; `iss`, a string whose value
+  the defining commitment specifies; and `value`, the committed
+  JSON value.
+* **Canonical-object digest**: SHA-256 over the JCS serialization of
+  a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed.
+* **Raw-octet digest**: SHA-256 over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value.
+
+The envelope's `iss` is a namespace binding that domain-separates
+commitments across issuing authorities; it does not authenticate
+whoever computed the commitment, which stays a signature or evidence
+property. A digest is encoded as an algorithm prefix followed by the
+base64url, no-padding {{RFC4648}} encoding of the digest: `sha-256:`
+identifies SHA-256, which is mandatory to implement and the only
+algorithm defined.
+
+Every committed JSON value, and the envelope around it, MUST satisfy
+I-JSON {{RFC7493}}, and the party computing or verifying a
+commitment MUST reject non-conformant input before canonicalization:
+externally received JSON destined for commitment is parsed by a
+duplicate-detecting parser, and an object carrying duplicate member
+names is rejected at parse time, before the parsed data model
+exists; string data is valid Unicode, free of the surrogate and
+noncharacter code points I-JSON prohibits, and is preserved
+unchanged; number data supplied to JCS is representable as a finite
+IEEE 754 binary64 value ({{RFC8785}}, Section 3.1). The commitment is over the parsed I-JSON data value,
+not the source text; a value needing exact decimal or large-integer
+semantics rides as a string or under a stricter declared numeric
+domain.
+
+The algorithm prefix is the agility mechanism. A new algorithm
+enters only through a new prefix defined by a referencing
+specification, its name drawn from the Named Information Hash
+Algorithm Registry ({{RFC6920}}). A verifier MUST reject a digest
+whose algorithm prefix it does not recognize and MUST NOT treat an
+unrecognized prefix as `sha-256`. No transition mechanism is
+defined: every commitment a current carrier defines is a single
+prefixed string, and a specification introducing a new prefix MUST
+define the carrier and schema of any parallel commitment, the
+binding that proves the old and new values commit to the same
+object, producer behavior during the transition, verifier selection
+and downgrade behavior when recognition sets differ, and the
+transition procedure itself.
+
+The OAuth binding's Integrity Anchor Test Vectors
+({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
+example of the envelope-anchor species alone (`intent_hash`,
+`proposal_hash`, `authority_hash`); an implementation can check its
+own computation against them. The canonical-object and raw-octet
+species above, the parse-time duplicate-detection rule, the I-JSON
+numeric domain, and the reject-unknown-prefix and no-downgrade
+agility rules remain prose-only: no vector pins them.
+
 # Optional Capabilities {#capabilities}
 
 Capabilities are additive claims.  A binding MUST NOT claim a
@@ -587,6 +619,18 @@ appear in the Mission Substrate Statement.
 Absence of a capability is not partial conformance.  It means that a
 consumer requiring that property does not compose with the binding in
 that mode.
+
+| Capability | Property claimed |
+| --- | --- |
+| Lifecycle-Gated Authorization ({{lifecycle-gated}}) | Named authorization operations are gated on currently active state |
+| State-Observable ({{state-observable}}) | An authenticated source lets a named consumer determine whether a Mission is active |
+| Structured Authority ({{structured-authority}}) | A machine-evaluable authority representation with an identified semantics owner |
+| Monotonic Derivation ({{monotonic-derivation}}) | Covered derivations verify a no-broader-than relation within a declared boundary |
+| Credential-Bound ({{credential-bound}}) | An integrity-protected association between an artifact and exactly one Mission, with selected fact semantics |
+| Authorized Context Correlation ({{authorized-context-correlation}}) | An authorized association among independently established facts, made by an identified joining authority |
+| Independently Verifiable ({{independently-verifiable}}) | A named consumer verifies a specified property without an online query to the Controller |
+| Portable Evidence ({{portable-evidence}}) | Evidence crosses a stated administrative boundary and verifies there |
+{: title="Optional capabilities at a glance"}
 
 ## Lifecycle-Gated Authorization {#lifecycle-gated}
 
@@ -881,11 +925,10 @@ The Statement MUST then include a capability table with one row for
 each capability in {{capabilities}}.  Each row MUST say `supplied` or
 `not supplied`: a capability is supplied in a named scope when the
 row's stated activation conditions hold, or it is not supplied.
-There is no third state.  The retired `conditional` state conflated
-four different facts, what a specification defines, what an
-implementation supports, what a deployment enables, and where the
-resulting property applies; an activation condition states them
-separately.  A supplied row MUST:
+There is no third state.  An activation condition states separately
+what a specification defines, what an implementation supports, what
+a deployment enables, and where the resulting property applies.  A
+supplied row MUST:
 
 * cite the binding sections that satisfy the capability;
 * state its mode and operational scope;
@@ -1038,31 +1081,28 @@ This document has no IANA actions.
 
 # Binding Mapping Guidance {#crosswalk}
 
-This appendix is informative.  It illustrates how existing Mission
-architectures map to the capability model.  It is not a substitute for
-the normative Mission Substrate Statement published by each binding,
-and an extension or deployment can change a row.
+This appendix is informative.  Each of the five bindings publishes
+the normative Mission Substrate Statement for its substrate: the
+OAuth binding's Statement is {{oauth-statement}} of this document,
+and the standalone MAS
+({{I-D.draft-mcguinness-mission-authority-server}}), AAuth
+({{I-D.draft-mcguinness-mission-aauth}}), UMA
+({{I-D.draft-mcguinness-mission-uma}}), and GNAP
+({{I-D.draft-mcguinness-mission-gnap}}) bindings each publish their
+own.  Those Statements, not this appendix, are the authoritative
+capability claims.  This appendix illustrates the mapping method
+through three design poles among which a new substrate can locate
+itself.
 
-| Capability | OAuth Mission | Standalone MAS | AAuth Mission |
-| --- | --- | --- | --- |
-| Contextual-governance kernel | Native Mission record, AS controller, OAuth client/subject mappings | Native Mission record, MAS controller, explicit join boundary | Native Mission reference and PS-controlled contextual Mission |
-| Lifecycle-Gated Authorization | AS gates covered token issuance and derivation | MAS gates its own decisions; OAuth credential issuance requires a cooperating credential issuer | PS gates covered permission or token decisions; coverage depends on the AAuth access mode |
-| State-Observable | Supplied when a status, introspection, or signal mechanism is active | Supplied when the MAS exposes a status mechanism | Not implied by the private Mission blob; requires a management or state extension for other consumers |
-| Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
-| Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
-| Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; supplied when a verified join or a cooperating credential issuer is active | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
-| Authorized Context Correlation | Not supplied natively: the issuer binds all facts at issuance | The MAS join and Join Assertion machinery | Not supplied natively: the PS binds the Mission, person, agent, and token at decision time |
-| Independently Verifiable | Supplied where signed credentials expose the property and verification material | Supplied when signed artifacts expose the property | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
-| Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise supplied only when an evidence profile is active | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
-{: title="Illustrative capability mapping for existing architectures"}
+## OAuth-Native Mapping: The Broad-Claims Pole
 
-## OAuth-Native Mapping
-
-OAuth Mission can intentionally claim a broad set of capabilities.
+The OAuth binding can intentionally claim a broad set of capabilities.
 Its Authorization Server can act as Controller, OAuth identifiers can
-instantiate Actor and subject mappings, Rich Authorization Requests
-can supply Structured Authority, and protected access-token fields can
-supply Credential-Bound.  Its defined subset relation can support
+instantiate Actor and subject mappings, and protected access-token
+fields can supply Credential-Bound.  Registered authorization-detail
+types can supply Structured Authority: each type's semantics owner
+defines its operations, constraints, and comparison behavior, and
+Rich Authorization Requests are the carrier, not the semantics.  Its defined subset relation can support
 Monotonic Derivation within the authorization-detail types and
 operations covered by that relation.
 
@@ -1074,7 +1114,7 @@ verification is limited to the properties actually present in a
 verifiable credential; current state and undisclosed context do not
 follow from a Mission identifier or hash alone.
 
-## Standalone MAS Mapping
+## Standalone MAS Mapping: The Separation-and-Join Pole
 
 The MAS separates Mission governance from an otherwise unchanged
 Authorization Server.  It can satisfy the kernel and can provide
@@ -1086,10 +1126,10 @@ credential-binding properties.  The MAS Statement needs to describe
 those with their activation conditions and preserve the boundary
 between MAS assertions and Authorization Server behavior.
 
-## AAuth-Native Mapping
+## AAuth-Native Mapping: The Private-Context Pole
 
 An AAuth Mission naturally implements the contextual-governance
-kernel: the Policy Server controls approval and contextual decisions,
+kernel: the Person Server (PS) controls approval and contextual decisions,
 the native Mission reference identifies the approved blob, and the
 Mission log records governance interactions.  The private mission
 description need not be a machine-evaluable authorization policy.
@@ -1146,6 +1186,11 @@ Precedence is scoped, not global.  For the OAuth-native binding, the
 OAuth binding's definitions govern that mapping; this document governs the
 kernel and capability vocabulary.  Neither document depends
 normatively on the other.
+
+Ownership migrates by touch, not by relocation.  When a
+binding-neutral definition next changes substantively, the change
+MUST land in this document, and the owning family section becomes a
+reference to it; no change is ever made solely to move words.
 
 ## OAuth Mission Binding Statement {#oauth-statement}
 
@@ -1230,27 +1275,50 @@ unresolvable reference, a failed anchor verification, and an unknown
 condition does not hold, the property is not supplied and a consumer
 MUST NOT rely on it.
 
-The OAuth binding's three OPTIONAL capabilities, named in its Conformance section
-({{I-D.draft-mcguinness-oauth-mission}}), are implementation roles:
-surfaces an implementation may or may not offer, each independent of
-the others. The capability table above states scoped guarantee
+The OAuth binding's three OPTIONAL implementation roles, which its
+Conformance section names OPTIONAL capabilities
+({{I-D.draft-mcguinness-oauth-mission}}), are surfaces an
+implementation may or may not offer, each independent of the others. The capability table above states scoped guarantee
 claims: properties the OAuth binding supplies and the conditions
 under which each is supplied. The two vocabularies answer different
-questions and are not equivalent; the table below relates them
+questions and are not equivalent; the entries below relate them
 without collapsing one into the other. Declaring an OPTIONAL role
 never creates a claim beyond the eight already stated above.
 
-| Core OPTIONAL capability | Substrate capability claim(s) exercised | Relationship |
-| --- | --- | --- |
-| Introspection | State-Observable | One of State-Observable's three named activation surfaces, alongside Status and Signals; declaring it activates that otherwise-conditional claim. |
-| Delegation | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound, Authorized Context Correlation | Core delegation subset-checks `authorization_details`, carries the `mission` claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. The Token Exchange that issues the delegated credential is itself a grant binding at issuance: the AS joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential. Four of the five claims are supplied always, and Delegation exercises them rather than creating them; Authorized Context Correlation is the exception, activated by this role, whose Token Exchange join is its supplier. The `act` chain itself supplies none of them: it is attribution, never authority. |
-| Cross-Domain | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound | Carries these four always-supplied guarantees across the domain hop: the Mission reference and `authority_hash` intact, authority that only narrows, and projection gated on active state, while adding an interoperable projection surface the guarantees alone do not provide. It does not become Portable Evidence by crossing a domain: that claim activates only when an Evidence, Mandate, or audit companion is active, and Cross-Domain is not among them. |
-{: title="Core optional roles related to substrate capability claims"}
+Introspection:
+: Exercises State-Observable.  One of State-Observable's three named
+  activation surfaces, alongside Status and Signals; declaring it
+  activates that otherwise-conditional claim.
 
-Ownership migrates by touch, not by relocation.  When a
-binding-neutral definition next changes substantively, the change
-MUST land in this document, and the owning family section becomes a
-reference to it; no change is ever made solely to move words.
+Delegation:
+: Exercises Lifecycle-Gated Authorization, Structured Authority,
+  Monotonic Derivation, Credential-Bound, and Authorized Context
+  Correlation.  The OAuth binding's delegation subset-checks
+  `authorization_details`, carries the `mission` claim unchanged,
+  sender-constrains the delegated credential to the delegate's own
+  key, and refuses issuance unless the Mission is active.  The Token
+  Exchange that issues the delegated credential is itself a grant
+  binding at issuance: the AS joins the Mission and Subject carried
+  by the Mission-bound `subject_token` with the delegate identity
+  established by the `actor_token` or the delegate's own client
+  authentication, binding both to the newly issued credential.  Four
+  of the five claims are supplied always, and Delegation exercises
+  them rather than creating them; Authorized Context Correlation is
+  the exception, activated by this role, whose Token Exchange join
+  is its supplier.  The `act` chain itself supplies none of them: it
+  is attribution, never authority.
+
+Cross-Domain:
+: Exercises Lifecycle-Gated Authorization, Structured Authority,
+  Monotonic Derivation, and Credential-Bound.  Carries these four
+  always-supplied guarantees across the domain hop: the Mission
+  reference and `authority_hash` intact, authority that only
+  narrows, and projection gated on active state, while adding an
+  interoperable projection surface the guarantees alone do not
+  provide.  It does not become Portable Evidence by crossing a
+  domain: that claim activates only when an Evidence, Mandate, or
+  audit companion is active, and Cross-Domain is not among them.
+
 
 # Acknowledgments
 {:numbered="false"}
