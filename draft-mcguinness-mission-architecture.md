@@ -457,9 +457,10 @@ is defined by {{I-D.draft-mcguinness-mission-aauth}}.
 
 # The Mission {#the-mission}
 
-OAuth 2.0 standardizes delegated authorization: an access token
-carries a user's delegation and can serve many requests, and
-deployments keep durable grants and consent records behind it. What
+OAuth 2.0 standardizes authorization: an access token represents
+authorization granted to the client, for a delegating user or for
+the client's own behalf, and can serve many requests, and a
+deployment may retain durable grant or consent state behind it. What
 OAuth does not standardize is an independently addressable,
 lifecycle-bearing approved-task object: an artifact whose semantics
 persist across tokens, actors, audiences, and evidence.
@@ -2414,12 +2415,13 @@ The levels, cumulative:
   per-action enforcement: a half-step into the next level, not a
   level of its own.
 
-  A deployment demonstrates Baseline Issuance with the following
-  minimum test set, scoped by the capabilities its Mission Substrate
-  Statement claims, so a standalone MAS is never asked to prove a
-  credential behavior it does not claim. The family's
-  conformance manifest is the executable realization and tracks this
-  set.
+  The verification coverage below is profile-owned: each test
+  verifies a rule its home profile states normatively, grouped here
+  in reading order, never as a conformance class a level confers.
+  Coverage is scoped by the capabilities a binding's Mission
+  Substrate Statement claims, so a standalone MAS is never asked to
+  verify a credential behavior it does not claim; the family's
+  conformance manifest carries the profile-owned rows.
 
   Kernel, every Baseline deployment:
 
@@ -2446,7 +2448,7 @@ The levels, cumulative:
      positive result (the forward-compatibility rule: only `active`
      permits reliance, and lost state never fails open).
 
-  The OAuth binding additionally demonstrates:
+  For the OAuth binding, the same coverage includes:
 
   1. refresh while the Mission is active succeeds within policy and
      is refused after a terminal transition; and
@@ -2597,9 +2599,12 @@ level:
 
 - **Approved-record integrity**: the anchors reproduce from the
   record alone (the OAuth binding's integrity anchors).
-- **Bounded revocation latency**: the published staleness bound plus
-  the permit window and the class's execution bound
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+- **Bounded revocation latency**, per path and mechanism, the claim
+  naming the paths it covers: for a runtime-gated class, the
+  published staleness bound plus the permit window plus the class's
+  execution bound ({{I-D.draft-mcguinness-mission-runtime}}); for a
+  lifecycle-gated path, the outstanding credential lifetime; an
+  ungated path has no bound to claim.
 - **Action-time enforcement**: PEP coverage for the Enforcement Scope
   Statement's mediated set, and nothing outside it.
 - **Parameter-bound enforcement**: permits bound to concrete
@@ -2795,17 +2800,21 @@ illustrative and the per-profile statements are the checkable form.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
-it does not cover. An illustrative shape, for a deployment claiming
-agent-compromise-resistant enforcement but not trifecta containment
-(its residuals say why):
+it does not cover. An illustrative shape, for a deployment that
+runs mediated credential custody but makes neither High-Assurance
+claim: the agent-compromise-resistant claim requires the runtime
+profile's per-condition evidence bindings (EAT profile and claim
+identifiers, measurements, appraisal policy, attester identity,
+freshness, signed approval configuration, rendering evidence, and a
+path-completeness audit), and this shape's generic attestation
+reference is declaration input, not that proof:
 
 ~~~ json
 {
   "profile": "mission-governed-agent-runtime",
   "assurance_claims": [
     "action-time enforcement", "parameter-bound enforcement",
-    "bounded revocation latency",
-    "agent-compromise-resistant enforcement"
+    "bounded revocation latency"
   ],
   "mission_issuer": "https://as.example.com",
   "state_sources": [
@@ -2911,6 +2920,7 @@ agent-compromise-resistant enforcement but not trifecta containment
     }
   },
   "residual_risks": [
+    "mediated custody is declared, not evidenced: no High-Assurance claim is made",
     "unmediated local reasoning is outside enforcement",
     "revocation latency up to 30 seconds",
     "PEP compromise is not prevented",
@@ -3270,9 +3280,11 @@ and compromise analysis are the Mission Security Model's
 document does introduce is composition, and the risks that emerge
 only at composition are its security subject matter:
 
-- stale state and materialized authority: every already-issued
-  credential, redeemed grant, and minted attenuation root runs to
-  its own bound past a lifecycle transition ({{validity-model}},
+- stale state and materialized authority: an already-issued
+  credential, redeemed grant, or minted attenuation root stays
+  usable to its artifact-specific bound only where no timely
+  state-aware or action-time gate reaches it; where one does,
+  reliance ends at that earlier gate ({{validity-model}},
   {{kill-switch-composition}});
 - unmediated paths: enforcement claims hold only inside the declared
   PEP boundary, and the Enforcement Scope Statement's exclusions are
@@ -3286,8 +3298,9 @@ only at composition are its security subject matter:
   security model prices each;
 - context splicing and join ambiguity: independently valid identity,
   credential, and Mission facts compose into an unauthorized whole
-  wherever a join is inferred rather than carried
-  ({{I-D.draft-mcguinness-mission-substrate}});
+  wherever they are combined without an authorized joining
+  authority, verified inputs, an association policy, and conflict
+  handling ({{I-D.draft-mcguinness-mission-substrate}});
 - false but correctly signed evidence: signatures make records
   tamper-evident, never true; and
 - correlation: the Mission Identifier, actor chain, and evidence
@@ -3315,10 +3328,11 @@ and execution evidence joined on the Mission Identifier at the
 runtime and audit layers; and the correlation surface that
 identifier creates wherever it travels (tokens, status responses,
 evidence, receipts, the Mandate). Minimization therefore has one
-shape everywhere: audience-scope what each party receives, disclose
-references rather than content, and let the record's access
-governance, not possession of a reference, decide who reads the
-concentrated view.
+shape everywhere: audience-scope what each party receives, prefer
+audience-scoped references over content (a stable reference reused
+across audiences is itself a correlation surface), and let the
+record's access governance, not possession of a reference, decide
+who reads the concentrated view.
 
 The AAuth binding's privacy posture is its own
 ({{I-D.draft-mcguinness-mission-aauth}}): the private mission blob
