@@ -44,6 +44,6 @@ anchors the AAuth binding and its management companion; and the
 these. The substrate contract publishes before or with any binding
 that claims conformance to it.
 
-In short: steps 1 through 3 rest on ratified dependencies and the
+In short: the stable adoption path (the core, status, and the runtime package) rests on ratified dependencies and the
 tracked in-progress ones noted above; everything experimental is
 additive and can wait.

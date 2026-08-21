@@ -64,6 +64,18 @@
     "draft-mcguinness-oauth-mission-consent-evidence"
    ],
    "summary": "Session-continuity stop and proof of what the Approver saw."
+  },
+  "transaction-assurance": {
+   "required": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-oauth-mission-transaction-authorization"
+   ],
+   "summary": "Fresh per-action authorization, verifiable offline, on top of the runtime package."
   }
  },
  "count": 41,
