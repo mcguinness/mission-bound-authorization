@@ -1,0 +1,2784 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Transaction Authorization Profile for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       A delegated agent's Mission may require that a specific action, with
+its concrete parameters, be authorized fresh at the point of use,
+across an organizational boundary, without a live callback on the
+execution path. This document defines a Mission Transaction
+Authorization profile of the OAuth transaction authorization
+challenge  . It keeps that
+protocol's wire contract whole and adds only the Mission layer: the
+profiled challenge claims,  subject_token  credential carriage,
+Mission and authority validation, approval as decision input, the
+fresh decision, and the transaction-token profile. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="transaction" name="keyword">
+<meta content="approval" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-transaction-authorization-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.3
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-transaction-authorization.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Transaction Authorization</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 22 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-transaction-authorization-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-21" class="published">21 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-22">22 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Transaction Authorization Profile for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">A delegated agent's Mission may require that a specific action, with
+its concrete parameters, be authorized fresh at the point of use,
+across an organizational boundary, without a live callback on the
+execution path. This document defines a Mission Transaction
+Authorization profile of the OAuth transaction authorization
+challenge <span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>. It keeps that
+protocol's wire contract whole and adds only the Mission layer: the
+profiled challenge claims, <code>subject_token</code> credential carriage,
+Mission and authority validation, approval as decision input, the
+fresh decision, and the transaction-token profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-authorization.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-authorization.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-transaction-authorization/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-transaction-authorization/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 22 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An Optional Extension</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-applicability" class="internal xref">Applicability</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-resource-challenge" class="internal xref">Resource Challenge</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-challenge-redemption-and-ap" class="internal xref">Challenge Redemption and Approval</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-subject-establishment" class="internal xref">Subject Establishment</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1.2.1">
+                    <p id="section-toc.1-1.6.2.1.2.1.1"><a href="#section-6.1.1" class="auto internal xref">6.1.1</a>.  <a href="#name-subject-namespaces" class="internal xref">Subject Namespaces</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-two-phase-expiry" class="internal xref">Two-Phase Expiry</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-transaction-token" class="internal xref">Transaction Token</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-offline-verification-and-ex" class="internal xref">Offline Verification and Execution</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-evidence-and-audit" class="internal xref">Evidence and Audit</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-failure-semantics" class="internal xref">Failure Semantics</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1.2.1">
+                    <p id="section-toc.1-1.13.2.1.2.1.1"><a href="#section-13.1.1" class="auto internal xref">13.1.1</a>.  <a href="#name-application-mission-txn-tok" class="internal xref">application/mission-txn-token+jwt</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-carrier-binding-floor" class="internal xref">Carrier Binding Floor</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-transaction-invariants" class="internal xref">Transaction Invariants</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-carrier-requirements" class="internal xref">Carrier Requirements</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
+                <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-oauth-discharge" class="internal xref">OAuth Discharge</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#section-18" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.1">
+                <p id="section-toc.1-1.18.2.1.1"><a href="#section-18.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.2">
+                <p id="section-toc.1-1.18.2.2.1"><a href="#section-18.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">An agent's Mission can carry actions whose consequence warrants more
+than the Mission's own approval and more than a stronger
+authentication context. Cross-organizational delegation sharpens the
+requirement: <span>[<a href="#I-D.draft-reece-wimse-cross-org-delegation" class="cite xref">I-D.draft-reece-wimse-cross-org-delegation</a>]</span> describes
+delegated work that must remain subject to execution-time human
+authorization, bound to the concrete action, parameters, resource,
+on-behalf-of principal, and authorized presenter, surviving
+delegation, and usable at most once, without a live call back to the
+approval authority on the execution path.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The Mission family already supplies the policy model: the Common
+Constraint <code>requires_action_approval</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) designates an action as
+requiring a fresh approval and is monotonic under the subset rule, and
+Mission Runtime's action-bound approval
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) defines concrete-parameter
+binding, a maximum age, a fresh decision, and atomic consumption. What
+neither defines is the portable wire workflow that carries an
+approval across a trust boundary to a resource that must enforce
+locally. This document supplies that workflow as a profile of the
+OAuth transaction authorization challenge
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>. The profile keeps that
+protocol's challenge type, request and response parameters,
+capability signal, endpoint, and asynchronous polling whole; it adds
+the Mission-profiled challenge claims, the credential carried to the
+transaction endpoint, Mission and authority validation, approval as
+decision input, the fresh decision, and the transaction-token
+profile.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The approval is not authority. The transaction token is authority
+because a trusted issuer minted it after a fresh decision bounded by
+the Mission and the approved operation.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This profile is the strict-delta consumer of the upstream protocol;
+engagement with that protocol's own evolution proceeds through the
+family's coordination process, outside this document.<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-extensio">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: An Optional Extension</a>
+      </h2>
+<p id="section-2-1">This document is optional. A deployment that satisfies action-bound
+approval by another means, a synchronous local decision, a bespoke
+callback, or no cross-organizational case at all, is fully conformant
+to the issuance profile and the runtime profile and is unaffected by
+this document. It places no new requirement on either.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">A deployment claims this profile only when it carries action-bound
+approval across a trust boundary through the transaction challenge
+and token defined here. The Mission, its Authority Set, the subset
+rule, and <code>requires_action_approval</code> are unchanged; this document
+governs only the portable wire result that a resource and a
+Transaction Authorization Server exchange to satisfy an action-bound
+approval requirement.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">This profile tracks an in-progress substrate. It depends normatively
+on the OAuth transaction authorization challenge
+(<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>), an early Internet-Draft
+that is not ratified and whose details may change, so this profile is
+not yet a stable interface and will track the substrate as it
+evolves. It reuses, without restating, the upstream challenge type,
+parameters, endpoint, and polling states, and the Mission's own
+<code>mission</code> claim, <code>requires_action_approval</code>, <code>parameter_digest</code>, and
+<code>act</code> delegation chain exactly as those documents define them.
+Action-bound approval within a single trust domain, which needs only
+the runtime profile, is the stable path; deploy this profile for
+evaluation rather than as a stable interface. This document is
+Experimental for that reason, tracking its substrate and crossing to
+the stable tier by reclassification when the substrate does.<a href="#section-2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions">
+<section id="section-3">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This document uses Mission, Authority Set, Approver, Mission Issuer,
+<code>mission_resource_access</code>, and the subset rule as the issuance profile
+defines them (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); action-bound
+approval, the Operation Profile, <code>parameter_digest</code>, and Mission state
+freshness as the runtime profile defines them
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the envelope anchor,
+canonical-object digest, and raw-octet digest species of the default
+commitment construction as the substrate defines them
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>); and the transaction
+authorization challenge, its claims, its endpoint, and its pending and
+polling states as the OAuth transaction authorization challenge
+defines them (<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-3">
+        <dt id="section-3-3.1">Transaction Authorization Server (TAS):</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.2">
+          <p id="section-3-3.2.1">The OAuth Authorization Server acting in the role
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> defines for the
+transaction authorization endpoint: it validates the challenge,
+applies the Mission validation and fresh-decision rules of this
+profile, and mints the transaction token. A TAS instance <span class="bcp14">MAY</span> be the
+Mission Issuer itself or an Authorization Server deployed separately
+from it; this profile does not require either arrangement.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.3">Challenge-Issuing Resource:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.4">
+          <p id="section-3-3.4.1">The protected resource of
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> in this profile: it
+normalizes the requested operation, computes its <code>parameter_digest</code>,
+and signs the transaction challenge with the Mission-profiled claims
+of <a href="#resource-challenge" class="auto internal xref">Section 5</a>.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.5">Presenting Client:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.6">
+          <p id="section-3-3.6.1">The client of <span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> in this
+profile: it holds the challenge's confirmation key, obtains the
+transaction token from the TAS, and presents the token to the
+Challenge-Issuing Resource for execution.<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.7">Transaction challenge:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.8">
+          <p id="section-3-3.8.1">The <code>transaction_challenge</code> of
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>, typed
+<code>txn-authz-challenge+jwt</code>, profiled by <a href="#resource-challenge" class="auto internal xref">Section 5</a> with
+the Mission-profiled claims.<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.9">Transaction token:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.10">
+          <p id="section-3-3.10.1">The sender-constrained, single-audience, single-use JWT the TAS
+mints of <a href="#transaction-token" class="auto internal xref">Section 7</a>, typed <code>application/mission-txn-token+jwt</code>.<a href="#section-3-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="applicability">
+<section id="section-4">
+      <h2 id="name-applicability">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-applicability" class="section-name selfRef">Applicability</a>
+      </h2>
+<p id="section-4-1">This profile is invoked when any of these requires action-bound
+approval for a normalized operation:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">
+          <p id="section-4-2.1.1">the matched Authority Set entry carries
+<code>constraints.requires_action_approval: true</code>;<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.2">
+          <p id="section-4-2.2.1">destination resource policy requires approval for the action or
+risk class; or<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.3">
+          <p id="section-4-2.3.1">a current local entitlement or governance rule requires it.<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-3">A delegated child <span class="bcp14">MUST</span> preserve <code>requires_action_approval: true</code>
+under the Common Constraints subset rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. <code>false</code> remains equivalent to
+omitting the member and cannot override a <code>true</code> ancestor. This
+profile defines no second approval constraint: <code>requires_action_approval</code>
+stays the only Authority Set designation this profile reads.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">Step-up authentication is not a substitute. A step-up obligation
+(<span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>) proves a stronger authentication context; it does not
+approve the transaction, and a Transaction Authorization Server <span class="bcp14">MUST NOT</span> treat a step-up context alone as satisfying an action-bound
+approval requirement. A durable role or relationship grant produced
+by a governance decision is also not an approval token: it becomes
+current governance state, and the fresh decision of
+<a href="#challenge-redemption" class="auto internal xref">Section 6</a> re-evaluates it like any other current
+policy input rather than consuming it as the approval itself.<a href="#section-4-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="resource-challenge">
+<section id="section-5">
+      <h2 id="name-resource-challenge">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-resource-challenge" class="section-name selfRef">Resource Challenge</a>
+      </h2>
+<p id="section-5-1">After receiving an ordinary Mission-bound request for an action that
+falls under <a href="#applicability" class="auto internal xref">Section 4</a>, the Challenge-Issuing Resource
+normalizes the operation under its Operation Profile and computes the
+runtime <code>parameter_digest</code> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
+When no valid transaction token is presented, the resource signals and
+returns a transaction authorization challenge exactly as the upstream
+protocol defines: the client's <code>Accept-Txn-Challenge</code> header gates the
+signal, the <code>transaction_authorization_required</code> error and
+<code>transaction_challenge</code> parameter carry the challenge, and the
+challenge is a JWT with protected header <code>typ</code>
+        <code>txn-authz-challenge+jwt</code>
+(<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Sections 4.1, 4.2, and
+4.2.1). This document does not restate that mechanism.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The challenge's <span class="bcp14">REQUIRED</span> claims <code>iss</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, <code>jti</code>,
+<code>txn</code>, <code>authorization_details</code>, and <code>reason</code>, and its <span class="bcp14">OPTIONAL</span> <code>act</code>
+and <code>reason_uri</code>, are exactly as
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Section 4.2.2 defines
+them. <code>authorization_details</code> carries exactly one operation-scoped
+<code>mission_resource_access</code> entry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+or one compound-action detail whose registered semantics make the
+operation atomic. The Operation Profile a TAS and the resource apply
+resolves deterministically from the challenge's <code>iss</code> and that entry's
+<code>type</code> member (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>): a resource versions its Operation Profile
+by versioning <code>type</code>, and a TAS <span class="bcp14">MUST</span> retain and recognize a superseded
+Operation Profile version for as long as a pending workflow still
+references it.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">This profile adds the following <span class="bcp14">REQUIRED</span> challenge claims:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-4">
+        <dt id="section-5-4.1">
+<code>mission</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.2">
+          <p id="section-5-4.2.1"><span class="bcp14">REQUIRED</span>. Copied from the verified Mission-bound access token,
+unchanged, including the invariant origin principal
+(<code>mission.subject</code>) where the Origin Principal profile applies
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-4.3">
+<code>parameter_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.4">
+          <p id="section-5-4.4.1"><span class="bcp14">REQUIRED</span>. Computed exactly as the runtime profile specifies
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); this document defines no
+second canonicalization.<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-4.5">
+<code>cnf</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.6">
+          <p id="section-5-4.6.1"><span class="bcp14">REQUIRED</span>. The presenter key <span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span> to which the resulting
+transaction token must be bound.<a href="#section-5-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-5">The resource <span class="bcp14">MUST</span> derive <code>mission</code>, <code>parameter_digest</code>, and <code>cnf</code> from
+the request and the verified Mission-bound access token, and <span class="bcp14">MUST NOT</span>
+accept a client-supplied replacement for any of them.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">Raw action parameters <span class="bcp14">SHOULD</span> remain outside the challenge when the TAS
+can decide from <code>parameter_digest</code> plus privacy-preserving attributes.
+Where a decision needs the normalized operation itself, this profile's
+one resource-controlled retrieval mechanism is the upstream
+<code>reason_uri</code> claim: dereferencing it, over a channel authenticated to
+the Challenge-Issuing Resource, returns the normalized operation bound
+to <code>txn</code>, the challenge <code>jti</code>, and <code>parameter_digest</code>; the party
+relying on the retrieved operation <span class="bcp14">MUST</span> recompute <code>parameter_digest</code>
+against it before relying on it. This document defines no second,
+unspecified attribute channel.<a href="#section-5-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="challenge-redemption">
+<section id="section-6">
+      <h2 id="name-challenge-redemption-and-ap">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-challenge-redemption-and-ap" class="section-name selfRef">Challenge Redemption and Approval</a>
+      </h2>
+<p id="section-6-1">The Presenting Client submits the challenge to the
+<code>transaction_authorization_endpoint</code> exactly as
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Section 5.1 defines:
+<code>client_id</code> where required, and the signed <code>transaction_challenge</code>.
+This profile adds two <span class="bcp14">REQUIRED</span> parameters that carry the Mission-bound
+access token as an assertion, under <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Sections 2.1 and 3:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-2">
+        <dt id="section-6-2.1">
+<code>subject_token</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.2">
+          <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span>. The Mission-bound access token.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.3">
+<code>subject_token_type</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.4">
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. <code>urn:ietf:params:oauth:token-type:access_token</code>.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-6-3">The request also carries proof of possession of the challenge's <code>cnf</code>
+key, using DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>, the same mechanism
+<a href="#transaction-token" class="auto internal xref">Section 7</a> binds the resulting token to. A holder-mediated
+cross-organizational delegation Chain is not an acceptable
+<code>subject_token</code> for this version of the profile; presenting one at the
+transaction endpoint returns once this profile defines its own
+<code>subject_token_type</code> and presentation binding for the Chain
+Presentation the cross-organizational delegation profile serializes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-org-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-org-delegation</a>]</span>).<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">The TAS authenticates the Presenting Client and validates the
+challenge exactly as
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Sections 5.1 and 4.6
+require. This profile adds, in order:<a href="#section-6-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-5">
+<li id="section-6-5.1">
+          <p id="section-6-5.1.1">validating <code>subject_token</code>'s audience against the challenge's <code>iss</code>
+and its <code>cnf</code> against the proof of possession presented on this
+request, establishing that the presented Mission-bound access token
+was issued for the challenged resource and is held by the party
+presenting the challenge;<a href="#section-6-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.2">
+          <p id="section-6-5.2.1">requiring exact equality between the challenge's <code>mission</code> and
+<code>subject_token</code>'s <code>mission</code> invariants;<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.3">
+          <p id="section-6-5.3.1">establishing that the challenge's <code>authorization_details</code> is within
+<code>subject_token</code>'s Authority Set under the subset rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and applies to the
+challenge's <code>iss</code> and resource;<a href="#section-6-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.4">
+          <p id="section-6-5.4.1">enforcing <code>requires_action_approval</code> and destination resource
+policy;<a href="#section-6-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.5">
+          <p id="section-6-5.5.1">obtaining or resolving a governed approval from an acceptable
+independent Approver or policy authority, bound to <code>txn</code>, the
+operation identity, <code>parameter_digest</code>, the resource, the Mission,
+the destination-local subject and, where the Origin Principal
+profile applies
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), the
+issuer-qualified origin principal, and the presenter key;<a href="#section-6-5.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.6">
+          <p id="section-6-5.6.1">verifying the approval's status, scope, grant time, maximum age,
+and <code>approved_until</code>; and<a href="#section-6-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.7">
+          <p id="section-6-5.7.1">running a fresh authorization decision using the verified approval
+as context together with current Mission state, <code>subject_token</code>
+validity, client and key binding, resource policy, and the concrete
+parameter inputs or attributes; the decision consumes the
+destination-local subject and, where present, the issuer-qualified
+origin principal as distinct inputs and revalidates their current
+mapping and entitlement.<a href="#section-6-5.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-6-6">Any denial ends the flow. Completion of step 6 alone <span class="bcp14">MUST NOT</span> trigger
+token issuance and <span class="bcp14">MUST NOT</span> bypass step 7.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">An approval obtained under step 5 <span class="bcp14">SHOULD</span> carry the shape of an
+AuthZEN Access Request and Approval Profile approval object
+(<span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>); steps 6 and 7 mirror the checks the AuthZEN binding
+applies to that object when it is presented as decision input, never
+as a bearer bypass (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Where
+an Approval Governance Record backs the decision, that record is the
+authoritative provenance of who approved and under what authority
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>); this document
+neither restates nor requires it.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<div id="subject-establishment">
+<section id="section-6.1">
+        <h3 id="name-subject-establishment">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-subject-establishment" class="section-name selfRef">Subject Establishment</a>
+        </h3>
+<p id="section-6.1-1">The destination-local subject the flow binds, from the approval of
+step 5 through the token of <a href="#transaction-token" class="auto internal xref">Section 7</a>, is established at
+admission and revalidated at completion:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.1-2">
+<li id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1">verify <code>subject_token</code> and establish its issuer-qualified
+identity, the pair of its <code>iss</code> and its <code>sub</code>;<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">establish the destination-local subject from that identity under
+the configured namespace policy of <a href="#subject-namespaces" class="auto internal xref">Section 6.1.1</a>;<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.3">
+            <p id="section-6.1-2.3.1">where the Origin Principal profile applies
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), co-resolve
+that subject with <code>mission.subject</code> under the profile's
+destination mapping rule; a conflict between them <span class="bcp14">MUST</span> be refused;<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">persist, on the pending workflow, the issuer-qualified source
+identity, the pinned destination-local subject, the origin
+principal where present, and the identity and version of the
+namespace policy that produced the pinned subject;<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.5">
+            <p id="section-6.1-2.5.1">at completion, resolve the current namespace policy against the
+persisted source identity again and require it to produce the
+pinned subject; a policy that no longer exists, no longer accepts
+the identity, or produces any other value <span class="bcp14">MUST</span> be refused; and<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.6">
+            <p id="section-6.1-2.6.1">only then run the fresh decision of step 7 and mint the token.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<div id="subject-namespaces">
+<section id="section-6.1.1">
+          <h4 id="name-subject-namespaces">
+<a href="#section-6.1.1" class="section-number selfRef">6.1.1. </a><a href="#name-subject-namespaces" class="section-name selfRef">Subject Namespaces</a>
+          </h4>
+<p id="section-6.1.1-1">A TAS <span class="bcp14">MAY</span> restrict which <code>subject_token</code> issuers and subject
+namespaces it accepts. Whether an accepted issuer shares this
+Authorization Server's subject namespace is configured trust policy,
+never inferred from request data. For a same-namespace issuer the
+verified <code>sub</code> is the destination-local subject, unchanged. For every
+accepted foreign namespace the TAS <span class="bcp14">MUST</span> apply an injective,
+issuer-qualified mapping from the pair (<code>iss</code>, <code>sub</code>) into its own
+namespace and use the mapped value. A missing, ambiguous, stale, or
+disabled mapping <span class="bcp14">MUST</span> be refused rather than guessed.<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="two-phase-expiry">
+<section id="section-6.2">
+        <h3 id="name-two-phase-expiry">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-two-phase-expiry" class="section-name selfRef">Two-Phase Expiry</a>
+        </h3>
+<p id="section-6.2-1">The challenge's <code>exp</code> bounds initial admission only: the Presenting
+Client <span class="bcp14">MUST</span> submit before it expires, and a late challenge is refused
+into a new workflow, never revived into an existing one. On
+acceptance, the pending workflow, identified by the upstream
+<code>transaction_authorization_id</code> (correlated to the ARAP task handle
+where ARAP backs the approval,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), carries its own
+deployment-declared lifetime: the upstream <code>expires_in</code> of
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Section 5.2. Steps 6 and 7
+of <a href="#challenge-redemption" class="auto internal xref">Section 6</a> revalidate current Mission state,
+<code>subject_token</code> validity, approval freshness, client and key binding,
+entitlement, and policy, fresh at the moment they run; the
+transaction token's <code>exp</code> is bounded by those inputs and the pending
+workflow's remaining lifetime, never by the already-consumed
+challenge <code>exp</code> (<a href="#transaction-token" class="auto internal xref">Section 7</a>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">Repeated initial submission of the same <code>(challenge issuer, challenge
+jti, client, cnf)</code> <span class="bcp14">MUST</span> return the existing pending workflow or fail
+deterministically; it <span class="bcp14">MUST NOT</span> create a second workflow for the same
+admitted challenge.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">The set of acceptable Transaction Authorization Servers,
+Challenge-Issuing Resources, and approval authorities is deployment
+and federation policy, never taken from an untrusted request claim.
+Key discovery rides the upstream metadata
+(<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>): a Challenge-Issuing
+Resource publishes its challenge-signing keys at
+<code>txn_challenge_jwks_uri</code> with
+<code>txn_challenge_signing_alg_values_supported</code>, and the TAS resolves a
+challenge issuer's keys there and nowhere else; a client discovers
+the TAS through <code>transaction_authorization_endpoint</code> in Authorization
+Server metadata. A TAS <span class="bcp14">MAY</span>
+be the Mission Issuer itself or an Authorization Server deployed
+separately from it; a resource trusts a TAS's token-signing key and
+policy role through pre-established federation metadata, not through
+anything the request asserts about itself.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="transaction-token">
+<section id="section-7">
+      <h2 id="name-transaction-token">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-transaction-token" class="section-name selfRef">Transaction Token</a>
+      </h2>
+<p id="section-7-1">On permit, the Transaction Authorization Server issues a JWT with
+protected header <code>typ</code> <code>mission-txn-token+jwt</code> (<a href="#iana" class="auto internal xref">Section 13</a>). This is its own
+JWT access-token profile with the complete validation semantics below;
+it does not conform to <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>, and a Resource Server that
+recognizes only <code>at+jwt</code> correctly rejects it as unknown. A deployment
+wanting RFC 9068 interoperability instead relies on the upstream <code>txn</code>
+claim carried by an ordinary JWT access token
+(<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Section 6); that is not
+this profile's shape. Its claims:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7-2">
+        <dt id="section-7-2.1">
+<code>iss</code>, <code>iat</code>, <code>exp</code>, <code>jti</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.2">
+          <p id="section-7-2.2.1"><span class="bcp14">REQUIRED</span>, standard JWT claims <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.3">
+<code>aud</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.4">
+          <p id="section-7-2.4.1"><span class="bcp14">REQUIRED</span>. A singleton, exactly the verified challenge's <code>iss</code>.
+Never a list and never any other value.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.5">
+<code>sub</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.6">
+          <p id="section-7-2.6.1"><span class="bcp14">REQUIRED</span>. The destination-local subject, derived from the verified
+issuer-qualified identity of the presented <code>subject_token</code> under
+the establishment and revalidation rules of
+<a href="#subject-establishment" class="auto internal xref">Section 6.1</a> and the namespace contract of
+<a href="#subject-namespaces" class="auto internal xref">Section 6.1.1</a>: the pinned subject those rules produced at
+admission and reconfirmed at completion, never a value derived a
+second way at minting time. Where the Origin Principal profile
+applies (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), the
+issuer-qualified origin principal travels in <code>mission.subject</code>,
+alongside the local subject and never in place of it. Never the
+Approver.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.7">
+<code>client_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.8">
+          <p id="section-7-2.8.1"><span class="bcp14">REQUIRED</span>. The client authenticated at the transaction endpoint
+(<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 4.3). The upstream client and the executing
+agent <span class="bcp14">MAY</span> be different parties; this claim identifies the former.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.9">
+<code>act</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.10">
+          <p id="section-7-2.10.1"><span class="bcp14">REQUIRED</span> whenever requester or actor context existed on
+<code>subject_token</code> or the challenge; otherwise absent. Present under
+the same conditions and structure as the issuance profile's <code>act</code>
+chain (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
+Within a Mission"; the OAuth Actor Profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span> remains the structural
+reference). The chain is attribution, never authority: it names
+who acted, for audit and as policy input, and grants nothing by
+itself. Actor proofs and receipts, where a deployment carries them,
+stay off this token; they ride <code>subject_token</code> or the delegation
+context the TAS verified at redemption (<a href="#challenge-redemption" class="auto internal xref">Section 6</a>),
+never the transaction token itself.<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.11">
+<code>txn</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.12">
+          <p id="section-7-2.12.1"><span class="bcp14">REQUIRED</span>. Copied unchanged from the verified challenge.<a href="#section-7-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.13">
+<code>authorization_details</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.14">
+          <p id="section-7-2.14.1"><span class="bcp14">REQUIRED</span>. The exact permitted entry, never wider than the
+challenge, <code>subject_token</code>'s Authority Set, or the fresh decision of
+<a href="#challenge-redemption" class="auto internal xref">Section 6</a>.<a href="#section-7-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.15">
+<code>parameter_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.16">
+          <p id="section-7-2.16.1"><span class="bcp14">REQUIRED</span>. Copied only after recomputation and verification against
+the challenge's value.<a href="#section-7-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.17">
+<code>mission</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.18">
+          <p id="section-7-2.18.1"><span class="bcp14">REQUIRED</span>. The Mission claim's profiled members, value-equal to the
+verified challenge's <code>mission</code>. The transaction token is a freshly
+signed JWT; this is value equality of the profiled members, not
+byte preservation of a carried artifact.<a href="#section-7-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.19">
+<code>cnf</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.20">
+          <p id="section-7-2.20.1"><span class="bcp14">REQUIRED</span>. Bound to the verified presenter key, DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>
+(<code>cnf.jkt</code>) or mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> (<code>cnf.x5t#S256</code>), equal to the
+challenge's <code>cnf</code> and the proof verified at redemption.<a href="#section-7-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-7-3">The token <span class="bcp14">MUST NOT</span> carry a generic <code>approval</code> object, a <code>single_use</code>
+boolean, raw rendered approval text or action parameters, roles or
+relationships conferred by an approval workflow, or evidence objects
+whose lifecycle and disclosure rules belong to the evidence and audit
+profiles. It <span class="bcp14">MUST NOT</span> carry a refresh token, a delegation grant, or
+token-exchange input, and <span class="bcp14">MUST NOT</span> be accepted as a general
+Mission-bound access token for any purpose beyond the challenged
+operation.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The token's <code>exp</code> <span class="bcp14">MUST</span> be no later than the earliest of: approval
+freshness or <code>approved_until</code>; <code>subject_token</code>'s own validity; Mission
+expiry; the pending workflow's remaining lifetime
+(<a href="#two-phase-expiry" class="auto internal xref">Section 6.2</a>); and deployment maximum. It is never bounded by
+the already-consumed challenge <code>exp</code>. A short token lifetime limits
+stale-policy and revocation exposure but does not replace the
+point-of-use state checks <a href="#offline-verification" class="auto internal xref">Section 8</a> requires.<a href="#section-7-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="offline-verification">
+<section id="section-8">
+      <h2 id="name-offline-verification-and-ex">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-offline-verification-and-ex" class="section-name selfRef">Offline Verification and Execution</a>
+      </h2>
+<p id="section-8-1">The Challenge-Issuing Resource verifies the transaction token locally,
+without calling the Transaction Authorization Server on the request
+path:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-8-2">
+<li id="section-8-2.1">
+          <p id="section-8-2.1.1">exact token <code>typ</code>, trusted issuer and signature, intended <code>aud</code>,
+<code>iat</code> and <code>exp</code>, and token class;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.2">
+          <p id="section-8-2.2.1"><code>cnf</code> proof by the current presenter;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.3">
+          <p id="section-8-2.3.1">equality of <code>txn</code>, the <code>mission</code> invariants, the operation
+<code>authorization_details</code>, and the recomputed <code>parameter_digest</code>
+with the pending operation;<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.4">
+          <p id="section-8-2.4.1">origin principal, local subject, and actor consistency under the
+principal profile in effect
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>);<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.5">
+          <p id="section-8-2.5.1">current local policy, principal entitlement, and that the
+challenged operation remains within the Mission's current
+Effective Authority Set, observed through a full audience-scoped
+Mission Status Response, containment- and discharge-aware issuer
+token introspection, or an equivalent authenticated, versioned
+authority source that reflects every relevant <code>authority_changed</code>
+update, each within its declared freshness bounds; the Status
+List <span class="bcp14">MAY</span> serve as a lifecycle prefilter only and <span class="bcp14">MUST NOT</span> alone
+satisfy this step, since its two-bit reliance state does not
+observe containment or discharge
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); and<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.6">
+          <p id="section-8-2.6.1">atomic first use of the resource-scoped <code>txn</code> in the consumption
+domain; a second, distinct token <code>jti</code> presented for an
+already-consumed <code>txn</code> is the same replay and <span class="bcp14">MUST</span> be refused,
+never executed as a new attempt.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-8-3">The Effective Authority Set belongs to the Mission and is evaluated
+at the point of use, not carried by the token: an <code>active</code> Mission
+observed before containment or discharge narrowed the set does not
+satisfy step 5. The transaction token transports a bounded,
+action-bound approval and never substitutes for the Mission's current
+authority, applicable Resource policy, or consumption state.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">Consumption of <code>txn</code> <span class="bcp14">MUST</span> be linearizable across every replica capable
+of executing the same operation, meeting the metering companion's
+Exact enforcement profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>): the record commits before
+the irreversible effect, or atomically with it where the operation
+store supports that transaction. If the consumption store is
+unavailable, the resource <span class="bcp14">MUST</span> fail closed for this profile.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5"><code>txn</code> identifies the resource transaction and is the atomic
+consumption key; challenge <code>jti</code> identifies one admission into a
+workflow; <code>transaction_authorization_id</code> (or the ARAP task handle
+backing it) identifies one pending workflow; token <code>jti</code> identifies
+one issuance from that workflow, not the one execution; and the
+Operation Profile's idempotency key identifies one effect. At most one
+authorization result exists per accepted workflow: repeated polling
+after a decision returns the same token or result stably, and a TAS
+<span class="bcp14">MUST NOT</span> mint a second token, under a different <code>jti</code>, for a <code>txn</code>
+whose workflow already produced one. An ambiguous retry looks up the
+prior result along this chain, from <code>txn</code> and token <code>jti</code> to the
+workflow to the idempotency key, and the resource returns
+<code>duplicate_suppressed</code> as the runtime profile defines it
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) rather than executing
+again. A genuinely new attempt requires a new challenge, a new
+workflow, a new token, and a new idempotency key.<a href="#section-8-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evidence-audit">
+<section id="section-9">
+      <h2 id="name-evidence-and-audit">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-evidence-and-audit" class="section-name selfRef">Evidence and Audit</a>
+      </h2>
+<p id="section-9-1">This document defines no evidence object of its own. The approval
+service or TAS records Approval Governance and, where configured,
+Consent Evidence state
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>); the fresh
+decision and the executing resource emit Decision Evidence and
+Execution Evidence under the runtime evidence profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), which a Mission
+Receipt may summarize (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); and
+where durable independent proof is required, the audit profile
+registers the relevant evidence
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). These records correlate by
+the Mission reference, <code>txn</code>, the transaction token's <code>jti</code>,
+<code>parameter_digest</code>, and idempotency identity. None of them ride in the
+transaction token.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The Transaction Authorization Server <span class="bcp14">MUST</span> be able to show that its
+fresh decision relied on a valid approval. A resource's own
+authorization decision rests on the trusted, typed transaction token
+plus the current local checks of <a href="#offline-verification" class="auto internal xref">Section 8</a>, never on
+parsing an arbitrary evidence blob presented at the request.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">This profile defines no Continuation Transport and no continuity
+guarantee of its own
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>). Its token is a
+bounded, single-use authorization artifact. The token carries <code>txn</code>,
+its own <code>jti</code>, and <code>parameter_digest</code>; those correlate the runtime
+evidence profile's execution-time evidence to this hop
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). The Operation
+Profile's idempotency identity correlates the effect and is not
+carried by the token.<a href="#section-9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="failure-semantics">
+<section id="section-10">
+      <h2 id="name-failure-semantics">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-failure-semantics" class="section-name selfRef">Failure Semantics</a>
+      </h2>
+<p id="section-10-1">The pending and polling states and errors of
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Section 5.3
+(<code>authorization_pending</code>, <code>slow_down</code>, <code>access_denied</code>,
+<code>expired_token</code>) apply unchanged; this document defines no second
+error vocabulary for that surface. Initial validation only admits a
+workflow: only the fresh decision at <a href="#challenge-redemption" class="auto internal xref">Section 6</a>
+completion is final, and an admitted workflow <span class="bcp14">MUST</span> still refuse there
+when a fresh input no longer holds.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-2">
+        <dt id="section-10-2.1">No or expired action approval:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.2">
+          <p id="section-10-2.2.1">Deny. The workflow <span class="bcp14">MAY</span> return or request another approval.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.3">Approval granted but current policy or entitlement denies:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.4">
+          <p id="section-10-2.4.1">Deny. The approval is not a bypass of step 7 of
+<a href="#challenge-redemption" class="auto internal xref">Section 6</a>.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.5">Parameter, resource, Mission, principal, presenter, or audience</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.6">
+          <p id="section-10-2.6.1"></p><a href="#section-10-2.6" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.7">mismatch:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.8">
+          <p id="section-10-2.8.1">Terminal refusal for that token or challenge.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.9">Stale or unavailable required state:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.10">
+          <p id="section-10-2.10.1">Fail closed. Retry only according to the declared state-recovery
+policy.<a href="#section-10-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.11">Consumed token:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.12">
+          <p id="section-10-2.12.1">Return the prior idempotent result via the relationship map of
+<a href="#offline-verification" class="auto internal xref">Section 8</a> when the Operation Profile allows it;
+otherwise <code>duplicate_suppressed</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Never execute again.<a href="#section-10-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.13">A challenge or token with an unknown <code>typ</code> or unrecognized</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.14">
+          <p id="section-10-2.14.1"></p><a href="#section-10-2.14" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.15">
+<code>authorization_details</code> semantics:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.16">
+          <p id="section-10-2.16.1"><span class="bcp14">MUST</span> be rejected outright, never parsed on a best-effort basis.<a href="#section-10-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-11">
+      <h2 id="name-security-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-11-1">The security considerations of the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the runtime profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> apply.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11-2">
+        <dt id="section-11-2.1">Challenge and credential substitution:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.2">
+          <p id="section-11-2.2.1">A challenge is scoped to one resource, one operation, and one
+presenter key. <a href="#challenge-redemption" class="auto internal xref">Section 6</a>'s step 1 (<code>subject_token</code>
+audience and <code>cnf</code>), step 2 (exact <code>mission</code> equality), and step 3
+(authority subset) together close the case of a challenge issued
+for one resource being redeemed for another's benefit, or a
+Mission-bound access token issued for a different resource or held
+by a different party being accepted as this profile's credential; a
+TAS that skips any of the three can be induced to authorize an
+operation the verified authority never covered.<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.3">Approval replay across operations:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.4">
+          <p id="section-11-2.4.1">An approval is bound to <code>txn</code>, the operation identity, and
+<code>parameter_digest</code>. A TAS that treats a completed approval as
+standing authority for a different transaction, rather than
+re-running step 7 fresh for each redemption, reintroduces the
+bearer-grant failure mode this profile exists to close.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.5">Transaction Authorization Server compromise, and pending-workflow exposure:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.6">
+          <p id="section-11-2.6.1">The TAS is the component every resource on the deployment trusts to
+have run a genuine fresh decision. Its compromise mints tokens for
+operations no human or policy authority approved, and a long-lived
+pending workflow widens the window in which <code>subject_token</code>, its
+key, or the approval authority can be compromised before that
+decision runs. Deployments <span class="bcp14">SHOULD</span> isolate the TAS's signing key and
+decision logic from the agent's own execution environment, matching
+the runtime profile's mediated-custody posture, <span class="bcp14">SHOULD</span> bound the
+pending workflow's declared lifetime (<a href="#two-phase-expiry" class="auto internal xref">Section 6.2</a>) to what
+genuine approval latency requires, and <span class="bcp14">SHOULD</span> bound token lifetime
+tightly enough that a detected compromise's blast radius is the
+outstanding token population, not the Mission's full remaining
+lifetime.<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.7">Consumption-store availability, and the fail-closed posture generally:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.8">
+          <p id="section-11-2.8.1">The at-most-once property this profile claims exists only while the
+consumption store meets the Exact enforcement profile of
+<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>; a deployment that
+degrades to a merely local cache during partition no longer has
+that property and <span class="bcp14">MUST NOT</span> claim it. Every failure path of
+<a href="#failure-semantics" class="auto internal xref">Section 10</a> resolves to denial, refusal, or a fail-closed
+state, never silent pass-through; an implementation that treats an
+unrecognized <code>typ</code>, an unverifiable approval, or an unreachable
+consumption store as permission is nonconformant.<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-12">
+      <h2 id="name-privacy-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-12-1">Raw action parameters and approval detail stay off the transaction
+token by design: the token carries <code>parameter_digest</code>, not the
+parameters, and no <code>approval</code> object. A Transaction Authorization
+Server that needs more than the digest to decide or render obtains
+raw values through the <code>reason_uri</code> retrieval of
+<a href="#resource-challenge" class="auto internal xref">Section 5</a>, never by widening the token.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">Digest-plus-attributes authorization lets a TAS decide without
+learning more than the deployment chooses to disclose over that
+channel; a deployment <span class="bcp14">SHOULD</span> weigh what attributes it discloses to
+the TAS against what the decision genuinely requires. Presenting
+<code>subject_token</code> discloses to the TAS that the Presenting Client holds
+Mission-bound authority at the challenged resource; the TAS already
+is a party the deployment trusts with the fresh decision, so this is
+not a disclosure beyond what <a href="#challenge-redemption" class="auto internal xref">Section 6</a> already requires
+it to evaluate.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3"><code>txn</code> and the transaction token's <code>jti</code> are a correlation surface: any
+party observing both a challenge and its redeemed token can link one
+resource transaction to one TAS decision. This is the profile's
+intended accountability property, not an incidental leak, but a
+deployment <span class="bcp14">SHOULD</span> scope <code>txn</code> values to the minimum lifetime and
+audience that <a href="#resource-challenge" class="auto internal xref">Section 5</a> and <a href="#offline-verification" class="auto internal xref">Section 8</a>
+require.<a href="#section-12-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="media-type-registration">
+<section id="section-13.1">
+        <h3 id="name-media-type-registration">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
+        </h3>
+<p id="section-13.1-1">IANA is requested to register one media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>. Its
+JOSE protected <code>typ</code> is the registered media type with the
+<code>application/</code> prefix omitted where JWS permits the shortened form; an
+HTTP <code>Content-Type</code> carries the full media type. This document
+registers no new claim, parameter, or metadata member: <code>txn</code>,
+<code>mission</code>, <code>cnf</code>, <code>parameter_digest</code>, <code>subject_token</code>, and
+<code>authorization_details</code> are each defined by the document that owns
+them and are reused here unchanged. This document does not register a
+second challenge media type; the challenge keeps the upstream <code>typ</code>
+          <code>txn-authz-challenge+jwt</code> unchanged.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<div id="applicationmission-txn-tokenjwt">
+<section id="section-13.1.1">
+          <h4 id="name-application-mission-txn-tok">
+<a href="#section-13.1.1" class="section-number selfRef">13.1.1. </a><a href="#name-application-mission-txn-tok" class="section-name selfRef">application/mission-txn-token+jwt</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-13.1.1-1.1">
+              <p id="section-13.1.1-1.1.1">Type name: application<a href="#section-13.1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.2">
+              <p id="section-13.1.1-1.2.1">Subtype name: mission-txn-token+jwt<a href="#section-13.1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.3">
+              <p id="section-13.1.1-1.3.1">Required parameters: none<a href="#section-13.1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.4">
+              <p id="section-13.1.1-1.4.1">Optional parameters: none<a href="#section-13.1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.5">
+              <p id="section-13.1.1-1.5.1">Encoding considerations: 8bit; JWS Compact Serialization
+<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span><a href="#section-13.1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.6">
+              <p id="section-13.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 11</a><a href="#section-13.1.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.7">
+              <p id="section-13.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-13.1.1-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.8">
+              <p id="section-13.1.1-1.8.1">Published specification: this document<a href="#section-13.1.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.9">
+              <p id="section-13.1.1-1.9.1">Applications that use this media type: Mission-Bound Authorization
+Challenge-Issuing Resources, Transaction Authorization Servers, and
+Presenting Clients<a href="#section-13.1.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.10">
+              <p id="section-13.1.1-1.10.1">Fragment identifier considerations: not applicable<a href="#section-13.1.1-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.11">
+              <p id="section-13.1.1-1.11.1">Additional information:<a href="#section-13.1.1-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1.1-1.11.2.1">
+                  <p id="section-13.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-13.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-13.1.1-1.11.2.2">
+                  <p id="section-13.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-13.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-13.1.1-1.11.2.3">
+                  <p id="section-13.1.1-1.11.2.3.1">File extension(s): none<a href="#section-13.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-13.1.1-1.11.2.4">
+                  <p id="section-13.1.1-1.11.2.4.1">Macintosh file type code(s): none<a href="#section-13.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-13.1.1-1.12">
+              <p id="section-13.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-13.1.1-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.13">
+              <p id="section-13.1.1-1.13.1">Intended usage: COMMON<a href="#section-13.1.1-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.14">
+              <p id="section-13.1.1-1.14.1">Restrictions on usage: none<a href="#section-13.1.1-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.15">
+              <p id="section-13.1.1-1.15.1">Author: IETF<a href="#section-13.1.1-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-13.1.1-1.16">
+              <p id="section-13.1.1-1.16.1">Change controller: IETF<a href="#section-13.1.1-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-13.1.1-2">The transaction token's registered semantics are sender-constrained,
+single-audience, and single-use. A Resource Server that recognizes
+<code>typ</code> <code>mission-txn-token+jwt</code> enforces exactly those properties regardless
+of any member on the token; this document defines no <code>single_use</code>
+member anywhere, because single use is semantic to the type itself.<a href="#section-13.1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="mission-substrate">
+<section id="section-14">
+      <h2 id="name-mission-substrate">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      </h2>
+<p id="section-14-1">This document is defined against the Mission model rather than
+against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
+this section is its consumption declaration under the rule of Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2">From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller
+carried in the <code>mission</code> claim, and the active and non-active gate the
+fresh decision of <a href="#challenge-redemption" class="auto internal xref">Section 6</a> observes.<a href="#section-14-2" class="pilcrow">¶</a></p>
+<p id="section-14-3">Its declaration against the optional capabilities:<a href="#section-14-3" class="pilcrow">¶</a></p>
+<span id="name-transaction-authorization-c"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-transaction-authorization-c" class="selfRef">Transaction authorization capability consumption</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Consumption</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope of consumption</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">required</td>
+            <td class="text-left" rowspan="1" colspan="1">A transaction token is minted only from a Mission the TAS observed <code>active</code>; this document adds no second gate to the issuance profile's (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">The challenge and token's <code>authorization_details</code> entry is evaluated against the verified Authority Set under the subset rule (<a href="#challenge-redemption" class="auto internal xref">Section 6</a> step 3)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Offline verification observes current Mission state within its declared freshness bound (<a href="#offline-verification" class="auto internal xref">Section 8</a>); establishing that state is the runtime and Status profiles' concern</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">A transaction token narrows nothing durable: it is a bounded, single-use permit, not a Mission, Child Mission, or successor</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">required and produced</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>subject_token</code> <span class="bcp14">MUST</span> already be sender-constrained by <code>cnf</code>, and the minted transaction token is itself a <code>cnf</code>-bound artifact (<a href="#transaction-token" class="auto internal xref">Section 7</a>); this profile both requires and produces the capability</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">The Presenting Client authenticates directly with its own <code>cnf</code> proof; no issuer-established correlation joins a separate credential to the Mission here</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
+            <td class="text-left" rowspan="1" colspan="1">produced</td>
+            <td class="text-left" rowspan="1" colspan="1">Offline verification of <a href="#offline-verification" class="auto internal xref">Section 8</a> independently verifies the transaction permit, the transaction binding, the carried authority, and the presenter binding, all as of issuance; it is explicitly not independent verification of Mission approval history or current Mission state</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">This document defines no evidence artifact of its own; the evidence plane of <a href="#evidence-audit" class="auto internal xref">Section 9</a> carries the durable account</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-14-5">Beyond the kernel, this profile also consumes companion capabilities
+outside the substrate contract: the metering companion's Exact
+enforcement profile for atomic <code>txn</code> consumption and the Mission
+Status surface for freshness-bounded state observation (both
+<a href="#offline-verification" class="auto internal xref">Section 8</a>), and, conditionally, the cross-domain Origin
+Principal profile for the invariant origin principal
+(<a href="#resource-challenge" class="auto internal xref">Section 5</a>). All three are consumed, none produced.<a href="#section-14-5" class="pilcrow">¶</a></p>
+<p id="section-14-6">These consumed capabilities join conjunctively, at the runtime
+decision, with the Mission's current Effective Authority Set and any
+applicable cumulative-consumption or stateful operational gate
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "The Runtime
+Decision"): the fresh, action-bound permit this profile mints is one
+more independent gate, never a substitute for the others.<a href="#section-14-6" class="pilcrow">¶</a></p>
+<p id="section-14-7">The carrier-side dual of this declaration, what a protocol binding
+must provide for another substrate to host this profile's flow, is
+<a href="#carrier-binding-floor" class="auto internal xref">Section 15</a>.<a href="#section-14-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="carrier-binding-floor">
+<section id="section-15">
+      <h2 id="name-carrier-binding-floor">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-carrier-binding-floor" class="section-name selfRef">Carrier Binding Floor</a>
+      </h2>
+<p id="section-15-1">The wire mechanics of this document are one discharge of a
+carrier-neutral flow: <a href="#mission-substrate" class="auto internal xref">Section 14</a> declares what this profile
+consumes from the Mission kernel, and this section declares what the
+flow itself requires, in three layers. <a href="#transaction-invariants" class="auto internal xref">Section 15.1</a>
+states the invariants that make the flow safe on any substrate.
+<a href="#carrier-requirements" class="auto internal xref">Section 15.2</a> states the slots a protocol binding <span class="bcp14">MUST</span>
+provide to carry them. <a href="#oauth-discharge" class="auto internal xref">Section 15.3</a> names this document's own
+discharge of each slot. A binding that cannot provide a slot does not
+host this profile: absence is fail-closed, and there is no partial
+hosting.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<div id="transaction-invariants">
+<section id="section-15.1">
+        <h3 id="name-transaction-invariants">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-transaction-invariants" class="section-name selfRef">Transaction Invariants</a>
+        </h3>
+<p id="section-15.1-1">Four roles participate: the Challenging Resource, which owns the
+operation and its state; the Transaction Authority, which admits the
+workflow and mints the result; the Presenter, which holds the
+committed key; and the Approver, whose governed decision is input to
+the Transaction Authority's own. The invariants bind commitments, not
+member names:<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-15.1-2">
+<li id="section-15.1-2.1">
+            <p id="section-15.1-2.1.1">Every commitment the challenge carries, to the operation, to the
+concrete parameters, to the Mission context, and to the presenter
+key, is derived by the Challenging Resource from its own
+authoritative state; a caller-supplied replacement for any of them
+is never accepted.<a href="#section-15.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.2">
+            <p id="section-15.1-2.2.1">Admission and completion are distinct: challenge expiry bounds
+admission alone, the pending workflow has its own declared
+lifetime, and completion runs a fresh authorization decision to
+which the approval is input and never a bypass. A step-up
+authentication context and durable governance state never issue
+alone.<a href="#section-15.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.3">
+            <p id="section-15.1-2.3.1">At most one result exists per transaction instance, across every
+workflow that references it, and repeated polls return that result
+stably.<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.4">
+            <p id="section-15.1-2.4.1">The result is single-use by class, sender-constrained to the
+committed key, audience-restricted to the Challenging Resource,
+carries no approval object, no evidence, and no raw parameters,
+and is never acceptable as a general credential of the substrate.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.5">
+            <p id="section-15.1-2.5.1">Immediately before execution, the Challenging Resource
+re-establishes, within declared freshness bounds, current Mission
+lifecycle state, current authority, current entitlement, and its
+own policy, and consumes the transaction instance atomically,
+linearizably across every replica capable of executing the
+operation, failing closed when either the state source or the
+consumption store is unavailable. A result minted before a
+termination or a narrowing never executes after it.<a href="#section-15.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.6">
+            <p id="section-15.1-2.6.1">The result's subject is the destination-local subject; the
+issuer-qualified origin principal travels alongside it, never in
+place of it; actor context is attribution, never authority.<a href="#section-15.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-15.1-2.7">
+            <p id="section-15.1-2.7.1">Refusals are typed, and pending, denied, and expired workflow
+states are distinguishable, so a refused caller can re-plan
+without receiving a map of the environment.<a href="#section-15.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="carrier-requirements">
+<section id="section-15.2">
+        <h3 id="name-carrier-requirements">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-carrier-requirements" class="section-name selfRef">Carrier Requirements</a>
+        </h3>
+<p id="section-15.2-1">A protocol binding provides one slot for each requirement below. Each
+slot is named by function; the binding supplies the substrate-native
+carrier.<a href="#section-15.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-15.2-2">
+          <dt id="section-15.2-2.1">Challenge carrier:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.2">
+            <p id="section-15.2-2.2.1">A resource-authenticated artifact for the commitments of
+<a href="#transaction-invariants" class="auto internal xref">Section 15.1</a>, whose signing keys a verifier resolves
+from the issuer's published metadata and nowhere else; one issuer's
+key never verifies another issuer's challenge.<a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.3">Operation identity:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.4">
+            <p id="section-15.2-2.4.1">A versioned operation identifier scoped to the Challenging
+Resource, validated as a complete entry and yielding a typed
+operation; a human-readable member is never authorization input; a
+superseded version resolves only for workflows admitted under it.<a href="#section-15.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.5">Parameter commitment:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.6">
+            <p id="section-15.2-2.6.1">The runtime profile's <code>parameter_digest</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), adopted into the
+binding's native commitment, or a verifiable equivalence to it. A
+binding never defines a second canonicalization.<a href="#section-15.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.7">Workflow handle:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.8">
+            <p id="section-15.2-2.8.1">A transaction-instance identifier with its own lifetime, distinct
+from any content address, under which repeated initial submission
+of one (challenge issuer, challenge identifier, client, presenter
+key) returns the existing workflow or fails deterministically.<a href="#section-15.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.9">Result class:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.10">
+            <p id="section-15.2-2.10.1">An artifact class every verifier can distinguish from each of the
+substrate's general credential classes, carrying the single-use
+semantics of invariant 4 on the class itself, never on a member.<a href="#section-15.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.11">Possession:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.12">
+            <p id="section-15.2-2.12.1">Proof of the committed presenter key at redemption and at
+execution, with the execution proof bound to the presented artifact
+itself, not only to the key.<a href="#section-15.2-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.13">Current-state source:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.14">
+            <p id="section-15.2-2.14.1">An authoritative source for the execution-time checks of invariant
+5, with a declared freshness bound, available to the Challenging
+Resource unconditionally on the execution path.<a href="#section-15.2-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-2.15">Failure vocabulary:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-2.16">
+            <p id="section-15.2-2.16.1">A mapping of pending, denied, and expired workflow states onto the
+substrate's native vocabulary; the binding defines no second
+vocabulary.<a href="#section-15.2-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="oauth-discharge">
+<section id="section-15.3">
+        <h3 id="name-oauth-discharge">
+<a href="#section-15.3" class="section-number selfRef">15.3. </a><a href="#name-oauth-discharge" class="section-name selfRef">OAuth Discharge</a>
+        </h3>
+<span id="name-oauth-discharge-of-the-carr"></span><table class="center" id="table-2">
+          <caption>
+<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#name-oauth-discharge-of-the-carr" class="selfRef">OAuth discharge of the carrier requirements</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Requirement</th>
+              <th class="text-left" rowspan="1" colspan="1">This document</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Challenge carrier</td>
+              <td class="text-left" rowspan="1" colspan="1">The signed challenge of <a href="#resource-challenge" class="auto internal xref">Section 5</a>, keys via <code>txn_challenge_jwks_uri</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Operation identity</td>
+              <td class="text-left" rowspan="1" colspan="1">The <code>authorization_details</code> entry <code>type</code> and Operation Profile rules of <a href="#resource-challenge" class="auto internal xref">Section 5</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Parameter commitment</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>parameter_digest</code>, carried and verified per <a href="#resource-challenge" class="auto internal xref">Section 5</a> and <a href="#offline-verification" class="auto internal xref">Section 8</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Workflow handle</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>transaction_authorization_id</code> and the admission rules of <a href="#two-phase-expiry" class="auto internal xref">Section 6.2</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Result class</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-txn-token+jwt</code> per <a href="#transaction-token" class="auto internal xref">Section 7</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Possession</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>cnf</code> under DPoP or mutual TLS, including <code>ath</code>, per <a href="#challenge-redemption" class="auto internal xref">Section 6</a> and <a href="#offline-verification" class="auto internal xref">Section 8</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Current-state source</td>
+              <td class="text-left" rowspan="1" colspan="1">Offline verification step 5 of <a href="#offline-verification" class="auto internal xref">Section 8</a>: the Mission Status surface, the Status List, or issuer introspection within declared freshness bounds</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Failure vocabulary</td>
+              <td class="text-left" rowspan="1" colspan="1">The upstream vocabulary applied unchanged per <a href="#failure-semantics" class="auto internal xref">Section 10</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-15.3-2">The Mission Context Binding for AAuth
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>) records, informatively, the
+native and missing status of each requirement against AAuth and R3
+(<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>); it does not claim the capability.<a href="#section-15.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conformance">
+<section id="section-16">
+      <h2 id="name-conformance">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-16-1">A <strong>Transaction Authorization Server</strong>:<a href="#section-16-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16-2.1">
+          <p id="section-16-2.1.1">authenticates the Presenting Client and validates the challenge as
+<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> requires, then completes
+every added step of <a href="#challenge-redemption" class="auto internal xref">Section 6</a> in order and refuses on
+any failure;<a href="#section-16-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.2">
+          <p id="section-16-2.2.1"><span class="bcp14">MUST NOT</span> let completion of the approval step alone trigger token
+issuance or bypass the fresh decision;<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.3">
+          <p id="section-16-2.3.1">mints the transaction token only with the claims and <span class="bcp14">MUST NOT</span> list
+of <a href="#transaction-token" class="auto internal xref">Section 7</a>; and<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.4">
+          <p id="section-16-2.4.1">publishes its signing keys and accepted challenge issuers as
+deployment and federation metadata, resolving each challenge
+issuer's keys through its published <code>txn_challenge_jwks_uri</code> and
+never accepting either from the request.<a href="#section-16-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-16-3">A <strong>Challenge-Issuing Resource</strong>:<a href="#section-16-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16-4.1">
+          <p id="section-16-4.1.1">derives the Mission-profiled challenge claims from the request and
+the verified credential, never from a client-supplied value
+(<a href="#resource-challenge" class="auto internal xref">Section 5</a>);<a href="#section-16-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-4.2">
+          <p id="section-16-4.2.1">verifies the transaction token locally under
+<a href="#offline-verification" class="auto internal xref">Section 8</a> without a request-path call to the TAS;
+and<a href="#section-16-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-4.3">
+          <p id="section-16-4.3.1">consumes <code>txn</code> atomically and linearizably across every replica,
+failing closed when the consumption store is unavailable.<a href="#section-16-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-16-5">A <strong>Presenting Client</strong>:<a href="#section-16-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16-6.1">
+          <p id="section-16-6.1.1">proves possession of the challenge's and token's confirmation key
+at redemption and at execution; and<a href="#section-16-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-6.2">
+          <p id="section-16-6.2.1">treats the transaction token, not the approval, as authority: it
+does not construct or assert an approval object of its own.<a href="#section-16-6.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-16-7">Positive and negative conformance vectors exist for: a valid
+challenge, <code>subject_token</code> presentation, approval, fresh decision, and
+one execution; delegated constraint preservation and an attempted
+removal of <code>requires_action_approval</code>; step-up presented without
+transaction approval; an approval valid for a changed amount,
+recipient, resource, action, Mission, destination-local subject,
+origin principal, actor, audience, or presenter key; an approval
+complete but Authority Set, entitlement, or resource policy denying;
+a missing or changed <code>parameter_digest</code> and a different
+canonicalization; a pending
+workflow that outlives its challenge and is later approved; repeated
+initial submission of the same challenge returning one workflow;
+challenge replay, single-replica token replay, and two distinct token
+<code>jti</code> values presented for one <code>txn</code>; an ambiguous first execution
+followed by an idempotent retry; an expired challenge, pending
+workflow, <code>subject_token</code>, or transaction token; a <code>subject_token</code>
+valid for a different resource audience or an unmatched <code>cnf</code>; an
+untrusted resource, TAS, or approval authority; an arbitrary signed
+JWT or an ordinary Mission token presented as a transaction token; a
+privacy projection showing raw parameters and approval detail absent
+from the token; and evidence correlation from challenge and decision
+through exactly one execution or terminal refusal.<a href="#section-16-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-17">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-17-1">This document is part of the Mission-Bound Authorization work and
+profiles the OAuth transaction authorization challenge for
+cross-organizational, execution-time approval.<a href="#section-17-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-18">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-18.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-rosomakho-oauth-txn-challenge">[I-D.draft-rosomakho-oauth-txn-challenge]</dt>
+        <dd>
+<span class="refAuthor">Rosomakho, Y.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"OAuth Transaction Authorization Challenge"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-rosomakho-oauth-txn-challenge-00</span>, <time datetime="2026-06-25" class="refDate">25 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-rosomakho-oauth-txn-challenge-00">https://datatracker.ietf.org/doc/html/draft-rosomakho-oauth-txn-challenge-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7800">[RFC7800]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)"</span>, <span class="seriesInfo">RFC 7800</span>, <span class="seriesInfo">DOI 10.17487/RFC7800</span>, <time datetime="2016-04" class="refDate">April 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7800">https://www.rfc-editor.org/rfc/rfc7800</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+      <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-18.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="ARAP">[ARAP]</dt>
+        <dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"AuthZEN Access Request and Approval Profile - Draft 1"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html">https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-hardt-aauth-r3">[I-D.draft-hardt-aauth-r3]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Rich Resource Requests (R3)"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html">https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-actor-profile">[I-D.draft-mcguinness-oauth-actor-profile]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Profile for Delegation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-profile-00</span>, <time datetime="2026-04-30" class="refDate">30 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-profile-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-profile-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-org-delegation">[I-D.draft-mcguinness-oauth-mission-cross-org-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Organizational Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-reece-wimse-cross-org-delegation">[I-D.draft-reece-wimse-cross-org-delegation]</dt>
+        <dd>
+<span class="refAuthor">Reece, M.</span>, <span class="refTitle">"Cross-Organizational Delegation for Workload and Agent Identity: Problem Statement and Requirements"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-reece-wimse-cross-org-delegation-01</span>, <time datetime="2026-07-30" class="refDate">30 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-reece-wimse-cross-org-delegation-01">https://datatracker.ietf.org/doc/html/draft-reece-wimse-cross-org-delegation-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9068">[RFC9068]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9470">[RFC9470]</dt>
+      <dd>
+<span class="refAuthor">Bertocci, V.</span> and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Step Up Authentication Challenge Protocol"</span>, <span class="seriesInfo">RFC 9470</span>, <span class="seriesInfo">DOI 10.17487/RFC9470</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9470">https://www.rfc-editor.org/rfc/rfc9470</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
