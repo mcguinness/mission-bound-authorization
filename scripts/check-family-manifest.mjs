@@ -18,10 +18,14 @@
 //   (f) draft copy            - a draft's `title`, `summary`, or `pull_when` is missing, empty,
 //                                or not a string, or its `summary` is a bare maturity word
 //   (g) reference stacks      - the manifest's top-level `reference_stacks` object (a transcription
-//                                of the Architecture's four cumulative stacks) is missing a stack,
-//                                has a malformed `contains` chain, or lists a `binding_one_of`,
-//                                `adds`, or `freshness_one_of` entry that is not a manifest slug
-//                                (a `core:` freshness entry names a binding facility and is allowed)
+//                                of the Architecture's four cumulative stacks in their OAuth
+//                                realization) is missing a stack, has a malformed `contains` chain
+//                                (self-reference, cycle, or not exactly one root), lacks the root's
+//                                pinned `binding` or the Runtime-Enforced stack's `freshness_one_of`
+//                                alternatives, lists an `adds`/`freshness_one_of` entry that is not
+//                                a manifest slug (a `core:` freshness entry names a binding facility
+//                                and is allowed), or names a stack whose `architecture_name` no
+//                                longer appears in the architecture document (rename tripwire)
 //   (h) maintenance enum      - a draft's `maintenance` is not one of the manifest's declared
 //                                `maintenance_classes`
 //   (i) maintenance evidence  - a draft whose `maintenance` is "active-experimental" is missing
@@ -41,12 +45,16 @@
 //                                README.md or DRAFTS.md targets a slug that is not a manifest
 //                                draft. README's structure is otherwise unvalidated: it is
 //                                curated prose, and the exhaustive inventory lives in DRAFTS.md.
-//   (n) typed edges           - a draft's `requires` (normative in-family dependencies; the only
-//                                edges that close transitively for adoption) or `references` (the
-//                                full in-family citation graph) is missing, self-referential,
-//                                duplicated, or not a manifest slug; `requires` is not a subset of
-//                                `references`; or `requires` drifts from the normative I-D.draft-
-//                                mcguinness-* references in the draft's own front matter
+//   (n) typed edges           - a draft's edge sets are malformed or drift from the draft itself.
+//                                `normative_references` (extracted: the front matter's normative
+//                                in-family refs) and `references` (extracted: normative plus
+//                                informative) are drift-checked bidirectionally against the draft's
+//                                front matter and carry no adoption semantics. `adoption_requires`
+//                                (authored: unconditional deployment dependencies; the only edges
+//                                that close transitively for adoption) must be a subset of
+//                                `normative_references`. `requires_when` (authored: conditional
+//                                deployment edges) entries must be {when, requires} objects whose
+//                                targets are cited in `references`.
 //   (o) groups                - the manifest's `groups` enum is malformed, a draft's `group` is
 //                                not in it, or the draft is not named under its group's "###"
 //                                section in DRAFTS.md's catalog
@@ -113,21 +121,27 @@ function parseFrontMatterCategory(text) {
   return km ? km[1].trim() : null;
 }
 
-// The normative in-family references a draft's own front matter declares:
-// the ground truth the manifest's `requires` edges must match. Only slugs
-// that are family drafts count; external I-Ds are out of scope here.
-function parseNormativeFamilyRefs(text, familySlugs) {
+// The in-family references a draft's own front matter declares, split by
+// reference class: the ground truth the manifest's extracted edge sets must
+// match. Only slugs that are family drafts count; external I-Ds are out of
+// scope here.
+function parseFamilyRefs(text, familySlugs) {
   const fmEnd = text.indexOf("\n--- abstract");
   const head = fmEnd > 0 ? text.slice(0, fmEnd) : text.slice(0, 8000);
-  const block = head.match(/^normative:[ \t]*\r?\n([\s\S]*?)^(?:informative:|--- )/m);
-  const out = new Set();
-  if (!block) return out;
-  const re = /^  I-D\.(draft-mcguinness-[a-z0-9-]+):/gm;
-  let m;
-  while ((m = re.exec(block[1]))) {
-    if (familySlugs.has(m[1])) out.add(m[1]);
-  }
-  return out;
+  const collect = (block) => {
+    const out = new Set();
+    if (!block) return out;
+    const re = /^  I-D\.(draft-mcguinness-[a-z0-9-]+):/gm;
+    let m;
+    while ((m = re.exec(block[1]))) {
+      if (familySlugs.has(m[1])) out.add(m[1]);
+    }
+    return out;
+  };
+  return {
+    normative: collect(head.match(/^normative:[ \t]*\r?\n([\s\S]*?)^(?:informative:|--- )/m)),
+    informative: collect(head.match(/^informative:[ \t]*\r?\n([\s\S]*?)(?:^--- |$(?![\s\S]))/m)),
+  };
 }
 
 // Returns the body text of a markdown section: from just after a heading line
@@ -401,10 +415,17 @@ function main() {
       if (s.contains === name) {
         fail("reference-stacks", `stack "${name}": "contains" refers to itself`);
       }
-      if (s.contains === null && !Array.isArray(s.binding_one_of)) {
-        fail("reference-stacks", `stack "${name}" is a root stack and must declare "binding_one_of"`);
+      if (s.contains === null && !manifestSlugs.has(s.binding)) {
+        fail("reference-stacks", `stack "${name}" is the root stack and must pin "binding" to a manifest slug (the stacks are the Architecture's OAuth realization), got ${JSON.stringify(s.binding)}`);
       }
-      checkSlugList(name, "binding_one_of", s.binding_one_of);
+      if (typeof s.architecture_name !== "string" || s.architecture_name.length === 0) {
+        fail("reference-stacks", `stack "${name}": "architecture_name" (the Architecture's own name for this stack) is required`);
+      } else if (!architecture.includes(s.architecture_name)) {
+        fail("reference-stacks", `stack "${name}": architecture_name "${s.architecture_name}" no longer appears in draft-mcguinness-mission-architecture.md; the transcription must be re-checked against {#reference-architecture}`);
+      }
+      if (s.level === "Runtime-Enforced" && (!Array.isArray(s.freshness_one_of) || s.freshness_one_of.length === 0)) {
+        fail("reference-stacks", `stack "${name}": the Runtime-Enforced level requires a non-empty "freshness_one_of" (the Architecture requires a freshness source, of which Status is only one realization)`);
+      }
       checkSlugList(name, "adds", s.adds, { allowEmpty: true });
       checkSlugList(name, "freshness_one_of", s.freshness_one_of, { allowCore: true });
     }
@@ -506,10 +527,10 @@ function main() {
   // front matter, and the only edges adoption closure may follow;
   // `references` is the full in-family citation graph and pulls in nothing.
   for (const d of drafts) {
-    // Shape validity is tracked per field so a malformed `references` never
-    // masks an independent `requires` drift bug in the same draft.
+    // Shape validity is tracked per field so one malformed set never masks
+    // an independent finding in another set on the same draft.
     const fieldOk = {};
-    for (const field of ["requires", "references"]) {
+    for (const field of ["normative_references", "references", "adoption_requires"]) {
       const arr = d[field];
       if (!Array.isArray(arr)) {
         fail("typed-edges", `${d.slug}: "${field}" must be an array of manifest slugs (empty allowed), got ${JSON.stringify(arr)}`);
@@ -528,25 +549,75 @@ function main() {
         seen.add(slug);
       }
     }
-    if (fieldOk.requires && fieldOk.references) {
+    if (fieldOk.normative_references && fieldOk.references) {
       const referenceSet = new Set(d.references);
-      for (const slug of d.requires) {
+      for (const slug of d.normative_references) {
         if (!referenceSet.has(slug)) {
-          fail("typed-edges", `${d.slug}: "requires" edge to "${slug}" is missing from "references" (requires must be a subset)`);
+          fail("typed-edges", `${d.slug}: "normative_references" entry "${slug}" is missing from "references"`);
         }
       }
     }
-    if (!Array.isArray(d.requires) || !onDiskSet.has(d.file)) continue;
-    const declared = parseNormativeFamilyRefs(readFile(path.join(ROOT, d.file), d.file), manifestSlugs);
-    const recorded = new Set(d.requires);
-    for (const slug of declared) {
-      if (!recorded.has(slug)) {
-        fail("typed-edges", `${d.slug}: front matter declares normative I-D.${slug}, but manifest "requires" omits it`);
+    // Adoption edges are authored, not extracted, but an unconditional
+    // deployment dependency must at least be a normative reference.
+    if (fieldOk.adoption_requires && fieldOk.normative_references) {
+      const normSet = new Set(d.normative_references);
+      for (const slug of d.adoption_requires) {
+        if (!normSet.has(slug)) {
+          fail("typed-edges", `${d.slug}: "adoption_requires" edge to "${slug}" is not among the draft's normative references; an unconditional deployment dependency must be normatively cited`);
+        }
       }
     }
-    for (const slug of recorded) {
-      if (!declared.has(slug)) {
-        fail("typed-edges", `${d.slug}: manifest "requires" lists "${slug}", but the draft's front matter has no normative reference to it`);
+    // Conditional deployment edges: {when, requires}. Targets must at least
+    // be cited by the draft.
+    if (d.requires_when !== undefined) {
+      if (!Array.isArray(d.requires_when)) {
+        fail("typed-edges", `${d.slug}: "requires_when" must be an array of {when, requires} objects`);
+      } else {
+        const refSet = new Set(fieldOk.references ? d.references : []);
+        for (const [i, entry] of d.requires_when.entries()) {
+          if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+            fail("typed-edges", `${d.slug}: requires_when[${i}] must be an object, got ${JSON.stringify(entry)}`);
+            continue;
+          }
+          if (typeof entry.when !== "string" || entry.when.trim().length === 0) {
+            fail("typed-edges", `${d.slug}: requires_when[${i}].when must be a non-empty condition string`);
+          }
+          if (!Array.isArray(entry.requires) || entry.requires.length === 0) {
+            fail("typed-edges", `${d.slug}: requires_when[${i}].requires must be a non-empty array of manifest slugs`);
+            continue;
+          }
+          for (const slug of entry.requires) {
+            if (!manifestSlugs.has(slug)) {
+              fail("typed-edges", `${d.slug}: requires_when[${i}] targets ${JSON.stringify(slug)}, which is not a manifest draft slug`);
+            } else if (fieldOk.references && !refSet.has(slug)) {
+              fail("typed-edges", `${d.slug}: requires_when[${i}] targets "${slug}", which the draft does not cite (not in "references")`);
+            }
+            if (slug === d.slug) fail("typed-edges", `${d.slug}: requires_when[${i}] targets the draft itself`);
+          }
+        }
+      }
+    }
+    // Drift: both extracted sets must match the draft's own front matter,
+    // in both directions.
+    if (!onDiskSet.has(d.file)) continue;
+    const declared = parseFamilyRefs(readFile(path.join(ROOT, d.file), d.file), manifestSlugs);
+    const declaredAll = new Set([...declared.normative, ...declared.informative]);
+    const driftPairs = [
+      ["normative_references", declared.normative, "normative"],
+      ["references", declaredAll, "normative or informative"],
+    ];
+    for (const [field, truth, kind] of driftPairs) {
+      if (!fieldOk[field]) continue;
+      const recorded = new Set(d[field]);
+      for (const slug of truth) {
+        if (!recorded.has(slug)) {
+          fail("typed-edges", `${d.slug}: front matter declares ${kind} I-D.${slug}, but manifest "${field}" omits it`);
+        }
+      }
+      for (const slug of recorded) {
+        if (!truth.has(slug)) {
+          fail("typed-edges", `${d.slug}: manifest "${field}" lists "${slug}", but the draft's front matter has no ${kind} reference to it`);
+        }
       }
     }
   }

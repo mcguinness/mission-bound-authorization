@@ -1,6 +1,10 @@
-# Mission Adoption Plan (v5, plan of record)
+# Mission Adoption Plan (v5, superseded)
 
-Status: plan of record, 2026-08-18. The plan states decisions as fact; all revision history
+Status: superseded, 2026-08-20, by the shipped storefront (PR #623): the README's verb-spine
+navigation, DRAFTS.md's generated catalog, DEPENDENCIES.md, and family-manifest.json's
+`reference_stacks` and typed adoption edges. The zones/tracks/rungs taxonomies this plan
+specifies were retired in that PR. Kept for provenance; the decisions below are historical.
+The plan states decisions as fact; all revision history
 lives in the Provenance section at the end. Refs #220, #238, #253.
 
 **The problem.** The repository has a storefront problem, not a document-count problem. The

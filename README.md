@@ -114,15 +114,20 @@ obligations; a deployment claims the level it has earned.
 
 Deployments compose along the Architecture's four cumulative
 reference stacks, from the protocol core alone (Baseline Issuance)
-to the high-assurance architecture (High-Assurance Agent); the
-manifest transcribes them as `reference_stacks` in
-[`family-manifest.json`](family-manifest.json), with the issuer
-binding and the freshness source modeled as explicit alternatives.
-Binding properties and assurance claims remain per path; a stack
-name never upgrades weaker paths. The transcription is structurally
-validated in CI (fidelity to the Architecture's prose is an
-editorial obligation) and provisional until v0 proper passes its
-publication gate. (The
+to the high-assurance architecture (High-Assurance Agent). The
+stacks are the Architecture's OAuth realization, and the manifest
+transcribes them that way as `reference_stacks` in
+[`family-manifest.json`](family-manifest.json), with the freshness
+source modeled as explicit alternatives; the binding decision stays
+in the table above, and the other bindings realize the levels per
+their own documents (standalone MAS reaches an issuance gate only by
+composing the Issuance Grant; AAuth reports native capabilities,
+with the Person Server's contextual gate as its per-action
+analogue). Binding properties and assurance claims remain per path;
+a stack name never upgrades weaker paths. The transcription is
+structurally validated in CI (fidelity to the Architecture's prose
+is an editorial obligation) and provisional until v0 proper passes
+its publication gate. (The
 Architecture's five *packages* are its own orthogonal decomposition;
 the manifest does not restate them.)
 
@@ -152,20 +157,25 @@ information-flow leakage within approved authority is out of scope.
 Every optional companion composes independently under its verb in
 the table above: pick the mechanisms the deployment needs and check
 each document's maturity before adopting it. For adoption closure,
-follow the manifest's typed `requires` edges — each document's
-normative in-family dependencies, extracted from the drafts' own
-reference sections and drift-checked in CI; the wider citation graph
-is recorded separately as `references` and pulls in nothing. The
-complete catalog with per-document summaries, maturity, and adoption
-triggers is [`DRAFTS.md`](DRAFTS.md).
+follow the manifest's `adoption_requires` edges: the documents a
+draft cannot be deployed without, under any option. They are
+authored, not inferred — a normative reference is not a deployment
+dependency — and conditional needs are recorded separately as
+`requires_when`, each edge naming the option, binding, or
+composition that activates it. The citation graph itself
+(`normative_references` and `references`, extracted from the drafts
+and drift-checked in CI) carries no adoption semantics and pulls in
+nothing. The complete catalog with per-document summaries, maturity,
+and adoption triggers is [`DRAFTS.md`](DRAFTS.md).
 
 ## Status
 
-Maturity words are the family manifest's own: **stable**,
-**experimental**, **sketch**, with informational documents shown as
-**guide**. The core is the published editor's draft
-([datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/));
-companions are editor's copies on their own timelines.
+The core is a published Internet-Draft on the IETF
+[Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/);
+the companions are editor's copies in this repository, on their own
+timelines. Maturity words — **stable**, **experimental**, **sketch**,
+with informational documents shown as **guide** — are this
+repository's own labels, not IETF statuses.
 
 - [`DRAFTS.md`](DRAFTS.md) — the complete document catalog (all 41)
 - [`DEPENDENCIES.md`](DEPENDENCIES.md) — dependency status, inside and outside the family
@@ -192,19 +202,20 @@ node scripts/generate-drafts-index.mjs --check # DRAFTS.md index freshness
 
 Each manifest entry carries `verbs` (the spine position), a
 one-sentence `summary`, a `pull_when` adoption trigger, `maturity`,
-`maintenance`, and two typed edge sets: `requires` (the draft's
-normative in-family references — the only edges that close
-transitively for adoption) and `references` (the full in-family
-citation graph, never used for closure). The Architecture's
-reference stacks are transcribed in the top-level `reference_stacks`
-object. The checker validates the structure of all of it, including
-that every `requires` edge matches the draft's own normative
-reference list,
-regenerates nothing silently (the DRAFTS.md index is checked for
-freshness, never rewritten in CI), and holds this README to three
-rules: it links the catalog and dependency reports, every backticked
-draft token is a real manifest slug, and every editor's-copy link
-targets one.
+`maintenance`, and typed edges in two layers: the extracted citation
+graph (`normative_references` and `references`, drift-checked both
+ways against each draft's own front matter) and the authored
+adoption graph (`adoption_requires`, the unconditional deployment
+dependencies that alone close transitively, validated as a subset of
+the normative references; and `requires_when`, conditional edges
+naming what activates them). The Architecture's OAuth reference
+stacks are transcribed in the top-level `reference_stacks` object.
+The checker validates the structure of all of it, regenerates
+nothing silently (the DRAFTS.md index is checked for freshness,
+never rewritten in CI), and holds this README to three rules: it
+links the catalog and dependency reports, every backticked draft
+token is a real manifest slug, and every editor's-copy link targets
+one.
 
 The reference implementation lives under [`src/`](src/) (a pnpm
 monorepo; see [`src/DEMO.md`](src/DEMO.md) and
