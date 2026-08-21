@@ -3226,14 +3226,21 @@ or a fail-closed mismatch into a retry loop. A Mission-aware Resource
 Server SHOULD therefore state which path it denies into, using the
 `mission_denial` attribute this document defines for the
 `WWW-Authenticate` response header, carried alongside `error` per
-{{RFC6750}}, with one of three values: `insufficient_authority` (the
-action is outside the token's carried authority, and more requires a
-new approval or an expansion where that companion is deployed),
-`step_up_required` (the authority exists, but the presented token or
-its binding does not meet the resource's requirements: a step-up,
-not a widening), or `constraint_unrecognized` (an applicable entry
-carries a `constraints` key the RS cannot enforce, and the request
-fails closed). A value the client does not recognize is treated as
+{{RFC6750}}, with one of three values:
+
+`insufficient_authority`:
+: The action is outside the token's carried authority; more requires
+  a new approval or an expansion where that companion is deployed.
+
+`step_up_required`:
+: The authority exists, but the presented token or its binding does
+  not meet the resource's requirements: a step-up, not a widening.
+
+`constraint_unrecognized`:
+: An applicable entry carries a `constraints` key the RS cannot
+  enforce, and the request fails closed.
+
+A value the client does not recognize is treated as
 `insufficient_authority`. The attribute's disclosure considerations
 are {{denial-disclosure}}'s.
 
@@ -3253,6 +3260,13 @@ ask again" as a graduated challenge assembled from independent
 grains, each naming a next step without granting anything itself.
 This document's own grain is `mission_denial` above: which path a
 denial leads into.
+
+| Grain | Carriage | Defined by |
+| --- | --- | --- |
+| `mission_denial` | `WWW-Authenticate` attribute | This document ({{rs-enforcement}}) |
+| `insufficient_authorization` with `authorization_remediation` | `WWW-Authenticate` error code and parameter | {{I-D.draft-zehavi-oauth-rar-metadata}} |
+| Requestable denial | AuthZEN access request | {{AuthZEN.ARAP}}, adopted by {{I-D.draft-mcguinness-mission-authzen}} |
+{: title="The three remediation grains"}
 
 A Resource Server MAY compose a second grain with it: the
 `insufficient_authorization` `WWW-Authenticate` error code and its
@@ -4459,23 +4473,17 @@ These vectors make the rule concrete. For a `prefix` entry whose
 `resource` is `https://api.example/orders`, a concrete request URI
 matches as follows:
 
-- `https://api.example/orders` and `https://api.example/orders/123`
-  ALLOW: the base itself, and an extension at a path-segment boundary.
-- `https://API.EXAMPLE/orders/123` ALLOW: the scheme and host are
-  case-folded, so the host matches.
-- `https://api.example:443/orders/123` ALLOW: the default port is
-  removed, so the authority matches.
-- `https://api.example/Orders/123` DENY: the path is case-sensitive,
-  so `Orders` is not `orders`.
-- `https://api.example/orders%2F123` (equivalently `%2f`) DENY: the
-  hex digits normalize to `%2F`, which stays encoded and is not a
-  path-segment separator, so this is the single segment
-  `orders%2F123`, not an extension of `/orders`.
-- `https://api.example/ordersX` DENY: the match extends only at a
-  path-segment boundary, not within a segment.
-- `https://api.example/orders/%2e%2e/admin` DENY: normalization
-  decodes `%2e%2e` to `..` and removes the dot-segment, yielding
-  `https://api.example/admin`, outside the prefix.
+| Request URI | Result | Why |
+| --- | --- | --- |
+| `https://api.example/orders` | ALLOW | The base itself |
+| `https://api.example/orders/123` | ALLOW | An extension at a path-segment boundary |
+| `https://API.EXAMPLE/orders/123` | ALLOW | Scheme and host are case-folded |
+| `https://api.example:443/orders/123` | ALLOW | The default port is removed |
+| `https://api.example/Orders/123` | DENY | The path is case-sensitive: `Orders` is not `orders` |
+| `https://api.example/orders%2F123` (equivalently `%2f`) | DENY | Hex digits normalize to `%2F`, which stays encoded and is not a separator: one segment `orders%2F123`, not an extension of `/orders` |
+| `https://api.example/ordersX` | DENY | The match extends only at a path-segment boundary, not within a segment |
+| `https://api.example/orders/%2e%2e/admin` | DENY | `%2e%2e` decodes to `..` and the dot-segment is removed, yielding `https://api.example/admin`, outside the prefix |
+{: title="Prefix matching for https://api.example/orders"}
 
 A deployment MAY agree out of band on the canonicalization profile its
 AS and Resource Servers apply; this document defines one rule
@@ -5188,8 +5196,11 @@ After approval, the AS records Mission
 The agent redeems the authorization code at the token endpoint. The
 AS resolves the Mission from the grant ({{grant-binding}}), gates on
 it being `active` ({{lifecycle}}), and issues a Mission-bound access
-token for the ERP, echoing the granted `authorization_details` in the
-token response ({{mission-bound-tokens}}). The decoded token:
+token for the ERP. The token response echoes the granted
+`authorization_details` ({{mission-bound-tokens}}) and carries the
+Mission references beside the token ({{grant-binding}}):
+`mission_id` `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` and
+`mission_expires_at` `2026-12-31T23:59:59Z`. The decoded token:
 
 ~~~ json
 {
