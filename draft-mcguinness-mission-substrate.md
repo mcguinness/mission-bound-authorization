@@ -284,6 +284,19 @@ authority is portable, machine-evaluable, monotonically derived,
 credential-bound, or independently verifiable.  It does mean that no
 reliance derived from a Mission is unbounded ({{bounded-reliance}}).
 
+| Kernel duty | The binding defines |
+| --- | --- |
+| Native reference and Controller ({{reference}}) | A stable, non-reassigned Mission Reference, its uniqueness namespace, its unguessability, and how relying components identify the Controller |
+| Authority roles ({{authority-roles}}) | The authorities responsible for the functions it uses; roles never collapse silently |
+| Actor binding ({{actor-binding}}) | The Actor handle, its authenticated establishment at approval, and how later decisions establish the acting party |
+| Approved context and immutability ({{approved-context}}) | The immutable approved value or a verifiable commitment to it, distinct from mutable operational fields |
+| Approval event ({{approval}}) | A native ceremony that atomically creates an active Mission from an authenticated approval |
+| Basic governance gate ({{basic-gate}}) | An active predicate; positive decisions only while active, and every unrecognized condition fails closed |
+| Bounded reliance ({{bounded-reliance}}) | A stated reliance bound on every positive decision and every Mission-governed artifact |
+| Context propagation ({{propagation}}) | The join between decisions or artifacts and the Mission Reference, and exactly what that join proves |
+| Ordered governance record ({{governance-record}}) | An integrity-protected, ordered, attributable record of governance events |
+{: title="Kernel duties at a glance"}
+
 ## Native Reference and Controller {#reference}
 
 A binding MUST define a Mission Reference that is:
@@ -389,82 +402,8 @@ structured authority.  A binding that retains the Approved Context at
 every governance party satisfies this section through the maintained
 value; a native content address it also uses as the Mission Reference
 is then verification material for parties holding the value, not a
-commitment in place of it.
-
-### Default Commitment Construction {#default-commitment}
-
-A binding MAY satisfy the duties above, for the Approved Context and
-for any other artifact it commits, with the following default
-construction. The OAuth issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
-profiles import it from this section; a binding with a native or
-member-named commitment (a content address, a signed object, a
-digest whose member name fixes the algorithm) remains free to use
-that instead, stating its own algorithm identification and agility
-behavior under the duties above.
-
-The default commits to bytes in one of three species, and a
-specification defining a commitment classifies it:
-
-* **Envelope anchor**: SHA-256 {{RFC6234}} over the JCS {{RFC8785}}
-  canonical bytes of a closed JSON object carrying exactly three
-  members and no others: `typ`, a string naming the committed
-  object, collision-resistant because a namespace the defining
-  specification controls qualifies it; `iss`, a string whose value
-  the defining commitment specifies; and `value`, the committed
-  JSON value.
-* **Canonical-object digest**: SHA-256 over the JCS serialization of
-  a normalized JSON object without the envelope, where protocol
-  context already fixes what is committed.
-* **Raw-octet digest**: SHA-256 over an exact,
-  specification-defined octet sequence, with no canonicalization: a
-  whole artifact as exchanged, or the UTF-8 encoding of a defined
-  scalar value.
-
-The envelope's `iss` is a namespace binding that domain-separates
-commitments across issuing authorities; it does not authenticate
-whoever computed the commitment, which stays a signature or evidence
-property. A digest is encoded as an algorithm prefix followed by the
-base64url, no-padding {{RFC4648}} encoding of the digest: `sha-256:`
-identifies SHA-256, which is mandatory to implement and the only
-algorithm defined.
-
-Every committed JSON value, and the envelope around it, MUST satisfy
-I-JSON {{RFC7493}}, and the party computing or verifying a
-commitment MUST reject non-conformant input before canonicalization:
-externally received JSON destined for commitment is parsed by a
-duplicate-detecting parser, and an object carrying duplicate member
-names is rejected at parse time, before the parsed data model
-exists; string data is valid Unicode, free of the surrogate and
-noncharacter code points I-JSON prohibits, and is preserved
-unchanged; number data supplied to JCS is representable as a finite
-IEEE 754 binary64 value ({{RFC8785}}, Section 3.1). The commitment is over the parsed I-JSON data value,
-not the source text; a value needing exact decimal or large-integer
-semantics rides as a string or under a stricter declared numeric
-domain.
-
-The algorithm prefix is the agility mechanism. A new algorithm
-enters only through a new prefix defined by a referencing
-specification, its name drawn from the Named Information Hash
-Algorithm Registry ({{RFC6920}}). A verifier MUST reject a digest
-whose algorithm prefix it does not recognize and MUST NOT treat an
-unrecognized prefix as `sha-256`. No transition mechanism is
-defined: every commitment a current carrier defines is a single
-prefixed string, and a specification introducing a new prefix MUST
-define the carrier and schema of any parallel commitment, the
-binding that proves the old and new values commit to the same
-object, producer behavior during the transition, verifier selection
-and downgrade behavior when recognition sets differ, and the
-transition procedure itself.
-
-The OAuth binding's Integrity Anchor Test Vectors
-({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
-example of the envelope-anchor species alone (`intent_hash`,
-`proposal_hash`, `authority_hash`); an implementation can check its
-own computation against them. The canonical-object and raw-octet
-species above, the parse-time duplicate-detection rule, the I-JSON
-numeric domain, and the reject-unknown-prefix and no-downgrade
-agility rules remain prose-only: no vector pins them.
+commitment in place of it.  A default construction a binding MAY
+adopt for these duties is defined in {{default-commitment}}.
 
 ## Approval Event {#approval}
 
@@ -592,6 +531,82 @@ This record need not be portable or independently verifiable.  A
 binding that makes either claim also supplies the corresponding
 capability in {{capabilities}}.
 
+# Default Commitment Construction {#default-commitment}
+
+A binding MAY satisfy the commitment duties of {{approved-context}},
+for the Approved Context and
+for any other artifact it commits, with the following default
+construction. The OAuth issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
+profiles import it from this section; a binding with a native or
+member-named commitment (a content address, a signed object, a
+digest whose member name fixes the algorithm) remains free to use
+that instead, stating its own algorithm identification and agility
+behavior under the duties above.
+
+The default commits to bytes in one of three species, and a
+specification defining a commitment classifies it:
+
+* **Envelope anchor**: SHA-256 {{RFC6234}} over the JCS {{RFC8785}}
+  canonical bytes of a closed JSON object carrying exactly three
+  members and no others: `typ`, a string naming the committed
+  object, collision-resistant because a namespace the defining
+  specification controls qualifies it; `iss`, a string whose value
+  the defining commitment specifies; and `value`, the committed
+  JSON value.
+* **Canonical-object digest**: SHA-256 over the JCS serialization of
+  a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed.
+* **Raw-octet digest**: SHA-256 over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value.
+
+The envelope's `iss` is a namespace binding that domain-separates
+commitments across issuing authorities; it does not authenticate
+whoever computed the commitment, which stays a signature or evidence
+property. A digest is encoded as an algorithm prefix followed by the
+base64url, no-padding {{RFC4648}} encoding of the digest: `sha-256:`
+identifies SHA-256, which is mandatory to implement and the only
+algorithm defined.
+
+Every committed JSON value, and the envelope around it, MUST satisfy
+I-JSON {{RFC7493}}, and the party computing or verifying a
+commitment MUST reject non-conformant input before canonicalization:
+externally received JSON destined for commitment is parsed by a
+duplicate-detecting parser, and an object carrying duplicate member
+names is rejected at parse time, before the parsed data model
+exists; string data is valid Unicode, free of the surrogate and
+noncharacter code points I-JSON prohibits, and is preserved
+unchanged; number data supplied to JCS is representable as a finite
+IEEE 754 binary64 value ({{RFC8785}}, Section 3.1). The commitment is over the parsed I-JSON data value,
+not the source text; a value needing exact decimal or large-integer
+semantics rides as a string or under a stricter declared numeric
+domain.
+
+The algorithm prefix is the agility mechanism. A new algorithm
+enters only through a new prefix defined by a referencing
+specification, its name drawn from the Named Information Hash
+Algorithm Registry ({{RFC6920}}). A verifier MUST reject a digest
+whose algorithm prefix it does not recognize and MUST NOT treat an
+unrecognized prefix as `sha-256`. No transition mechanism is
+defined: every commitment a current carrier defines is a single
+prefixed string, and a specification introducing a new prefix MUST
+define the carrier and schema of any parallel commitment, the
+binding that proves the old and new values commit to the same
+object, producer behavior during the transition, verifier selection
+and downgrade behavior when recognition sets differ, and the
+transition procedure itself.
+
+The OAuth binding's Integrity Anchor Test Vectors
+({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
+example of the envelope-anchor species alone (`intent_hash`,
+`proposal_hash`, `authority_hash`); an implementation can check its
+own computation against them. The canonical-object and raw-octet
+species above, the parse-time duplicate-detection rule, the I-JSON
+numeric domain, and the reject-unknown-prefix and no-downgrade
+agility rules remain prose-only: no vector pins them.
+
 # Optional Capabilities {#capabilities}
 
 Capabilities are additive claims.  A binding MUST NOT claim a
@@ -603,6 +618,18 @@ appear in the Mission Substrate Statement.
 Absence of a capability is not partial conformance.  It means that a
 consumer requiring that property does not compose with the binding in
 that mode.
+
+| Capability | Property claimed |
+| --- | --- |
+| Lifecycle-Gated Authorization ({{lifecycle-gated}}) | Named authorization operations are gated on currently active state |
+| State-Observable ({{state-observable}}) | An authenticated source lets a named consumer determine whether a Mission is active |
+| Structured Authority ({{structured-authority}}) | A machine-evaluable authority representation with an identified semantics owner |
+| Monotonic Derivation ({{monotonic-derivation}}) | Covered derivations verify a no-broader-than relation within a declared boundary |
+| Credential-Bound ({{credential-bound}}) | An integrity-protected association between an artifact and exactly one Mission, with selected fact semantics |
+| Authorized Context Correlation ({{authorized-context-correlation}}) | An authorized association among independently established facts, made by an identified joining authority |
+| Independently Verifiable ({{independently-verifiable}}) | A named consumer verifies a specified property without an online query to the Controller |
+| Portable Evidence ({{portable-evidence}}) | Evidence crosses a stated administrative boundary and verifies there |
+{: title="Optional capabilities at a glance"}
 
 ## Lifecycle-Gated Authorization {#lifecycle-gated}
 
