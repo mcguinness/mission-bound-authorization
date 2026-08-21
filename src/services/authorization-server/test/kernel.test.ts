@@ -65,6 +65,19 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
       /max_derivations/,
     );
   });
+  it("accepts well-formed goal_lang, refuses malformed, and commits it in intent_hash (@spec mission#mission-intent)", () => {
+    for (const ok of ["en", "en-US", "zh-Hant-TW", "x-private"]) {
+      expect(validateMissionIntent(intent({ goal_lang: ok })).goal_lang).toBe(ok);
+    }
+    for (const bad of ["", "english language", "-en", "en--US", "a1", "en-", "e", "n".repeat(36), 7]) {
+      expect(() => validateMissionIntent(intent({ goal_lang: bad }))).toThrow(/goal_lang/);
+    }
+    // Committed like every Intent member: two Intents differing only in
+    // goal_lang commit to different intent hashes.
+    const a = approve(intent({ goal_lang: "en" }), 534001);
+    const b = approve(intent({ goal_lang: "de" }), 534002);
+    expect(a.intent_hash).not.toBe(b.intent_hash);
+  });
   it("rejects proposed_authority resources outside the Intent's resources", () => {
     expect(() =>
       validateAuthorityProposal(

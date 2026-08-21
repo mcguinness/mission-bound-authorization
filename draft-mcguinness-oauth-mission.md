@@ -31,6 +31,7 @@ normative:
   RFC3339:
   RFC3986:
   RFC4648:
+  RFC5646:
   RFC6234:
   RFC6920:
   RFC7493:
@@ -840,6 +841,16 @@ narrowed `scope`. It has the following members:
   for rendering to the Approver. Maximum 4096 characters. Prose
   here persists on the record and can carry personal data about
   third parties ({{third-party-data-subjects}}).
+
+`goal_lang`:
+: OPTIONAL. A string. A BCP 47 language tag {{RFC5646}} declaring
+  the language of the Intent's human-readable members (`goal`,
+  `constraints`, `success_criteria`). It is disclosure metadata for
+  rendering, committed by `intent_hash` like every Intent member;
+  it carries no machine semantics and MUST NOT be used to derive,
+  widen, or gate authority. At submission acceptance, the AS MUST
+  refuse a `goal_lang` that is not a well-formed language tag with
+  `invalid_request` ({{i18n}}).
 
 `resources`:
 : REQUIRED. An array of strings. The target resources the
@@ -2581,11 +2592,32 @@ this profile defines:
     the committed reference that identifies it. For `direct`, this
     Mission's own `authority_hash`.
 
+  `approved_at`:
+  : REQUIRED for every standing-consent `type`; absent for `direct`,
+    whose approval event carries its own instant
+    ({{approval-event}}). An RFC 3339 date-time: the instant the
+    accountable human approved the exact consented root that
+    `root_commitment` commits (the template version, the drawdown
+    policy version), not the instant this Mission instance was
+    activated. The activating issuer MUST verify `approved_at`
+    against its retained, authenticated record of that standing
+    consent for that exact version; it MUST NOT accept the value as
+    the activating request's own uncorroborated assertion.
+
   For `direct`, `activation.approval_event_id` MUST identify a human
   approval event ({{approval-event}}). A companion profile defining a
   standing-consent `type` MUST make its `consent_principal` and
   `root_commitment` trace to an accountable human's approval of the
-  named standing consent, with no fresh approval event per instance.
+  named standing consent, with no fresh approval event per instance,
+  and MUST carry that approval's instant as `approved_at`. A
+  deployment MAY declare maximum standing-consent ages (recency
+  ceilings), per consequence class where it classifies actions;
+  where a declared ceiling applies, activating an instance whose
+  `approved_at` is older than the ceiling MUST be refused. The
+  Approval Governance companion defines the analogous bound for its
+  policy-assertion path
+  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+  "Policy-Approval Recency").
 
   `approval_basis` is provenance: it is recorded alongside `approver`
   and is not folded into `intent_hash` or `authority_hash`
@@ -4142,6 +4174,14 @@ the OPTIONAL capabilities; a scope-only Resource Server still operates
 at the coarse scope level ({{rs-enforcement}}). This note names a
 starting point and creates no new conformance class.
 
+This binding's Mission Substrate Statement, the kernel mapping and
+capability table these surfaces supply to the family's substrate
+contract, is published in the substrate companion's family appendix
+({{I-D.draft-mcguinness-mission-substrate}}, Section "OAuth Mission
+Binding Statement"). That Statement is informative here: it restates
+this document, adds no requirement to it, and this document remains
+self-contained.
+
 # Security Considerations
 
 ## Consent Binding {#consent-binding}
@@ -4645,6 +4685,39 @@ deployment that needs containment to take effect quickly against
 already-materialized authority SHOULD keep cross-domain grant and
 offline attenuation root lifetimes short, so the residual window is
 one the next lease or re-mint closes.
+
+# Internationalization Considerations {#i18n}
+
+Mission Intent prose (`goal`, `constraints`, `success_criteria`) is
+human-readable disclosure, and the Approver's consent is only as
+good as their comprehension of it. `goal_lang` ({{mission-intent}})
+declares the language of that prose as a BCP 47 language tag
+{{RFC5646}}, so an approval surface can render, translate, or route
+it deliberately rather than by guess.
+
+Three rules keep the declaration honest:
+
+- `goal_lang` is a syntactic declaration. The AS validates
+  well-formedness ({{RFC5646}}, Section 2.1) at submission
+  acceptance and refuses a malformed tag `invalid_request`; it does
+  not verify that the prose is in the declared language, and a
+  consumer MUST NOT treat the tag as a verified property of the
+  text.
+- Rendering to the Approver follows the consent-binding rules
+  unchanged ({{consent-binding}}): client prose stays inert text in
+  any language and any script, including bidirectional text. Where
+  the approval surface presents a translation, the rendered
+  disclosure is what the deployment's consent evidence records
+  (Mission Consent Evidence binds one locale, one disclosure, one
+  hash, {{I-D.draft-mcguinness-oauth-mission-consent-evidence}});
+  `goal_lang` declares the source's language and is never a record
+  of what was rendered.
+- Authority Set entries carry machine-facing identifiers (URIs,
+  action strings, structured constraints), not prose; this document
+  deliberately adds no language-tagged display fields to them.
+  Localizing how authority is explained is the approval surface's
+  duty under {{consent-binding}}, never a property of the committed
+  set.
 
 # Privacy Considerations
 
@@ -5412,6 +5485,22 @@ resolve before interoperating.
 
 -01
 
+- `goal_lang` (OPTIONAL, BCP 47) on the Mission Intent and an
+  Internationalization Considerations section: a syntactic language
+  declaration for the Intent's human-readable prose, committed by
+  `intent_hash`, refused `invalid_request` when malformed, with no
+  authority semantics and deliberately no language-tagged display
+  fields on Authority Set entries (#534).
+- Standing-consent approval instant: `approval_basis.approved_at`
+  (REQUIRED for every standing-consent `type`) carries the human
+  approval instant of the exact consented root, verified by the
+  activating issuer from retained state, never accepted as the
+  activating request's own assertion, with deployment-declared
+  recency ceilings mirroring the Approval Governance companion's
+  policy-approval recency (#580).
+- Informative pointer to the substrate-hosted OAuth Mission Binding
+  Statement from the Conformance section; the core remains
+  self-contained (#551).
 - Requested versus effective expiry: `intent.expires_at` is the
   client's requested not-after ceiling and the Mission Record's
   `expires_at` is the AS-established effective lifetime, never later

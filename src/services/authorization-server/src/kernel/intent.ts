@@ -44,6 +44,7 @@ import type {
 // closed-top-level rule below (@spec mission#submission-via-par).
 const TOP_LEVEL = new Set([
   "goal",
+  "goal_lang",
   "resources",
   "expires_at",
   "constraints",
@@ -55,6 +56,16 @@ const TOP_LEVEL = new Set([
 const MAX_INTENT_BYTES = 65536;
 const MAX_ARRAY_LEN = 64;
 const MAX_GOAL_CHARS = 4096;
+
+/**
+ * @spec mission#mission-intent — `goal_lang` well-formedness (BCP 47 / RFC
+ * 5646 Section 2.1 shape): a 2-8 alpha primary subtag (or the `x`/`i`
+ * singleton forms) followed by 1-8 alphanumeric subtags. Syntactic only: the
+ * AS never verifies the prose is in the declared language. RFC 5646 Section
+ * 4.4.1's 35-character support floor is adopted as the acceptance bound.
+ */
+const BCP47_WELL_FORMED = /^(?:[A-Za-z]{2,8}|[xXiI])(-[A-Za-z0-9]{1,8})*$/;
+const MAX_GOAL_LANG_CHARS = 35;
 
 /** @spec mission#submission-via-par — the envelope's own closed top level. */
 const SUBMISSION_TOP_LEVEL = new Set(["intent", "evidence"]);
@@ -384,6 +395,19 @@ function validateMissionIntentObject(obj: Record<string, JsonValue>): MissionInt
   const goal = obj.goal;
   if (typeof goal !== "string" || goal.length === 0 || goal.length > MAX_GOAL_CHARS) {
     throw new IntentError("invalid_request", "goal is required (string, <= 4096 chars)");
+  }
+  // @spec mission#mission-intent — a malformed `goal_lang` is refused
+  // invalid_request at submission acceptance. Disclosure metadata only: it is
+  // committed by intent_hash like every member and never feeds derivation.
+  const goalLang = obj.goal_lang;
+  if (goalLang !== undefined) {
+    if (
+      typeof goalLang !== "string" ||
+      goalLang.length > MAX_GOAL_LANG_CHARS ||
+      !BCP47_WELL_FORMED.test(goalLang)
+    ) {
+      throw new IntentError("invalid_request", "goal_lang must be a well-formed BCP 47 language tag");
+    }
   }
   const resources = obj.resources;
   if (!isStringArray(resources) || resources.length === 0 || resources.length > MAX_ARRAY_LEN) {

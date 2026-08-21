@@ -40,7 +40,7 @@
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
-    "content_sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
+    "content_sha256": "10db7988b1d1342efc460d6166016035370659b778651830a35be4970aaa0f84"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
@@ -134,7 +134,8 @@
    "substrate.independently-verifiable",
    "substrate.portable-evidence",
    "issuance-grant.state-integration",
-   "mas.enterprise"
+   "mas.enterprise",
+   "core.standing-consent"
   ]
  },
  "profiles": [
@@ -383,6 +384,87 @@
      "surface": "par"
     }
    ]
+  },
+  {
+   "id": "core.intent.goal-lang-well-formed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "the AS MUST refuse a `goal_lang` that is not a well-formed language tag with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed BCP 47 tag is refused invalid_request at submission acceptance; a well-formed tag rides the Intent and is committed by intent_hash"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "intent validation (@spec mission#submission-via-par) > accepts well-formed goal_lang, refuses malformed, and commits it in intent_hash (@spec mission#mission-intent)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "Well-formedness is syntactic (RFC 5646 Section 2.1 shape, 35-char acceptance bound); the AS never verifies the prose is in the declared language, per the i18n section."
+  },
+  {
+   "id": "core.approval-basis.approved-at-standing-consent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "The activating issuer MUST verify `approved_at` against its retained, authenticated record of that standing consent for that exact version",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a standing-consent activation whose approved_at is absent, or does not match the issuer's retained record of the exact consented version, is refused; the request's own clock value is never accepted uncorroborated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New with the #580 core component. No standing-consent basis is implemented in src today (template dispatch exists but records its basis without approved_at); flips when the template/child-delegation companions carry the member and the kernel verifies it. Companion follow-on tracked on the #580 thread."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-recency",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "activating an instance whose `approved_at` is older than the ceiling MUST be refused",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a deployment declares a recency ceiling for a consequence class, a standing-consent activation older than the ceiling is refused rather than activated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared). Mirrors approval-governance's policy-approval recency on the AGR path."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",

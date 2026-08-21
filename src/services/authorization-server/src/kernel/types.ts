@@ -11,6 +11,10 @@ import type { JsonValue } from "@mission/core";
  */
 export interface MissionIntent {
   goal: string;
+  /** @spec mission#mission-intent — OPTIONAL BCP 47 language tag for the
+   *  Intent's human-readable prose; disclosure metadata, no authority
+   *  semantics, committed by intent_hash like every member. */
+  goal_lang?: string;
   resources: string[];
   expires_at: string;
   constraints?: string[];
