@@ -142,6 +142,16 @@ for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.e
     if (m && !registered.has(`${file}::${m[1]}`)) {
       fail("statement-unregistered", `${file}:${i + 1}: Statement table "${m[1]}" is not registered in check-substrate-statements.mjs`);
     }
+    // A differently titled table cannot evade registration: any table using
+    // the exact five-column Statement header must be registered, and any
+    // section titled "Mission Substrate Statement" must live in a file that
+    // registers a Statement here.
+    if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file)) {
+      fail("statement-unregistered", `${file}:${i + 1}: a five-column Statement table in a file with no registered Statement`);
+    }
+    if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
+      fail("statement-unregistered", `${file}:${i + 1}: a "Mission Substrate Statement" section in a file with no registered Statement`);
+    }
   });
 }
 
