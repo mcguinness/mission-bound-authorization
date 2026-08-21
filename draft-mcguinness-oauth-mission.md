@@ -371,10 +371,10 @@ commitment, and no derivation gating; a deployment MAY surface Mission
 revocation through a grant-management-style API.
 {{I-D.draft-klrc-aiagent-auth}} names the agent's mission and leaves its
 translation into authorization out of scope; this document specifies
-that translation, reusing that specification's principal model
-unchanged ({{principal-model}}), and an agent authenticated and
-delegated per it uses the mechanisms here to obtain Mission-bound
-tokens. Decision-layer access-request and approval workflows,
+that translation, reusing its agent-as-client and
+delegating-principal-as-token-`sub` assignments unchanged
+({{principal-model}}), and an agent authenticated and delegated per
+it uses the mechanisms here to obtain Mission-bound tokens. Decision-layer access-request and approval workflows,
 such as the OpenID AuthZEN Access Request and Approval Profile
 {{AuthZEN.ARAP}}, manage approval tasks but define no issuance binding;
 this document supplies the issuance-bound object such workflows
@@ -3265,7 +3265,7 @@ denial leads into.
 | --- | --- | --- |
 | `mission_denial` | `WWW-Authenticate` attribute | This document ({{rs-enforcement}}) |
 | `insufficient_authorization` with `authorization_remediation` | `WWW-Authenticate` error code and parameter | {{I-D.draft-zehavi-oauth-rar-metadata}} |
-| Requestable denial | AuthZEN access request | {{AuthZEN.ARAP}}, adopted by {{I-D.draft-mcguinness-mission-authzen}} |
+| Requestable denial | AuthZEN denial response: `context.access_request` with `next_action: request` | {{AuthZEN.ARAP}}, profiled by {{I-D.draft-mcguinness-mission-authzen}} |
 {: title="The three remediation grains"}
 
 A Resource Server MAY compose a second grain with it: the
@@ -4849,8 +4849,7 @@ bounded below by the audit horizon ({{mission-record}}).
 
 # IANA Considerations {#iana}
 
-## OAuth Parameters Registration
-
+## OAuth Parameters Registration {#oauth-parameters-registration}
 This document registers the following in the "OAuth Parameters"
 registry:
 
@@ -4886,8 +4885,7 @@ the `WWW-Authenticate` scheme's extensible auth-param space
 ({{RFC6750}}, {{rs-enforcement}}), for which no IANA registry
 exists; no action is required for it.
 
-## OAuth Extensions Error Registration
-
+## OAuth Extensions Error Registration {#oauth-extensions-error-registration}
 This document registers the following in the "OAuth Extensions Error"
 registry {{RFC6749}}:
 
@@ -4915,8 +4913,7 @@ registry entry for it and requires no IANA action here. If a registry
 of authorization details types is established in the future, this type
 SHOULD be registered in it.
 
-## JSON Web Token Claims Registration
-
+## JSON Web Token Claims Registration {#json-web-token-claims-registration}
 This document registers the following in the "JSON Web Token Claims"
 registry:
 
@@ -4927,8 +4924,7 @@ registry:
 - Change Controller: IESG
 - Specification Document(s): this document, {{mission-claim}}
 
-## OAuth Token Introspection Response Registration
-
+## OAuth Token Introspection Response Registration {#oauth-token-introspection-response-registration}
 This document registers the following in the "OAuth Token
 Introspection Response" registry ({{RFC7662}}):
 
@@ -4942,8 +4938,7 @@ Introspection Response" registry ({{RFC7662}}):
 - Change Controller: IESG
 - Specification Document(s): this document, {{introspection}}
 
-## OAuth Authorization Server Metadata Registration
-
+## OAuth Authorization Server Metadata Registration {#oauth-authorization-server-metadata-registration}
 This document registers the following in the "OAuth Authorization
 Server Metadata" registry ({{RFC8414}}):
 
@@ -4953,8 +4948,7 @@ Server Metadata" registry ({{RFC8414}}):
 - Change Controller: IESG
 - Specification Document(s): this document, {{discovery}}
 
-## OAuth Protected Resource Metadata Registration
-
+## OAuth Protected Resource Metadata Registration {#oauth-protected-resource-metadata-registration}
 This document registers the following in the "OAuth Protected Resource
 Metadata" registry ({{RFC9728}}):
 
@@ -5090,8 +5084,7 @@ Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in the home ERP
 under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
 
-## Stage 0: Agent Identity (by Reference)
-
+## Stage 0: Agent Identity (by Reference) {#stage-0-agent-identity-by-reference}
 The agent is an OAuth client with a workload identity (for example,
 a workload identity established using WIMSE or SPIFFE,
 {{I-D.draft-ietf-wimse-arch}},
@@ -5101,8 +5094,7 @@ ordinary authorization-code flow, per
 token `sub` is `alice`. This document adds the Mission layer on top of
 that identity; Stage 0 is otherwise unchanged from that specification.
 
-## Stage 1: Mission Creation
-
+## Stage 1: Mission Creation {#stage-1-mission-creation}
 The agent submits this Submission envelope through PAR
 ({{submission-via-par}}), carrying the Mission Intent and no
 evidence, and proposing concrete authority alongside it on the
@@ -5191,16 +5183,45 @@ After approval, the AS records Mission
 `proposal_hash`
 `sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo`.
 
-## Stage 2: Mission-Bound Token Issuance
-
+## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 The agent redeems the authorization code at the token endpoint. The
 AS resolves the Mission from the grant ({{grant-binding}}), gates on
 it being `active` ({{lifecycle}}), and issues a Mission-bound access
-token for the ERP. The token response echoes the granted
-`authorization_details` ({{mission-bound-tokens}}) and carries the
-Mission references beside the token ({{grant-binding}}):
-`mission_id` `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` and
-`mission_expires_at` `2026-12-31T23:59:59Z`. The decoded token:
+token for the ERP. The token response carries the granted
+`authorization_details` echo ({{mission-bound-tokens}}) and the
+Mission references beside the token, response members rather than
+JWT claims ({{grant-binding}}):
+
+~~~ json
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
+  ]
+}
+~~~
+
+The decoded token:
 
 ~~~ json
 {
@@ -5247,8 +5268,7 @@ token is short-lived (300 s) and its `exp` is far below
 `expires_at`; revoking the Mission stops further derivation, and
 this token dies at its own expiry ({{revocation}}).
 
-## Stage 3: The Resource Server Enforces
-
+## Stage 3: The Resource Server Enforces {#stage-3-the-resource-server-enforces}
 The agent calls the ERP Resource Server (`erp.example.com`) with that
 token. The Resource Server validates the JWT and the `cnf` binding and
 enforces the `authorization_details` whose `resource` it serves,
@@ -5618,7 +5638,7 @@ resolve before interoperating.
 
 - Initial individual draft.
 
-# Acknowledgments
+# Acknowledgments {#acknowledgments}
 {:numbered="false"}
 
 This work builds on the OAuth 2.0 Rich Authorization Requests, Pushed
