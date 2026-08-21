@@ -45,13 +45,13 @@ export function renderIndex(manifest) {
   const lines = [
     START_MARKER,
     "",
-    "| Document | Maturity | Verbs | Summary |",
-    "|---|---|---|---|",
+    "| Document | Maturity | Verbs | Summary | Pull this in when |",
+    "|---|---|---|---|---|",
   ];
   for (const d of manifest.drafts) {
     const maturity = maturityDisplay(d.maturity) ?? d.maturity;
     const verbs = (d.verbs || []).join(", ");
-    lines.push(`| [${d.title}](${editorsCopyUrl(d.slug)}) | ${maturity} | ${verbs} | ${d.summary} |`);
+    lines.push(`| [${d.title}](${editorsCopyUrl(d.slug)}) | ${maturity} | ${verbs} | ${d.summary} | ${d.pull_when} |`);
   }
   lines.push("", END_MARKER);
   return lines.join("\n");

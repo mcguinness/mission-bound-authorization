@@ -10,11 +10,21 @@ delegated authority for hours across many resources.
 
 A **Mission** closes the gap: a durable, integrity-bound record of
 the approved task — the intent, the derived Authority Set, the
-Approver, and a lifecycle — held by the party that approved it.
-Issuance and every derivation of authority are gated on the Mission's
-current state, so revoking the Mission is a kill switch at the
-issuance layer; runtime enforcement is the targeted overlay for the
-actions that cannot wait for token expiry.
+Approver, and a lifecycle — held by the party that approved it. In
+the OAuth binding, a client proposes a **Mission Intent**, the
+Mission Issuer derives an **Authority Set**, and the approval event
+commits both as `intent_hash` and `authority_hash`. Issuance and
+every derivation of authority are gated on the Mission's current
+state, so revoking the Mission is a kill switch at the issuance
+layer; runtime enforcement is the targeted overlay for the actions
+that cannot wait for token expiry.
+
+Read as one system, the drafts define a **delegated-authority
+layer**: authentication says who is acting, and entitlement
+governance says what a principal may hold; this layer governs the
+approved task itself. The Mission Issuer is the control plane,
+holding the approved task and distributing bounded authority; tokens
+with the PEP/PDP boundary are its data plane.
 
 The essential boundary: a Mission records the approved task and its
 lifecycle. It does not replace OAuth authority syntax. RAR describes
@@ -44,7 +54,9 @@ profile** (it governs issuance and derivation).
 | Review threats and trust | [Security Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) |
 
 The rest of this page is the orientation; the links above are depth,
-not prerequisites.
+not prerequisites. For the story told in prose rather than protocol,
+the **[Mission Handbook](https://notes.karlmcguinness.com/mission-handbook/)**
+is the published narrative companion: the why before the wire.
 
 ## The architecture, in verbs
 
@@ -99,7 +111,34 @@ Packages say what is deployed. Binding properties and assurance
 claims remain per path; a deployment name never upgrades weaker
 paths. The named deployment packages live in
 [`family-manifest.json`](family-manifest.json) and are validated in
-CI.
+CI; package definitions are provisional until v0 proper passes its
+publication gate.
+
+## The minimal implementation
+
+The first useful piece is one profile, not the suite. A minimal
+conforming deployment of the core implements:
+
+- `mission_intent` submission through Pushed Authorization Requests;
+- derivation of the Authority Set, in narrowing mode from the
+  standard `authorization_details` proposal pushed alongside the
+  Intent;
+- the Mission record with its `intent_hash` and `authority_hash`
+  integrity anchors;
+- the `mission` claim on issued tokens and the `authorization_details`
+  echo in token responses;
+- issuance and refresh gated on Mission state, with revocation by
+  `mission_id`; and
+- optionally, token introspection reporting Mission state.
+
+That is the whole mandatory surface; the core's Conformance section
+names it. What the core alone does **not** protect, by design:
+already-issued tokens run to expiry (prompt cutoff needs
+introspection, Status, or the runtime layer); completed actions are
+not undone; off-path execution by a compromised agent is the runtime
+and harness profiles' territory; prompt injection is constrained
+(inert intent text, fixed authority), not prevented; and
+information-flow leakage within approved authority is out of scope.
 
 ## Add capabilities by verb
 
