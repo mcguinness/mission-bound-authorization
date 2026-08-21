@@ -34,48 +34,58 @@
   "lab-floor-referenced",
   "lab-best-effort"
  ],
- "packages": {
-  "issuance-baseline": {
-   "required": [
-    "draft-mcguinness-oauth-mission"
-   ],
-   "summary": "Approved, integrity-bound Missions with state-gated issuance where the binding puts Mission authority on the issuance path."
-  },
-  "runtime-enforced": {
-   "required": [
-    "draft-mcguinness-mission-substrate",
+ "reference_stacks": {
+  "$comment": "A transcription of the Architecture's four cumulative reference stacks ({#reference-architecture} in draft-mcguinness-mission-architecture); the Architecture is authoritative and this object must change only when that section does. These are NOT the Architecture's five architecture packages ({#packages}), which the manifest does not restate. Each stack contains the previous one. `binding_one_of`: exactly one issuer binding anchors a deployment (Mission-substrate conformance is carried by the chosen binding; the substrate document is the checklist for authoring new bindings, not an adoption dependency). `freshness_one_of`: the Runtime-Enforced level requires one freshness source; a `core:` entry names a facility of the chosen binding rather than a separate document. Adoption closure beyond a stack follows each draft's typed `requires` edges. Provisional until v0 proper passes its publication gate.",
+  "protocol-core": {
+   "level": "Baseline Issuance",
+   "contains": null,
+   "binding_one_of": [
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-status",
-    "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-mission-runtime-evidence",
-    "draft-mcguinness-mission-authzen"
+    "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-uma",
+    "draft-mcguinness-mission-gnap"
    ],
-   "summary": "Point-of-use permits with durable evidence."
+   "adds": [],
+   "summary": "The issuance profile alone: approved, anchored, state-gated Missions with no per-action control."
   },
-  "governed-agent": {
-   "required": [
-    "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-status",
+  "reference-security-architecture": {
+   "level": "Runtime-Enforced",
+   "contains": "protocol-core",
+   "adds": [
     "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-runtime-evidence"
+   ],
+   "freshness_one_of": [
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-signals",
+    "core:token-introspection"
+   ],
+   "notes": "Presumes an authority-bearing binding; under AAuth the analogous per-action control is the Person Server's contextual gate on PS-mediated paths.",
+   "summary": "The default evaluation shape: point-of-use permits with durable decision and execution evidence, plus a freshness source."
+  },
+  "recommended-agent-architecture": {
+   "level": "Governed Agent",
+   "contains": "reference-security-architecture",
+   "adds": [
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-oauth-mission-consent-evidence"
    ],
-   "summary": "Session-continuity stop and proof of what the Approver saw."
+   "summary": "What a deployment running autonomous AI agents should build: session-continuity stop and proof of what the Approver saw."
   },
-  "transaction-assurance": {
-   "required": [
-    "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-status",
-    "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-mission-runtime-evidence",
-    "draft-mcguinness-mission-authzen",
-    "draft-mcguinness-oauth-mission-transaction-authorization"
+  "high-assurance-architecture": {
+   "level": "High-Assurance Agent",
+   "contains": "recommended-agent-architecture",
+   "adds": [],
+   "claims": [
+    "mediated custody",
+    "no unmediated path",
+    "action-bound approval",
+    "active freshness",
+    "agent-isolated approval rendering"
    ],
-   "summary": "Fresh per-action authorization, verifiable offline, on top of the runtime package."
+   "summary": "The recommended architecture plus the named per-path claims; a claims level, not an additional document list."
   }
  },
  "count": 41,
@@ -95,7 +105,11 @@
    "pull_when": "A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL).",
    "adoption_alias": "aauth-expiry",
    "is_published_core": false,
-   "deps": []
+   "requires": [],
+   "references": [
+    "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-aauth-management"
+   ]
   },
   {
    "file": "draft-mcguinness-mission-aam.md",
@@ -111,7 +125,8 @@
    "summary": "Maps Cloudflare's Agent Access Model onto the family, realizing each of its six components with an existing mechanism and declining the grant review loop because Missions are not standing grants.",
    "pull_when": "Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms.",
    "is_published_core": false,
-   "deps": [
+   "requires": [],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authzen",
@@ -142,13 +157,16 @@
    "summary": "The thin AAuth-native binding: it uses AAuth's existing mission blob, `{approver, s256}` reference, propose/clarify/approve flow, and active and terminated states unchanged, and defines no new wire members.",
    "pull_when": "The substrate is AAuth: Mission context on its native propose/approve flow.",
    "is_published_core": false,
-   "deps": [
+   "maintenance_exception": "2026-08-20 (#554, PR #621): the Mission Substrate Statement migration to the supplied/not-supplied format is a substrate-contract conformance change applied under owner direction; no AAuth wire member or protocol behavior changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
+   "requires": [
+    "draft-mcguinness-mission-substrate"
+   ],
+   "references": [
     "draft-mcguinness-aauth-mission-expiry",
     "draft-mcguinness-mission-aauth-management",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission-transaction-authorization"
-   ],
-   "maintenance_exception": "2026-08-20 (#554, PR #621): the Mission Substrate Statement migration to the supplied/not-supplied format is a substrate-contract conformance change applied under owner direction; no AAuth wire member or protocol behavior changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged."
+   ]
   },
   {
    "file": "draft-mcguinness-mission-aauth-management.md",
@@ -164,7 +182,8 @@
    "summary": "The AAuth-native companion promised by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the existing Person Server `mission_endpoint`.",
    "pull_when": "Alongside the AAuth binding: status, termination, delegation-tree queries.",
    "is_published_core": false,
-   "deps": [
+   "requires": [],
+   "references": [
     "draft-mcguinness-aauth-mission-expiry",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-security-model"
@@ -184,11 +203,16 @@
    "summary": "Extracts approval-authority provenance into the Approval Governance Record: an issuer-retained, issuer-signed record of who approved, under which authority, and why the decision satisfied governance.",
    "pull_when": "Approval authority itself needs authenticated, policy-backed provenance.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
@@ -209,7 +233,8 @@
    "summary": "The single structural view: the delegated-authority-layer thesis, a Mission's life end to end, the seven invariants, the substrate interface, the verb spine, the Mission Assurance Levels, and the Deployment Profile.",
    "pull_when": "Before adopting anything: the Mission model, invariants, and assurance levels the rest cite.",
    "is_published_core": false,
-   "deps": [
+   "requires": [],
+   "references": [
     "draft-mcguinness-aauth-mission-expiry",
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-aauth-management",
@@ -218,6 +243,7 @@
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-discovery",
+    "draft-mcguinness-mission-gnap",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-metering",
@@ -242,6 +268,7 @@
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-transaction-authorization",
     "draft-mcguinness-oauth-mission-work-products"
    ]
   },
@@ -259,22 +286,41 @@
    "summary": "Makes the suite's evidence tamper-evident and independently verifiable by registering it into a SCITT Transparency Service as Signed Statements.",
    "pull_when": "A cross-domain party must verify evidence integrity without trusting issuer logs.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-approval-governance",
+    "draft-mcguinness-mission-discovery",
+    "draft-mcguinness-mission-harness",
+    "draft-mcguinness-mission-mandate",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-work-products"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-mandate",
+    "draft-mcguinness-mission-orchestration",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-shaping",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-template"
+    "draft-mcguinness-oauth-mission-template",
+    "draft-mcguinness-oauth-mission-work-products"
    ]
   },
   {
@@ -291,7 +337,19 @@
    "summary": "A peer binding, the AS-optional deployment mode, and the estate control plane of the delegated-authority layer.",
    "pull_when": "The AS cannot change: run Mission governance as a standalone control plane.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-approval-governance",
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authzen",
@@ -327,14 +385,24 @@
    "summary": "The concrete OpenID AuthZEN binding of the runtime decision contract.",
    "pull_when": "The PDP speaks AuthZEN and needs the decision-contract wire mapping.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-status"
@@ -354,9 +422,17 @@
    "summary": "Binds a Mission's approved catalog-sourced entry (an MCP tool, an OpenAPI operation, or an equivalent) to the capability source it was derived from: `tool_id`, source, and a content digest recorded at derivation and verified at decision time.",
    "pull_when": "Actions come from a discovered catalog where invoked identity can drift from approval.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission"
    ]
   },
@@ -374,7 +450,14 @@
    "summary": "Makes discovery a governed operation for agents that meet resources their approval could not name, defining the Encounter, resource identity pinning, two-mode Discovery Adjudication, and Discovery Evidence.",
    "pull_when": "An open-world agent meets resources its approval never named.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-harness",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-progressive"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
@@ -383,6 +466,7 @@
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-containment",
@@ -405,7 +489,14 @@
    "summary": "Experimental sketch: the fifth binding, to the Grant Negotiation and Authorization Protocol (RFC 9635) authorization server, and the second authored against the Mission Substrate Requirements contract.",
    "pull_when": "Evaluating a GNAP deployment only.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
@@ -447,8 +538,16 @@
    "summary": "How an agent harness binds sessions, task graphs, queues, and sub-agent handles to Mission state, and how it must pause, suppress, or terminate work once the Mission is no longer active.",
    "pull_when": "A harness holds session state across restarts and must stop work when the Mission dies.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-audit",
+    "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-orchestration",
@@ -477,7 +576,11 @@
    "summary": "A signed, portable, independently verifiable statement of a Mission's committed facts (its identifiers, integrity anchors, Subject, Approver, and optionally its Authority Set), minted by the Mission Issuer.",
    "pull_when": "An outside party must verify what was approved without a token-exchange hop.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
@@ -505,7 +608,15 @@
    "summary": "Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire binding that enforce them.",
    "pull_when": "A Mission needs cumulative caps (budget, calls, duration, egress), not just scope.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-consent-evidence"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-orchestration",
@@ -513,6 +624,7 @@
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence"
    ]
   },
@@ -530,7 +642,15 @@
    "summary": "How a multi-step or multi-Mission workflow assigns a reversibility class to each step, records an unwind plan before dispatch, and unwinds in-flight work safely when a Mission stops.",
    "pull_when": "In-flight work must unwind safely if the Mission ends mid-workflow.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-harness",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-runtime",
@@ -557,10 +677,23 @@
    "summary": "The binding-neutral Decision Evidence, Execution Evidence, and Refusal Record objects a decision-API binding's PDP and PEP emit: their members, canonicalization, integrity envelope, media types, and retention.",
    "pull_when": "Runtime enforcement is deployed and decisions need durable, verifiable records.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain"
+   ],
+   "references": [
+    "draft-mcguinness-mission-audit",
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-capability-binding",
+    "draft-mcguinness-mission-harness",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-continuation",
+    "draft-mcguinness-oauth-mission-cross-domain"
    ]
   },
   {
@@ -577,7 +710,11 @@
    "summary": "A decision contract for enforcing a Mission-bound token at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission.",
    "pull_when": "Actions need a point-of-use check, not just issuance-time gating.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
@@ -587,6 +724,7 @@
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-metering",
+    "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-mission-substrate",
@@ -597,7 +735,8 @@
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-transaction-authorization"
    ]
   },
   {
@@ -620,8 +759,14 @@
    "summary": "Profiles the OAuth transaction authorization challenge for the Mission cross-domain case: a Transaction Authorization Server runs a fresh decision with a governed approval as input and issues a sender-constrained, single-use transaction token the resource verifies offline.",
    "pull_when": "One action needs a fresh, portable, cross-org authorization with no live callback.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-metering",
@@ -633,6 +778,7 @@
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
+    "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
    ]
   },
@@ -650,7 +796,10 @@
    "summary": "A cross-cutting, Informational consolidation of the suite's trusted base.",
    "pull_when": "Reviewing or auditing: the one consolidated trust and blast-radius view.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
@@ -695,11 +844,16 @@
    "summary": "How a client-side \"shaper\" turns a user's request into a candidate Mission Intent before it is submitted.",
    "pull_when": "You need a defined client-side path from user prompt to candidate Mission Intent.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
@@ -722,7 +876,8 @@
    "summary": "For authors of new bindings: a small, normative contextual-governance kernel (native Mission reference, identified Controller, authenticated Actor binding, immutable Approved Context, approval event, active/non-active gate, context propagation, ordered governance record), with stronger properties declared separately as capabilities.",
    "pull_when": "Runtime implementers consume its commitment construction and kernel contract; binding authors profile it.",
    "is_published_core": false,
-   "deps": [
+   "requires": [],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
@@ -751,7 +906,12 @@
    "summary": "Experimental sketch: the fourth binding, and the first authored against the Mission Substrate Requirements contract rather than extracted into it.",
    "pull_when": "Evaluating a UMA 2.0 deployment only.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-issuance-grant"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
@@ -793,7 +953,11 @@
    "summary": "Adds a `revisable` mode to Deferred Approval: the Authorization Server signals which dimensions it refused and invites the client to push a narrowing revision, continuing the same deferred approval instead of starting over.",
    "pull_when": "Reviewers routinely narrow a proposed Mission rather than approve or deny.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approval"
+   ],
+   "references": [
     "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-oauth-mission",
@@ -816,7 +980,12 @@
    "summary": "Makes the approval event asynchronous, profiling OAuth Deferred Token Response so a Mission approval can be deferred and polled.",
    "pull_when": "Approval is asynchronous: a human review queue, not an immediate decision.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-approval-governance",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-oauth-mission",
@@ -839,13 +1008,18 @@
    "summary": "Removes the Authorization Server from the sub-agent fan-out hot path, profiling Attenuating Agent Tokens so a Mission-bound token holder mints a narrower child token offline.",
    "pull_when": "Deep fan-out makes an AS round-trip per narrowing too costly; mint offline.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-cross-org-delegation",
     "draft-mcguinness-oauth-mission-issuance-grant"
    ]
   },
@@ -863,11 +1037,18 @@
    "summary": "Lets a parent Mission authorize a Child Mission for a sub-agent, with explicit parent lineage, strict-subset authority, expiry no later than the parent, fan-out controls, and cascade revocation when the parent reaches a terminal state.",
    "pull_when": "A sub-agent needs its own Mission outliving a call frame, with cascade termination.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
+    "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-expansion",
@@ -891,8 +1072,13 @@
    "summary": "Commits the structured consent disclosure shown to the Approver at the approval event, through a `consent_rendering_hash` and a signed Consent Evidence object, so an auditor can reconstruct the recorded approval surface.",
    "pull_when": "You must prove what the Approver actually saw, not only what was approved.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-approval-governance",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-runtime",
@@ -902,7 +1088,8 @@
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -919,7 +1106,13 @@
    "summary": "Narrows a live Mission without ending it: on a declared protected event the Mission Issuer commits a contain transition whose issuer-held, monotonic, removal-only overlay gates every derivation while the approved anchors stay immutable.",
    "pull_when": "A live Mission must be narrowed, not ended, on a protected event.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-discovery",
@@ -952,7 +1145,12 @@
    "summary": "Profiles authorization continuity: how a Mission's work continues across hops and over time without re-presenting the original credential and without widening authority.",
    "pull_when": "Authorized work continues across hops or time without re-presented credentials.",
    "is_published_core": false,
-   "deps": [
+   "adoption_alias": "mission-continuation",
+   "requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-expansion"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authzen",
@@ -960,9 +1158,9 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-uma",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-cross-domain"
-   ],
-   "adoption_alias": "mission-continuation"
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-expansion"
+   ]
   },
   {
    "file": "draft-mcguinness-oauth-mission-cross-domain.md",
@@ -978,13 +1176,19 @@
    "summary": "Lets a single Mission be honored by Authorization Servers in other trust domains: the originating issuer projects audience-scoped authority through a short-lived, sender-constrained cross-domain grant, and the Resource AS mints its own local Mission-bound tokens preserving the `mission` claim.",
    "pull_when": "A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
+    "draft-mcguinness-oauth-mission-cross-org-delegation",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
    ]
@@ -1004,12 +1208,21 @@
    },
    "group": "cross-domain-projection",
    "verbs": [
+    "delegate",
     "project"
    ],
    "summary": "Profiles Mission Offline Attenuation across organizational trust domains: an agent in one organization delegates a narrowed slice to an agent in another, and the relying party verifies the complete narrowing chain without calling the origin on the request path.",
    "pull_when": "An attenuation chain crosses organizational trust domains.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-attenuation",
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
@@ -1036,13 +1249,23 @@
    "summary": "How to widen a Mission's authority: because authority can only narrow within a Mission, widening requires a fresh approval that creates a successor Mission superseding its predecessor.",
    "pull_when": "Approved authority will predictably need to widen mid-task via fresh approval.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
+    "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -1059,7 +1282,12 @@
    "summary": "The issuance join: the middle integration between the standalone binding and a natively Mission-aware AS.",
    "pull_when": "A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-mandate",
@@ -1085,7 +1313,13 @@
    "summary": "The fleet-management surface the status profile defers: authenticated Mission enumeration and bulk lifecycle operations, dry-run first, with a per-Mission outcome manifest.",
    "pull_when": "An operator needs fleet enumeration and bulk lifecycle across many Missions.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
@@ -1111,7 +1345,12 @@
    "summary": "At the initial approval the Approver also consents to an authority ceiling and a drawdown policy, letting the Mission Issuer adjudicate an in-ceiling expansion by policy instead of a fresh human approval.",
    "pull_when": "Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-expansion"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-discovery",
@@ -1139,13 +1378,18 @@
    "summary": "A profile of the OpenID Shared Signals Framework: the Mission Issuer emits a signed Security Event Token on each Mission lifecycle transition, delivered by push or poll, so a consumer learns of a transition promptly without polling.",
    "pull_when": "Consumers need push notice of state changes instead of polling per Mission.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-status"
@@ -1165,9 +1409,14 @@
    "summary": "A `mission_id`-keyed status surface with signed responses, plus a lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and `complete` transitions and the `suspended` and `completed` states.",
    "pull_when": "You must observe or change Mission state beyond token expiry (revoke, suspend, complete).",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
@@ -1191,7 +1440,12 @@
    "summary": "An Approver consents once to a task template (a ceiling of resources, actions, and constraints plus a dispatch policy), and each dispatch then instantiates an ordinary, independently gated Mission from it at machine speed.",
    "pull_when": "Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-consent-evidence"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
@@ -1217,7 +1471,10 @@
    "summary": "Keeps information from carrying authority: a policy-free work-product provenance object attributes an artifact to the approved work that produced it, and a non-transitive handoff rule makes the receiving Mission re-evaluate any proposed action under its own Authority Set.",
    "pull_when": "Artifacts cross into another Mission and must carry provenance, never authority.",
    "is_published_core": false,
-   "deps": [
+   "requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-harness",
@@ -1242,12 +1499,18 @@
    "summary": "The mandatory core, the issuance profile: defines the Mission, the Mission Intent and Authority Set, the approval event and its `intent_hash` / `authority_hash` anchors, the `mission` token claim, the subset rule, and state-gated issuance.",
    "pull_when": "Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses.",
    "is_published_core": true,
-   "deps": [
+   "adoption_alias": "core",
+   "requires": [],
+   "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-shaping",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
@@ -1258,8 +1521,7 @@
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-template",
     "draft-mcguinness-oauth-mission-work-products"
-   ],
-   "adoption_alias": "core"
+   ]
   }
  ]
 }

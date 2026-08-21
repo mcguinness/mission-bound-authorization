@@ -17,9 +17,11 @@
 //                                non-empty, duplicate-free array drawn from that enum
 //   (f) draft copy            - a draft's `summary` or `pull_when` is missing, empty, or not a
 //                                string, or its `summary` is a bare maturity word
-//   (g) packages              - the manifest's top-level `packages` object is missing or empty,
-//                                or a package has an empty/duplicated `required` list, a
-//                                `required` slug that is not a manifest draft, or no `summary`
+//   (g) reference stacks      - the manifest's top-level `reference_stacks` object (a transcription
+//                                of the Architecture's four cumulative stacks) is missing a stack,
+//                                has a malformed `contains` chain, or lists a `binding_one_of`,
+//                                `adds`, or `freshness_one_of` entry that is not a manifest slug
+//                                (a `core:` freshness entry names a binding facility and is allowed)
 //   (h) maintenance enum      - a draft's `maintenance` is not one of the manifest's declared
 //                                `maintenance_classes`
 //   (i) maintenance evidence  - a draft whose `maintenance` is "active-experimental" is missing
@@ -33,11 +35,18 @@
 //   (l) drafts-index          - DRAFTS.md's generated index block is stale against the manifest
 //                                (see scripts/generate-drafts-index.mjs --check), or a draft's
 //                                `maturity` has no display word for that index
-//   (m) readme-curated        - README.md does not link DRAFTS.md and DEPENDENCIES.md, or a
+//   (m) readme-curated        - README.md does not link DRAFTS.md and DEPENDENCIES.md, a
 //                                backtick-quoted `draft-...` token in README.md is not a
-//                                manifest slug. README's structure is otherwise unvalidated:
-//                                it is curated prose, and the exhaustive inventory lives in
-//                                DRAFTS.md.
+//                                manifest slug, or an editor's-copy link (#go.<slug>.html) in
+//                                README.md or DRAFTS.md targets a slug that is not a manifest
+//                                draft. README's structure is otherwise unvalidated: it is
+//                                curated prose, and the exhaustive inventory lives in DRAFTS.md.
+//   (n) typed edges           - a draft's `requires` (normative in-family dependencies; the only
+//                                edges that close transitively for adoption) or `references` (the
+//                                full in-family citation graph) is missing, self-referential,
+//                                duplicated, or not a manifest slug; `requires` is not a subset of
+//                                `references`; or `requires` drifts from the normative I-D.draft-
+//                                mcguinness-* references in the draft's own front matter
 
 import fs from "node:fs";
 import path from "node:path";
@@ -99,6 +108,23 @@ function parseFrontMatterCategory(text) {
   if (!m) return null;
   const km = m[1].match(/^category:\s*(.*)$/m);
   return km ? km[1].trim() : null;
+}
+
+// The normative in-family references a draft's own front matter declares:
+// the ground truth the manifest's `requires` edges must match. Only slugs
+// that are family drafts count; external I-Ds are out of scope here.
+function parseNormativeFamilyRefs(text, familySlugs) {
+  const fmEnd = text.indexOf("\n--- abstract");
+  const head = fmEnd > 0 ? text.slice(0, fmEnd) : text.slice(0, 8000);
+  const block = head.match(/^normative:[ \t]*\r?\n([\s\S]*?)^(?:informative:|--- )/m);
+  const out = new Set();
+  if (!block) return out;
+  const re = /^  I-D\.(draft-mcguinness-[a-z0-9-]+):/gm;
+  let m;
+  while ((m = re.exec(block[1]))) {
+    if (familySlugs.has(m[1])) out.add(m[1]);
+  }
+  return out;
 }
 
 // Returns the body text of a markdown section: from just after a heading line
@@ -290,32 +316,68 @@ function main() {
     }
   }
 
-  // (g) Packages: the document sets a deployment adopts together. Every
-  // member must be a real draft, and a package with no members is not one.
-  const packages = manifest.packages;
-  if (typeof packages !== "object" || packages === null || Array.isArray(packages) || Object.keys(packages).length === 0) {
-    fail("packages", `family-manifest.json's top-level "packages" must be a non-empty object`);
+  // (g) Reference stacks: a transcription of the Architecture's four
+  // cumulative stacks ({#reference-architecture}), never a taxonomy of the
+  // manifest's own. Structure is validated here; fidelity to the
+  // Architecture's prose is an editorial obligation recorded in the object's
+  // $comment.
+  const stacks = manifest.reference_stacks;
+  if (typeof stacks !== "object" || stacks === null || Array.isArray(stacks)) {
+    fail("reference-stacks", `family-manifest.json's top-level "reference_stacks" must be an object`);
   } else {
-    for (const [name, pkg] of Object.entries(packages)) {
-      if (typeof pkg !== "object" || pkg === null || Array.isArray(pkg)) {
-        fail("packages", `package "${name}" must be an object, got ${JSON.stringify(pkg)}`);
+    const stackNames = Object.keys(stacks).filter((k) => !k.startsWith("$"));
+    const EXPECTED_STACKS = [
+      "protocol-core",
+      "reference-security-architecture",
+      "recommended-agent-architecture",
+      "high-assurance-architecture",
+    ];
+    for (const name of EXPECTED_STACKS) {
+      if (!stackNames.includes(name)) {
+        fail("reference-stacks", `reference_stacks is missing the Architecture's "${name}" stack`);
+      }
+    }
+    for (const name of stackNames) {
+      if (!EXPECTED_STACKS.includes(name)) {
+        fail("reference-stacks", `reference_stacks names "${name}", which is not one of the Architecture's four stacks`);
+      }
+    }
+    const checkSlugList = (name, field, arr, { allowEmpty, allowCore } = {}) => {
+      if (arr === undefined) return;
+      if (!Array.isArray(arr) || (!allowEmpty && arr.length === 0)) {
+        fail("reference-stacks", `stack "${name}": "${field}" must be a non-empty array of manifest slugs`);
+        return;
+      }
+      const seen = new Set();
+      for (const slug of arr) {
+        const isCoreFacility = allowCore && typeof slug === "string" && /^core:[a-z][a-z-]*$/.test(slug);
+        if (!isCoreFacility && !manifestSlugs.has(slug)) {
+          fail("reference-stacks", `stack "${name}": "${field}" entry ${JSON.stringify(slug)} is not a manifest draft slug${allowCore ? ' or a "core:" binding facility' : ""}`);
+        }
+        if (seen.has(slug)) fail("reference-stacks", `stack "${name}": "${field}" lists "${slug}" more than once`);
+        seen.add(slug);
+      }
+    };
+    for (const name of stackNames) {
+      const s = stacks[name];
+      if (typeof s !== "object" || s === null || Array.isArray(s)) {
+        fail("reference-stacks", `stack "${name}" must be an object, got ${JSON.stringify(s)}`);
         continue;
       }
-      if (!Array.isArray(pkg.required) || pkg.required.length === 0) {
-        fail("packages", `package "${name}": "required" must be a non-empty array of manifest slugs`);
-      } else {
-        const seen = new Set();
-        for (const slug of pkg.required) {
-          if (!manifestSlugs.has(slug)) {
-            fail("packages", `package "${name}" requires ${JSON.stringify(slug)}, which is not a manifest draft slug`);
-          }
-          if (seen.has(slug)) fail("packages", `package "${name}" lists "${slug}" more than once`);
-          seen.add(slug);
+      for (const field of ["level", "summary"]) {
+        if (typeof s[field] !== "string" || s[field].trim().length === 0) {
+          fail("reference-stacks", `stack "${name}": "${field}" must be a non-empty string`);
         }
       }
-      if (typeof pkg.summary !== "string" || pkg.summary.trim().length === 0) {
-        fail("packages", `package "${name}": "summary" must be a non-empty string`);
+      if (s.contains !== null && !stackNames.includes(s.contains)) {
+        fail("reference-stacks", `stack "${name}": "contains" must be null or another stack name, got ${JSON.stringify(s.contains)}`);
       }
+      if (s.contains === null && !Array.isArray(s.binding_one_of)) {
+        fail("reference-stacks", `stack "${name}" is a root stack and must declare "binding_one_of"`);
+      }
+      checkSlugList(name, "binding_one_of", s.binding_one_of);
+      checkSlugList(name, "adds", s.adds, { allowEmpty: true });
+      checkSlugList(name, "freshness_one_of", s.freshness_one_of, { allowCore: true });
     }
   }
 
@@ -379,6 +441,64 @@ function main() {
     if (!token.startsWith("draft-")) continue;
     if (!manifestSlugs.has(token)) {
       fail("readme-curated", `README.md quotes \`${token}\`, which is not a family-manifest.json draft slug`);
+    }
+  }
+  // Editor's-copy links are the reader's actual navigation: a mistyped slug
+  // renders fine and 404s at click time, so every #go.<slug>.html target in
+  // the curated files must be a manifest draft.
+  for (const [label, text] of [["README.md", readme], ["DRAFTS.md", draftsDoc]]) {
+    const goRe = /#go\.(draft-[a-z0-9-]+)\.html/g;
+    let gm;
+    while ((gm = goRe.exec(text))) {
+      if (!manifestSlugs.has(gm[1])) {
+        fail("readme-curated", `${label} links the editor's copy of "${gm[1]}", which is not a family-manifest.json draft slug`);
+      }
+    }
+  }
+
+  // (n) Typed dependency edges: `requires` is the draft's normative in-family
+  // reference set, extracted from and drift-checked against the draft's own
+  // front matter, and the only edges adoption closure may follow;
+  // `references` is the full in-family citation graph and pulls in nothing.
+  for (const d of drafts) {
+    let shapeOk = true;
+    for (const field of ["requires", "references"]) {
+      const arr = d[field];
+      if (!Array.isArray(arr)) {
+        fail("typed-edges", `${d.slug}: "${field}" must be an array of manifest slugs (empty allowed), got ${JSON.stringify(arr)}`);
+        shapeOk = false;
+        continue;
+      }
+      const seen = new Set();
+      for (const slug of arr) {
+        if (!manifestSlugs.has(slug)) {
+          fail("typed-edges", `${d.slug}: "${field}" entry ${JSON.stringify(slug)} is not a manifest draft slug`);
+          shapeOk = false;
+        }
+        if (slug === d.slug) fail("typed-edges", `${d.slug}: "${field}" lists the draft itself`);
+        if (seen.has(slug)) fail("typed-edges", `${d.slug}: "${field}" lists "${slug}" more than once`);
+        seen.add(slug);
+      }
+    }
+    if (!shapeOk) continue;
+    const referenceSet = new Set(d.references);
+    for (const slug of d.requires) {
+      if (!referenceSet.has(slug)) {
+        fail("typed-edges", `${d.slug}: "requires" edge to "${slug}" is missing from "references" (requires must be a subset)`);
+      }
+    }
+    if (!onDiskSet.has(d.file)) continue;
+    const declared = parseNormativeFamilyRefs(readFile(path.join(ROOT, d.file), d.file), manifestSlugs);
+    const recorded = new Set(d.requires);
+    for (const slug of declared) {
+      if (!recorded.has(slug)) {
+        fail("typed-edges", `${d.slug}: front matter declares normative I-D.${slug}, but manifest "requires" omits it`);
+      }
+    }
+    for (const slug of recorded) {
+      if (!declared.has(slug)) {
+        fail("typed-edges", `${d.slug}: manifest "requires" lists "${slug}", but the draft's front matter has no normative reference to it`);
+      }
     }
   }
 

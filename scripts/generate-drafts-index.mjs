@@ -40,6 +40,13 @@ export function editorsCopyUrl(slug) {
   return `${EDITORS_COPY_BASE}${slug}.html`;
 }
 
+// Manifest strings land inside a Markdown table: a literal pipe would open a
+// phantom column and a newline would end the row, so both are neutralized
+// here rather than banned in the manifest.
+export function escapeCell(value) {
+  return String(value).replace(/\|/g, "\\|").replace(/\s*\r?\n\s*/g, " ");
+}
+
 // The generated block, markers included, in manifest order.
 export function renderIndex(manifest) {
   const lines = [
@@ -51,7 +58,9 @@ export function renderIndex(manifest) {
   for (const d of manifest.drafts) {
     const maturity = maturityDisplay(d.maturity) ?? d.maturity;
     const verbs = (d.verbs || []).join(", ");
-    lines.push(`| [${d.title}](${editorsCopyUrl(d.slug)}) | ${maturity} | ${verbs} | ${d.summary} | ${d.pull_when} |`);
+    lines.push(
+      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${maturity} | ${verbs} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} |`
+    );
   }
   lines.push("", END_MARKER);
   return lines.join("\n");

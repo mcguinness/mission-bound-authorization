@@ -10,9 +10,9 @@ delegated authority for hours across many resources.
 
 A **Mission** closes the gap: a durable, integrity-bound record of
 the approved task — the intent, the derived Authority Set, the
-Approver, and a lifecycle — held by the party that approved it. In
-the OAuth binding, a client proposes a **Mission Intent**, the
-Mission Issuer derives an **Authority Set**, and the approval event
+Approver, and a lifecycle — recorded and retained by the Mission
+control point. In the OAuth binding, a client proposes a **Mission
+Intent**, the Mission Issuer derives an **Authority Set**, and the approval event
 commits both as `intent_hash` and `authority_hash`. Issuance and
 every derivation of authority are gated on the Mission's current
 state, so revoking the Mission is a kill switch at the issuance
@@ -72,7 +72,7 @@ is the citable form of this view.
 | **Govern** | How does the Mission change or end? | [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) (pull), [Signals](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) (push), [Expansion](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.html) (widen via a successor), [Containment](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) (issuer-held monotonic narrowing), [Progressive Drawdown](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html), [Metering](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html), [Discovery](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html), [Management](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) |
 | **Enforce Each Action** | May this exact action run now? | [Runtime contract](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html), [AuthZEN binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html), [Transaction Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html), [Capability Binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) |
 | **Run and Wind Down** | What happens across sessions, queues, and restarts? | [Harness](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html), [Orchestration](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) |
-| **Delegate** | Is new subordinate authority created? | [Child Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html), [Offline Attenuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html) |
+| **Delegate** | Is new subordinate authority created? | [Child Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html), [Offline Attenuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html), [Cross-Organizational Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) |
 | **Project** | How is existing authority honored elsewhere? | [Cross-Domain Projection](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html), [Cross-Organizational Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) |
 | **Continue** | How does authorization survive a hop or a pause? | [Continuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) |
 | **Prove** | What was approved, decided, and executed? | [Consent Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html), [Runtime Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html), [Mandate](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html), [Audit](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) |
@@ -81,7 +81,10 @@ is the citable form of this view.
 Two of these are easy to conflate and the spine keeps them apart:
 **delegate** creates new subordinate authority (a Child Mission, an
 attenuated token); **project** honors authority that already exists
-in another trust domain, creating none.
+in another trust domain, creating none. A document may live under
+more than one verb: Cross-Organizational Delegation both delegates
+(the attenuation chain narrows authority) and projects (a relying
+party in another organization honors it).
 
 ## Choose a binding
 
@@ -107,32 +110,31 @@ obligations; a deployment claims the level it has earned.
 | **Governed Agent** | Adds session-continuity stop (the harness) and proof of what the Approver saw (consent evidence) |
 | **High-Assurance Agent** | Adds the named custody and containment claims: compromise-resistant custody and trifecta containment |
 
-Packages say what is deployed. Binding properties and assurance
-claims remain per path; a deployment name never upgrades weaker
-paths. The named deployment packages live in
-[`family-manifest.json`](family-manifest.json) and are validated in
-CI; package definitions are provisional until v0 proper passes its
-publication gate.
+Deployments compose along the Architecture's four cumulative
+reference stacks, from the protocol core alone to the high-assurance
+agent architecture; the manifest transcribes them as
+`reference_stacks` in
+[`family-manifest.json`](family-manifest.json), with the issuer
+binding and the freshness source modeled as explicit alternatives.
+Binding properties and assurance claims remain per path; a stack
+name never upgrades weaker paths. The transcription is validated in
+CI and provisional until v0 proper passes its publication gate. (The
+Architecture's five *packages* are its own orthogonal decomposition;
+the manifest does not restate them.)
 
 ## The minimal implementation
 
 The first useful piece is one profile, not the suite. A minimal
-conforming deployment of the core implements:
+conforming deployment implements the core alone: Mission Intent
+submission, Authority Set derivation, the committed Mission record
+with its integrity anchors, the `mission` claim, and state-gated
+issuance with revocation by Mission. The authoritative checklist,
+including the distinct client and resource-server obligations, is
+the core's
+[Conformance section](https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html#name-conformance);
+this page does not duplicate it.
 
-- `mission_intent` submission through Pushed Authorization Requests;
-- derivation of the Authority Set, in narrowing mode from the
-  standard `authorization_details` proposal pushed alongside the
-  Intent;
-- the Mission record with its `intent_hash` and `authority_hash`
-  integrity anchors;
-- the `mission` claim on issued tokens and the `authorization_details`
-  echo in token responses;
-- issuance and refresh gated on Mission state, with revocation by
-  `mission_id`; and
-- optionally, token introspection reporting Mission state.
-
-That is the whole mandatory surface; the core's Conformance section
-names it. What the core alone does **not** protect, by design:
+What the core alone does **not** protect, by design:
 already-issued tokens run to expiry (prompt cutoff needs
 introspection, Status, or the runtime layer); completed actions are
 not undone; off-path execution by a compromised agent is the runtime
@@ -143,9 +145,12 @@ information-flow leakage within approved authority is out of scope.
 ## Add capabilities by verb
 
 Every optional companion composes independently under its verb in
-the table above: pick the mechanisms the deployment needs, check
-each document's maturity before adopting it, and let the manifest's
-recorded dependencies pull in what a companion builds on. The
+the table above: pick the mechanisms the deployment needs and check
+each document's maturity before adopting it. For adoption closure,
+follow the manifest's typed `requires` edges — each document's
+normative in-family dependencies, extracted from the drafts' own
+reference sections and drift-checked in CI; the wider citation graph
+is recorded separately as `references` and pulls in nothing. The
 complete catalog with per-document summaries, maturity, and adoption
 triggers is [`DRAFTS.md`](DRAFTS.md).
 
@@ -182,12 +187,18 @@ node scripts/generate-drafts-index.mjs --check # DRAFTS.md index freshness
 
 Each manifest entry carries `verbs` (the spine position), a
 one-sentence `summary`, a `pull_when` adoption trigger, `maturity`,
-`maintenance`, and recorded `deps`; named deployment packages live in
-the top-level `packages` object. The checker validates all of it,
+`maintenance`, and two typed edge sets: `requires` (the draft's
+normative in-family references — the only edges that close
+transitively for adoption) and `references` (the full in-family
+citation graph, never used for closure). The Architecture's
+reference stacks are transcribed in the top-level `reference_stacks`
+object. The checker validates all of it, including that every
+`requires` edge matches the draft's own normative reference list,
 regenerates nothing silently (the DRAFTS.md index is checked for
-freshness, never rewritten in CI), and holds this README to exactly
-two rules: it links the catalog and dependency reports, and every
-backticked draft token is a real manifest slug.
+freshness, never rewritten in CI), and holds this README to three
+rules: it links the catalog and dependency reports, every backticked
+draft token is a real manifest slug, and every editor's-copy link
+targets one.
 
 The reference implementation lives under [`src/`](src/) (a pnpm
 monorepo; see [`src/DEMO.md`](src/DEMO.md) and
