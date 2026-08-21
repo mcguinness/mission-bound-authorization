@@ -1552,7 +1552,7 @@ new requirement on the issuance profile: it defines one OPTIONAL
 entry member and the rules for handling it. A deployment claims the
 completion capability only when it issues or consumes entries
 carrying `terminal_when`. The capability is newer and less exercised
-than the issuance profile and the runtime layer, and is not required by
+than baseline issuance and runtime enforcement, and is not required by
 any Mission Assurance Level; its entry-discharge details may change.
 
 The issuance profile gates issuance on Mission state but has no

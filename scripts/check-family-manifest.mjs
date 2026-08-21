@@ -58,6 +58,11 @@
 //   (o) groups                - the manifest's `groups` enum is malformed, a draft's `group` is
 //                                not in it, or the draft is not named under its group's "###"
 //                                section in DRAFTS.md's catalog
+//   (p) retired vocabulary    - "the core" / "OAuth core" / "Core's" as a name for the OAuth
+//                                binding is retired family-wide (D122): every draft (except the
+//                                OAuth binding's own document) and every reader surface must be
+//                                free of it, modulo the adjectival followers and the explicit
+//                                allowlist in RETIRED_CORE_ALLOWLIST
 
 import fs from "node:fs";
 import path from "node:path";
@@ -669,6 +674,41 @@ function main() {
     const section = groupSections[d.group];
     if (section !== undefined && !containsToken(section, d.slug)) {
       fail("groups", `${d.slug}: not named under DRAFTS.md's "### ${GROUP_SECTION_TITLES[d.group]}" section, where its group "${d.group}" places it`);
+    }
+  }
+
+  // (p) Retired vocabulary: "the core" as a name for the OAuth binding is
+  // retired (D122); the binding is "the OAuth binding" family-wide, or "the
+  // issuance profile" inside its OAuth companions. The OAuth binding's own
+  // document is exempt (its adjectival self-descriptions and Document
+  // History are sanctioned). Adjectival uses survive via ALLOWED followers;
+  // anything else must be a deliberate, listed exception.
+  const RETIRED_CORE_ALLOWLIST = [
+    // A vitest test NAME recorded in a conformance row: implementation
+    // namespace, renaming it requires renaming the test.
+    { file: "conformance-manifest.json", near: "core test vector exactly" },
+  ];
+  const ALLOWED_CORE_FOLLOWERS = /^\s(?:evaluation|record\b|principle|enforcement\stier)/;
+  const retiredSurfaces = [
+    ...onDisk.filter((f) => f !== "draft-mcguinness-oauth-mission.md"),
+    "README.md",
+    "DRAFTS.md",
+    "DEPENDENCIES.md",
+    "CONTRIBUTING.md",
+    "conformance-manifest.json",
+  ];
+  for (const f of retiredSurfaces) {
+    const norm = readFile(path.join(ROOT, f), f).replace(/\s+/g, " ");
+    const re = /\b(?:[Tt]he|OAuth) core\b|\bCore's\b/g;
+    let mm;
+    while ((mm = re.exec(norm))) {
+      if (ALLOWED_CORE_FOLLOWERS.test(norm.slice(mm.index + mm[0].length))) continue;
+      const ctx = norm.slice(Math.max(0, mm.index - 30), mm.index + mm[0].length + 45);
+      if (RETIRED_CORE_ALLOWLIST.some((a) => a.file === f && ctx.includes(a.near))) continue;
+      fail(
+        "retired-vocab",
+        `${f}: retired vocabulary ${JSON.stringify(mm[0])} near "...${ctx}..."; say "the OAuth binding" (or, inside its OAuth companions, "the issuance profile"), or add a deliberate RETIRED_CORE_ALLOWLIST entry`
+      );
     }
   }
 

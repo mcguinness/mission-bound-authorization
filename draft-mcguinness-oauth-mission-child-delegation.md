@@ -1010,8 +1010,7 @@ approval event. It MUST commit the issuance profile's integrity anchors
 child Authority Set, `intent_hash` over the child Mission Intent, and,
 where the exchange carried an authority proposal, `proposal_hash` over
 it, and
-it MUST produce the immutable, accountable record the issuance profile approval
-event produces.
+it MUST produce record the issuance profile's approval.
 
 A Child Mission is created under a parent grant rather than a
 first-party approval ({{issuance-relationship}}), so its human

@@ -27,8 +27,7 @@ document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
 
 ## Money
 
-`{"amount": "<decimal string>", "currency": "<ISO 4217>"}` — the core's
-`max_amount` shape. `amount` is a decimal string at the currency's minor
+`{"amount": "<decimal string>", "currency": "<ISO 4217>"}` — the OAuth binding's. `amount` is a decimal string at the currency's minor
 scale (USD: exactly two fraction digits), never a JSON number. Comparison
 is numeric over the decimal string; serialization is byte-preserved.
 

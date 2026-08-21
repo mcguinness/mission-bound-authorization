@@ -180,8 +180,9 @@ throughout; the family map is
 {{I-D.draft-mcguinness-mission-architecture}}) realize each of the
 six components as a first-class mechanism already defined. The
 mapping is expressed on the OAuth lane, as the Conformance section
-scopes precisely; a peer binding would realize the components per
-its own documents. This document is that mapping, stated
+scopes precisely; a peer binding maps only the components its
+declared capabilities and companions support, realized and omitted
+components named per that section's rule. This document is that mapping, stated
 in both vocabularies: which Mission mechanism realizes each AAM
 component, how the model's reference scenario (a nightly
 reconciliation job with one human-gated external communication) runs

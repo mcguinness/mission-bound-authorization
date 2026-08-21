@@ -625,7 +625,7 @@ trust domains: the originating Mission Issuer projects audience-scoped
 authority through a short-lived, sender-constrained cross-domain grant
 (ID-JAG recommended), and the Resource AS mints its own local
 Mission-bound tokens from it, preserving the `mission` claim unchanged.
-One hop; the single-domain core is complete without it. Extracted from
+One hop; the single-domain OAuth binding is complete without it. Extracted from
 the OAuth binding so that binding carries no cross-domain dependencies.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html)

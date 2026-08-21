@@ -441,7 +441,7 @@ object, producer behavior during the transition, verifier selection
 and downgrade behavior when recognition sets differ, and the
 transition procedure itself.
 
-Core's Integrity Anchor Test Vectors
+The OAuth binding's Integrity Anchor Test Vectors
 ({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
 example of the envelope-anchor species alone (`intent_hash`,
 `proposal_hash`, `authority_hash`); an implementation can check its
@@ -525,7 +525,7 @@ A decision or artifact with neither bound does not conform, and a
 stated bound SHOULD NOT exceed the interval the Mission's purpose
 requires.  This floor requires no consumer-facing freshness source: a binding whose
 credential lifetimes sit inside the Mission's own bound satisfies it
-unmodified, as the OAuth core's stateless baseline does.  The bound
+unmodified, as the OAuth binding's stateless baseline does.  The bound
 gives the non-active transition of {{basic-gate}} its force: a party
 who causes a Mission to become non-active is assured that reliance
 under the Mission ends within the stated interval.
@@ -1117,7 +1117,7 @@ This appendix is normative for documents of the Mission-Bound
 Authorization family and informative for every other adopter.  An
 adopter outside the family does not need it.
 
-The family's earlier documents, including the published OAuth core
+The family's earlier documents, including the published OAuth binding
 ({{I-D.draft-mcguinness-oauth-mission}}), use the vocabulary this
 contract was generalized from.  The terms correspond as follows:
 
@@ -1230,7 +1230,7 @@ unresolvable reference, a failed anchor verification, and an unknown
 condition does not hold, the property is not supplied and a consumer
 MUST NOT rely on it.
 
-Core's three OPTIONAL capabilities, named in its Conformance section
+The OAuth binding's three OPTIONAL capabilities, named in its Conformance section
 ({{I-D.draft-mcguinness-oauth-mission}}), are implementation roles:
 surfaces an implementation may or may not offer, each independent of
 the others. The capability table above states scoped guarantee
