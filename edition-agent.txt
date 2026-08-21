@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-21T21:01:59Z
-Source repository commit: 456662223bd73ed5fad2a2a0aca58a7b66e0b823
+Generated: 2026-08-21T21:27:04Z
+Source repository commit: 210f43ede1b47555db864db29ad3996b8b989383
 Member count: 9
 
 Reading order:
@@ -4168,40 +4168,40 @@ Table of Contents
      3.2.  Authority Roles
      3.3.  Actor Binding
      3.4.  Approved Context and Immutability
-       3.4.1.  Default Commitment Construction
      3.5.  Approval Event
      3.6.  Basic Governance Gate
      3.7.  Bounded Reliance
      3.8.  Context Propagation
      3.9.  Ordered Governance Record
-   4.  Optional Capabilities
-     4.1.  Lifecycle-Gated Authorization
-     4.2.  State-Observable
-     4.3.  Structured Authority
-     4.4.  Monotonic Derivation
-     4.5.  Credential-Bound
-     4.6.  Authorized Context Correlation
-     4.7.  Independently Verifiable
-     4.8.  Portable Evidence
-   5.  Composition by Capability
-   6.  Mission Substrate Conformance
-     6.1.  Mission Substrate Statement
-   7.  Security Considerations
-     7.1.  Capability Confusion
-     7.2.  Reference and Context Substitution
-     7.3.  Context Splicing
-     7.4.  Controller Compromise
-     7.5.  State and Residual Authority
-     7.6.  Governance Record Integrity
-   8.  Privacy Considerations
-   9.  IANA Considerations
-   10. References
-     10.1.  Normative References
-     10.2.  Informative References
+   4.  Default Commitment Construction
+   5.  Optional Capabilities
+     5.1.  Lifecycle-Gated Authorization
+     5.2.  State-Observable
+     5.3.  Structured Authority
+     5.4.  Monotonic Derivation
+     5.5.  Credential-Bound
+     5.6.  Authorized Context Correlation
+     5.7.  Independently Verifiable
+     5.8.  Portable Evidence
+   6.  Composition by Capability
+   7.  Mission Substrate Conformance
+     7.1.  Mission Substrate Statement
+   8.  Security Considerations
+     8.1.  Capability Confusion
+     8.2.  Reference and Context Substitution
+     8.3.  Context Splicing
+     8.4.  Controller Compromise
+     8.5.  State and Residual Authority
+     8.6.  Governance Record Integrity
+   9.  Privacy Considerations
+   10. IANA Considerations
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
    Appendix A.  Binding Mapping Guidance
-     A.1.  OAuth-Native Mapping
-     A.2.  Standalone MAS Mapping
-     A.3.  AAuth-Native Mapping
+     A.1.  OAuth-Native Mapping: The Broad-Claims Pole
+     A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
+     A.3.  AAuth-Native Mapping: The Private-Context Pole
    Appendix B.  Mission-Bound Authorization Family Use
      B.1.  OAuth Mission Binding Statement
    Acknowledgments
@@ -4220,7 +4220,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]).  A standalone Mission
    Authority Server (MAS) can manage the relationship without issuing
    the resource credential that exercises authority
-   ([I-D.draft-mcguinness-mission-authority-server]).  An AAuth Policy
+   ([I-D.draft-mcguinness-mission-authority-server]).  An AAuth Person
    Server can keep contextual Mission data private while scopes,
    resource-owned policy, and per-hop authorization decisions provide
    deterministic resource access ([I-D.draft-mcguinness-mission-aauth]).
@@ -4236,13 +4236,13 @@ Table of Contents
    *  a contextual-governance kernel that every conforming Mission
       Substrate Binding provides (Section 3);
 
-   *  optional, independently declared capabilities (Section 4);
+   *  optional, independently declared capabilities (Section 5);
 
    *  rules for profiles that consume only the capabilities they need
-      (Section 5); and
+      (Section 6); and
 
    *  a Mission Substrate Statement that makes each binding's guarantees
-      and limits checkable (Section 6.1).
+      and limits checkable (Section 7.1).
 
    The architectural relationship among Mission specifications is
    described informationally in
@@ -4332,7 +4332,7 @@ Table of Contents
 
    Mission Substrate Statement:  The section of a Mission Substrate
       Binding that declares the binding's kernel mapping and optional
-      capabilities (Section 6.1).
+      capabilities (Section 7.1).
 
    Positive governance decision:  A Controller decision that approves,
       permits, or continues an operation specifically by relying on the
@@ -4350,6 +4350,53 @@ Table of Contents
    authority is portable, machine-evaluable, monotonically derived,
    credential-bound, or independently verifiable.  It does mean that no
    reliance derived from a Mission is unbounded (Section 3.7).
+
+      +===============+=============================================+
+      | Kernel duty   | The binding defines                         |
+      +===============+=============================================+
+      | Native        | A stable, non-reassigned Mission Reference, |
+      | reference and | its uniqueness namespace, how               |
+      | Controller    | unguessability is met where the reference   |
+      | (Section 3.1) | is disclosed beyond the Controller, and how |
+      |               | relying components identify the Controller  |
+      +---------------+---------------------------------------------+
+      | Authority     | The authorities responsible for the         |
+      | roles         | functions it uses; roles never collapse     |
+      | (Section 3.2) | silently                                    |
+      +---------------+---------------------------------------------+
+      | Actor binding | The Actor handle, its authenticated         |
+      | (Section 3.3) | establishment at approval, and how later    |
+      |               | decisions establish the acting party        |
+      +---------------+---------------------------------------------+
+      | Approved      | The immutable approved value or a           |
+      | context and   | verifiable commitment to it, distinct from  |
+      | immutability  | mutable operational fields                  |
+      | (Section 3.4) |                                             |
+      +---------------+---------------------------------------------+
+      | Approval      | A native ceremony that atomically creates   |
+      | event         | an active Mission from an authenticated     |
+      | (Section 3.5) | approval                                    |
+      +---------------+---------------------------------------------+
+      | Basic         | An active predicate; positive decisions     |
+      | governance    | only while active, and every unrecognized   |
+      | gate          | condition fails closed                      |
+      | (Section 3.6) |                                             |
+      +---------------+---------------------------------------------+
+      | Bounded       | A stated reliance bound on every positive   |
+      | reliance      | decision and every Mission-governed         |
+      | (Section 3.7) | artifact                                    |
+      +---------------+---------------------------------------------+
+      | Context       | The join between decisions or artifacts and |
+      | propagation   | the Mission Reference, and exactly what     |
+      | (Section 3.8) | that join proves                            |
+      +---------------+---------------------------------------------+
+      | Ordered       | An integrity-protected, ordered,            |
+      | governance    | attributable record of governance events    |
+      | record        |                                             |
+      | (Section 3.9) |                                             |
+      +---------------+---------------------------------------------+
+
+                     Table 1: Kernel duties at a glance
 
 3.1.  Native Reference and Controller
 
@@ -4418,7 +4465,7 @@ Table of Contents
    other roles appear when the corresponding capability is claimed.
    Higher-assurance profiles can require preventive or evidentiary
    independence between roles; the kernel requires only that they never
-   collapse silently (Section 7.1).
+   collapse silently (Section 8.1).
 
 3.3.  Actor Binding
 
@@ -4473,82 +4520,8 @@ Table of Contents
    every governance party satisfies this section through the maintained
    value; a native content address it also uses as the Mission Reference
    is then verification material for parties holding the value, not a
-   commitment in place of it.
-
-3.4.1.  Default Commitment Construction
-
-   A binding MAY satisfy the duties above, for the Approved Context and
-   for any other artifact it commits, with the following default
-   construction.  The OAuth issuance profile
-   ([I-D.draft-mcguinness-oauth-mission]) instantiates it, and family
-   profiles import it from this section; a binding with a native or
-   member-named commitment (a content address, a signed object, a digest
-   whose member name fixes the algorithm) remains free to use that
-   instead, stating its own algorithm identification and agility
-   behavior under the duties above.
-
-   The default commits to bytes in one of three species, and a
-   specification defining a commitment classifies it:
-
-   *  *Envelope anchor*: SHA-256 [RFC6234] over the JCS [RFC8785]
-      canonical bytes of a closed JSON object carrying exactly three
-      members and no others: typ, a string naming the committed object,
-      collision-resistant because a namespace the defining specification
-      controls qualifies it; iss, a string whose value the defining
-      commitment specifies; and value, the committed JSON value.
-
-   *  *Canonical-object digest*: SHA-256 over the JCS serialization of a
-      normalized JSON object without the envelope, where protocol
-      context already fixes what is committed.
-
-   *  *Raw-octet digest*: SHA-256 over an exact, specification-defined
-      octet sequence, with no canonicalization: a whole artifact as
-      exchanged, or the UTF-8 encoding of a defined scalar value.
-
-   The envelope's iss is a namespace binding that domain-separates
-   commitments across issuing authorities; it does not authenticate
-   whoever computed the commitment, which stays a signature or evidence
-   property.  A digest is encoded as an algorithm prefix followed by the
-   base64url, no-padding [RFC4648] encoding of the digest: sha-256:
-   identifies SHA-256, which is mandatory to implement and the only
-   algorithm defined.
-
-   Every committed JSON value, and the envelope around it, MUST satisfy
-   I-JSON [RFC7493], and the party computing or verifying a commitment
-   MUST reject non-conformant input before canonicalization: externally
-   received JSON destined for commitment is parsed by a duplicate-
-   detecting parser, and an object carrying duplicate member names is
-   rejected at parse time, before the parsed data model exists; string
-   data is valid Unicode, free of the surrogate and noncharacter code
-   points I-JSON prohibits, and is preserved unchanged; number data
-   supplied to JCS is representable as a finite IEEE 754 binary64 value
-   ([RFC8785], Section 3.1).  The commitment is over the parsed I-JSON
-   data value, not the source text; a value needing exact decimal or
-   large-integer semantics rides as a string or under a stricter
-   declared numeric domain.
-
-   The algorithm prefix is the agility mechanism.  A new algorithm
-   enters only through a new prefix defined by a referencing
-   specification, its name drawn from the Named Information Hash
-   Algorithm Registry ([RFC6920]).  A verifier MUST reject a digest
-   whose algorithm prefix it does not recognize and MUST NOT treat an
-   unrecognized prefix as sha-256.  No transition mechanism is defined:
-   every commitment a current carrier defines is a single prefixed
-   string, and a specification introducing a new prefix MUST define the
-   carrier and schema of any parallel commitment, the binding that
-   proves the old and new values commit to the same object, producer
-   behavior during the transition, verifier selection and downgrade
-   behavior when recognition sets differ, and the transition procedure
-   itself.
-
-   The OAuth binding's Integrity Anchor Test Vectors
-   ([I-D.draft-mcguinness-oauth-mission]) give a byte-level worked
-   example of the envelope-anchor species alone (intent_hash,
-   proposal_hash, authority_hash); an implementation can check its own
-   computation against them.  The canonical-object and raw-octet species
-   above, the parse-time duplicate-detection rule, the I-JSON numeric
-   domain, and the reject-unknown-prefix and no-downgrade agility rules
-   remain prose-only: no vector pins them.
+   commitment in place of it.  A default construction a binding MAY
+   adopt for these duties is defined in Section 4.
 
 3.5.  Approval Event
 
@@ -4583,7 +4556,7 @@ Table of Contents
    The kernel does not require the Approved Context to enumerate every
    resource operation.  If the ceremony approves structured authority,
    the binding claims and follows the Structured Authority capability
-   (Section 4.3).
+   (Section 5.3).
 
 3.6.  Basic Governance Gate
 
@@ -4682,9 +4655,86 @@ Table of Contents
 
    This record need not be portable or independently verifiable.  A
    binding that makes either claim also supplies the corresponding
-   capability in Section 4.
+   capability in Section 5.
 
-4.  Optional Capabilities
+4.  Default Commitment Construction
+
+   Any specification that defines a commitment, a Mission Substrate
+   Binding or an importing profile alike, MAY satisfy the commitment
+   duties of Section 3.4, for the Approved Context and for any other
+   artifact it commits, with the following default construction.  The
+   OAuth issuance profile ([I-D.draft-mcguinness-oauth-mission])
+   instantiates it, and family profiles import it from this section; a
+   specification with a native or member-named commitment (a content
+   address, a signed object, a digest whose member name fixes the
+   algorithm) remains free to use that instead, stating its own
+   algorithm identification and agility behavior under the duties of
+   Section 3.4.
+
+   The default commits to bytes in one of three species, and a
+   specification defining a commitment classifies it:
+
+   *  *Envelope anchor*: SHA-256 [RFC6234] over the JCS [RFC8785]
+      canonical bytes of a closed JSON object carrying exactly three
+      members and no others: typ, a string naming the committed object,
+      collision-resistant because a namespace the defining specification
+      controls qualifies it; iss, a string whose value the defining
+      commitment specifies; and value, the committed JSON value.
+
+   *  *Canonical-object digest*: SHA-256 over the JCS serialization of a
+      normalized JSON object without the envelope, where protocol
+      context already fixes what is committed.
+
+   *  *Raw-octet digest*: SHA-256 over an exact, specification-defined
+      octet sequence, with no canonicalization: a whole artifact as
+      exchanged, or the UTF-8 encoding of a defined scalar value.
+
+   The envelope's iss is a namespace binding that domain-separates
+   commitments across issuing authorities; it does not authenticate
+   whoever computed the commitment, which stays a signature or evidence
+   property.  A digest is encoded as an algorithm prefix followed by the
+   base64url, no-padding [RFC4648] encoding of the digest: sha-256:
+   identifies SHA-256, which is mandatory to implement and the only
+   algorithm defined.
+
+   Every committed JSON value, and the envelope around it, MUST satisfy
+   I-JSON [RFC7493], and the party computing or verifying a commitment
+   MUST reject non-conformant input before canonicalization: externally
+   received JSON destined for commitment is parsed by a duplicate-
+   detecting parser, and an object carrying duplicate member names is
+   rejected at parse time, before the parsed data model exists; string
+   data is valid Unicode, free of the surrogate and noncharacter code
+   points I-JSON prohibits, and is preserved unchanged; number data
+   supplied to JCS is representable as a finite IEEE 754 binary64 value
+   ([RFC8785], Section 3.1).  The commitment is over the parsed I-JSON
+   data value, not the source text; a value needing exact decimal or
+   large-integer semantics rides as a string or under a stricter
+   declared numeric domain.
+
+   The algorithm prefix is the agility mechanism.  A new algorithm
+   enters only through a new prefix defined by a referencing
+   specification, its name drawn from the Named Information Hash
+   Algorithm Registry ([RFC6920]).  A verifier MUST reject a digest
+   whose algorithm prefix it does not recognize and MUST NOT treat an
+   unrecognized prefix as sha-256.  No transition mechanism is defined:
+   every commitment a current carrier defines is a single prefixed
+   string, and a specification introducing a new prefix MUST define the
+   carrier and schema of any parallel commitment, the binding that
+   proves the old and new values commit to the same object, producer
+   behavior during the transition, verifier selection and downgrade
+   behavior when recognition sets differ, and the transition procedure
+   itself.
+
+   The OAuth binding's Integrity Anchor Test Vectors
+   ([I-D.draft-mcguinness-oauth-mission]) give a byte-level worked
+   example of the envelope-anchor species alone (intent_hash,
+   proposal_hash, authority_hash); an implementation can check its own
+   computation against them.  The canonical-object and raw-octet species
+   above, the parse-time duplicate-detection rule, the I-JSON numeric
+   domain, and the reject-unknown-prefix and no-downgrade agility rules
+   remain prose-only: no vector pins them.
+
+5.  Optional Capabilities
 
    Capabilities are additive claims.  A binding MUST NOT claim a
    capability unless it meets every requirement in that capability's
@@ -4696,7 +4746,45 @@ Table of Contents
    consumer requiring that property does not compose with the binding in
    that mode.
 
-4.1.  Lifecycle-Gated Authorization
+      +====================+=======================================+
+      | Capability         | Property claimed                      |
+      +====================+=======================================+
+      | Lifecycle-Gated    | Named authorization operations are    |
+      | Authorization      | gated on currently active state       |
+      | (Section 5.1)      |                                       |
+      +--------------------+---------------------------------------+
+      | State-Observable   | An authenticated source lets a named  |
+      | (Section 5.2)      | consumer determine whether a Mission  |
+      |                    | is active                             |
+      +--------------------+---------------------------------------+
+      | Structured         | A machine-evaluable authority         |
+      | Authority          | representation with an identified     |
+      | (Section 5.3)      | semantics owner                       |
+      +--------------------+---------------------------------------+
+      | Monotonic          | Covered derivations verify a no-      |
+      | Derivation         | broader-than relation within a        |
+      | (Section 5.4)      | declared boundary                     |
+      +--------------------+---------------------------------------+
+      | Credential-Bound   | An integrity-protected association    |
+      | (Section 5.5)      | between an artifact and exactly one   |
+      |                    | Mission, with selected fact semantics |
+      +--------------------+---------------------------------------+
+      | Authorized Context | An authorized association among       |
+      | Correlation        | independently established facts, made |
+      | (Section 5.6)      | by an identified joining authority    |
+      +--------------------+---------------------------------------+
+      | Independently      | A named consumer verifies a specified |
+      | Verifiable         | property without an online query to   |
+      | (Section 5.7)      | the Controller                        |
+      +--------------------+---------------------------------------+
+      | Portable Evidence  | Evidence crosses a stated             |
+      | (Section 5.8)      | administrative boundary and verifies  |
+      |                    | there                                 |
+      +--------------------+---------------------------------------+
+
+                Table 2: Optional capabilities at a glance
+
+5.1.  Lifecycle-Gated Authorization
 
    A binding claiming *Lifecycle-Gated Authorization* extends the basic
    governance gate to named authorization operations.  Its Statement
@@ -4716,7 +4804,7 @@ Table of Contents
    resource tokens.  It MUST NOT generalize the narrower claim to the
    uncovered path.
 
-4.2.  State-Observable
+5.2.  State-Observable
 
    A binding claiming *State-Observable* MUST expose at least one
    authenticated, integrity-protected source from which a named consumer
@@ -4743,7 +4831,7 @@ Table of Contents
    Authorization or by a consuming runtime profile such as
    [I-D.draft-mcguinness-mission-runtime].
 
-4.3.  Structured Authority
+5.3.  Structured Authority
 
    A binding claiming *Structured Authority* MUST define a machine-
    evaluable representation of authority associated with the Mission and
@@ -4771,7 +4859,7 @@ Table of Contents
    constraints MUST fail closed at a decision point that requires their
    semantics.
 
-4.4.  Monotonic Derivation
+5.4.  Monotonic Derivation
 
    A binding claiming *Monotonic Derivation* MUST also claim Structured
    Authority for the values covered by the derivation.  It MUST define a
@@ -4806,7 +4894,7 @@ Table of Contents
    the same Mission while leaving them outside this capability; in the
    classification above those decisions are decide_anew.
 
-4.5.  Credential-Bound
+5.5.  Credential-Bound
 
    A binding claiming *Credential-Bound* MUST define an integrity-
    protected association between a credential or authorization artifact
@@ -4851,7 +4939,7 @@ Table of Contents
    Mission-bound under any of these semantics while offering a weaker
    holder guarantee.
 
-4.6.  Authorized Context Correlation
+5.6.  Authorized Context Correlation
 
    A binding claiming *Authorized Context Correlation* MUST supply an
    authorized association among independently established facts, such as
@@ -4866,7 +4954,7 @@ Table of Contents
    association is an authorized fact established by the joining
    authority, not an observation that two values coincide.  This
    capability is required whenever one authority did not itself bind all
-   required facts in the applicable context (Section 7.3).
+   required facts in the applicable context (Section 8.3).
 
    Native binding does not automatically supply this capability.  It
    supplies it where it authoritatively joins independently established
@@ -4879,7 +4967,7 @@ Table of Contents
    supplied with that reason rather than presenting native binding as a
    join.
 
-4.7.  Independently Verifiable
+5.7.  Independently Verifiable
 
    A binding claiming *Independently Verifiable* MUST let the named
    consumer verify a specified Mission property without an online query
@@ -4899,7 +4987,7 @@ Table of Contents
    or turn contextual governance into a machine-evaluable policy
    language.
 
-4.8.  Portable Evidence
+5.8.  Portable Evidence
 
    A binding claiming *Portable Evidence* MUST define evidence that can
    be transferred across the administrative boundary stated in the claim
@@ -4925,7 +5013,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-mandate],
    [I-D.draft-mcguinness-mission-audit]).
 
-5.  Composition by Capability
+6.  Composition by Capability
 
    A substrate-neutral profile MUST declare the kernel functions and
    optional capabilities it consumes.  It MUST NOT infer an undeclared
@@ -4965,7 +5053,7 @@ Table of Contents
    those boundaries rather than describe the whole deployment with the
    stronger local property.
 
-6.  Mission Substrate Conformance
+7.  Mission Substrate Conformance
 
    This document defines conformance for a specification.  An
    implementation conforms to the binding specification it implements.
@@ -4976,7 +5064,7 @@ Table of Contents
        Section 3;
 
    2.  publishes a Mission Substrate Statement as specified in
-       Section 6.1;
+       Section 7.1;
 
    3.  claims only optional capabilities whose complete requirements it
        satisfies in the claimed scope; and
@@ -4989,7 +5077,7 @@ Table of Contents
    hide which guarantees are actually present.  The capability list and
    scope in the Mission Substrate Statement are the conformance result.
 
-6.1.  Mission Substrate Statement
+7.1.  Mission Substrate Statement
 
    A Mission Substrate Binding MUST contain a section titled "Mission
    Substrate Statement".  It MUST identify the specification version and
@@ -5025,14 +5113,13 @@ Table of Contents
        and retention.
 
    The Statement MUST then include a capability table with one row for
-   each capability in Section 4.  Each row MUST say supplied or not
+   each capability in Section 5.  Each row MUST say supplied or not
    supplied: a capability is supplied in a named scope when the row's
    stated activation conditions hold, or it is not supplied.  There is
-   no third state.  The retired conditional state conflated four
-   different facts, what a specification defines, what an implementation
-   supports, what a deployment enables, and where the resulting property
-   applies; an activation condition states them separately.  A supplied
-   row MUST:
+   no third state.  An activation condition states separately what a
+   specification defines, what an implementation supports, what a
+   deployment enables, and where the resulting property applies.  A
+   supplied row MUST:
 
    *  cite the binding sections that satisfy the capability;
 
@@ -5106,7 +5193,7 @@ Table of Contents
    |             |        |          |               | local           |
    +-------------+--------+----------+---------------+-----------------+
 
-     Table 1: Illustrative Mission Substrate Statement capability table
+     Table 3: Illustrative Mission Substrate Statement capability table
 
    A real Statement also carries each supplied row's temporal elements
    and failure behavior; the skeleton omits those columns for width.
@@ -5116,9 +5203,9 @@ Table of Contents
    specification MUST publish an updated Statement or a Statement
    extension that identifies the base binding and precise added scope.
 
-7.  Security Considerations
+8.  Security Considerations
 
-7.1.  Capability Confusion
+8.1.  Capability Confusion
 
    The principal risk this document addresses is capability confusion:
    treating Mission correlation as proof of authority, an approval as
@@ -5132,7 +5219,7 @@ Table of Contents
    declared scope.  It does not upgrade a kernel-only reference because
    its syntax resembles a credential claim or content digest.
 
-7.2.  Reference and Context Substitution
+8.2.  Reference and Context Substitution
 
    The Controller namespace is part of Mission identity whenever a
    reference is not globally unique.  Omitting it permits references
@@ -5147,17 +5234,17 @@ Table of Contents
    supplied reference without authentication can attribute unrelated
    authority or activity to a Mission.
 
-7.3.  Context Splicing
+8.3.  Context Splicing
 
    An attacker can combine valid identity evidence, a valid credential,
    and a valid Mission from different transactions.  Each piece verifies
    on its own; the composite is unauthorized.  Authorized Context
-   Correlation (Section 4.6) is required whenever one authority did not
+   Correlation (Section 5.6) is required whenever one authority did not
    itself bind all required facts in the applicable context, and a
    consumer MUST NOT treat co-presentation of independently valid facts
    as an authorized association.
 
-7.4.  Controller Compromise
+8.4.  Controller Compromise
 
    The Controller is trusted for the kernel properties it asserts.  A
    compromised Controller can approve false context, bind the wrong
@@ -5173,7 +5260,7 @@ Table of Contents
    decision, logging, and credential components.  Naming one logical
    Controller does not eliminate those internal trust boundaries.
 
-7.5.  State and Residual Authority
+8.5.  State and Residual Authority
 
    The kernel's non-active outcome stops new positive Controller
    governance decisions.  It does not automatically invalidate every
@@ -5187,7 +5274,7 @@ Table of Contents
    floor's purpose; consumers evaluate the stated interval, not only its
    presence.
 
-7.6.  Governance Record Integrity
+8.6.  Governance Record Integrity
 
    An ordered record that is not externally witnessed can still be
    truncated or rewritten by a compromised Controller.  The kernel
@@ -5196,7 +5283,7 @@ Table of Contents
    equivocation or truncation require Portable Evidence or a separate
    transparency profile.
 
-8.  Privacy Considerations
+9.  Privacy Considerations
 
    Mission References are correlation handles.  Reusing them across
    resources or administrative domains can reveal that otherwise
@@ -5220,13 +5307,13 @@ Table of Contents
    themselves become stable correlation values, and a commitment can
    enable guessing attacks when the committed context has low entropy.
 
-9.  IANA Considerations
+10.  IANA Considerations
 
    This document has no IANA actions.
 
-10.  References
+11.  References
 
-10.1.  Normative References
+11.1.  Normative References
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -5260,7 +5347,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-10.2.  Informative References
+11.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
@@ -5283,6 +5370,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-authority-server.html>.
 
+   [I-D.draft-mcguinness-mission-gnap]
+              McGuinness, K., "Mission-Bound Authorization for GNAP",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-gnap.html>.
+
    [I-D.draft-mcguinness-mission-mandate]
               McGuinness, K., "Mission Mandate", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -5298,6 +5390,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-security-model.html>.
 
+   [I-D.draft-mcguinness-mission-uma]
+              McGuinness, K., "Mission-Bound Authorization for UMA 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-uma.html>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -5310,119 +5407,30 @@ Table of Contents
 
 Appendix A.  Binding Mapping Guidance
 
-   This appendix is informative.  It illustrates how existing Mission
-   architectures map to the capability model.  It is not a substitute
-   for the normative Mission Substrate Statement published by each
-   binding, and an extension or deployment can change a row.
+   This appendix is informative.  Each of the five bindings publishes
+   the normative Mission Substrate Statement for its substrate: the
+   OAuth binding's Statement is Appendix B.1 of this document, and the
+   standalone MAS ([I-D.draft-mcguinness-mission-authority-server]),
+   AAuth ([I-D.draft-mcguinness-mission-aauth]), UMA
+   ([I-D.draft-mcguinness-mission-uma]), and GNAP
+   ([I-D.draft-mcguinness-mission-gnap]) bindings each publish their
+   own.  Those Statements, not this appendix, are the authoritative
+   capability claims.  This appendix illustrates the mapping method
+   through three design poles among which a new substrate can locate
+   itself.
 
-   +===============+================+================+=================+
-   | Capability    | OAuth Mission  | Standalone MAS | AAuth Mission   |
-   +===============+================+================+=================+
-   | Contextual-   | Native Mission | Native Mission | Native Mission  |
-   | governance    | record, AS     | record, MAS    | reference and   |
-   | kernel        | controller,    | controller,    | PS-controlled   |
-   |               | OAuth client/  | explicit join  | contextual      |
-   |               | subject        | boundary       | Mission         |
-   |               | mappings       |                |                 |
-   +---------------+----------------+----------------+-----------------+
-   | Lifecycle-    | AS gates       | MAS gates its  | PS gates        |
-   | Gated         | covered token  | own decisions; | covered         |
-   | Authorization | issuance and   | OAuth          | permission or   |
-   |               | derivation     | credential     | token           |
-   |               |                | issuance       | decisions;      |
-   |               |                | requires a     | coverage        |
-   |               |                | cooperating    | depends on the  |
-   |               |                | credential     | AAuth access    |
-   |               |                | issuer         | mode            |
-   +---------------+----------------+----------------+-----------------+
-   | State-        | Supplied when  | Supplied when  | Not implied by  |
-   | Observable    | a status,      | the MAS        | the private     |
-   |               | introspection, | exposes a      | Mission blob;   |
-   |               | or signal      | status         | requires a      |
-   |               | mechanism is   | mechanism      | management or   |
-   |               | active         |                | state           |
-   |               |                |                | extension for   |
-   |               |                |                | other           |
-   |               |                |                | consumers       |
-   +---------------+----------------+----------------+-----------------+
-   | Structured    | OAuth          | Can use the    | Not inherent    |
-   | Authority     | authorization  | OAuth Mission  | in the Mission  |
-   |               | details and    | authority      | description;    |
-   |               | their type-    | representation | scopes or a     |
-   |               | specific       |                | resource-owned  |
-   |               | semantics      |                | structured      |
-   |               |                |                | language can    |
-   |               |                |                | supply it for   |
-   |               |                |                | their own       |
-   |               |                |                | decision        |
-   |               |                |                | boundary        |
-   +---------------+----------------+----------------+-----------------+
-   | Monotonic     | Applies where  | Applies to     | Not a baseline  |
-   | Derivation    | the OAuth      | MAS-governed   | cross-hop       |
-   |               | profile        | authority      | property; a     |
-   |               | defines and    | operations;    | structured      |
-   |               | checks its no- | not            | resource        |
-   |               | broader-than   | automatically  | policy can      |
-   |               | relation       | to an          | define          |
-   |               |                | unchanged AS   | monotonicity    |
-   |               |                |                | within its own  |
-   |               |                |                | vocabulary      |
-   +---------------+----------------+----------------+-----------------+
-   | Credential-   | Mission-bound  | Not supplied   | Native Mission  |
-   | Bound         | OAuth          | by the MAS     | reference can   |
-   |               | credential     | alone;         | be credential-  |
-   |               |                | supplied when  | bound where     |
-   |               |                | a verified     | the PS or       |
-   |               |                | join or a      | federated AS    |
-   |               |                | cooperating    | carries and     |
-   |               |                | credential     | validates it;   |
-   |               |                | issuer is      | not every       |
-   |               |                | active         | access mode     |
-   |               |                |                | does            |
-   +---------------+----------------+----------------+-----------------+
-   | Authorized    | Not supplied   | The MAS join   | Not supplied    |
-   | Context       | natively: the  | and Join       | natively: the   |
-   | Correlation   | issuer binds   | Assertion      | PS binds the    |
-   |               | all facts at   | machinery      | Mission,        |
-   |               | issuance       |                | person, agent,  |
-   |               |                |                | and token at    |
-   |               |                |                | decision time   |
-   +---------------+----------------+----------------+-----------------+
-   | Independently | Supplied where | Supplied when  | A resource can  |
-   | Verifiable    | signed         | signed         | verify a        |
-   |               | credentials    | artifacts      | credential,     |
-   |               | expose the     | expose the     | but cannot      |
-   |               | property and   | property       | thereby         |
-   |               | verification   |                | independently   |
-   |               | material       |                | verify private  |
-   |               |                |                | contextual      |
-   |               |                |                | Mission         |
-   |               |                |                | content or the  |
-   |               |                |                | PS's full       |
-   |               |                |                | reasoning       |
-   +---------------+----------------+----------------+-----------------+
-   | Portable      | Supplied only  | Likewise       | A PS-local      |
-   | Evidence      | by evidence,   | supplied only  | Mission log is  |
-   |               | Mandate, or    | when an        | not portable    |
-   |               | audit profiles | evidence       | evidence;       |
-   |               | that define    | profile is     | signed          |
-   |               | portable       | active         | receipts or     |
-   |               | artifacts      |                | checkpoints     |
-   |               |                |                | would be an     |
-   |               |                |                | extension       |
-   +---------------+----------------+----------------+-----------------+
+A.1.  OAuth-Native Mapping: The Broad-Claims Pole
 
-    Table 2: Illustrative capability mapping for existing architectures
-
-A.1.  OAuth-Native Mapping
-
-   OAuth Mission can intentionally claim a broad set of capabilities.
-   Its Authorization Server can act as Controller, OAuth identifiers can
-   instantiate Actor and subject mappings, Rich Authorization Requests
-   can supply Structured Authority, and protected access-token fields
-   can supply Credential-Bound.  Its defined subset relation can support
-   Monotonic Derivation within the authorization-detail types and
-   operations covered by that relation.
+   The OAuth binding can intentionally claim a broad set of
+   capabilities.  Its Authorization Server can act as Controller, OAuth
+   identifiers can instantiate Actor and subject mappings, and protected
+   access-token fields can supply Credential-Bound.  Registered
+   authorization-detail types can supply Structured Authority: each
+   type's semantics owner defines its operations, constraints, and
+   comparison behavior, and Rich Authorization Requests are the carrier,
+   not the semantics.  Its defined subset relation can support Monotonic
+   Derivation within the authorization-detail types and operations
+   covered by that relation.
 
    Those are strengths of the OAuth binding, not kernel requirements.
    State observation is supplied when a status, introspection, or
@@ -5432,7 +5440,7 @@ A.1.  OAuth-Native Mapping
    undisclosed context do not follow from a Mission identifier or hash
    alone.
 
-A.2.  Standalone MAS Mapping
+A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
 
    The MAS separates Mission governance from an otherwise unchanged
    Authorization Server.  It can satisfy the kernel and can provide
@@ -5444,13 +5452,14 @@ A.2.  Standalone MAS Mapping
    those with their activation conditions and preserve the boundary
    between MAS assertions and Authorization Server behavior.
 
-A.3.  AAuth-Native Mapping
+A.3.  AAuth-Native Mapping: The Private-Context Pole
 
    An AAuth Mission naturally implements the contextual-governance
-   kernel: the Policy Server controls approval and contextual decisions,
-   the native Mission reference identifies the approved blob, and the
-   Mission log records governance interactions.  The private mission
-   description need not be a machine-evaluable authorization policy.
+   kernel: the Person Server (PS) controls approval and contextual
+   decisions, the native Mission reference identifies the approved blob,
+   and the Mission log records governance interactions.  The private
+   mission description need not be a machine-evaluable authorization
+   policy.
 
    Deterministic access can remain with scopes, Access Server policy, or
    a resource-owned structured policy language.  Such a language can
@@ -5505,7 +5514,7 @@ Appendix B.  Mission-Bound Authorization Family Use
     | record     |                                                    |
     +------------+----------------------------------------------------+
 
-                     Table 3: Family vocabulary mapping
+                     Table 4: Family vocabulary mapping
 
    A family document that maps its own vocabulary to the kernel's MUST
    use these correspondences.
@@ -5521,6 +5530,11 @@ Appendix B.  Mission-Bound Authorization Family Use
    OAuth binding's definitions govern that mapping; this document
    governs the kernel and capability vocabulary.  Neither document
    depends normatively on the other.
+
+   Ownership migrates by touch, not by relocation.  When a binding-
+   neutral definition next changes substantively, the change MUST land
+   in this document, and the owning family section becomes a reference
+   to it; no change is ever made solely to move words.
 
 B.1.  OAuth Mission Binding Statement
 
@@ -5675,7 +5689,7 @@ B.1.  OAuth Mission Binding Statement
    |             |        |                                      |                     |issuer-local|
    +-------------+--------+--------------------------------------+---------------------+------------+
 
-              Table 4: OAuth Mission binding capability table
+              Table 5: OAuth Mission binding capability table
 
    Temporal elements: every issued credential's exp is capped by the
    record's effective expires_at; state observations carry their
@@ -5687,92 +5701,47 @@ B.1.  OAuth Mission Binding Statement
    condition does not hold, the property is not supplied and a consumer
    MUST NOT rely on it.
 
-   The OAuth binding's three OPTIONAL capabilities, named in its
-   Conformance section ([I-D.draft-mcguinness-oauth-mission]), are
-   implementation roles: surfaces an implementation may or may not
-   offer, each independent of the others.  The capability table above
-   states scoped guarantee claims: properties the OAuth binding supplies
-   and the conditions under which each is supplied.  The two
-   vocabularies answer different questions and are not equivalent; the
-   table below relates them without collapsing one into the other.
-   Declaring an OPTIONAL role never creates a claim beyond the eight
-   already stated above.
+   The OAuth binding's three OPTIONAL implementation roles, which its
+   Conformance section names OPTIONAL capabilities
+   ([I-D.draft-mcguinness-oauth-mission]), are surfaces an
+   implementation may or may not offer, each independent of the others.
+   The capability table above states scoped guarantee claims: properties
+   the OAuth binding supplies and the conditions under which each is
+   supplied.  The two vocabularies answer different questions and are
+   not equivalent; the entries below relate them without collapsing one
+   into the other.  Declaring an OPTIONAL role never creates a claim
+   beyond the eight already stated above.
 
-   +===============+===================+===============================+
-   | Core OPTIONAL | Substrate         | Relationship                  |
-   | capability    | capability        |                               |
-   |               | claim(s)          |                               |
-   |               | exercised         |                               |
-   +===============+===================+===============================+
-   | Introspection | State-Observable  | One of State-Observable's     |
-   |               |                   | three named activation        |
-   |               |                   | surfaces, alongside Status    |
-   |               |                   | and Signals; declaring it     |
-   |               |                   | activates that otherwise-     |
-   |               |                   | conditional claim.            |
-   +---------------+-------------------+-------------------------------+
-   | Delegation    | Lifecycle-Gated   | Core delegation subset-       |
-   |               | Authorization,    | checks                        |
-   |               | Structured        | authorization_details,        |
-   |               | Authority,        | carries the mission claim     |
-   |               | Monotonic         | unchanged, sender-constrains  |
-   |               | Derivation,       | the delegated credential to   |
-   |               | Credential-Bound, | the delegate's own key, and   |
-   |               | Authorized        | refuses issuance unless the   |
-   |               | Context           | Mission is active.  The       |
-   |               | Correlation       | Token Exchange that issues    |
-   |               |                   | the delegated credential is   |
-   |               |                   | itself a grant binding at     |
-   |               |                   | issuance: the AS joins the    |
-   |               |                   | Mission and Subject carried   |
-   |               |                   | by the Mission-bound          |
-   |               |                   | subject_token with the        |
-   |               |                   | delegate identity             |
-   |               |                   | established by the            |
-   |               |                   | actor_token or the            |
-   |               |                   | delegate's own client         |
-   |               |                   | authentication, binding both  |
-   |               |                   | to the newly issued           |
-   |               |                   | credential.  Four of the      |
-   |               |                   | five claims are supplied      |
-   |               |                   | always, and Delegation        |
-   |               |                   | exercises them rather than    |
-   |               |                   | creating them; Authorized     |
-   |               |                   | Context Correlation is the    |
-   |               |                   | exception, activated by this  |
-   |               |                   | role, whose Token Exchange    |
-   |               |                   | join is its supplier.  The    |
-   |               |                   | act chain itself supplies     |
-   |               |                   | none of them: it is           |
-   |               |                   | attribution, never            |
-   |               |                   | authority.                    |
-   +---------------+-------------------+-------------------------------+
-   | Cross-Domain  | Lifecycle-Gated   | Carries these four always-    |
-   |               | Authorization,    | supplied guarantees across    |
-   |               | Structured        | the domain hop: the Mission   |
-   |               | Authority,        | reference and authority_hash  |
-   |               | Monotonic         | intact, authority that only   |
-   |               | Derivation,       | narrows, and projection       |
-   |               | Credential-Bound  | gated on active state, while  |
-   |               |                   | adding an interoperable       |
-   |               |                   | projection surface the        |
-   |               |                   | guarantees alone do not       |
-   |               |                   | provide.  It does not become  |
-   |               |                   | Portable Evidence by          |
-   |               |                   | crossing a domain: that       |
-   |               |                   | claim activates only when an  |
-   |               |                   | Evidence, Mandate, or audit   |
-   |               |                   | companion is active, and      |
-   |               |                   | Cross-Domain is not among     |
-   |               |                   | them.                         |
-   +---------------+-------------------+-------------------------------+
+   Introspection:  Exercises State-Observable.  One of State-
+      Observable's three named activation surfaces, alongside Status and
+      Signals; declaring it activates that otherwise-conditional claim.
 
-    Table 5: Core optional roles related to substrate capability claims
+   Delegation:  Exercises Lifecycle-Gated Authorization, Structured
+      Authority, Monotonic Derivation, Credential-Bound, and Authorized
+      Context Correlation.  The OAuth binding's delegation subset-checks
+      authorization_details, carries the mission claim unchanged,
+      sender-constrains the delegated credential to the delegate's own
+      key, and refuses issuance unless the Mission is active.  The Token
+      Exchange that issues the delegated credential is itself a grant
+      binding at issuance: the AS joins the Mission and Subject carried
+      by the Mission-bound subject_token with the delegate identity
+      established by the actor_token or the delegate's own client
+      authentication, binding both to the newly issued credential.  Four
+      of the five claims are supplied always, and Delegation exercises
+      them rather than creating them; Authorized Context Correlation is
+      the exception, activated by this role, whose Token Exchange join
+      is its supplier.  The act chain itself supplies none of them: it
+      is attribution, never authority.
 
-   Ownership migrates by touch, not by relocation.  When a binding-
-   neutral definition next changes substantively, the change MUST land
-   in this document, and the owning family section becomes a reference
-   to it; no change is ever made solely to move words.
+   Cross-Domain:  Exercises Lifecycle-Gated Authorization, Structured
+      Authority, Monotonic Derivation, and Credential-Bound.  Carries
+      these four always-supplied guarantees across the domain hop: the
+      Mission reference and authority_hash intact, authority that only
+      narrows, and projection gated on active state, while adding an
+      interoperable projection surface the guarantees alone do not
+      provide.  It does not become Portable Evidence by crossing a
+      domain: that claim activates only when an Evidence, Mandate, or
+      audit companion is active, and Cross-Domain is not among them.
 
 Acknowledgments
 
