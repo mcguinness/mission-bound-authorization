@@ -92,7 +92,9 @@ token's `authorization_details` still carry the authority itself.
 OAuth already handles each credential issuance in that story. The
 Mission is the object that connects them into one governed
 undertaking. The walkthrough is the OAuth realization; the peer
-bindings carry the same lifecycle on their own substrates.
+bindings realize the same kernel on their own substrates, each
+declaring its lifecycle capabilities in its Mission Substrate
+Statement.
 
 ## What a Mission is not
 
@@ -124,11 +126,14 @@ and lifecycle context a Mission-aware decision consumes.
 
 ## The standards proposal
 
-The proposed standardization surface is two things: the **Mission
-model** and one complete binding for the substrate with the most
-deployed infrastructure: the **OAuth issuance binding**. The choice
-is infrastructure, never maturity; no binding has production Mission
-deployments today. The remaining
+The proposed standardization surface is three layers: the
+informative **Architecture** (the model), the normative **Mission
+Substrate Requirements** (the binding-neutral kernel contract, which
+publishes before or with any binding claiming conformance to it),
+and one complete binding for the substrate with the most deployed
+infrastructure: the **OAuth issuance binding**. The choice of first
+binding is infrastructure, never maturity; no production Mission
+deployment is known today on any binding. The remaining
 documents are design exploration and independently selectable
 companion work with declared dependencies (runtime, lifecycle,
 evidence, and cross-domain profiles on their own timelines), not a
@@ -169,11 +174,14 @@ information-flow leakage within approved authority is out of scope.
 Three rings, smallest first; each ring is complete without the next:
 
 - **The model and a binding**: [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (the
-  informative model) plus one binding from the peer table below. For
-  an OAuth estate that is
+  informative model) and
+  [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html) (the normative
+  kernel contract), plus one binding's dependency-closed adoption
+  set from the peer table below (the manifest's `adoption_requires`
+  edges name each binding's floor). For an OAuth estate that is
   [the OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html)
   alone: one self-contained document, and a useful deployment by
-  itself.
+  itself. The peer bindings declare their own floors.
 - **Runtime-enforced profile** (shown on the OAuth binding): add
   [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
   (the kernel contract the runtime documents consume),
@@ -249,7 +257,7 @@ main mechanisms; the full verb-to-document map is
 ## Choose a binding
 
 The binding decides where the Mission control point lives. The
-bindings are peers: no binding has production Mission deployments
+bindings are peers: no production Mission deployment is known
 today, OAuth brings the most deployed substrate infrastructure, and
 Missions on it still require the changes its binding defines.
 Maturity labels are document design maturity, never deployment
@@ -320,7 +328,7 @@ partial, or todo coverage.
 
 ## Status
 
-The core is a published Internet-Draft on the IETF
+The OAuth binding is a published Internet-Draft on the IETF
 [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/);
 the companions are editor's copies in this repository, on their own
 timelines. Maturity words (**stable**, **experimental**, **sketch**,

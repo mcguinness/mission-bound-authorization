@@ -7,7 +7,7 @@ here instead of restating the inventory. Maturity words are the family
 manifest's own (**stable**, **experimental**, **sketch**, with
 informational documents shown as **guide**); family draft maturity is
 repository design maturity, not standards status and not deployment
-history (no binding has production Mission deployments today), so
+history (no production Mission deployment is known today), so
 upstream dependency
 status lives in [DEPENDENCIES.md](DEPENDENCIES.md) and implementation
 coverage in the conformance ledger (`conformance-manifest.json`). The
@@ -59,7 +59,7 @@ hand-authored.
 | [Mission Status and Lifecycle for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) | stable | govern | A `mission_id`-keyed status surface with signed responses, plus a lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and `complete` transitions and the `suspended` and `completed` states. | You must observe or change Mission state beyond token expiry (revoke, suspend, complete). |
 | [Mission Template for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) | experimental | approve | An Approver consents once to a task template (a ceiling of resources, actions, and constraints plus a dispatch policy), and each dispatch then instantiates an ordinary, independently gated Mission from it at machine speed. | Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling. |
 | [Mission Work Products](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-work-products.html) | experimental | prove | Keeps information from carrying authority: a policy-free work-product provenance object attributes an artifact to the approved work that produced it, and a non-transitive handoff rule makes the receiving Mission re-evaluate any proposed action under its own Authority Set. | Artifacts cross into another Mission and must carry provenance, never authority. |
-| [Mission-Bound Authorization for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) | stable | approve | The mandatory core, the issuance profile: defines the Mission, the Mission Intent and Authority Set, the approval event and its `intent_hash` / `authority_hash` anchors, the `mission` token claim, the subset rule, and state-gated issuance. | Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses. |
+| [Mission-Bound Authorization for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) | stable | approve | The OAuth 2.0 binding of the Mission model, the issuance profile to its OAuth companions: defines the OAuth realization of the Mission, the Mission Intent and Authority Set, the approval event and its `intent_hash` / `authority_hash` anchors, the `mission` token claim, the subset rule, and state-gated issuance. | Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses. |
 
 <!-- generated:drafts-index:end -->
 
@@ -388,8 +388,8 @@ evidence bag. Experimental; profiles an unratified individual draft.
 
 ### The substrate and the bindings
 
-The kernel contract first, then its five peer bindings. No binding
-has production Mission deployments today; OAuth brings the most
+The kernel contract first, then its five peer bindings. No
+production Mission deployment is known today; OAuth brings the most
 deployed substrate infrastructure, and Missions on it still require
 the changes its binding defines.
 

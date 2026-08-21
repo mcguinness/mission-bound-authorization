@@ -270,12 +270,18 @@ function main() {
   for (const d of drafts) {
     if (!onDiskSet.has(d.file)) fail("inventory", `family-manifest.json lists ${d.file}, which does not exist on disk`);
   }
-  const publishedDrafts = drafts.filter((d) => d.is_published_draft);
-  if (publishedDrafts.length !== 1) {
-    fail(
-      "inventory",
-      `expected exactly one draft flagged is_published_draft, found ${publishedDrafts.length} (${publishedDrafts.map((d) => d.slug).join(", ") || "none"})`
-    );
+  // Publication is zero-or-more metadata, never a one-document invariant:
+  // any draft MAY carry datatracker_url once it publishes, and each such URL
+  // must name the draft's own slug.
+  for (const d of drafts) {
+    if (d.datatracker_url === undefined) continue;
+    if (
+      typeof d.datatracker_url !== "string" ||
+      !d.datatracker_url.startsWith("https://datatracker.ietf.org/doc/") ||
+      !d.datatracker_url.includes(d.slug)
+    ) {
+      fail("inventory", `${d.slug}: datatracker_url must be a datatracker URL naming the draft's own slug, got ${JSON.stringify(d.datatracker_url)}`);
+    }
   }
 
   // (b) Category mismatch (only checked for drafts that exist on disk)
