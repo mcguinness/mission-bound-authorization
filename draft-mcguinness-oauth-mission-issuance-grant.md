@@ -142,8 +142,7 @@ intake, approval, or derivation surfaces.
 # Introduction
 
 Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile", here
-"the core") binds issued authority to a durable, human-approved
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds issued authority to a durable, human-approved
 Mission, with the Authorization Server (AS) as the Mission Issuer.
 The Mission Authority Server (MAS,
 {{I-D.draft-mcguinness-mission-authority-server}}) hosts the same
@@ -168,7 +167,7 @@ issuance gate, the property the MAS-only mode structurally lacks.
 The Authorization Server's obligations are deliberately small:
 validate the grant, mint within its bounds, gate issuance and refresh
 on Mission state and current effective authority. It implements none
-of the core's intake, approval ceremony,
+of the issuance profile's intake, approval ceremony,
 derivation, record, or lifecycle surfaces; those stay at the MAS.
 The integration ladder is then: record-only governance, the runtime
 join, the issuance join, and native Mission-awareness, each adopted
@@ -181,7 +180,7 @@ where its cost is warranted
 
 This document uses Mission, Mission Intent, Authority Set, Mission
 Issuer, the `mission` claim, the subset rule, and the integrity
-anchors (`intent_hash`, `authority_hash`) as the core defines them,
+anchors (`intent_hash`, `authority_hash`) as the issuance profile defines them,
 Mission Authority Server (MAS), Mission Join, and the Enterprise
 Mapping Contract as {{I-D.draft-mcguinness-mission-authority-server}}
 defines them, and Effective Authority Set as
@@ -227,7 +226,7 @@ auditor attributes what was approved to the MAS record and what was
 issued to the consuming AS's log, joined by the Mission reference
 the grant carries.
 
-Tokens issued under this profile are Mission-bound in the core's
+Tokens issued under this profile are Mission-bound in the issuance profile's
 sense: they carry the `mission` claim, their authority is a subset
 of the consented Authority Set, and issuance and refresh are gated
 on Mission state. Runtime enforcement
@@ -273,7 +272,7 @@ Claims:
   consuming AS. Only this authenticated client redeems the grant.
 
 `mission`:
-: REQUIRED. The core's `mission` claim object (`id`, `issuer`,
+: REQUIRED. The issuance profile's `mission` claim object (`id`, `issuer`,
   `authority_hash`), exactly as recorded, extended with the
   `expires_at` member of {{expires-at-member}}.
 
@@ -289,7 +288,7 @@ Claims:
   {{RFC9449}} or mutual TLS {{RFC8705}} as the deployment configures.
 
 An illustrative decoded grant (this Mission and its anchors are not
-the core walkthrough's):
+the one from the issuance profile's walkthrough):
 
 ~~~ json
 {
@@ -355,7 +354,7 @@ discovery metadata ({{iana}}). The Grant Minter MUST observe:
    other state refuses.
 3. **Subset and audience.** The grant's `authorization_details` MUST
    be a subset of the Mission's consented Authority Set under the
-   core's subset rule. The grant SHOULD carry only the entries the
+   issuance profile's subset rule. The grant SHOULD carry only the entries the
    named consuming AS serves. The requester MAY request a narrower
    subset. The requester MUST NOT obtain a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
@@ -382,7 +381,7 @@ TLS, authenticated as {{minting}} requires:
 
 `authorization_details`:
 : OPTIONAL. An array. A narrower subset the requester asks the grant to
-  carry, under the core's subset rule. Omitted, the MAS scopes the
+  carry, under the issuance profile's subset rule. Omitted, the MAS scopes the
   grant to the entries the named audience serves ({{minting}}); present,
   it MUST NOT widen beyond that scope.
 
@@ -488,18 +487,18 @@ in an order that fails closed:
 On success the consuming AS mints tokens under these rules:
 
 - **The claim rides unchanged.** Issued tokens carry the grant's
-  `mission` object verbatim as the core's `mission` claim, including
+  `mission` object verbatim as the issuance profile's `mission` claim, including
   the `expires_at` member ({{expires-at-member}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS MUST NOT widen, remap, or supplement
   them from its own policy except to narrow.
 - **Echo.** The token response SHOULD echo the issued
-  `authorization_details` as the core specifies for Mission-bound
+  `authorization_details` as the issuance profile specifies for Mission-bound
   issuance.
 - **Scope projection.** Carrying `authorization_details` at all
   requires {{RFC9396}} support at the consuming AS. An AS that
   models authority as `scope` instead projects the grant's
-  `authorization_details` to `scope` under the core's
+  `authorization_details` to `scope` under the issuance profile's
   scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}}):
   every issued scope value corresponds to authority the grant
   conveys, and none conveys authority, or relaxes a constraint, that
@@ -707,12 +706,13 @@ and its own Authorization Servers, no identity-chaining substrate
 required. A deployment does not use this profile across domains;
 projection exists for that.
 
-**The core is the destination, not a competitor.** An AS that
-becomes natively Mission-aware implements the core and mints without
+**Native Mission-aware issuance retires this grant; it does not rank
+the architectures.** An AS that
+becomes natively Mission-aware implements the issuance profile and mints without
 grants for its own resources; the record, anchors, and lifecycle it
 consumes are the same ones the MAS already operates, so nothing is
 re-approved in migration. Until then, the issuance join gives the
-estate Mission-bound tokens at a fraction of the core's
+estate Mission-bound tokens at a fraction of the issuance profile's
 implementation surface.
 
 **The runtime join remains for everything else.** Tokens minted
@@ -826,7 +826,7 @@ not renew its original, now-narrowed authority. A deployment states
 the refresh staleness bound it publishes ({{conformance}}).
 
 **Consent integrity.** The approval the grant rests on was rendered
-and committed at the Mission Issuer under the core's rules and,
+and committed at the Mission Issuer under the issuance profile's rules and,
 where deployed, Consent Evidence. The consuming AS relies on that
 event; it MUST NOT substitute a weaker consent of its own, and its
 non-prompting duty ({{redemption}}) prevents consent-surface

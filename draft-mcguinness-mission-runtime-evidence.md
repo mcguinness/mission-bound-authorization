@@ -178,14 +178,15 @@ are referenced, not duplicated, here.
 
 This document uses JSON {{RFC8259}} as the data model for every
 record it defines. JCS canonicalization {{RFC8785}} applies wherever
-an integrity hash is computed, under the canonicalization rules of
-{{I-D.draft-mcguinness-oauth-mission}}; this document does not
+an integrity hash is computed, under the substrate's default
+commitment construction
+({{I-D.draft-mcguinness-mission-substrate}}); this document does not
 define a second canonicalization.
 
-"SHA-256" refers to {{RFC6234}}. A digest is encoded in the
-integrity-anchor encoded form of
-{{I-D.draft-mcguinness-oauth-mission}}: `sha-256:` followed by the
-base64url, no-padding encoding of the digest. Every digest this
+"SHA-256" refers to {{RFC6234}}. A digest is encoded in the encoded
+form of the substrate's default commitment construction
+({{I-D.draft-mcguinness-mission-substrate}}): `sha-256:` followed by
+the base64url, no-padding encoding of the digest. Every digest this
 document defines (`evaluation_request_digest`, `entry_digest`,
 `effective_parameter_digest`, the Mission Receipt's evidence-reference
 and chain-predecessor digests, {{mission-receipt}}) is a
@@ -1353,8 +1354,8 @@ Each `evidence` entry is an object. All members REQUIRED:
 
 `digest`:
 : REQUIRED. A string. A `sha-256:` prefixed digest, classified under
-  the core's commitment taxonomy
-  ({{I-D.draft-mcguinness-oauth-mission}}) as a canonical-object
+  the substrate's default commitment construction
+  ({{I-D.draft-mcguinness-mission-substrate}}) as a canonical-object
   digest for a JSON evidence record and a raw-octet digest for a
   JWS- or JWT-shaped artifact. For a JSON evidence record the digest
   input is the exact canonical bytes the convention fixes for that

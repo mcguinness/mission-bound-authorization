@@ -297,7 +297,7 @@ beyond narrowing requires a fresh human approval, never policy
 adjudication.
 
 A policy-adjudicated in-ceiling successor is rooted in a
-standing-consent `approval_basis`, under the core profile's open
+standing-consent `approval_basis`, under the issuance profile's open
 `type` set ({{I-D.draft-mcguinness-oauth-mission}}), with `type`
 `ceiling_drawdown`, defined and owned by this profile: its
 `consent_principal` is the Approver who consented the ceiling, its

@@ -187,8 +187,7 @@ every step, and evidenced at every binding.
 # Introduction
 
 Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile", here
-"the core") commits a Mission's authority at the approval event, over
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") commits a Mission's authority at the approval event, over
 resources the Authority Set names. An open-world agent breaks that
 premise: given a task, it meets resources, tools, and services the
 approval could not enumerate, and some substrates invert the
@@ -233,7 +232,7 @@ human-approved expansion
 This document uses:
 
 - Mission, Authority Set, Mission Issuer, the subset rule, and the
-  integrity anchors as the core defines them, and imports the
+  integrity anchors as the OAuth binding defines them, and imports the
   substrate's default commitment construction normatively
   ({{I-D.draft-mcguinness-mission-substrate}}): of the digests this
   document defines, `resource_metadata_digest` and
@@ -347,7 +346,7 @@ The encounter request is agent-influenced input by construction: the
 agent chose what to meet, and content it ingested may have chosen
 for it. Every rule in this document is written against that fact,
 and no member of an encounter request derives, widens, or gates
-authority by itself, per the core's inert-input rule.
+authority by itself, per the OAuth binding's inert-input rule.
 
 # Resource Identity {#resource-identity}
 
@@ -677,8 +676,8 @@ It is registrable in a transparency log on the Mission's feed
 encounter reproducible: what was met, what it claimed, what was
 sought, what was drawn against, and under what taint.
 
-An illustrative bound encounter (this Mission is not the core
-walkthrough's):
+An illustrative bound encounter (this Mission is not the one from
+the OAuth binding's walkthrough):
 
 ~~~ json
 {

@@ -164,13 +164,14 @@ decision contract consumes an already established action identity.
 This document uses JSON {{RFC8259}} as the data model for the
 capability-source binding object. JCS canonicalization {{RFC8785}}
 applies wherever this document computes a digest, under the
-canonicalization rules of {{I-D.draft-mcguinness-oauth-mission}};
+substrate's default commitment construction
+({{I-D.draft-mcguinness-mission-substrate}});
 this document does not define a second canonicalization.
 
-"SHA-256" refers to {{RFC6234}}. A digest is encoded in the
-integrity-anchor encoded form of
-{{I-D.draft-mcguinness-oauth-mission}}: `sha-256:` followed by the
-base64url, no-padding encoding of the digest. Under the substrate's
+"SHA-256" refers to {{RFC6234}}. A digest is encoded in the encoded
+form of the substrate's default commitment construction
+({{I-D.draft-mcguinness-mission-substrate}}): `sha-256:` followed by
+the base64url, no-padding encoding of the digest. Under the substrate's
 default commitment construction, which this document imports
 normatively ({{I-D.draft-mcguinness-mission-substrate}}),
 `source_digest` is a canonical-object digest and `catalog_digest` a

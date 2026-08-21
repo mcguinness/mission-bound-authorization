@@ -16,7 +16,7 @@ this matrix and the `@spec` tags to the affected code and tests.
   a greppable comment tag: `@spec <doc>#<section>` (e.g.
   `@spec mission#integrity-anchors`). One tag per behavior, at the
   narrowest enclosing scope. `grep -rn "@spec mission#"` answers "where
-  does the core land in the code."
+  does the OAuth binding land in the code."
 - **Updating a pin.** Deliberate, never implicit (D25/D41): diff the spec
   old→new, grep the changed section anchors against `@spec` tags, list the
   affected modules and tests in the bump commit message, review against the
@@ -101,10 +101,10 @@ this matrix and the `@spec` tags to the affected code and tests.
   any vector whose intent carried a proposal; the repo's four existing vectors
   were unaffected and a fifth `proposal_hash` vector was added); new anchor
   `proposal_hash` (`typ: mission-proposed-authority`, present iff submitted,
-  record + introspection, not the claim). The core rows above pin `c2053e5`,
+  record + introspection, not the claim). The OAuth binding's rows above pin `c2053e5`,
   which predates this; the `@spec` surfaces `mission#submission-via-par` /
   `mission#authorization-derivation` now realize the new carriage in code
-  (PR #478). The core pin bump remains deliberate-deferred per D25/D41.
+  (PR #478). The OAuth binding's pin bump remains deliberate-deferred per D25/D41.
 - DTR (`-00`) initiation is folded into the deferred grant type rather than
   carried as `completion_mode=deferred` on the originating grant:
   node-oidc-provider offers no pre-issuance defer hook for built-in grants. A

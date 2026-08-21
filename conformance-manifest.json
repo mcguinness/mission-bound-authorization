@@ -4,23 +4,23 @@
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "73ee0ae0be4edea4ab2f44a54966409a64b99df8",
-    "content_sha256": "43175a513681f7bdaf3881a63acbf389ff6f44a913a7e1ba3e2d12119b431d76"
+    "content_sha256": "49264ae72433bf4992fe213a112f0b40e03af6c46ed0fdd6c65b48e1cb0712d4"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
-    "content_sha256": "c7e0b8d20957d758e1c48ae1324241872a558e185545ac890f59214acb00ecaa"
+    "content_sha256": "9164ff69782d34eb589824489ee4e0b212ace8a4f656721fba27577bcf9013d8"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "3694449a787e0be021803eb82c5ee6eaae3f7ddd",
-    "content_sha256": "49e6edceb6e56df6d9330576c5874acc96b6f558c78c2e07e06778b136f306d2"
+    "content_sha256": "35cf20baa7361da6740c48d0645f47eb7493bac2a6f3ef7b9916af3e43a54cc7"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "b5e35e2cb5bb8d3cb27394764dfe49a312bc75ff",
-    "content_sha256": "6dda9fda158cdb6bccc9fdb3f1cf0f447b824e1335a863d015e534338504caaa"
+    "content_sha256": "31bc6a2ed17fb1ee1632dce7f62588ae53879d14c8cd5926a0ebb4934a64b652"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "73ee0ae0be4edea4ab2f44a54966409a64b99df8",
-    "content_sha256": "4aa6c3cf8931001f8ecb527d9b70e1aedf249acb46594a186c350b706b307d18"
+    "content_sha256": "8ecf382d7400e323063f9550b2c567c93bc019cd10ae23d96cdad9bd29200ee2"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "942d2b0f577d71e8d3d0c1043506ebde04639271",
@@ -32,7 +32,7 @@
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "2399f170964924d80f8ceaad81d41892411d4465",
-    "content_sha256": "99b26772bde92ff2d7b88729f4da84f432920ad65274269c940493e3fcb428b5"
+    "content_sha256": "55860d12b728163f5aca581441a18250e5a6e24de24408996562205755893355"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "12b540f5c8e547a61cac16259c98515eca7ec504",
@@ -44,7 +44,7 @@
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
-    "content_sha256": "0978188dafc403593f6c817c23aca8f3589d5a54ec9f0265e32657d5fff09a75"
+    "content_sha256": "1b5c363aa75e5111d1a73a89eb40d50b016a07595c3ad8c1ce5f65f0532562a5"
    }
   }
  },
@@ -12097,7 +12097,7 @@
    "id": "evidence.receipt.evidence-reference-digest-classification",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "receipt-evidence",
-   "text": "A `sha-256:` prefixed digest, classified under the core's commitment taxonomy ({{I-D.draft-mcguinness-oauth-mission}}) as a canonical-object digest for a JSON evidence record and a raw-octet digest for a JWS- or JWT-shaped artifact.",
+   "text": "A `sha-256:` prefixed digest, classified under the substrate's default commitment construction ({{I-D.draft-mcguinness-mission-substrate}}) as a canonical-object digest for a JSON evidence record and a raw-octet digest for a JWS- or JWT-shaped artifact.",
    "role": "RECEIPT-ISSUER",
    "strength": "stated",
    "applicability": {

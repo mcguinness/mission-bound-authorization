@@ -1441,7 +1441,7 @@ profile adds:
   migration of a Mission's feed between services are deferred to future
   work, and a deployment whose Missions outlive a single log instance
   handles them by local arrangement until then. One interim rule
-  holds now: the core's retired-key rule
+  holds now: the OAuth binding's retired-key rule
   ({{I-D.draft-mcguinness-oauth-mission}}) applies to the
   Transparency Service's own keys, with the audit horizon of the
   feeds a key covers as the retention bound.

@@ -439,7 +439,7 @@ asynchronous decision native rather than a companion overlay
 In the agent deployments this profile targets, one natural person
 commonly operates the client, owns the resources, and is the
 principal the Mission serves: operator, Approver, and Subject
-coincide, the core's default geometry. The table's role assignments,
+coincide, the OAuth binding's default geometry. The table's role assignments,
 not that coincidence, are normative.
 
 # Mission Flow {#flow}

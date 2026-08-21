@@ -172,7 +172,7 @@ A Mission Issuer or deployment that does not implement this document is
 a fully conforming issuance-profile deployment
 ({{I-D.draft-mcguinness-oauth-mission}}). Nothing here places a new
 requirement back on the issuance profile, and this document adds no
-constraint to the core's `mission_resource_access`. The provenance
+constraint to the issuance profile's `mission_resource_access`. The provenance
 object and the handoff rule are companion mechanisms that a deployment
 adopts where its agents share durable work products.
 
@@ -187,10 +187,10 @@ The invariant of {{invariant}} is not a new axiom. It is the
 artifact-plane reading of a claim the issuance profile already makes on
 the credential plane: authority exists only by derivation for a Mission,
 so no possessed thing, credential or artifact, substitutes for the
-Mission's live gate. Alignment with a forthcoming core Security
+Mission's live gate. Alignment with a forthcoming issuance-profile Security
 Considerations statement of this property is anticipated; this document
 states the property for work products and imposes nothing new on the
-core.
+issuance profile.
 
 Child delegation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 is the legitimate authority path this document points to: where an agent
@@ -708,7 +708,7 @@ IANA is requested to register one media type per {{RFC6838}}.
 
 The committed-object `typ` value `mission-work-product-provenance` used
 to compute `provenance_digest` ({{binding-object}}) is not registered:
-the core specification defines no registry of such values and relies on
+the issuance profile specification defines no registry of such values and relies on
 the collision-resistant-name rule ({{I-D.draft-mcguinness-oauth-mission}}).
 This document adds the informative in-toto {{IN-TOTO}} and SLSA {{SLSA}}
 references as the conceptual model for {{binding}}.

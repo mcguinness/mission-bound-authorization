@@ -1500,7 +1500,7 @@ approval record is created ({{lanes}}).
 Authentication step-up has no dedicated denial-reason value under this
 profile: an in-process step-up rides the obligation on a permit, and
 an RFC 9470 step-up rides the obligation on a `resource_policy`
-denial. The core's `mission_denial` value `step_up_required` remains
+denial. The OAuth binding's `mission_denial` value `step_up_required` remains
 the Resource Server's own challenge-surface signal
 ({{I-D.draft-mcguinness-oauth-mission}}) and composes with, but is
 not, either shape of this obligation. The requirement is Resource
@@ -2255,7 +2255,7 @@ evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 This binding's one coordinated extension member, `mission_history`
 ({{evidence}}), carries behavioral history predicates and their
 outcomes and inherits that guidance in full: it is subject to the
-same PII-sink, access-control, and retention treatment as the core
+same PII-sink, access-control, and retention treatment as the OAuth binding
 record, with no exemption. This binding otherwise defines no
 additional record content.
 

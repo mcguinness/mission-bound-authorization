@@ -293,7 +293,7 @@ The request is an HTTPS POST with an
 
 `mission_id`:
 : REQUIRED. A string. The canonical Mission Identifier, named per the
-  core's external-surface convention
+  issuance profile's external-surface convention
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `audience`:
@@ -502,7 +502,7 @@ The members are:
   - `state`: the current Mission lifecycle state. The authoritative
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-    and Gating"): the core states `active`, `revoked`, `expired`, this
+    and Gating"): the issuance profile states `active`, `revoked`, `expired`, this
     profile's `suspended` and `completed` when the Mission Lifecycle
     endpoint ({{mission-lifecycle-endpoint}}) is deployed, and any
     further state a companion profile defines and the deployment runs
@@ -881,7 +881,7 @@ form-urlencoded body:
 
 `mission_id`:
 : REQUIRED. A string. The canonical Mission Identifier, named per the
-  core's external-surface convention
+  issuance profile's external-surface convention
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `operation`:
@@ -1552,7 +1552,7 @@ new requirement on the issuance profile: it defines one OPTIONAL
 entry member and the rules for handling it. A deployment claims the
 completion capability only when it issues or consumes entries
 carrying `terminal_when`. The capability is newer and less exercised
-than the issuance core and the runtime layer, and is not required by
+than baseline issuance and runtime enforcement, and is not required by
 any Mission Assurance Level; its entry-discharge details may change.
 
 The issuance profile gates issuance on Mission state but has no
@@ -2185,7 +2185,7 @@ its `jwks_uri`. The AS MUST keep the public JWK for every `kid` it
 has signed such a response under resolvable in its `jwks_uri` for at
 least the Mission record retention period, so an archived
 `application/mission-status-response+jwt` remains verifiable for
-audit and dispute. This is the core's retired-key rule
+audit and dispute. This is the issuance profile's retired-key rule
 ({{I-D.draft-mcguinness-oauth-mission}}), with the record retention
 period as the bound. A key known or suspected
 compromised is the exception: the AS removes it, and the Mandate

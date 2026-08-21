@@ -441,7 +441,7 @@ object, producer behavior during the transition, verifier selection
 and downgrade behavior when recognition sets differ, and the
 transition procedure itself.
 
-Core's Integrity Anchor Test Vectors
+The OAuth binding's Integrity Anchor Test Vectors
 ({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
 example of the envelope-anchor species alone (`intent_hash`,
 `proposal_hash`, `authority_hash`); an implementation can check its
@@ -525,7 +525,7 @@ A decision or artifact with neither bound does not conform, and a
 stated bound SHOULD NOT exceed the interval the Mission's purpose
 requires.  This floor requires no consumer-facing freshness source: a binding whose
 credential lifetimes sit inside the Mission's own bound satisfies it
-unmodified, as the OAuth core's stateless baseline does.  The bound
+unmodified, as the OAuth binding's stateless baseline does.  The bound
 gives the non-active transition of {{basic-gate}} its force: a party
 who causes a Mission to become non-active is assured that reliance
 under the Mission ends within the stated interval.
@@ -1117,7 +1117,7 @@ This appendix is normative for documents of the Mission-Bound
 Authorization family and informative for every other adopter.  An
 adopter outside the family does not need it.
 
-The family's earlier documents, including the published OAuth core
+The family's earlier documents, including the published OAuth binding
 ({{I-D.draft-mcguinness-oauth-mission}}), use the vocabulary this
 contract was generalized from.  The terms correspond as follows:
 
@@ -1135,7 +1135,7 @@ contract was generalized from.  The terms correspond as follows:
 A family document that maps its own vocabulary to the kernel's MUST
 use these correspondences.
 
-The authority-role map ({{authority-roles}}) aligns with the core's
+The authority-role map ({{authority-roles}}) aligns with the OAuth binding's
 Authority Sources: the `authority_source` record member and its three
 sources (user-delegated, service-owned, organizational) are the OAuth
 binding's realization of the authority-source authority role, and its
@@ -1143,7 +1143,7 @@ source ceiling is that role's assertion staying within the named
 source's authority.
 
 Precedence is scoped, not global.  For the OAuth-native binding, the
-core's definitions govern that mapping; this document governs the
+OAuth binding's definitions govern that mapping; this document governs the
 kernel and capability vocabulary.  Neither document depends
 normatively on the other.
 
@@ -1151,11 +1151,11 @@ normatively on the other.
 
 This section is the Mission Substrate Statement of the OAuth Mission
 binding ({{I-D.draft-mcguinness-oauth-mission}}), hosted here so the
-core remains self-contained with no companion normative dependency.
-It applies to the core's editor's-draft lineage and to the kernel and
-capability vocabulary of this document.  The core's own definitions
+OAuth binding remains self-contained with no companion normative dependency.
+It applies to the OAuth binding's editor's-draft lineage and to the kernel and
+capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this Statement claims no property the
-core does not define.
+OAuth binding does not define.
 
 For the kernel:
 
@@ -1168,7 +1168,7 @@ For the kernel:
    established through `mission.issuer` and the deployment's issuer
    trust (AS metadata and published keys).
 3. The Actor handle is the authenticated OAuth client at approval;
-   the external Subject is fixed by the core's injective mapping;
+   the external Subject is fixed by the OAuth binding's injective mapping;
    delegates ride the `act` chain; child and successor lineage is
    recorded through the parent and predecessor members; actor-type
    classification uses `sub_profile` and instance assertions where
@@ -1179,7 +1179,7 @@ For the kernel:
    immutable members; commitments are the typed integrity anchors
    (`intent_hash`, `proposal_hash`, `authority_hash`); a material
    change obtains a new approval through an expansion successor.
-5. The approval ceremony is the core's approval event: authenticated
+5. The approval ceremony is the OAuth binding's approval event: authenticated
    Approver, the distinct-approver rule for write-bearing Missions,
    rendering of the derived Authority Set and the effective expiry,
    and atomic record commit, with deferred, interactive, and dispatch
@@ -1230,7 +1230,7 @@ unresolvable reference, a failed anchor verification, and an unknown
 condition does not hold, the property is not supplied and a consumer
 MUST NOT rely on it.
 
-Core's three OPTIONAL capabilities, named in its Conformance section
+The OAuth binding's three OPTIONAL capabilities, named in its Conformance section
 ({{I-D.draft-mcguinness-oauth-mission}}), are implementation roles:
 surfaces an implementation may or may not offer, each independent of
 the others. The capability table above states scoped guarantee

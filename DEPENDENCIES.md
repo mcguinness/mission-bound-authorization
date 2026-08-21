@@ -13,7 +13,7 @@ Bold shorthand below names the family's documents informally;
 Outside the family itself, every normative dependency is a ratified
 RFC, a finalized OpenID specification, or (for the **uma** sketch) a
 final Kantara Initiative Recommendation, with these tracked
-exceptions: the **core** has a normative dependency on an
+exceptions: **oauth-mission** (the OAuth binding) has a normative dependency on an
 unratified individual draft (OAuth 2.0 RAR Metadata and Error
 Remediation): an AS that advertises Mission-bound authorization
 support MUST advertise the authorization-details type-metadata
@@ -42,8 +42,7 @@ optional.
 Family-internal normative dependencies are Internet-Drafts by
 construction: the substrate contract anchors the **uma**, **gnap**,
 **authority-server**, and **aauth** Statements; **aauth-expiry**
-anchors the AAuth binding and its management companion; and the
-**core** anchors its OAuth companions. The family manifest tracks
+anchors the AAuth binding and its management companion; and **oauth-mission** anchors its OAuth companions. The family manifest tracks
 these. The substrate contract publishes before or with any binding
 that claims conformance to it.
 

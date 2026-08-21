@@ -1010,8 +1010,7 @@ approval event. It MUST commit the issuance profile's integrity anchors
 child Authority Set, `intent_hash` over the child Mission Intent, and,
 where the exchange carried an authority proposal, `proposal_hash` over
 it, and
-it MUST produce the immutable, accountable record the core approval
-event produces.
+it MUST produce record the issuance profile's approval.
 
 A Child Mission is created under a parent grant rather than a
 first-party approval ({{issuance-relationship}}), so its human
@@ -1101,7 +1100,7 @@ Resource Server enforces child tokens exactly as Mission-bound tokens:
 the child `authority_hash` is the immediate authority commitment.
 
 Child Mission tokens MUST be sender-constrained to the child actor's
-own key, matching the core's delegated-token posture
+own key, matching the issuance profile's delegated-token posture
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Subset Evaluation {#strict-subset}
@@ -1112,9 +1111,9 @@ child Authority Set and the parent Authority Set with no relaxation.
 "Strict" refers to that no-relaxation requirement, not to inequality:
 per-entry equality is permitted, so a child entry MAY equal a parent
 entry. Each child entry MUST be a subset of some parent entry under the
-core rule, and the `delegation` narrowing of {{attenuation}} applies in
-addition. A Mission Issuer MUST NOT assume any relaxation the core rule
-does not define: the core's own opt-in hierarchy forms (`prefix`
+issuance profile's rule, and the `delegation` narrowing of {{attenuation}} applies in
+addition. A Mission Issuer MUST NOT assume any relaxation the issuance profile's rule
+does not define: the issuance profile's own opt-in hierarchy forms (`prefix`
 resource containment and `.*` action families) apply as that rule
 defines them, and nothing beyond them applies.
 
@@ -1147,7 +1146,7 @@ profile's attenuation rules
 # Fan-Out Controls {#fanout}
 
 This profile defines the on-switch for child creation as a member of the
-core's per-entry `delegation` object. The issuance profile lets a
+issuance profile's per-entry `delegation` object. The issuance profile lets a
 companion profile define additional `delegation` members that are policy,
 not authority, are never broadened downstream, and are carried unchanged
 when not understood ({{I-D.draft-mcguinness-oauth-mission}}); this
@@ -1166,10 +1165,10 @@ profile's `children` member is such a member.
     Mission.
 
   `allowed_child_actors`:
-  : OPTIONAL. An array of matcher objects of the same form as the core's
+  : OPTIONAL. An array of matcher objects of the same form as the issuance profile's
     `allowed_delegates` ({{I-D.draft-mcguinness-oauth-mission}}),
     constraining which actors or actor classes may receive a Child
-    Mission from this entry. Matchers are evaluated under the core's
+    Mission from this entry. Matchers are evaluated under the issuance profile's
     `allowed_delegates` matching rules, including the rule that a
     `{ "sub_profile": ... }` matcher is satisfied when its value is
     among the actor's space-separated `sub_profile` values.

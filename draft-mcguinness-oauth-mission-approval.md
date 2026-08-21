@@ -221,7 +221,7 @@ to the asynchronous review surface:
    resolves to a Mission-bound token response.
 
 This relocation relies on a core extensibility seam for approval
-sequencing, under discussion upstream. The core specifies the approval
+sequencing, under discussion upstream. The issuance profile specifies the approval
 event and authorization-code issuance as one atomic step, so a
 deployment claims conformance to this profile's relocated sequencing
 rather than unqualified conformance to that original step; what the

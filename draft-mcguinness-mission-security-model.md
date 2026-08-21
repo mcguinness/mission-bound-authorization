@@ -637,7 +637,7 @@ that issuer.
 Four assumptions hold across the whole model:
 
 - **Sender-constrained credentials.** Where Mission-bound tokens are
-  sender-constrained (recommended by the core,
+  sender-constrained (recommended by the OAuth binding,
   {{I-D.draft-mcguinness-oauth-mission}}), a token exfiltrated without
   its proof-of-possession key is unusable, and the model assumes the
   proof-of-possession mechanism is sound and keys are protected by
