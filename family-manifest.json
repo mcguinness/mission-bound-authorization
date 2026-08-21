@@ -807,7 +807,7 @@
    "category": "exp",
    "maturity": "experimental",
    "maintenance": "lab-floor-referenced",
-   "group": "bindings-substrate",
+   "group": "runtime-enforcement",
    "verbs": [
     "govern"
    ],

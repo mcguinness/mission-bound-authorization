@@ -373,6 +373,20 @@ formats the runtime evidence companion owns.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html)
 
+#### Mission Consumption Metering
+
+Experimental. Defines the cumulative consumption bounds a Mission
+Intent may carry (`max_budget`, `max_calls`, `max_duration`,
+`max_egress_volume`), the `exclusive` control that latches
+conflicting action classes apart under a single approval, the
+runtime metering that enforces them (atomic check-and-decrement,
+reserve/commit postures, duration leases, settlement), and the AuthZEN
+wire binding for lease renewal and settlement. Without it, Missions
+carry no cumulative bounds; the runtime profile's fail-closed rule
+covers any bound a deployment cannot meter.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html)
+
 #### Mission Transaction Authorization Profile for OAuth 2.0
 
 Profiles the OAuth transaction authorization challenge for the
@@ -536,20 +550,6 @@ and the mutability discipline the binding must impose on grant
 updates.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html)
-
-#### Mission Consumption Metering
-
-Experimental. Defines the cumulative consumption bounds a Mission
-Intent may carry (`max_budget`, `max_calls`, `max_duration`,
-`max_egress_volume`), the `exclusive` control that latches
-conflicting action classes apart under a single approval, the
-runtime metering that enforces them (atomic check-and-decrement,
-reserve/commit postures, duration leases, settlement), and the AuthZEN
-wire binding for lease renewal and settlement. Without it, Missions
-carry no cumulative bounds; the runtime profile's fail-closed rule
-covers any bound a deployment cannot meter.
-
-[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html)
 
 ### Agent runtime
 
