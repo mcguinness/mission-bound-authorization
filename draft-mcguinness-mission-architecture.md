@@ -3092,249 +3092,115 @@ every one.
 
 # Mission Document Map {#document-map}
 
-One line per document, grouped as the family groups them; the short
-form drops the `draft-mcguinness-` prefix. The naming encodes a
-boundary: profiles extending the Authorization Server's own surfaces
-keep "oauth" in their names; profiles defined against the substrate
-of {{substrate}} are named without it. This document is named without
-it because the architecture is substrate-neutral by construction.
+One row per document, grouped as the family groups them; the short
+form drops the `draft-mcguinness-` prefix, and the repository's
+DRAFTS.md is the full catalog with maturity and adoption metadata.
+The naming encodes a boundary: profiles extending the Authorization
+Server's own surfaces keep "oauth" in their names; profiles defined
+against the substrate of {{substrate}} are named without it. This
+document is named without it because the architecture is
+substrate-neutral by construction.
 
 Maturity is a dependency boundary. A Standards-Track profile never
-depends normatively on an experimental one: the experimental profiles
-(tagged below) extend the stable interface only through its declared
+depends normatively on an experimental one: the experimental
+profiles extend the stable interface only through its declared
 seams, the `controls` extension of the OAuth binding and the
 coordinated-extension rules of the evidence objects, and a
 Standards-Track document cites them informatively at most. An
 experimental profile that stabilizes crosses the boundary by
 reclassification, not by a stable document absorbing a dependency.
 
+Within Lifecycle, Status is the OAuth lifecycle suite's root
+document, with Signals (the push channel) and Management (the
+operator plane) as its satellites; AAuth keeps its native two-state
+lifecycle, served by `mission-aauth-management`, with the expiry
+bound profiled by `aauth-mission-expiry`.
+
 **The model and its bindings:**
 
-`oauth-mission`:
-: The OAuth binding, its OAuth companions' issuance profile: the
-  OAuth realization of the Mission, the approval event and anchors,
-  the `mission` claim, the subset rule, state-gated issuance.
-
-`mission-authority-server`:
-: The standalone Mission Issuer and the PDP join of ordinary
-  credentials to Missions.
-
-`oauth-mission-issuance-grant`:
-: The issuance join: MAS-minted grants an estate Authorization
-  Server redeems at its token endpoint for Mission-bound,
-  state-gated tokens.
-
-`mission-aauth`:
-: The AAuth Mission Context binding: the Person Server as controlling
-  authority, the exact-byte mission blob under AAuth's `s256`
-  commitment, native `{approver, s256}` propagation, and active-state
-  gating on PS endpoints and the PS-asserted and federated paths. It
-  defines no OAuth Authority Set or additional AAuth wire members.
-
-`mission-uma`:
-: Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent
-  rides claims pushing, the resource owner's decision fills UMA's
-  authorization assessment, the RPT is the Mission-bound credential,
-  and the PCT is continuity that is never authority; the first
-  binding authored against the substrate contract.
-
-`mission-gnap`:
-: Experimental sketch. The GNAP binding: the Mission Intent rides a
-  registered grant request member, interaction or a
-  companion-supplied standing basis is
-  the approval event, grant modification splits into in-Mission
-  drawdown and Approver-routed expansion, and the continuation access
-  token is continuity that is never authority; the second binding
-  authored against the substrate contract.
-
-`mission-substrate`:
-: The binding-neutral kernel contract: normative on any further
-  binding, conformed to by the existing bindings through their
-  published Substrate Statements, with vocabulary ownership
-  migrating to it by touch.
-
-`mission-aam`:
-: Experimental sketch. Cloudflare's Agent Access Model realized on
-  the family: the six AAM components map onto issuance, the PDP, the
-  mediated harness, Containment, Mission Templates, and the evidence
-  join, and the grant review loop is deliberately not adopted. It
-  defines no binding and no new mechanism.
+| Document | Role |
+|---|---|
+| `oauth-mission` | The OAuth binding, its OAuth companions' issuance profile: the OAuth realization of the Mission, the approval event and anchors, the `mission` claim, the subset rule, state-gated issuance. |
+| `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
+| `oauth-mission-issuance-grant` | The issuance join: MAS-minted grants an estate Authorization Server redeems at its token endpoint for Mission-bound, state-gated tokens. |
+| `mission-aauth` | The AAuth Mission Context binding: the Person Server as controlling authority, the exact-byte mission blob under AAuth's `s256` commitment, native `{approver, s256}` propagation, and active-state gating on PS endpoints and the PS-asserted and federated paths. It defines no OAuth Authority Set or additional AAuth wire members. |
+| `mission-uma` | Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent rides claims pushing, the resource owner's decision fills UMA's authorization assessment, the RPT is the Mission-bound credential, and the PCT is continuity that is never authority; the first binding authored against the substrate contract. |
+| `mission-gnap` | Experimental sketch. The GNAP binding: the Mission Intent rides a registered grant request member, interaction or a companion-supplied standing basis is the approval event, grant modification splits into in-Mission drawdown and Approver-routed expansion, and the continuation access token is continuity that is never authority; the second binding authored against the substrate contract. |
+| `mission-substrate` | The binding-neutral kernel contract: normative on any further binding, conformed to by the existing bindings through their published Substrate Statements, with vocabulary ownership migrating to it by touch. |
+| `mission-aam` | Experimental sketch. Cloudflare's Agent Access Model realized on the family: the six AAM components map onto issuance, the PDP, the mediated harness, Containment, Mission Templates, and the evidence join, and the grant review loop is deliberately not adopted. It defines no binding and no new mechanism. |
 
 **Approval time:**
 
-`mission-shaping`:
-: Client-side shaping of a user's request into a candidate Mission
-  Intent, as untrusted proposal.
-
-`oauth-mission-consent-evidence`:
-: The `consent_rendering_hash` anchor and signed evidence of what the
-  Approver was shown, with the translation floor and Disclosure
-  Interrogation that keep the approval surface readable and
-  questionable.
-
-`oauth-mission-approval`:
-: Asynchronous approval over the deferred substrate.
-
-`mission-approval-governance`:
-: The Approval Governance Record: authenticated, event-bound,
-  policy-authorized assertions standing behind an approval decision,
-  committed atomically with Mission activation and immutable once
-  signed.
-
-`oauth-mission-approval-revision`:
-: Experimental: in-review narrowing revision of a deferred proposal.
-
-`oauth-mission-template`:
-: Experimental: one consent to a task template's ceiling; each dispatch
-  instantiates an ordinary Mission from it by policy, at machine speed,
-  bounded by its own derived Authority Set and never exceeding the ceiling.
+| Document | Role |
+|---|---|
+| `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
+| `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown, with the translation floor and Disclosure Interrogation that keep the approval surface readable and questionable. |
+| `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
+| `mission-approval-governance` | The Approval Governance Record: authenticated, event-bound, policy-authorized assertions standing behind an approval decision, committed atomically with Mission activation and immutable once signed. |
+| `oauth-mission-approval-revision` | Experimental: in-review narrowing revision of a deferred proposal. |
+| `oauth-mission-template` | Experimental: one consent to a task template's ceiling; each dispatch instantiates an ordinary Mission from it by policy, at machine speed, bounded by its own derived Authority Set and never exceeding the ceiling. |
 
 **Lifecycle:**
 
-Status is the OAuth lifecycle suite's root document (state reading,
-including the swarm-scale Status List, lifecycle verbs, and
-completion), with Signals (the push channel) and Management (the
-operator plane) as its satellites.  AAuth keeps its native two-state
-lifecycle and uses `mission-aauth-management` for its corresponding
-status, termination, expiry, and delegation-tree surface.  The expiry
-bound is AAuth's own `expires_at`, profiled by the expiry document
-({{I-D.draft-mcguinness-aauth-mission-expiry}}).
-
-`oauth-mission-status`:
-: The signed pull surface and the lifecycle endpoint, with
-  `suspended` and `completed`, and per-entry discharge via the
-  `terminal_when` constraint.
-
-`oauth-mission-signals`:
-: A signed event per lifecycle transition, push or poll.
-
-`oauth-mission-expansion`:
-: Widening through an approved successor Mission.
-
-`oauth-mission-containment`:
-: Event-triggered, monotonic narrowing of a live Mission's effective
-  authority, with restoration only through an approved successor.
-
-`oauth-mission-progressive`:
-: Experimental: policy-adjudicated expansion within a pre-consented
-  ceiling.
-
-`mission-discovery`:
-: Experimental: the open-world encounter as a governed operation:
-  identity pinning, ceiling and contextual adjudication with the
-  lying-resource and tainted-session floors, Discovery Evidence.
-
-`oauth-mission-management`:
-: Fleet enumeration and bulk lifecycle operations for operators and
-  incident response; dry-run-first, per-Mission semantics.
-
-`mission-aauth-management`:
-: AAuth-native status, permanent termination, optional expiry, and
-  delegation-tree queries at the Person Server, keyed only by
-  `{approver, s256}` and preserving AAuth's `active` and `terminated`
-  states.
-
-`aauth-mission-expiry`:
-: Profile of AAuth's `expires_at` mission lifetime bound (RFC 3339
-  precision, skew documentation, prompt termination).  The base
-  protocol enforces the bound on every Person Server decision path
-  and caps every token carrying `mission_s256`; the AAuth binding
-  requires the member on every mission.
-
-`oauth-mission-cross-domain`:
-: Single-hop projection of a Mission to another trust domain via the
-  cross-domain grant.
-
-`oauth-mission-cross-org-delegation`:
-: Recursive cross-organizational delegation as a profile of offline
-  attenuation: the chain is the portable authority proof, each hop
-  names its own actor under the identity-binding rule, and projection
-  turns a verified chain into a local token.
-
-`oauth-mission-continuation`:
-: The authorization-continuity profile: a Mission continues its
-  authorization over identity-continuity transports (Identity
-  Continuation, async delegation, cross-domain), state-gated, with the
-  invariant that a continuation handle grants nothing.
-
-`oauth-id-continuation-assertion`:
-: A continuation transport: a short-lived token-exchange subject token
-  yielding an ID-JAG for an intra-domain hop, bound to a Mission's
-  authorization by mission-continuation.
+| Document | Role |
+|---|---|
+| `oauth-mission-status` | The signed pull surface and the lifecycle endpoint, with `suspended` and `completed`, and per-entry discharge via the `terminal_when` constraint. |
+| `oauth-mission-signals` | A signed event per lifecycle transition, push or poll. |
+| `oauth-mission-expansion` | Widening through an approved successor Mission. |
+| `oauth-mission-containment` | Event-triggered, monotonic narrowing of a live Mission's effective authority, with restoration only through an approved successor. |
+| `oauth-mission-progressive` | Experimental: policy-adjudicated expansion within a pre-consented ceiling. |
+| `mission-discovery` | Experimental: the open-world encounter as a governed operation: identity pinning, ceiling and contextual adjudication with the lying-resource and tainted-session floors, Discovery Evidence. |
+| `oauth-mission-management` | Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics. |
+| `mission-aauth-management` | AAuth-native status, permanent termination, optional expiry, and delegation-tree queries at the Person Server, keyed only by `{approver, s256}` and preserving AAuth's `active` and `terminated` states. |
+| `aauth-mission-expiry` | Profile of AAuth's `expires_at` mission lifetime bound (RFC 3339 precision, skew documentation, prompt termination). The base protocol enforces the bound on every Person Server decision path and caps every token carrying `mission_s256`; the AAuth binding requires the member on every mission. |
+| `oauth-mission-cross-domain` | Single-hop projection of a Mission to another trust domain via the cross-domain grant. |
+| `oauth-mission-cross-org-delegation` | Recursive cross-organizational delegation as a profile of offline attenuation: the chain is the portable authority proof, each hop names its own actor under the identity-binding rule, and projection turns a verified chain into a local token. |
+| `oauth-mission-continuation` | The authorization-continuity profile: a Mission continues its authorization over identity-continuity transports (Identity Continuation, async delegation, cross-domain), state-gated, with the invariant that a continuation handle grants nothing. |
+| `oauth-id-continuation-assertion` | A continuation transport: a short-lived token-exchange subject token yielding an ID-JAG for an intra-domain hop, bound to a Mission's authorization by mission-continuation. |
 
 **Runtime enforcement:**
 
-`mission-runtime`:
-: The per-action decision contract: parameter binding, custody,
-  fail-closed behavior.
-
-`mission-authzen`:
-: The concrete decision-API binding: the AuthZEN request and response
-  mapping and the denial classification.
-
-`mission-runtime-evidence`:
-: The binding-neutral Decision Evidence, Execution Evidence, and
-  Refusal Record objects a decision-API binding's PDP and PEP emit,
-  their integrity envelope, and retention.
-
-`mission-metering`:
-: Experimental: cumulative consumption bounds and the metering that
-  enforces them.
-
-`oauth-mission-transaction-authorization`:
-: Experimental: the transaction authorization challenge profiled for
-  the cross-domain case, minting a single-use action-bound token
-  after a fresh decision with a governed approval as input.
+| Document | Role |
+|---|---|
+| `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior. |
+| `mission-authzen` | The concrete decision-API binding: the AuthZEN request and response mapping and the denial classification. |
+| `mission-runtime-evidence` | The binding-neutral Decision Evidence, Execution Evidence, and Refusal Record objects a decision-API binding's PDP and PEP emit, their integrity envelope, and retention. |
+| `mission-metering` | Experimental: cumulative consumption bounds and the metering that enforces them. |
+| `oauth-mission-transaction-authorization` | Experimental: the transaction authorization challenge profiled for the cross-domain case, minting a single-use action-bound token after a fresh decision with a governed approval as input. |
 
 **Agent runtime:**
 
-`mission-harness`:
-: Binding sessions, queues, and sub-agent handles to Mission state;
-  the mediated environment.
-
-`mission-capability-binding`:
-: Binds an approved catalog-sourced entry (an MCP tool, an OpenAPI
-  operation) to its capability source at derivation and refuses on
-  drift at decision time, with the AuthZEN MCP profile's (COAZ)
-  mapping for MCP deployments.
-
-`mission-orchestration`:
-: Experimental: reversibility classes, unwind plans, and compensation
-  after a stop.
+| Document | Role |
+|---|---|
+| `mission-harness` | Binding sessions, queues, and sub-agent handles to Mission state; the mediated environment. |
+| `mission-capability-binding` | Binds an approved catalog-sourced entry (an MCP tool, an OpenAPI operation) to its capability source at derivation and refuses on drift at decision time, with the AuthZEN MCP profile's (COAZ) mapping for MCP deployments. |
+| `mission-orchestration` | Experimental: reversibility classes, unwind plans, and compensation after a stop. |
 
 **Sub-agents:**
 
-`oauth-mission-child-delegation`:
-: Child Missions with lineage, strict-subset authority, cascade
-  revocation.
-
-`oauth-mission-attenuation`:
-: Experimental: narrower Mission-bound tokens minted offline; the
-  kill switch preserved by runtime re-check.
+| Document | Role |
+|---|---|
+| `oauth-mission-child-delegation` | Child Missions with lineage, strict-subset authority, cascade revocation. |
+| `oauth-mission-attenuation` | Experimental: narrower Mission-bound tokens minted offline; the kill switch preserved by runtime re-check. |
 
 **Work products:**
 
-`oauth-mission-work-products`:
-: Experimental: work-product provenance, attribution and not authority,
-  and the non-transitive Mission-to-Mission handoff rule; a work product
-  crossing into a Mission is input, re-evaluated under the receiver's
-  Authority Set.
+| Document | Role |
+|---|---|
+| `oauth-mission-work-products` | Experimental: work-product provenance, attribution and not authority, and the non-transitive Mission-to-Mission handoff rule; a work product crossing into a Mission is input, re-evaluated under the receiver's Authority Set. |
 
 **Proof and portability:**
 
-`mission-mandate`:
-: A signed, portable statement of a Mission's committed facts;
-  evidence, not a credential.
-
-`mission-audit`:
-: Registration of Mission evidence in a SCITT Transparency Service;
-  receipts verifiable offline.
+| Document | Role |
+|---|---|
+| `mission-mandate` | A signed, portable statement of a Mission's committed facts; evidence, not a credential. |
+| `mission-audit` | Registration of Mission evidence in a SCITT Transparency Service; receipts verifiable offline. |
 
 **Security model:**
 
-`mission-security-model`:
-: The trusted base in one view: what each component must achieve and
-  what its compromise costs.
+| Document | Role |
+|---|---|
+| `mission-security-model` | The trusted base in one view: what each component must achieve and what its compromise costs. |
 
 # Security Considerations {#security-considerations}
 
