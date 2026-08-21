@@ -15,8 +15,8 @@
 //   (e) verbs                 - the manifest's top-level `verbs` enum is empty, non-string-valued,
 //                                or has a duplicate entry; or a draft's `verbs` is not a
 //                                non-empty, duplicate-free array drawn from that enum
-//   (f) draft copy            - a draft's `summary` or `pull_when` is missing, empty, or not a
-//                                string, or its `summary` is a bare maturity word
+//   (f) draft copy            - a draft's `title`, `summary`, or `pull_when` is missing, empty,
+//                                or not a string, or its `summary` is a bare maturity word
 //   (g) reference stacks      - the manifest's top-level `reference_stacks` object (a transcription
 //                                of the Architecture's four cumulative stacks) is missing a stack,
 //                                has a malformed `contains` chain, or lists a `binding_one_of`,
@@ -47,6 +47,9 @@
 //                                duplicated, or not a manifest slug; `requires` is not a subset of
 //                                `references`; or `requires` drifts from the normative I-D.draft-
 //                                mcguinness-* references in the draft's own front matter
+//   (o) groups                - the manifest's `groups` enum is malformed, a draft's `group` is
+//                                not in it, or the draft is not named under its group's "###"
+//                                section in DRAFTS.md's catalog
 
 import fs from "node:fs";
 import path from "node:path";
@@ -54,7 +57,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
-import { maturityDisplay, validateDraftsIndex } from "./generate-drafts-index.mjs";
+import { maturityDisplay, validateDraftsIndex, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -212,6 +215,16 @@ function main() {
     process.exit(1);
   }
 
+  // Structural gate: every entry needs a string slug and file before any
+  // other check can reason about it; a malformed entry would otherwise
+  // crash later checks mid-run instead of producing one clean finding.
+  const malformed = drafts.filter((d) => typeof d?.slug !== "string" || d.slug.length === 0 || typeof d?.file !== "string" || d.file.length === 0);
+  if (malformed.length > 0) {
+    console.error(`family-manifest check FAILED: ${malformed.length} drafts[] entr${malformed.length === 1 ? "y" : "ies"} missing a string slug/file:`);
+    for (const d of malformed) console.error(`  - ${JSON.stringify({ slug: d?.slug, file: d?.file })}`);
+    process.exit(1);
+  }
+
   const onDisk = fs
     .readdirSync(ROOT)
     .filter((f) => /^draft-.*\.md$/.test(f))
@@ -219,6 +232,19 @@ function main() {
   const onDiskSet = new Set(onDisk);
   const manifestFiles = new Set(drafts.map((d) => d.file));
   const manifestSlugs = new Set(drafts.map((d) => d.slug));
+
+  // `slug` is the foreign key for requires/references/reference_stacks and
+  // the go-link check; a duplicate would make every edge to it ambiguous
+  // while the Sets above silently collapse it.
+  for (const [field, set] of [["slug", manifestSlugs], ["file", manifestFiles]]) {
+    if (set.size !== drafts.length) {
+      const seen = new Set();
+      for (const d of drafts) {
+        if (seen.has(d[field])) fail("inventory", `drafts[] lists ${field} "${d[field]}" more than once`);
+        seen.add(d[field]);
+      }
+    }
+  }
 
   // (a) Inventory drift
   if (typeof manifest.count === "number" && manifest.count !== drafts.length) {
@@ -302,7 +328,7 @@ function main() {
   // the adoption trigger a reader chooses by. A summary that is only a
   // maturity word describes nothing.
   for (const d of drafts) {
-    for (const field of ["summary", "pull_when"]) {
+    for (const field of ["title", "summary", "pull_when"]) {
       const v = d[field];
       if (typeof v !== "string" || v.trim().length === 0) {
         fail("draft-copy", `${d.slug}: "${field}" must be a non-empty string, got ${JSON.stringify(v)}`);
@@ -350,7 +376,7 @@ function main() {
       }
       const seen = new Set();
       for (const slug of arr) {
-        const isCoreFacility = allowCore && typeof slug === "string" && /^core:[a-z][a-z-]*$/.test(slug);
+        const isCoreFacility = allowCore && typeof slug === "string" && /^core:[a-z][a-z0-9-]*$/.test(slug);
         if (!isCoreFacility && !manifestSlugs.has(slug)) {
           fail("reference-stacks", `stack "${name}": "${field}" entry ${JSON.stringify(slug)} is not a manifest draft slug${allowCore ? ' or a "core:" binding facility' : ""}`);
         }
@@ -372,6 +398,9 @@ function main() {
       if (s.contains !== null && !stackNames.includes(s.contains)) {
         fail("reference-stacks", `stack "${name}": "contains" must be null or another stack name, got ${JSON.stringify(s.contains)}`);
       }
+      if (s.contains === name) {
+        fail("reference-stacks", `stack "${name}": "contains" refers to itself`);
+      }
       if (s.contains === null && !Array.isArray(s.binding_one_of)) {
         fail("reference-stacks", `stack "${name}" is a root stack and must declare "binding_one_of"`);
       }
@@ -379,14 +408,30 @@ function main() {
       checkSlugList(name, "adds", s.adds, { allowEmpty: true });
       checkSlugList(name, "freshness_one_of", s.freshness_one_of, { allowCore: true });
     }
+    // The stacks are cumulative: exactly one root, and every `contains`
+    // chain must reach it without a cycle.
+    const roots = stackNames.filter((n) => stacks[n]?.contains === null);
+    if (roots.length !== 1) {
+      fail("reference-stacks", `expected exactly one root stack (contains: null), found ${roots.length} (${roots.join(", ") || "none"})`);
+    }
+    for (const name of stackNames) {
+      const visited = new Set([name]);
+      let cur = stacks[name]?.contains;
+      while (typeof cur === "string" && stackNames.includes(cur)) {
+        if (visited.has(cur)) {
+          fail("reference-stacks", `stack "${name}": "contains" chain cycles at "${cur}"`);
+          break;
+        }
+        visited.add(cur);
+        cur = stacks[cur]?.contains;
+      }
+    }
   }
 
   // (h) maintenance enum: `maintenance` must be one of the manifest's own
   // declared `maintenance_classes`.
-  const validMaintenance = new Set(manifest.maintenance_classes || []);
-  if (validMaintenance.size === 0) {
-    fail("maintenance-enum", `family-manifest.json is missing a non-empty top-level "maintenance_classes" array`);
-  }
+  validateEnumArray("maintenance-enum", "maintenance_classes", manifest.maintenance_classes);
+  const validMaintenance = new Set(Array.isArray(manifest.maintenance_classes) ? manifest.maintenance_classes : []);
   for (const d of drafts) {
     if (!validMaintenance.has(d.maintenance)) {
       fail("maintenance-enum", `${d.slug}: maintenance "${d.maintenance}" is not one of ${JSON.stringify([...validMaintenance])}`);
@@ -447,7 +492,7 @@ function main() {
   // renders fine and 404s at click time, so every #go.<slug>.html target in
   // the curated files must be a manifest draft.
   for (const [label, text] of [["README.md", readme], ["DRAFTS.md", draftsDoc]]) {
-    const goRe = /#go\.(draft-[a-z0-9-]+)\.html/g;
+    const goRe = new RegExp(GO_LINK_PATTERN, "g");
     let gm;
     while ((gm = goRe.exec(text))) {
       if (!manifestSlugs.has(gm[1])) {
@@ -461,33 +506,37 @@ function main() {
   // front matter, and the only edges adoption closure may follow;
   // `references` is the full in-family citation graph and pulls in nothing.
   for (const d of drafts) {
-    let shapeOk = true;
+    // Shape validity is tracked per field so a malformed `references` never
+    // masks an independent `requires` drift bug in the same draft.
+    const fieldOk = {};
     for (const field of ["requires", "references"]) {
       const arr = d[field];
       if (!Array.isArray(arr)) {
         fail("typed-edges", `${d.slug}: "${field}" must be an array of manifest slugs (empty allowed), got ${JSON.stringify(arr)}`);
-        shapeOk = false;
+        fieldOk[field] = false;
         continue;
       }
+      fieldOk[field] = true;
       const seen = new Set();
       for (const slug of arr) {
         if (!manifestSlugs.has(slug)) {
           fail("typed-edges", `${d.slug}: "${field}" entry ${JSON.stringify(slug)} is not a manifest draft slug`);
-          shapeOk = false;
+          fieldOk[field] = false;
         }
         if (slug === d.slug) fail("typed-edges", `${d.slug}: "${field}" lists the draft itself`);
         if (seen.has(slug)) fail("typed-edges", `${d.slug}: "${field}" lists "${slug}" more than once`);
         seen.add(slug);
       }
     }
-    if (!shapeOk) continue;
-    const referenceSet = new Set(d.references);
-    for (const slug of d.requires) {
-      if (!referenceSet.has(slug)) {
-        fail("typed-edges", `${d.slug}: "requires" edge to "${slug}" is missing from "references" (requires must be a subset)`);
+    if (fieldOk.requires && fieldOk.references) {
+      const referenceSet = new Set(d.references);
+      for (const slug of d.requires) {
+        if (!referenceSet.has(slug)) {
+          fail("typed-edges", `${d.slug}: "requires" edge to "${slug}" is missing from "references" (requires must be a subset)`);
+        }
       }
     }
-    if (!onDiskSet.has(d.file)) continue;
+    if (!Array.isArray(d.requires) || !onDiskSet.has(d.file)) continue;
     const declared = parseNormativeFamilyRefs(readFile(path.join(ROOT, d.file), d.file), manifestSlugs);
     const recorded = new Set(d.requires);
     for (const slug of declared) {
@@ -499,6 +548,51 @@ function main() {
       if (!declared.has(slug)) {
         fail("typed-edges", `${d.slug}: manifest "requires" lists "${slug}", but the draft's front matter has no normative reference to it`);
       }
+    }
+  }
+
+  // (o) Groups: the enum is well-formed, every draft's `group` is in it, and
+  // the draft is named under its group's "###" section in DRAFTS.md's
+  // catalog — the placement semantics the retired README adoption map used
+  // to carry.
+  const GROUP_SECTION_TITLES = {
+    "architecture": "Architecture",
+    "core": "The core",
+    "approval-time": "Approval time",
+    "lifecycle": "Lifecycle",
+    "runtime-enforcement": "Runtime enforcement",
+    "bindings-substrate": "Alternate bindings and the substrate",
+    "agent-runtime": "Agent runtime",
+    "sub-agents": "Sub-agents",
+    "cross-domain-projection": "Cross-domain projection",
+    "proof-portability": "Proof and portability",
+    "security-model": "Security model",
+  };
+  validateEnumArray("groups", "groups", manifest.groups);
+  const validGroups = new Set(Array.isArray(manifest.groups) ? manifest.groups : []);
+  for (const g of validGroups) {
+    if (!(g in GROUP_SECTION_TITLES)) {
+      fail("groups", `group "${g}" has no DRAFTS.md section title mapping in this checker; add it to GROUP_SECTION_TITLES`);
+    }
+  }
+  const groupSections = {};
+  for (const [g, title] of Object.entries(GROUP_SECTION_TITLES)) {
+    if (!validGroups.has(g)) continue;
+    const section = extractSection(draftsDoc, (t, l) => l === 3 && t === title);
+    if (section === null) {
+      fail("groups", `DRAFTS.md has no "### ${title}" section for group "${g}"`);
+      continue;
+    }
+    groupSections[g] = section;
+  }
+  for (const d of drafts) {
+    if (!validGroups.has(d.group)) {
+      fail("groups", `${d.slug}: group ${JSON.stringify(d.group)} is not one of ${JSON.stringify([...validGroups])}`);
+      continue;
+    }
+    const section = groupSections[d.group];
+    if (section !== undefined && !containsToken(section, d.slug)) {
+      fail("groups", `${d.slug}: not named under DRAFTS.md's "### ${GROUP_SECTION_TITLES[d.group]}" section, where its group "${d.group}" places it`);
     }
   }
 

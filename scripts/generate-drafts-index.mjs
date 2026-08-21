@@ -26,6 +26,10 @@ export const END_MARKER = "<!-- generated:drafts-index:end -->";
 
 const EDITORS_COPY_BASE = "https://mcguinness.github.io/mission-bound-authorization/#go.";
 
+// The one editor's-copy link convention, shared with the family checker so
+// the link-validation regex cannot drift from the URLs this file emits.
+export const GO_LINK_PATTERN = "#go\\.(draft-[a-z0-9-]+)\\.html";
+
 // A manifest maturity value under the family's one display vocabulary: stable,
 // experimental, and sketch display verbatim; informational displays as "guide"
 // (a document that explains rather than defines). Returns null for a value with
@@ -75,6 +79,15 @@ export function spliceIndex(text, block) {
   if (startIdx === -1) throw new Error(`DRAFTS.md is missing the marker ${START_MARKER}`);
   if (endIdx === -1) throw new Error(`DRAFTS.md is missing the marker ${END_MARKER}`);
   if (endIdx < startIdx) throw new Error(`DRAFTS.md has ${END_MARKER} before ${START_MARKER}`);
+  // A duplicated block (bad merge, stray paste) must fail loudly: with only
+  // first-occurrence splicing, the second, stale copy would ship while the
+  // freshness check reports "current".
+  if (text.indexOf(START_MARKER, startIdx + START_MARKER.length) !== -1) {
+    throw new Error(`DRAFTS.md contains ${START_MARKER} more than once`);
+  }
+  if (text.indexOf(END_MARKER, endIdx + END_MARKER.length) !== -1) {
+    throw new Error(`DRAFTS.md contains ${END_MARKER} more than once`);
+  }
   return text.slice(0, startIdx) + block + text.slice(endIdx + END_MARKER.length);
 }
 

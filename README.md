@@ -24,11 +24,13 @@ layer**: authentication says who is acting, and entitlement
 governance says what a principal may hold; this layer governs the
 approved task itself. The Mission Issuer is the control plane,
 holding the approved task and distributing bounded authority; tokens
-with the PEP/PDP boundary are its data plane.
+with the policy enforcement and decision boundary (PEP/PDP) are its
+data plane.
 
 The essential boundary: a Mission records the approved task and its
-lifecycle. It does not replace OAuth authority syntax. RAR describes
-requested and issued authority; the Mission explains why that
+lifecycle. It does not replace OAuth authority syntax. RAR (Rich
+Authorization Requests, RFC 9396) describes requested and issued
+authority; the Mission explains why that
 authority exists and gates its continued derivation and use.
 
 ## The standardization ask
@@ -93,8 +95,8 @@ The binding decides where the Mission control point lives.
 | Binding | Use it when | The boundary to know |
 |---|---|---|
 | [**OAuth AS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the core) | Your Authorization Server can issue Mission-bound tokens | Portable structured authority on the token; this is the issuance profile |
-| [**Standalone MAS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) | Existing Authorization Servers cannot host Mission approval | Ordinary credentials are *joined* to Missions; high-consequence paths require Mission-bound issuance (the [Issuance Grant](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)) |
-| [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | The Person Server owns contextual governance | Native AAuth access semantics, not the OAuth Authority Set |
+| [**Standalone MAS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) (Mission Authority Server) | Existing Authorization Servers cannot host Mission approval | Ordinary credentials are *joined* to Missions; high-consequence paths require Mission-bound issuance (the [Issuance Grant](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)) |
+| [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | AAuth's Person Server (the user-held control point) owns contextual governance | Native AAuth access semantics, not the OAuth Authority Set |
 | [**UMA**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) / [**GNAP**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | Protocol research and evaluation | Experimental sketches, authored against the substrate contract |
 
 ## Choose an assurance outcome
@@ -105,20 +107,22 @@ obligations; a deployment claims the level it has earned.
 
 | Level | What it gives |
 |---|---|
-| **Baseline Issuance** | Approved, integrity-bound Missions and state-gated issuance: the kill switch is the issuance gate, and outstanding tokens run to their own expiry |
+| **Baseline Issuance** | Approved, integrity-bound Missions and state-gated issuance: where the binding issues Mission-bound credentials, the kill switch is the issuance gate, and outstanding tokens run to their own expiry |
 | **Runtime-Enforced** | A point-of-use permit before each consequential action, with durable decision and execution evidence |
 | **Governed Agent** | Adds session-continuity stop (the harness) and proof of what the Approver saw (consent evidence) |
-| **High-Assurance Agent** | Adds the named custody and containment claims: compromise-resistant custody and trifecta containment |
+| **High-Assurance Agent** | Adds the level's two named claims: agent-compromise-resistant enforcement and trifecta containment |
 
 Deployments compose along the Architecture's four cumulative
-reference stacks, from the protocol core alone to the high-assurance
-agent architecture; the manifest transcribes them as
-`reference_stacks` in
+reference stacks, from the protocol core alone (Baseline Issuance)
+to the high-assurance architecture (High-Assurance Agent); the
+manifest transcribes them as `reference_stacks` in
 [`family-manifest.json`](family-manifest.json), with the issuer
 binding and the freshness source modeled as explicit alternatives.
 Binding properties and assurance claims remain per path; a stack
-name never upgrades weaker paths. The transcription is validated in
-CI and provisional until v0 proper passes its publication gate. (The
+name never upgrades weaker paths. The transcription is structurally
+validated in CI (fidelity to the Architecture's prose is an
+editorial obligation) and provisional until v0 proper passes its
+publication gate. (The
 Architecture's five *packages* are its own orthogonal decomposition;
 the manifest does not restate them.)
 
@@ -127,8 +131,9 @@ the manifest does not restate them.)
 The first useful piece is one profile, not the suite. A minimal
 conforming deployment implements the core alone: Mission Intent
 submission, Authority Set derivation, the committed Mission record
-with its integrity anchors, the `mission` claim, and state-gated
-issuance with revocation by Mission. The authoritative checklist,
+with its integrity anchors, the `mission` claim, and issuance
+bounded by the subset rule and gated on Mission state (revocation by
+Mission is the kill switch). The authoritative checklist,
 including the distinct client and resource-server obligations, is
 the core's
 [Conformance section](https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html#name-conformance);
@@ -138,7 +143,7 @@ What the core alone does **not** protect, by design:
 already-issued tokens run to expiry (prompt cutoff needs
 introspection, Status, or the runtime layer); completed actions are
 not undone; off-path execution by a compromised agent is the runtime
-and harness profiles' territory; prompt injection is constrained
+layer's territory; prompt injection is constrained
 (inert intent text, fixed authority), not prevented; and
 information-flow leakage within approved authority is out of scope.
 
@@ -192,8 +197,9 @@ normative in-family references — the only edges that close
 transitively for adoption) and `references` (the full in-family
 citation graph, never used for closure). The Architecture's
 reference stacks are transcribed in the top-level `reference_stacks`
-object. The checker validates all of it, including that every
-`requires` edge matches the draft's own normative reference list,
+object. The checker validates the structure of all of it, including
+that every `requires` edge matches the draft's own normative
+reference list,
 regenerates nothing silently (the DRAFTS.md index is checked for
 freshness, never rewritten in CI), and holds this README to three
 rules: it links the catalog and dependency reports, every backticked

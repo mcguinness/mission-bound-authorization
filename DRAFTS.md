@@ -104,7 +104,7 @@ primitives a binding provides and the profiles consume), the verb
 spine, deployment patterns, the Mission Assurance Levels, the
 Deployment Profile, and the requirements the family answers.
 Informational; it defines no mechanism, and the profiles remain
-authoritative. Read this first.
+authoritative. The recommended first read.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
 
@@ -402,13 +402,16 @@ evidence bag. Experimental; profiles an unratified individual draft.
 
 A peer binding, the AS-optional deployment mode, and the estate
 control plane of the delegated-authority layer. A Mission Authority
-Server implements the Mission Issuer role (intent submission, the
+Server (MAS) implements the Mission Issuer role (intent submission, the
 approval event, the record, lifecycle, and state) without being an
 OAuth Authorization Server and without deriving tokens. Enforcement
 joins ordinary OAuth tokens to Missions at the Policy Decision Point,
-so a deployment gets Mission governance with an unmodified AS. No
-Mission-bound tokens and no issuance gating; runtime enforcement over
-every consequential path is required. Above the conformance floor,
+so a deployment gets Mission governance with an unmodified AS. Joined
+credentials are not Mission-bound, so runtime enforcement covers
+every consequential path, and a path claiming the Enterprise
+profile's high-consequence credential property MUST use Mission-bound
+issuance (the Issuance Grant, or a natively Mission-aware AS). Above
+the conformance floor,
 the Enterprise Mission Authority Profile is the estate operating
 mode: Join Assertions, instance-bound joins, a mapping contract,
 policy-view distribution, and documented PEP coverage, with a
@@ -467,10 +470,12 @@ continuity token that grants nothing) and deliberately left the
 authorization assessment unspecified; this binding fills that
 interior with the Mission. The pushed Mission Intent rides claims
 pushing at the token endpoint, the resource owner's decision is the
-approval event, the lifecycle gates every RPT issuance and upgrade,
+approval event, the lifecycle gates every RPT (requesting party
+token) issuance and upgrade,
 the RPT is the Mission-bound credential (token-carried or
 introspection-carried via the core's registered `mission` member),
-and the PCT is Mission continuity that is never authority. It claims
+and the PCT (persistent claims token) is Mission continuity that is
+never authority. It claims
 the contextual-governance kernel plus lifecycle-gated, state-observable,
 structured-authority, monotonic-derivation, and credential-bound
 capabilities on ratified substrate machinery; independent verification

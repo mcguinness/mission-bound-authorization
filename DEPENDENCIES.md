@@ -7,6 +7,9 @@ the per-document catalog is in [DRAFTS.md](DRAFTS.md).
 
 ## Dependency stability
 
+Bold shorthand below names the family's documents informally;
+[DRAFTS.md](DRAFTS.md) maps every document to its full draft name.
+
 Outside the family itself, every normative dependency is a ratified
 RFC, a finalized OpenID specification, or (for the **uma** sketch) a
 final Kantara Initiative Recommendation, with these tracked
@@ -20,9 +23,9 @@ capability; **status** depends on the OAuth Status List (a
 working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
-and in the RFC Editor queue; **approval**, **attenuation**, **cross-org-delegation**, **aauth**,
-**aauth-expiry**, and **aauth-management** track unratified individual
-drafts (OAuth
+and in the RFC Editor queue; **approval**, **attenuation**,
+**cross-org-delegation**, **aauth**, **aauth-expiry**, and
+**aauth-management** track unratified individual drafts (OAuth
 Deferred Token Response, Attenuating Agent Tokens, and the AAuth
 protocol); **authority-server** confines its Internet-Draft
 references (client instance assertion and the AI agent instance
@@ -44,6 +47,7 @@ anchors the AAuth binding and its management companion; and the
 these. The substrate contract publishes before or with any binding
 that claims conformance to it.
 
-In short: the stable adoption path (the core, Status, and the runtime enforcement documents) rests on ratified dependencies and the
-tracked in-progress ones noted above; everything experimental is
+In short: the stable adoption path (the core, Status, and the
+runtime enforcement documents) rests on ratified dependencies and
+the tracked in-progress ones noted above; everything experimental is
 additive and can wait.
