@@ -101,6 +101,18 @@ export {
   unionConditions,
 } from "./kernel/discharge.js";
 export {
+  DEFAULT_DISCHARGE_EVENT_TTL_S,
+  DEFAULT_LIFECYCLE_NONCE_TTL_S,
+  type DischargeEventAudit,
+  type DischargeEventKey,
+  DischargeEventStore,
+  LIFECYCLE_ENDPOINT_KEY,
+  type LifecycleNonceKey,
+  LifecycleResponseStore,
+  type StoredDischargeEvent,
+  type StoredLifecycleResponse,
+} from "./kernel/lifecycle-idempotency.js";
+export {
   missionResourceAccessProfile,
   type OperationProfile,
   OperationProfileRegistry,

@@ -20,6 +20,8 @@ import {
   assertDischargePoliciesResolvable,
   conditionDigest,
   type DischargeAuthorityPolicy,
+  dischargeAssertionFingerprint,
+  DischargeConflictError,
   DischargeNotFoundError,
   type DischargeRequest,
   type DischargeResult,
@@ -28,6 +30,7 @@ import {
   resolveConditionMapping,
   terminalWhenOf,
 } from "./discharge.js";
+import { DischargeEventStore, type DischargeEventKey } from "./lifecycle-idempotency.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -174,6 +177,13 @@ export interface KernelOptions {
    * record at all and every `discharge` delivery joins the `not_found` collapse.
    */
   dischargeAuthority?: DischargeAuthorityPolicy;
+  /**
+   * @spec status#discharge-idempotency ("Retention") — override the event-dedup
+   * retention window (seconds); defaults to the published retry horizon. A test
+   * shortens it to prove that a repeated assertion after eviction is processed
+   * fresh against the monotonic latch.
+   */
+  dischargeEventRetentionSeconds?: number;
   now?: () => Date;
   /**
    * @spec status#mission-status-anti-oracle — Status List index allocator.
@@ -211,6 +221,12 @@ export class MissionKernel {
    * purged Mission-bound grant as an ordinary one and fail OPEN.
    */
   readonly missionBoundGrants: MissionBoundGrantStore;
+  /**
+   * @spec status#discharge-idempotency — the durable event-dedup store, on THIS
+   * kernel's database so an event row commits in the same transaction as the
+   * latch it records (@spec status#discharge-operation, "Atomicity").
+   */
+  readonly dischargeEvents: DischargeEventStore;
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
@@ -219,6 +235,12 @@ export class MissionKernel {
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
+    this.dischargeEvents = new DischargeEventStore(this.db, {
+      now: this.now,
+      ...(opts.dischargeEventRetentionSeconds !== undefined
+        ? { retentionSeconds: opts.dischargeEventRetentionSeconds }
+        : {}),
+    });
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -1011,6 +1033,55 @@ export class MissionKernel {
       condition_digest: input.condition_digest,
       event_id: input.event_id,
     };
+    // --- event-level dedup (@spec status#discharge-idempotency) ---
+    // Scoped by the five-part tuple and qualified by the assertion fingerprint.
+    // Evaluated BEFORE the terminal check: an at-least-once sender's retry under
+    // a fresh nonce must recover the ORIGINAL outcome and versions even after
+    // the Mission has since gone terminal. `nonce` is the endpoint's own retry
+    // key and is deliberately outside the fingerprint, so it never reaches here.
+    const eventKey: DischargeEventKey = {
+      authority: input.authority,
+      missionId: record.id,
+      entryDigest: input.entry_digest,
+      conditionDigest: input.condition_digest,
+      eventId: input.event_id,
+    };
+    const fingerprint = dischargeAssertionFingerprint({
+      mission_id: record.id,
+      entry_digest: input.entry_digest,
+      condition_digest: input.condition_digest,
+      event_type: input.event_type,
+      event_id: input.event_id,
+      ...(input.evidence_ref !== undefined ? { evidence_ref: input.evidence_ref } : {}),
+      ...(input.evidence_digest !== undefined ? { evidence_digest: input.evidence_digest } : {}),
+      ...(input.observed_at !== undefined ? { observed_at: input.observed_at } : {}),
+    });
+    const recorded = this.dischargeEvents.find(eventKey);
+    if (recorded) {
+      if (recorded.fingerprint !== fingerprint) {
+        throw new DischargeConflictError(
+          `event_id ${input.event_id} was already asserted against this target with a different assertion`,
+        );
+      }
+      // No state-changing work: no re-latch, no version increment. The caller
+      // signs a FRESH envelope echoing the new nonce and carrying this stored
+      // outcome with the versions the original commit produced.
+      return {
+        record,
+        result: {
+          ...selectors,
+          outcome: recorded.outcome,
+          prior_version: recorded.priorVersion,
+          current_version: recorded.currentVersion,
+        },
+      };
+    }
+    const audit = {
+      receivedAt: this.now().toISOString(),
+      ...(input.evidence_ref !== undefined ? { evidenceRef: input.evidence_ref } : {}),
+      ...(input.evidence_digest !== undefined ? { evidenceDigest: input.evidence_digest } : {}),
+      ...(input.observed_at !== undefined ? { observedAt: input.observed_at } : {}),
+    };
     // --- terminal states: acknowledged, never a transition ---
     if (TERMINAL_STATES.has(record.state)) {
       return {
@@ -1029,33 +1100,42 @@ export class MissionKernel {
     // same condition under a different event_id, is acknowledged
     // already_discharged and never re-latches or re-increments.
     if (record.discharged?.some((d) => d.entry_digest === input.entry_digest)) {
-      return {
-        record,
-        result: {
-          ...selectors,
-          outcome: "already_discharged",
-          prior_version: record.version,
-          current_version: record.version,
-        },
-      };
-    }
-    const fresh = this.latchDischarge(record, [
-      {
-        entry_digest: input.entry_digest,
-        condition_digest: input.condition_digest,
-        event_type: input.event_type,
-        event_id: input.event_id,
-      },
-    ]);
-    return {
-      record: fresh,
-      result: {
+      const result: DischargeResult = {
         ...selectors,
-        outcome: "discharged",
+        outcome: "already_discharged",
         prior_version: record.version,
-        current_version: fresh.version,
+        current_version: record.version,
+      };
+      // Recorded even though it commits no latch: a later replay of THIS
+      // occurrence must report the versions this delivery saw, not whatever the
+      // Mission's version has since become through unrelated transitions.
+      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit);
+      return { record, result };
+    }
+    let result!: DischargeResult;
+    const fresh = this.latchDischarge(
+      record,
+      [
+        {
+          entry_digest: input.entry_digest,
+          condition_digest: input.condition_digest,
+          event_type: input.event_type,
+          event_id: input.event_id,
+        },
+      ],
+      (committed) => {
+        result = {
+          ...selectors,
+          outcome: "discharged",
+          prior_version: record.version,
+          current_version: committed.version,
+        };
+        // In the SAME transaction as the latch and the version increment
+        // (@spec status#discharge-operation, "Atomicity").
+        this.dischargeEvents.recordInCallerTx(eventKey, fingerprint, result, audit);
       },
-    };
+    );
+    return { record: fresh, result };
   }
 
   /**
@@ -1080,6 +1160,12 @@ export class MissionKernel {
   private latchDischarge(
     record: MissionRecord,
     latches: ReadonlyArray<Omit<DischargedEntry, "discharged_at">>,
+    /**
+     * Runs INSIDE the commit transaction, after the persisted row is read and
+     * before the lifecycle fan-out: how the event-dedup row (and any future
+     * result record) joins this one unit.
+     */
+    accompany?: (committed: MissionRecord) => void,
   ): MissionRecord {
     const nowIso = this.now().toISOString();
     const next: DischargedEntry[] = [
@@ -1102,6 +1188,7 @@ export class MissionKernel {
         .run(JSON.stringify(next), record.id);
       const committed = this.get(record.id);
       if (!committed) throw new Error(`unknown mission: ${record.id}`);
+      accompany?.(committed);
       // Inside the unit deliberately: the signal enqueue commits with the latch
       // (@spec status#discharge-operation, "Atomicity"). Nothing after the
       // fan-out can fail the transaction, so the hook cannot fire on a rollback.
