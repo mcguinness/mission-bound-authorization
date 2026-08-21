@@ -5484,6 +5484,27 @@ resolve before interoperating.
 
 -01
 
+- Editorial consolidation; no normative change: every removed
+  sentence restates a rule that remains normatively stated at its
+  home ({{mission-bound-tokens}} and {{rs-enforcement}} for
+  `client_id`'s registered meaning, {{submission-via-par}} for the
+  submission trust rule, {{introspection}} for the RFC 7662
+  deviation, {{resource-boundary-canonicalization}} for the
+  single-normalization rule, {{lifecycle}} for short-lifetime
+  guidance). The rejected `client_id`-freezing narrative compressed
+  to its design rationale; spec-archaeology sentences removed in
+  favor of this history; the Mission Drift consideration folded
+  away. Structure: the commitment machinery promoted to Integrity
+  and Commitments; the Introduction's positioning subsections merged
+  into Relationship to Adjacent Work; the submission processing
+  order given its own section; Security Considerations grouped into
+  five themed clusters. Scanability: `mission_denial` values as a
+  definition list, a remediation-grains table, a prefix-matching
+  example table. Explicit anchors pinned on every previously
+  auto-slugged surviving heading, matching the published fragments;
+  the end-to-end example now shows `mission_id` and
+  `mission_expires_at` on the token response.
+
 - `goal_lang` (OPTIONAL, BCP 47) on the Mission Intent and an
   Internationalization Considerations section: a syntactic language
   declaration for the Intent's human-readable prose, committed by
