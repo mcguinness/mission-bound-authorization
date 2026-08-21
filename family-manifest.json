@@ -1175,9 +1175,11 @@
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-gnap",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-security-model",
+    "draft-mcguinness-mission-uma",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-status"
    ]

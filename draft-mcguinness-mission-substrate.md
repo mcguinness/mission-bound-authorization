@@ -57,6 +57,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-uma:
+    title: "Mission-Bound Authorization for UMA 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-gnap:
+    title: "Mission-Bound Authorization for GNAP"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-gnap.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -1038,27 +1054,22 @@ This document has no IANA actions.
 
 # Binding Mapping Guidance {#crosswalk}
 
-This appendix is informative.  It illustrates how existing Mission
-architectures map to the capability model.  It is not a substitute for
-the normative Mission Substrate Statement published by each binding,
-and an extension or deployment can change a row.
+This appendix is informative.  Each of the five bindings publishes
+the normative Mission Substrate Statement for its substrate: the
+OAuth binding's Statement is {{oauth-statement}} of this document,
+and the standalone MAS
+({{I-D.draft-mcguinness-mission-authority-server}}), AAuth
+({{I-D.draft-mcguinness-mission-aauth}}), UMA
+({{I-D.draft-mcguinness-mission-uma}}), and GNAP
+({{I-D.draft-mcguinness-mission-gnap}}) bindings each publish their
+own.  Those Statements, not this appendix, are the authoritative
+capability claims.  This appendix illustrates the mapping method
+through three design poles among which a new substrate can locate
+itself.
 
-| Capability | OAuth Mission | Standalone MAS | AAuth Mission |
-| --- | --- | --- | --- |
-| Contextual-governance kernel | Native Mission record, AS controller, OAuth client/subject mappings | Native Mission record, MAS controller, explicit join boundary | Native Mission reference and PS-controlled contextual Mission |
-| Lifecycle-Gated Authorization | AS gates covered token issuance and derivation | MAS gates its own decisions; OAuth credential issuance requires a cooperating credential issuer | PS gates covered permission or token decisions; coverage depends on the AAuth access mode |
-| State-Observable | Supplied when a status, introspection, or signal mechanism is active | Supplied when the MAS exposes a status mechanism | Not implied by the private Mission blob; requires a management or state extension for other consumers |
-| Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
-| Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
-| Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; supplied when a verified join or a cooperating credential issuer is active | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
-| Authorized Context Correlation | Not supplied natively: the issuer binds all facts at issuance | The MAS join and Join Assertion machinery | Not supplied natively: the PS binds the Mission, person, agent, and token at decision time |
-| Independently Verifiable | Supplied where signed credentials expose the property and verification material | Supplied when signed artifacts expose the property | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
-| Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise supplied only when an evidence profile is active | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
-{: title="Illustrative capability mapping for existing architectures"}
+## OAuth-Native Mapping: The Broad-Claims Pole
 
-## OAuth-Native Mapping
-
-OAuth Mission can intentionally claim a broad set of capabilities.
+The OAuth binding can intentionally claim a broad set of capabilities.
 Its Authorization Server can act as Controller, OAuth identifiers can
 instantiate Actor and subject mappings, Rich Authorization Requests
 can supply Structured Authority, and protected access-token fields can
@@ -1074,7 +1085,7 @@ verification is limited to the properties actually present in a
 verifiable credential; current state and undisclosed context do not
 follow from a Mission identifier or hash alone.
 
-## Standalone MAS Mapping
+## Standalone MAS Mapping: The Separation-and-Join Pole
 
 The MAS separates Mission governance from an otherwise unchanged
 Authorization Server.  It can satisfy the kernel and can provide
@@ -1086,7 +1097,7 @@ credential-binding properties.  The MAS Statement needs to describe
 those with their activation conditions and preserve the boundary
 between MAS assertions and Authorization Server behavior.
 
-## AAuth-Native Mapping
+## AAuth-Native Mapping: The Private-Context Pole
 
 An AAuth Mission naturally implements the contextual-governance
 kernel: the Policy Server controls approval and contextual decisions,
@@ -1146,6 +1157,11 @@ Precedence is scoped, not global.  For the OAuth-native binding, the
 OAuth binding's definitions govern that mapping; this document governs the
 kernel and capability vocabulary.  Neither document depends
 normatively on the other.
+
+Ownership migrates by touch, not by relocation.  When a
+binding-neutral definition next changes substantively, the change
+MUST land in this document, and the owning family section becomes a
+reference to it; no change is ever made solely to move words.
 
 ## OAuth Mission Binding Statement {#oauth-statement}
 
@@ -1236,21 +1252,44 @@ surfaces an implementation may or may not offer, each independent of
 the others. The capability table above states scoped guarantee
 claims: properties the OAuth binding supplies and the conditions
 under which each is supplied. The two vocabularies answer different
-questions and are not equivalent; the table below relates them
+questions and are not equivalent; the entries below relate them
 without collapsing one into the other. Declaring an OPTIONAL role
 never creates a claim beyond the eight already stated above.
 
-| Core OPTIONAL capability | Substrate capability claim(s) exercised | Relationship |
-| --- | --- | --- |
-| Introspection | State-Observable | One of State-Observable's three named activation surfaces, alongside Status and Signals; declaring it activates that otherwise-conditional claim. |
-| Delegation | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound, Authorized Context Correlation | Core delegation subset-checks `authorization_details`, carries the `mission` claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. The Token Exchange that issues the delegated credential is itself a grant binding at issuance: the AS joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential. Four of the five claims are supplied always, and Delegation exercises them rather than creating them; Authorized Context Correlation is the exception, activated by this role, whose Token Exchange join is its supplier. The `act` chain itself supplies none of them: it is attribution, never authority. |
-| Cross-Domain | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound | Carries these four always-supplied guarantees across the domain hop: the Mission reference and `authority_hash` intact, authority that only narrows, and projection gated on active state, while adding an interoperable projection surface the guarantees alone do not provide. It does not become Portable Evidence by crossing a domain: that claim activates only when an Evidence, Mandate, or audit companion is active, and Cross-Domain is not among them. |
-{: title="Core optional roles related to substrate capability claims"}
+Introspection:
+: Exercises State-Observable.  One of State-Observable's three named
+  activation surfaces, alongside Status and Signals; declaring it
+  activates that otherwise-conditional claim.
 
-Ownership migrates by touch, not by relocation.  When a
-binding-neutral definition next changes substantively, the change
-MUST land in this document, and the owning family section becomes a
-reference to it; no change is ever made solely to move words.
+Delegation:
+: Exercises Lifecycle-Gated Authorization, Structured Authority,
+  Monotonic Derivation, Credential-Bound, and Authorized Context
+  Correlation.  The OAuth binding's delegation subset-checks
+  `authorization_details`, carries the `mission` claim unchanged,
+  sender-constrains the delegated credential to the delegate's own
+  key, and refuses issuance unless the Mission is active.  The Token
+  Exchange that issues the delegated credential is itself a grant
+  binding at issuance: the AS joins the Mission and Subject carried
+  by the Mission-bound `subject_token` with the delegate identity
+  established by the `actor_token` or the delegate's own client
+  authentication, binding both to the newly issued credential.  Four
+  of the five claims are supplied always, and Delegation exercises
+  them rather than creating them; Authorized Context Correlation is
+  the exception, activated by this role, whose Token Exchange join
+  is its supplier.  The `act` chain itself supplies none of them: it
+  is attribution, never authority.
+
+Cross-Domain:
+: Exercises Lifecycle-Gated Authorization, Structured Authority,
+  Monotonic Derivation, and Credential-Bound.  Carries these four
+  always-supplied guarantees across the domain hop: the Mission
+  reference and `authority_hash` intact, authority that only
+  narrows, and projection gated on active state, while adding an
+  interoperable projection surface the guarantees alone do not
+  provide.  It does not become Portable Evidence by crossing a
+  domain: that claim activates only when an Evidence, Mandate, or
+  audit companion is active, and Cross-Domain is not among them.
+
 
 # Acknowledgments
 {:numbered="false"}
