@@ -1429,7 +1429,8 @@ Issuer role is played by the OAuth Authorization Server (AS)
 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>: the AS validates the Mission Intent, runs the approval
 event, records the Mission, derives Mission-bound tokens, and gates
 issuance on Mission state. That binding places the chokepoint at the
-token plane, the strongest enforcement position, and it requires
+token plane, the two capabilities a joined deployment lacks
+(Mission-bound credentials and issuance gating), and it requires
 changing the AS.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">Many deployments cannot make that change: the AS is a shared or
 third-party service, while the need to govern agent tasks is
@@ -1486,8 +1487,9 @@ enforcement from this profile and <span class="bcp14">SHOULD NOT</span> claim it
 <p id="section-1.1-2">The Mission Join (<a href="#mission-join" class="auto internal xref">Section 10</a>) is the newest mechanism in the
 family and, like every mechanism in this family, not yet exercised
 in production deployment; a deployment that can implement the OAuth
-binding obtains the token-plane chokepoint, a structural property of
-that binding rather than a maturity difference.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+binding obtains the token-plane chokepoint (Mission-bound
+credentials and issuance gating), a capability difference between
+the bindings rather than a maturity one.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
