@@ -356,13 +356,13 @@ durable object these project from: the approved task that bounds and
 outlives them, and that every derived token refers back to.
 
 Rich Authorization Requests express authority; a Mission expresses
-an approved task with a lifecycle. The Mission is a separate
-object because that approved-task lifecycle, not a new way to express
-authority, is what OAuth lacks. A Mission is therefore not another
+an approved task with a lifecycle; that approved-task lifecycle,
+not a new way to express authority, is what OAuth lacks. A Mission
+is therefore not another
 `authorization_details` type; it is the durable, approval-backed object
 an Authority Set is derived for and gated by.
 
-## Relationship to Other Authorization Objects
+## Relationship to Adjacent Work {#adjacent-work}
 
 A grant, in the sense of FAPI Grant Management {{FAPI.GrantManagement}},
 is a durable, queryable, revocable container of consented authorization
@@ -371,7 +371,10 @@ commitment, and no derivation gating; a deployment MAY surface Mission
 revocation through a grant-management-style API.
 {{I-D.draft-klrc-aiagent-auth}} names the agent's mission and leaves its
 translation into authorization out of scope; this document specifies
-that translation. Decision-layer access-request and approval workflows,
+that translation, reusing that specification's principal model
+unchanged ({{principal-model}}), and an agent authenticated and
+delegated per it uses the mechanisms here to obtain Mission-bound
+tokens. Decision-layer access-request and approval workflows,
 such as the OpenID AuthZEN Access Request and Approval Profile
 {{AuthZEN.ARAP}}, manage approval tasks but define no issuance binding;
 this document supplies the issuance-bound object such workflows
@@ -384,8 +387,6 @@ intent commitment, and offline capability attenuation
 ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) carries offline
 narrowing. None combines the durable approved object, state-gated
 issuance, and integrity anchors this document defines.
-
-## Relationship to GNAP
 
 The Grant Negotiation and Authorization Protocol {{RFC9635}} occupies
 much of the same design space as this document: a continuable
@@ -405,8 +406,6 @@ model, a durable, approval-anchored, integrity-bound task object
 gating derivation, is the OAuth-native instantiation of a
 binding-neutral contextual-governance kernel that admits a candidate
 binding onto that substrate; this document does not define one.
-
-## Capability-System Prior Art
 
 The Authority Set's subset rule ({{subset}}) and the offline
 attenuation it supports continue a lineage of capability systems:
@@ -447,16 +446,6 @@ runtime layer's concern ({{runtime-boundary}}), not this document's.
 
 The invariant across all three: the plan and the execution draw on the
 Mission's authority; neither enlarges it.
-
-## Relationship to Agent-Identity Specifications
-
-This document is complementary to {{I-D.draft-klrc-aiagent-auth}}
-and reuses its model: the agent is the OAuth client
-(`client_id`); the delegating user or system is the token `sub`.
-This document does not define agent identity, credentialing, or
-posture; it defines the approved-task artifact those identities act
-within. An agent authenticated and delegated per that specification
-uses the mechanisms here to obtain Mission-bound tokens.
 
 ## Applicability {#applicability}
 
@@ -1299,6 +1288,23 @@ Processing is governed by the following rules:
   bound with `invalid_request`, so presented evidence cannot exhaust
   the AS any more than an oversized Intent can.
 
+On a surface that carries a Mission-creation idempotency fingerprint
+(the expansion and child-creation token exchanges,
+{{I-D.draft-mcguinness-oauth-mission-expansion}}), presented evidence
+affects admission, derivation, approval, and side effects and is
+therefore a member of that fingerprint; the profile that owns the
+fingerprint lists it. On those surfaces, recovery of a completed
+operation under the creation-idempotency rules
+({{I-D.draft-mcguinness-oauth-mission-expansion}}) returns the
+recorded outcome without re-verifying the presented evidence:
+verification happened when the operation ran, and an artifact whose
+freshness or status has since lapsed does not invalidate the recovery
+of an already-completed request. PAR-based creation and surfaces that
+submit no Mission Intent carry no such fingerprint and retain their
+own replay and idempotency mechanisms.
+
+## Submission Processing Order {#submission-processing}
+
 The AS processes a submission in this order:
 
 1. Parse the Submission envelope and enforce both closed top levels
@@ -1337,21 +1343,6 @@ Schema validation and the provisional hash precede signature
 verification, so the AS never verifies artifacts for a submission it
 would refuse on shape, and so intent-bound evidence has a hash to be
 checked against.
-
-On a surface that carries a Mission-creation idempotency fingerprint
-(the expansion and child-creation token exchanges,
-{{I-D.draft-mcguinness-oauth-mission-expansion}}), presented evidence
-affects admission, derivation, approval, and side effects and is
-therefore a member of that fingerprint; the profile that owns the
-fingerprint lists it. On those surfaces, recovery of a completed
-operation under the creation-idempotency rules
-({{I-D.draft-mcguinness-oauth-mission-expansion}}) returns the
-recorded outcome without re-verifying the presented evidence:
-verification happened when the operation ran, and an artifact whose
-freshness or status has since lapsed does not invalidate the recovery
-of an already-completed request. PAR-based creation and surfaces that
-submit no Mission Intent carry no such fingerprint and retain their
-own replay and idempotency mechanisms.
 
 # Mission Authority {#authorization-derivation}
 
@@ -2252,6 +2243,14 @@ recorded by the Approval Governance Record
 Evidence may carry a deliberately partial presentation of that record
 through `co_approvals` and its approval-governance members
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
+# Integrity and Commitments {#integrity-and-commitments}
+
+The anchors the Approver consents to at the approval event
+({{approval-event}}) are constructed, canonicalized, and bound by the
+rules of this section; the Mission Record ({{mission-record}})
+records them, and the test vectors ({{test-vectors}}) pin the
+construction byte-for-byte.
 
 ## Integrity Anchors {#integrity-anchors}
 
@@ -4174,7 +4173,9 @@ self-contained.
 
 # Security Considerations {#security-considerations}
 
-## Consent Binding {#consent-binding}
+## Commitment and Consent Integrity {#sec-commitment}
+
+### Consent Binding {#consent-binding}
 
 The security goal of this document is that a user's approval of a
 task bounds every token derived for it. The `authority_hash` commits
@@ -4284,7 +4285,7 @@ As that profile makes explicit, such a commitment binds the structured
 disclosure the AS records, not the pixels actually presented; it
 narrows this gap for audit but does not close it.
 
-## Downgrade by Omission {#downgrade-by-omission}
+### Downgrade by Omission {#downgrade-by-omission}
 
 A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
@@ -4302,7 +4303,9 @@ Server for such a resource rejects a token lacking the `mission` claim
 `mission_bound_authorization_required`
 ({{protected-resource-metadata}}).
 
-## Prompt Injection and the Exfiltration Leg {#prompt-injection}
+## Agent-Specific Threats {#sec-agent}
+
+### Prompt Injection and the Exfiltration Leg {#prompt-injection}
 
 An agent that reads attacker-influenceable content can be prompt-injected;
 this profile assumes that and does not try to make the agent immune.
@@ -4337,7 +4340,7 @@ compromised agent is the runtime enforcement layer's role
 laundering needs a separate taint or information-flow layer this profile
 does not define.
 
-## Authority Does Not Propagate With Information {#information-propagation}
+### Authority Does Not Propagate With Information {#information-propagation}
 
 Issuance gating bounds escalation by token acquisition
 ({{lifecycle}}, {{subset}}): an agent cannot exceed the approved
@@ -4379,7 +4382,9 @@ non-transitive Mission-to-Mission handoff, is specified by Mission Work
 Products {{I-D.draft-mcguinness-oauth-mission-work-products}}; this
 document takes no normative dependency on it.
 
-## Issuance Scope, Not Runtime Enforcement {#runtime-boundary}
+## Enforcement Boundaries {#sec-enforcement}
+
+### Issuance Scope, Not Runtime Enforcement {#runtime-boundary}
 
 This profile governs the issuance and derivation of authority: it
 bounds what authority a Mission yields, binds it to the Approver's
@@ -4408,7 +4413,7 @@ request URI against a `prefix` entry, the single-normalization rule
 of {{resource-boundary-canonicalization}} binds that match the same
 way.
 
-## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
+### Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
 A `prefix` entry ({{authorization-derivation}}) draws an authority
 boundary in URI space. The AS's containment test ({{subset}}) and the
@@ -4476,7 +4481,7 @@ A deployment MAY agree out of band on the canonicalization profile its
 AS and Resource Servers apply; this document defines one rule
 ({{subset}}), so no profile identifier is required for interoperation.
 
-## Denial Detail Disclosure {#denial-disclosure}
+### Denial Detail Disclosure {#denial-disclosure}
 
 The `mission_denial` attribute ({{rs-enforcement}}) tells a caller
 which path a denial leads into, and thereby reveals authorization
@@ -4491,7 +4496,9 @@ omit the attribute otherwise; when in doubt,
 `insufficient_authority` is the value that reveals least, and
 omission reveals nothing.
 
-## Token Theft {#token-theft}
+## Credentials and Delegation {#sec-credentials}
+
+### Token Theft {#token-theft}
 
 Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
 {{RFC8705}}) at the levels set in {{mission-bound-tokens}} and
@@ -4502,7 +4509,7 @@ cross-domain credentials
 is bounded by the Authority Set and the Mission lifetime regardless,
 but sender-constraint prevents replay by a different party.
 
-## Delegation and Chain Compromise {#delegation-and-chain-compromise}
+### Delegation and Chain Compromise {#delegation-and-chain-compromise}
 
 Delegation ({{delegation}}) widens the set of parties holding
 Mission-derived authority. Because authority only narrows down the
@@ -4540,7 +4547,7 @@ token ({{mission-bound-tokens}}) closes the remaining gap, since a
 token stolen from an audience then fails presentation at the token
 endpoint.
 
-## client_id Conformance and the Approved-Agent Residual {#client-id-misattribution}
+### client_id Conformance and the Approved-Agent Residual {#client-id-misattribution}
 
 Because this profile keeps `client_id`'s ordinary {{RFC9068}} meaning
 ({{client-id-rebinding}}), a generic {{RFC9068}} Resource Server, or
@@ -4563,7 +4570,7 @@ process the `act` chain ({{rs-enforcement}}), and SHOULD review any
 existing component that authorizes or logs solely from `client_id`
 for this gap before exposing it to delegated Mission-bound tokens.
 
-## Signing and Key Rotation {#key-rotation}
+### Signing and Key Rotation {#key-rotation}
 
 The `mission` claim and `authorization_details` are carried inside
 the {{RFC9068}} JWT and are covered by the AS's token signature; their
@@ -4595,7 +4602,9 @@ segmentation needs no wire change. Recovery from a signing-key
 compromise is deployment-owned and belongs in the deployment's
 documented procedures.
 
-## Compromised or Over-Broad Derivation {#compromised-or-over-broad-derivation}
+## Composition and Residual Authority {#sec-composition}
+
+### Compromised or Over-Broad Derivation {#compromised-or-over-broad-derivation}
 
 The AS is trusted to derive authority no broader than the Mission
 Intent. Both derivation modes ({{authorization-derivation}}) are
@@ -4604,7 +4613,7 @@ rather than free-form inference, and the recorded `policy_version`
 names the policy a derivation ran under so the derivation can be
 audited. General OAuth security guidance {{RFC9700}} applies.
 
-## Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
+### Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
 
 `authority_hash` commits the approved Authority Set, not the Mission.
 Two distinct Missions that approve byte-identical authority carry the
@@ -4619,7 +4628,7 @@ approved. A consumer that needs to bind to or correlate a specific
 Mission uses the Mission Identifier, and `intent_hash` and `approver`
 distinguish Missions that share an Authority Set.
 
-## Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
+### Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
 
 Delegation depth ({{delegation-constraints}}) resets to 0 at each
 cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
@@ -4644,7 +4653,7 @@ profile's role ({{I-D.draft-mcguinness-mission-metering}}), not a
 property this document or its composition partners provide by
 themselves.
 
-## The Containment Materialized-Capability Residual {#the-containment-materialized-capability-residual}
+### The Containment Materialized-Capability Residual {#the-containment-materialized-capability-residual}
 
 Where a deployment runs the Mission Containment profile
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
