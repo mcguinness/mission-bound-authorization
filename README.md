@@ -4,14 +4,14 @@
 
 An OAuth token says what a client may access. It does not say why,
 for what approved task, under whose approval, or until when in terms
-of the task itself. Every deployment can answer whether a token is
-valid; none can answer whether the work it serves is still approved.
+of the task itself. A conventional access token can establish what
+access it authorizes; the token alone cannot establish whether the
+task it serves is still approved.
 That gap is survivable when a human clicks every consent screen. It
 is not survivable when autonomous agents hold delegated authority
 for hours across many resources, and the moment it bites is always
 the same one: something looks wrong, and there is no object to ask
-what this task is still allowed to do, or how to end it everywhere
-at once.
+what this task is still allowed to do, or how to wind it down.
 
 A **Mission** is that object: a durable, integrity-bound record of
 the approved task (the intent, the derived Authority Set, the
@@ -19,13 +19,15 @@ Approver, and a lifecycle), recorded and retained by the Mission
 control point. In the OAuth binding, a client proposes a **Mission
 Intent**, the Mission Issuer derives an **Authority Set**, and the
 approval event commits both as `intent_hash` and `authority_hash`,
-so what was approved can never be silently rewritten. Authority is
+making later alteration detectable to a verifier that retains or can
+independently establish those commitments. Authority is
 derived from the approved task, never asserted by a client or
-inferred by a model. Issuance and every derivation are gated on the
-Mission's current state: revoking the Mission stops new issuance
-everywhere at once, outstanding tokens run only to their own expiry,
-and runtime enforcement is the targeted overlay for the actions that
-cannot wait even that long.
+inferred by a model. Issuance and issuer-mediated derivation are
+gated on the Mission's current state: revocation stops the Mission
+Issuer from minting or deriving further authority, while already
+materialized credentials and downstream grants run only to their own
+lifetimes unless state-aware runtime enforcement cuts off their use
+sooner.
 
 On the wire, one small claim rides every derived token:
 
@@ -55,7 +57,8 @@ Authorization Requests, RFC 9396) still describes requested and
 issued authority; the Mission explains why that authority exists and
 gates its continued derivation. Agent identity still says who is
 acting; the Mission says what for. Policy engines still decide each
-action; the Mission is the record they decide against.
+action; the Mission supplies the task, authority, and lifecycle
+context a Mission-aware decision consumes.
 
 ## The standardization ask
 
@@ -77,11 +80,11 @@ profile** (it governs issuance and derivation).
 | You already run | The relationship |
 |---|---|
 | RAR (RFC 9396) | The Authority Set's wire syntax; the Mission adds the approved task it is derived from |
-| Token Exchange and `act` (RFC 8693) | The delegation substrate the delegation and continuation profiles ride |
-| ID-JAG / Cross App Access | The cross-domain rail the projection profile binds Missions to |
+| Token Exchange and `act` (RFC 8693) | The rail AS-mediated delegation and continuation ride; offline attenuation deliberately works without it |
+| Cross-App Access (XAA), via ID-JAG | The cross-domain rail the projection profile binds Missions to |
 | Transaction Tokens | A different-layer neighbor: call-chain context within a domain, while the Mission is the durable task record above it |
 | AuthZEN | The decision wire the runtime contract binds to |
-| SETs / Shared Signals (RFC 8417) | The rail lifecycle Signals ride |
+| Security Event Tokens (RFC 8417) / OpenID Shared Signals Framework | The rail lifecycle Signals ride |
 
 Every row composes; none competes.
 
@@ -204,9 +207,9 @@ implements the core and the runtime, lifecycle, delegation, and
 transaction surfaces tracked row-by-row in
 [`src/SPEC_VERSIONS.md`](src/SPEC_VERSIONS.md);
 [`src/DEMO.md`](src/DEMO.md) runs the flow end to end.
-[`conformance-manifest.json`](conformance-manifest.json) maps every
-requirement to its coverage, honestly: tested, partial, and todo are
-distinct states.
+[`conformance-manifest.json`](conformance-manifest.json) maps each
+inventoried requirement in its audited specification set to tested,
+partial, or todo coverage.
 
 ## Status
 
