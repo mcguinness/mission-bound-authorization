@@ -370,7 +370,8 @@ It consumes these optional capabilities:
 {: title="Containment profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate: it defines each consumed kernel
+version's base profile (this document is an OAuth-lane companion of
+that binding): it defines each consumed kernel
 function and capability for OAuth 2.0, and every OAuth artifact named
 in this document enters through it. A binding that provides the
 required capabilities above, and maps this document's representations

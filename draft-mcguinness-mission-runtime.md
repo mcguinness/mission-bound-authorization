@@ -558,10 +558,13 @@ It consumes these optional capabilities:
 | Portable Evidence | not consumed | Evidence portability is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the records themselves are the runtime evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 {: title="Runtime profile capability consumption"}
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate: it defines each consumed kernel
-function and capability for OAuth 2.0, and every OAuth artifact named
-in this document enters through it. A binding that provides the
+The OAuth binding {{I-D.draft-mcguinness-oauth-mission}} (the
+issuance profile to its OAuth companions) is this version's
+reference host: a normative reference for its concrete OAuth
+surfaces, not the family's substrate (the substrate contract is
+{{I-D.draft-mcguinness-mission-substrate}}). It defines each
+consumed kernel function and capability for OAuth 2.0, and every
+OAuth artifact named in this document enters through it. A binding that provides the
 required capabilities above, and whichever conditional capabilities
 the deployment's enforcement scopes require, can host this profile,
 given a mapping of this profile's representations onto the binding's

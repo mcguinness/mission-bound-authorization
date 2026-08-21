@@ -326,7 +326,7 @@ OAuth 2.0 mechanics. It consumes these substrate primitives:
   must survive.
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate. Evidence produced under another Mission
+version's reference host. Evidence produced under another Mission
 substrate registers and verifies the same way once its types and
 canonical bytes are defined as in the evidence-type table
 ({{evidence-types}}).

@@ -152,7 +152,8 @@ Agent harnesses preserve execution state across restarts, retries,
 background jobs, tool-connection reuse, and sub-agent orchestration.
 That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization, with OAuth 2.0 as this version's normative substrate.
+Authorization, with the OAuth binding as this version's reference
+host.
 It specifies how a harness binds sessions, task graphs, queues, cached
 tool connections, and sub-agent handles to Mission state; when it must
 re-check Mission status; and how it must pause, suppress, or terminate
@@ -309,10 +310,13 @@ It consumes these optional capabilities:
 | Portable Evidence | not consumed | This document produces Harness Evidence of its own, registrable on the Mission's transparency feed ({{harness-evidence}}, {{I-D.draft-mcguinness-mission-audit}}) |
 {: title="Harness profile capability consumption"}
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate: it defines each consumed kernel
-function and capability for OAuth 2.0, and every OAuth artifact named
-in this document enters through it. A binding that provides the
+The OAuth binding {{I-D.draft-mcguinness-oauth-mission}} (the
+issuance profile to its OAuth companions) is this version's
+reference host: a normative reference for its concrete OAuth
+surfaces, not the family's substrate (the substrate contract is
+{{I-D.draft-mcguinness-mission-substrate}}). It defines each
+consumed kernel function and capability for OAuth 2.0, and every
+OAuth artifact named in this document enters through it. A binding that provides the
 required capabilities above, and whichever conditional capabilities
 the deployment's governed work relies on, can host this profile. The
 portability claim is capability-scoped rather than substrate-wide for

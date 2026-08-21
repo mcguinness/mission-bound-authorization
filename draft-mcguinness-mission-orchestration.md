@@ -267,7 +267,9 @@ It consumes these optional capabilities:
 {: title="Orchestration profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate: it defines each consumed kernel
+version's reference host (a normative reference for its concrete
+OAuth surfaces; the family's substrate contract is
+{{I-D.draft-mcguinness-mission-substrate}}): it defines each consumed kernel
 function and capability for OAuth 2.0. A binding that provides the
 required capabilities above, and Structured Authority where a
 deployment compensates under a `separate_mission` basis, can host
