@@ -2246,13 +2246,15 @@ Four components publish provider claims:
 Action-time enforcement and decision evidence are supplied by the
 runtime profile and its evidence companion at the gateway
 ({{I-D.draft-mcguinness-mission-runtime}}); they consume the
-capability claims above as decision inputs. The provider claims are
-the deployment's own: the example assumes a deployment-local Mission
-Substrate Statement extension restating the AAuth binding's claims in
-the current Statement format (supplied, with Mission Management
-deployment as the State-Observable activation condition and the
-binding's temporal and failure elements), not that the published
-binding text already supplies them in that form. The deployment
+capability claims above as decision inputs. The AAuth rows come from
+the binding's own published Mission Substrate Statement: the
+lifecycle claim from the base Statement, and the state claim under
+its Mission Management activation condition, each with the
+Statement's temporal and failure elements
+({{I-D.draft-mcguinness-mission-aauth}}). The payment policy
+adapter's and the gateway's claims remain the deployment's own,
+stated as deployment-local provider claims; nothing here implies
+every provider claim becomes binding-owned. The deployment
 declaration names the four providers, the two routes, and the
 consequence class; no machine-readable declaration format is defined
 (the Mission Deployment Profile's schema remains reserved future

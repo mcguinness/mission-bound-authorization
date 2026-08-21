@@ -52,6 +52,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
 
@@ -686,7 +687,12 @@ function main() {
   }
 
   console.log(`family-manifest check OK: ${drafts.length} drafts, no drift detected.`);
-  process.exit(0);
+
+  // Chained sub-check (#554): the Mission Substrate Statement structural
+  // tripwire runs under this entry point so it rides the existing CI step;
+  // its own findings and exit code stand on their own.
+  const sub = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "check-substrate-statements.mjs")], { stdio: "inherit" });
+  process.exit(sub.status ?? 1);
 }
 
 main();

@@ -744,6 +744,17 @@ authority, not an observation that two values coincide.  This
 capability is required whenever one authority did not itself bind all
 required facts in the applicable context ({{context-splicing}}).
 
+Native binding does not automatically supply this capability. It
+supplies it where it authoritatively joins independently established
+facts and satisfies the joining-authority, policy, proof,
+conflict-handling, lifetime, audience, and substitution requirements
+above; one authority can perform that join, and being the same
+authority does not make the facts co-established. Where a binding's
+facts are genuinely co-established at issuance or decision time,
+nothing independently established remains to join, and its Statement
+says `not supplied` with that reason rather than presenting native
+binding as a join.
+
 ## Independently Verifiable {#independently-verifiable}
 
 A binding claiming **Independently Verifiable** MUST let the named
@@ -1040,7 +1051,7 @@ and an extension or deployment can change a row.
 | Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
 | Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
 | Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; supplied when a verified join or a cooperating credential issuer is active | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
-| Authorized Context Correlation | Native grant binding associates the Mission, Subject, client, and credential at issuance | Native: the MAS join and Join Assertion machinery | The PS binds the Mission, person, agent, and token natively at decision time |
+| Authorized Context Correlation | Not supplied natively: the issuer binds all facts at issuance | The MAS join and Join Assertion machinery | Not supplied natively: the PS binds the Mission, person, agent, and token at decision time |
 | Independently Verifiable | Supplied where signed credentials expose the property and verification material | Supplied when signed artifacts expose the property | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
 | Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise supplied only when an evidence profile is active | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
 {: title="Illustrative capability mapping for existing architectures"}
@@ -1204,7 +1215,7 @@ The capability table:
 | Structured Authority | supplied | always | `authorization_details` with registered types and the Common Constraints | Semantics exist per registered type, not universally |
 | Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
 | Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
-| Authorized Context Correlation | supplied | always | The grant binding at issuance | The joining authority is the issuer itself; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
+| Authorized Context Correlation | supplied | the Delegation role active ({{I-D.draft-mcguinness-oauth-mission}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
 | Independently Verifiable | supplied | Mandate, signed Status, or audit companion active | Anchor recomputation and signed artifacts per those profiles | Signature verification never establishes current state |
 | Portable Evidence | supplied | Evidence, Mandate, or audit companion active | Per those profiles | The governance record is otherwise issuer-local |
 {: title="OAuth Mission binding capability table"}
@@ -1232,7 +1243,7 @@ never creates a claim beyond the eight already stated above.
 | Core OPTIONAL capability | Substrate capability claim(s) exercised | Relationship |
 | --- | --- | --- |
 | Introspection | State-Observable | One of State-Observable's three named activation surfaces, alongside Status and Signals; declaring it activates that otherwise-conditional claim. |
-| Delegation | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound, Authorized Context Correlation | Core delegation subset-checks `authorization_details`, carries the `mission` claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. The Token Exchange that issues the delegated credential is itself a grant binding at issuance: the AS joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential. All five claims are already supplied always; Delegation exercises them rather than creating them. The `act` chain itself supplies none of them: it is attribution, never authority. |
+| Delegation | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound, Authorized Context Correlation | Core delegation subset-checks `authorization_details`, carries the `mission` claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. The Token Exchange that issues the delegated credential is itself a grant binding at issuance: the AS joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential. Four of the five claims are supplied always, and Delegation exercises them rather than creating them; Authorized Context Correlation is the exception, activated by this role, whose Token Exchange join is its supplier. The `act` chain itself supplies none of them: it is attribution, never authority. |
 | Cross-Domain | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound | Carries these four always-supplied guarantees across the domain hop: the Mission reference and `authority_hash` intact, authority that only narrows, and projection gated on active state, while adding an interoperable projection surface the guarantees alone do not provide. It does not become Portable Evidence by crossing a domain: that claim activates only when an Evidence, Mandate, or audit companion is active, and Cross-Domain is not among them. |
 {: title="Core optional roles related to substrate capability claims"}
 

@@ -108,9 +108,11 @@
    "is_published_core": false,
    "deps": [
     "draft-mcguinness-aauth-mission-expiry",
+    "draft-mcguinness-mission-aauth-management",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission-transaction-authorization"
-   ]
+   ],
+   "maintenance_exception": "2026-08-20 (#554, PR #621): the Mission Substrate Statement migration to the supplied/not-supplied format is a substrate-contract conformance change applied under owner direction; no AAuth wire member or protocol behavior changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged."
   },
   {
    "file": "draft-mcguinness-mission-aauth-management.md",

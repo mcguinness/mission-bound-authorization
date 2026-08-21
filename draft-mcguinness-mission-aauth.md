@@ -859,18 +859,35 @@ The contextual-governance kernel maps as follows:
    coverage, ordering, integrity, access, and retention requirements
    of {{mission-log}}.
 
-The binding declares these optional capabilities:
+The Statement's capability table follows, one row per capability;
+every supplied row states its activation conditions, and its temporal
+and failure elements in its cells or by express inheritance of the
+Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
-| Capability | Claim | Scope and defining sections | Limitations |
-| --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supported | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and missionless token requests are outside the claim ({{ref-propagation}}); the post-transition residual is bounded by auth-token lifetime and `expires_at` |
-| State-Observable | conditional | The AAuth Mission Management status operation where deployed: authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
-| Structured Authority | not supported | The mission description is private prose; `approved_tools` is PS-governance input | Scopes or a resource-owned policy language can supply structure inside its own boundary |
-| Monotonic Derivation | not supported | No cross-boundary subset relation is defined | A resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | conditional | PS-asserted and federated modes carry and validate the signed `mission_s256` claim in PS-issued or PS-brokered artifacts, a binding established at issuance rather than by an external join, for requests whose resource token carries the claim ({{access-modes}}, {{ref-propagation}}) | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
-| Independently Verifiable | not supported | `s256` proves byte identity to parties holding the blob | It does not prove record properties or current state to third parties |
-| Portable Evidence | not supported | The mission log is PS-local | Signed receipts or checkpoints would be an extension |
+| Capability | Claim | Activation | Scope and defining sections | Limitations |
+| --- | --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and missionless token requests are outside the claim ({{ref-propagation}}); the post-transition residual is bounded by auth-token lifetime and `expires_at` |
+| State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
+| Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
+| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
+| Credential-Bound | supplied | PS-asserted or federated access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
+| Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
+| Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
+| Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
 {: title="AAuth Mission substrate capabilities"}
+
+Each supplied row's temporal elements inherit the binding's own
+bounds unless stated: decisions establish current state at the PS at
+decision time, artifact lifetime is the auth-token lifetime capped by
+`expires_at`, and the residual after the mission becomes non-active
+is the outstanding auth-token lifetime. Failure behavior is uniformly
+fail-closed: a request whose resource token is missing the
+`mission_s256` claim its mode requires, carries one that fails
+validation, or mismatches the named mission is processed as
+missionless at best and never as mission-bound; a failed,
+unrecognized, or stale Management status response, or an unavailable
+status surface, refuses the state-dependent decision; unknown input
+never degrades to a weaker mode silently.
 
 # IANA Considerations
 
