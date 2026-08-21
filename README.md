@@ -27,8 +27,9 @@ the last three:
   until approved.
 - **Mission**: the approved, governed work, the record everything
   below derives from.
-- **Authority**: the bounded capability derived for the work
-  (tokens, grants, delegations).
+- **Authority**: the approved, bounded Authority Set for the work;
+  tokens, grants, projections, and delegations carry or derive
+  subsets of it.
 - **Action**: one concrete use of that authority at a resource or
   through a decision point.
 
@@ -36,7 +37,9 @@ A client or a model may propose the Intent and candidate authority;
 no proposal is authoritative. The Mission control point (in the
 OAuth binding, the Mission Issuer) derives and bounds the Authority
 Set under policy, and the approval event commits the intent and the
-derived set as `intent_hash` and `authority_hash`, making later
+derived set as `intent_hash` and `authority_hash` (and the submitted
+proposal, where one was made, as `proposal_hash`, keeping
+what-was-asked distinct from what-was-granted), making later
 alteration detectable to a verifier that retains or can
 independently establish those commitments. Issuance and
 issuer-mediated derivation take Mission state as authoritative
@@ -72,7 +75,9 @@ token's `authorization_details` still carry the authority itself.
 1. The agent proposes that as a **Mission Intent**, with candidate
    `authorization_details` for the accounting and payments APIs.
 2. The Mission Issuer derives a bounded Authority Set; the user
-   approves; Mission `M1` is `active`, both anchors committed.
+   approves; Mission `M1` is `active`, all three anchors committed
+   (`intent_hash` over the task, `proposal_hash` over what the agent
+   asked for, `authority_hash` over what was granted).
 3. The agent obtains tokens for the accounting API and the payments
    API; each carries the `mission` claim naming `M1`.
 4. It delegates invoice classification to a sub-agent under a
@@ -90,12 +95,14 @@ undertaking.
 
 ## What a Mission is not
 
-Not a grant. An OAuth grant is authority obtained through one
-authorization flow at one Authorization Server. A Mission is the
-governed undertaking from which many grants, tokens, delegations,
-and runtime decisions derive: it can outlive any one of them, span
-multiple Resource Servers and (through projection) multiple
-Authorization Servers, create subordinate authority, and be ended as
+Not merely an OAuth grant with metadata. A grant, a consent record,
+a refresh family, or a PDP record can be durable and
+lifecycle-bearing within one Authorization Server's administrative
+domain; durability is not the difference. What none of them
+standardizes is the approved-task object: the Mission joins many
+grants, credentials, actors, and evidence producers (and, through
+projection, trust domains) to one committed, integrity-anchored
+undertaking that can create subordinate authority and be ended as
 one object at its control point, with the already-materialized
 credentials running to their own lifetimes unless state-aware
 enforcement cuts them off sooner (a residual the drafts document
@@ -118,10 +125,11 @@ and lifecycle context a Mission-aware decision consumes.
 
 The proposed standardization surface is two things: the **Mission
 model** and its **OAuth issuance binding** (the core). The remaining
-documents are design exploration and independently adoptable
-companion work (runtime, lifecycle, evidence, and cross-domain
-profiles on their own timelines), not a request to standardize a
-41-document suite. Anything beyond that chartering surface enters
+documents are design exploration and independently selectable
+companion work with declared dependencies (runtime, lifecycle,
+evidence, and cross-domain profiles on their own timelines), not a
+request to standardize a 41-document suite. Anything beyond that
+chartering surface enters
 scope only as the community pulls it.
 
 The suite takes its name from the model; the core's title,
@@ -158,7 +166,10 @@ Three rings, smallest first; each ring is complete without the next:
   informative model) and [the core](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the
   OAuth issuance profile). The standards proposal, and a useful
   deployment by itself.
-- **Runtime-enforced profile**: add [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
+- **Runtime-enforced profile**: add
+  [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
+  (the kernel contract the runtime documents consume),
+  [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
   (or another freshness source), the
   [Runtime contract](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html),
   [Runtime Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html), and the
@@ -166,8 +177,8 @@ Three rings, smallest first; each ring is complete without the next:
   permit before each consequential action.
 - **Optional capabilities**: approval workflows, delegation,
   cross-domain projection, agent harnessing, evidence, and fleet
-  management, each adoptable independently;
-  [`DRAFTS.md`](DRAFTS.md) is the complete catalog.
+  management, each selectable on its own with its declared
+  dependencies; [`DRAFTS.md`](DRAFTS.md) is the complete catalog.
 
 | You want to… | Start with |
 |---|---|
@@ -253,7 +264,12 @@ obligations; a deployment claims the level it has earned.
 | **Baseline Issuance** | Approved, integrity-bound Missions and state-gated issuance: where the binding issues Mission-bound credentials, the kill switch is the issuance gate, and outstanding tokens run to their own expiry |
 | **Runtime-Enforced** | A point-of-use permit before each consequential action, with durable decision and execution evidence |
 | **Governed Agent** | Adds session-continuity stop (the harness) and proof of what the Approver saw (consent evidence) |
-| **High-Assurance Agent** | Adds the level's two named claims: agent-compromise-resistant enforcement (mediated credential custody, a declared and audited path scope, action-bound approval, active freshness, and approval rendering isolated from the agent) and trifecta containment (least exposure, the mandatory harness taint rule, and full mediation of external communication and commitment) |
+| **High-Assurance Agent** | Adds the level's two named claims: agent-compromise-resistant enforcement (mediated credential custody, a declared and audited path scope, action-bound approval, active freshness, and approval rendering isolated from the agent) and trifecta containment (least exposure; the mandatory harness taint rule, with pre-consented egress to Approver-named destinations as its one carve-out; and full mediation of external communication and commitment over enumerated egress channels) |
+
+Both names are claims with proof obligations: the parentheses give
+their shape, and the Architecture's declared per-condition evidence
+and appraisal contract is what establishes them, never the wire
+alone.
 
 Deployments compose along the Architecture's four cumulative
 reference stacks, from the protocol core alone (Baseline Issuance)
@@ -265,27 +281,6 @@ issuance gate only by composing the Issuance Grant; AAuth reports
 native capabilities, with the Person Server's contextual gate as its
 per-action analogue). Binding properties and assurance claims remain
 per path; a stack name never upgrades weaker paths.
-
-## The minimal implementation
-
-The first useful piece is one profile, not the suite. A minimal
-conforming deployment implements the core alone: Mission Intent
-submission, Authority Set derivation, the committed Mission record
-with its integrity anchors, the `mission` claim, and issuance
-bounded by the subset rule and gated on Mission state (revocation by
-Mission is the kill switch). The authoritative checklist,
-including the distinct client and resource-server obligations, is
-the core's
-[Conformance section](https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html#name-conformance);
-this page does not duplicate it.
-
-What the core alone does **not** protect, by design:
-already-issued tokens run to expiry (prompt cutoff needs
-introspection, Status, or the runtime layer); completed actions are
-not undone; off-path execution by a compromised agent is the runtime
-layer's territory; prompt injection is constrained
-(inert intent text, fixed authority), not prevented; and
-information-flow leakage within approved authority is out of scope.
 
 ## Add capabilities by verb
 
