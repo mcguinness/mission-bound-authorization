@@ -1699,9 +1699,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         });
         return;
       }
-      // @spec status#authorization — every other operation is a Mission-state
-      // transition and requires the lifecycle grant; an authenticated caller
-      // without it is refused with the not-found shape, never a 403.
+      // @spec status#mission-status-errors — every other operation is a
+      // Mission-state transition and requires the lifecycle grant; an
+      // authenticated caller without it is refused with the endpoint's
+      // not-found shape (the profile's Authorization section), never a 403.
       if (!principal.scopes.includes(MISSION_LIFECYCLE_SCOPE)) {
         sendNotFound();
         return;

@@ -918,18 +918,36 @@ describe("the discharge operation on the lifecycle endpoint", () => {
 
   it("never dereferences evidence_ref and never lets an evidence member decide authorization", async () => {
     const record = approveOnAs();
-    // A reference no baseline processing may fetch (an unroutable TEST-NET-1
-    // host: a dereference would hang or fail, never return a 200 in time), plus
-    // a digest committing nothing reachable. The discharge succeeds regardless.
-    const res = await lifecycle(
-      record.id,
-      dischargeBody(record, {
-        evidence_ref: "https://192.0.2.1/close-evidence.json",
-        evidence_digest: `sha-256:${"D".repeat(43)}`,
-      }),
-    );
+    // Observe every outbound request this process makes while the discharge is
+    // processed. A spy (rather than an unreachable host) is what actually proves
+    // non-dereference: a fetch the handler never awaits, or awaits inside a
+    // catch, would still be RECORDED here while leaving the response a prompt
+    // 200. The AS runs in-process, so its own outbound calls are visible.
+    const evidenceRef = "https://192.0.2.1/close-evidence.json";
+    const original = globalThis.fetch;
+    const requested: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      requested.push(typeof input === "string" ? input : input.toString());
+      return original(input as never, init);
+    }) as typeof fetch;
+    let res: Response;
+    try {
+      res = await lifecycle(
+        record.id,
+        dischargeBody(record, {
+          evidence_ref: evidenceRef,
+          evidence_digest: `sha-256:${"D".repeat(43)}`,
+        }),
+      );
+    } finally {
+      globalThis.fetch = original;
+    }
     expect(res.status).toBe(200);
     expect(await dischargeResultOf(res)).toMatchObject({ outcome: "discharged" });
+    // Exactly one request: the test's own lifecycle POST. Nothing touched the
+    // evidence reference.
+    expect(requested.filter((u) => u.includes("192.0.2.1"))).toEqual([]);
+    expect(requested).toEqual([`${ISSUER}/missions/${record.id}/lifecycle`]);
     // And evidence cannot buy authorization: the same members presented by a
     // caller without the discharge grant are still refused.
     const other = approveOnAs();
