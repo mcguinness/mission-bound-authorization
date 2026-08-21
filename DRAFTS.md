@@ -6,7 +6,9 @@ below it. [README.md](README.md) is the curated explanation and links
 here instead of restating the inventory. Maturity words are the family
 manifest's own (**stable**, **experimental**, **sketch**, with
 informational documents shown as **guide**); family draft maturity is
-repository maturity, not standards status, so upstream dependency
+repository design maturity, not standards status and not deployment
+history (no binding has production Mission deployments today), so
+upstream dependency
 status lives in [DEPENDENCIES.md](DEPENDENCIES.md) and implementation
 coverage in the conformance ledger (`conformance-manifest.json`). The
 index table is generated from `family-manifest.json` by
@@ -123,18 +125,6 @@ authenticated protected events are never assumed honest. It defines
 no binding and no new mechanism.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aam.html)
-
-### The core
-
-#### Mission-Bound Authorization for OAuth 2.0
-
-The mandatory core, the **issuance profile**. Defines the Mission, the
-Mission Intent and Authority Set, the approval event and its
-`intent_hash` / `authority_hash` integrity anchors, the `mission` token
-claim, the subset rule, and state-gated issuance. Every other document
-builds on this one.
-
-[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.diff)
 
 ### Approval time
 
@@ -396,7 +386,44 @@ evidence bag. Experimental; profiles an unratified individual draft.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html)
 
-### Alternate bindings and the substrate
+### The substrate and the bindings
+
+The kernel contract first, then its five peer bindings. No binding
+has production Mission deployments today; OAuth brings the most
+deployed substrate infrastructure, and Missions on it still require
+the changes its binding defines.
+
+#### Mission Substrate Requirements
+
+For authors of new bindings. Defines a small, normative
+contextual-governance kernel: a native Mission reference, identified
+Controller, authenticated Actor binding, immutable Approved Context or
+verifiable commitment, approval event, active/non-active gate with
+bounded reliance, context propagation, and ordered governance record. Stronger properties are
+declared separately as lifecycle-gated, state-observable,
+structured-authority, monotonic-derivation, credential-bound,
+independently-verifiable, and portable-evidence capabilities. Each
+binding publishes a Mission Substrate Statement identifying the scope
+and limitations of every claim; the kernel does not require OAuth
+identifiers, RAR, JWT claims, a universal Authority Set, or common
+integrity anchors. The kernel is adoptable outside the family; the
+family vocabulary bridge, scoped precedence, and change-ownership
+rule live in an appendix.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
+
+#### Mission-Bound Authorization for OAuth 2.0
+
+The OAuth 2.0 binding of the Mission model, the **issuance profile**
+to its OAuth companions, and the published Internet-Draft. Defines
+the OAuth realization of the Mission, the Mission Intent and
+Authority Set, the approval event and its `intent_hash` /
+`authority_hash` integrity anchors, the `mission` token claim, the
+subset rule, and state-gated issuance. The `oauth-mission-*`
+companions build on this binding; the binding-neutral documents
+anchor on the substrate contract.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.diff)
 
 #### Mission Authority Server
 
@@ -508,25 +535,6 @@ and the mutability discipline the binding must impose on grant
 updates.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html)
-
-#### Mission Substrate Requirements
-
-For authors of new bindings. Defines a small, normative
-contextual-governance kernel: a native Mission reference, identified
-Controller, authenticated Actor binding, immutable Approved Context or
-verifiable commitment, approval event, active/non-active gate with
-bounded reliance, context propagation, and ordered governance record. Stronger properties are
-declared separately as lifecycle-gated, state-observable,
-structured-authority, monotonic-derivation, credential-bound,
-independently-verifiable, and portable-evidence capabilities. Each
-binding publishes a Mission Substrate Statement identifying the scope
-and limitations of every claim; the kernel does not require OAuth
-identifiers, RAR, JWT claims, a universal Authority Set, or common
-integrity anchors. The kernel is adoptable outside the family; the
-family vocabulary bridge, scoped precedence, and change-ownership
-rule live in an appendix.
-
-[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
 
 #### Mission Consumption Metering
 

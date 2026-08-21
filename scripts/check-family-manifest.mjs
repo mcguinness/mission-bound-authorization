@@ -270,11 +270,11 @@ function main() {
   for (const d of drafts) {
     if (!onDiskSet.has(d.file)) fail("inventory", `family-manifest.json lists ${d.file}, which does not exist on disk`);
   }
-  const publishedCore = drafts.filter((d) => d.is_published_core);
-  if (publishedCore.length !== 1) {
+  const publishedDrafts = drafts.filter((d) => d.is_published_draft);
+  if (publishedDrafts.length !== 1) {
     fail(
       "inventory",
-      `expected exactly one draft flagged is_published_core, found ${publishedCore.length} (${publishedCore.map((d) => d.slug).join(", ") || "none"})`
+      `expected exactly one draft flagged is_published_draft, found ${publishedDrafts.length} (${publishedDrafts.map((d) => d.slug).join(", ") || "none"})`
     );
   }
 
@@ -628,11 +628,10 @@ function main() {
   // to carry.
   const GROUP_SECTION_TITLES = {
     "architecture": "Architecture",
-    "core": "The core",
     "approval-time": "Approval time",
     "lifecycle": "Lifecycle",
     "runtime-enforcement": "Runtime enforcement",
-    "bindings-substrate": "Alternate bindings and the substrate",
+    "bindings-substrate": "The substrate and the bindings",
     "agent-runtime": "Agent runtime",
     "sub-agents": "Sub-agents",
     "cross-domain-projection": "Cross-domain projection",

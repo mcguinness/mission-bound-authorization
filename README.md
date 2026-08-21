@@ -2,7 +2,7 @@
 
 # Mission-Bound Authorization
 
-An OAuth access token carries authority for a resource request. It
+An access token carries authority for a resource request. It
 does not, by itself, establish the approved task that caused the
 authority to exist, or whether that task remains approved. The gap
 matters little while a human clicks every consent screen. It becomes
@@ -91,7 +91,8 @@ token's `authorization_details` still carry the authority itself.
 
 OAuth already handles each credential issuance in that story. The
 Mission is the object that connects them into one governed
-undertaking.
+undertaking. The walkthrough is the OAuth realization; the peer
+bindings carry the same lifecycle on their own substrates.
 
 ## What a Mission is not
 
@@ -124,7 +125,10 @@ and lifecycle context a Mission-aware decision consumes.
 ## The standards proposal
 
 The proposed standardization surface is two things: the **Mission
-model** and its **OAuth issuance binding** (the core). The remaining
+model** and one complete binding for the substrate with the most
+deployed infrastructure: the **OAuth issuance binding**. The choice
+is infrastructure, never maturity; no binding has production Mission
+deployments today. The remaining
 documents are design exploration and independently selectable
 companion work with declared dependencies (runtime, lifecycle,
 evidence, and cross-domain profiles on their own timelines), not a
@@ -132,25 +136,27 @@ request to standardize a 41-document suite. Anything beyond that
 chartering surface enters
 scope only as the community pulls it.
 
-The suite takes its name from the model; the core's title,
-"Mission-Bound Authorization for OAuth 2.0", names the binding the
-core defines. The companions refer to the core as the **issuance
-profile** (it governs issuance and derivation).
+The suite takes its name from the model; the OAuth binding's title,
+"Mission-Bound Authorization for OAuth 2.0", names what it is: one
+binding of the model. Its OAuth companions refer to it as the
+**issuance profile** (it governs issuance and derivation on that
+substrate).
 
 ## The minimal implementation
 
-The first useful piece is one profile, not the suite. A minimal
-conforming deployment implements the core alone: Mission Intent
+The first useful piece is one binding, not the suite. A minimal
+conforming OAuth deployment implements the OAuth binding alone:
+Mission Intent
 submission, Authority Set derivation, the committed Mission record
 with its integrity anchors, the `mission` claim, and issuance
 bounded by the subset rule and gated on Mission state (revocation by
 Mission is the kill switch). The authoritative checklist,
 including the distinct client and resource-server obligations, is
-the core's
+the binding's
 [Conformance section](https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html#name-conformance);
 this page does not duplicate it.
 
-What the core alone does **not** protect, by design:
+What that binding alone does **not** protect, by design:
 already-issued tokens run to expiry (prompt cutoff needs
 introspection, Status, or the runtime layer); completed actions are
 not undone; off-path execution by a compromised agent is the runtime
@@ -162,11 +168,13 @@ information-flow leakage within approved authority is out of scope.
 
 Three rings, smallest first; each ring is complete without the next:
 
-- **Core**: [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (the
-  informative model) and [the core](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the
-  OAuth issuance profile). The standards proposal, and a useful
-  deployment by itself.
-- **Runtime-enforced profile**: add
+- **The model and a binding**: [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (the
+  informative model) plus one binding from the peer table below. For
+  an OAuth estate that is
+  [the OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html)
+  alone: one self-contained document, and a useful deployment by
+  itself.
+- **Runtime-enforced profile** (shown on the OAuth binding): add
   [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
   (the kernel contract the runtime documents consume),
   [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
@@ -183,7 +191,7 @@ Three rings, smallest first; each ring is complete without the next:
 | You want to… | Start with |
 |---|---|
 | Understand the model | [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) |
-| Implement OAuth issuance | [The core](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) ([datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)) |
+| Implement OAuth issuance | [The OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) ([datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)) |
 | Build a PEP or PDP | [Runtime](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html), then its [AuthZEN binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html) |
 | Run agents under a Mission | [Harness](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html), then [Runtime](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html) |
 | Review threats and trust | [Security Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) |
@@ -218,7 +226,7 @@ is the citable form of this view.
 | Verb | The question | Main mechanisms |
 |---|---|---|
 | **Propose** | What task is being requested? | [Intent Shaping](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html) (client-side, untrusted proposal) |
-| **Approve and Record** | Who approved what, at which control point, under what governance? | [The core](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) and the other bindings (below); [Deferred Approval](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html); [Template](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) (consent once to a ceiling, instantiate at machine speed); one more |
+| **Approve and Record** | Who approved what, at which control point, under what governance? | [The OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) and its peers (below); [Deferred Approval](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html); [Template](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) (consent once to a ceiling, instantiate at machine speed); one more |
 | **Govern** | How does the Mission change or end? | [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) (pull), [Signals](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) (push), [Containment](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) (issuer-held monotonic narrowing); five more |
 | **Enforce Each Action** | May this exact action run now? | [Runtime contract](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html), [AuthZEN binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html), [Transaction Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html), [Capability Binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) |
 | **Run and Wind Down** | What happens across sessions, queues, and restarts? | [Harness](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html), [Orchestration](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) |
@@ -240,13 +248,18 @@ main mechanisms; the full verb-to-document map is
 
 ## Choose a binding
 
-The binding decides where the Mission control point lives.
+The binding decides where the Mission control point lives. The
+bindings are peers: no binding has production Mission deployments
+today, OAuth brings the most deployed substrate infrastructure, and
+Missions on it still require the changes its binding defines.
+Maturity labels are document design maturity, never deployment
+history.
 
 | Binding | Use it when | The boundary to know |
 |---|---|---|
-| [**OAuth AS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the core) | Your Authorization Server can issue Mission-bound tokens | Portable structured authority on the token; this is the issuance profile |
+| [**OAuth AS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the published Internet-Draft) | Your Authorization Server can issue Mission-bound tokens | Portable structured authority on the token; the issuance profile to its OAuth companions |
 | [**Standalone MAS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) (Mission Authority Server) | Existing Authorization Servers cannot host Mission approval | Ordinary credentials are *joined* to Missions; high-consequence paths require Mission-bound issuance (the [Issuance Grant](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)) |
-| [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | AAuth's Person Server (the user-held control point) owns contextual governance | Native AAuth access semantics, not the OAuth Authority Set |
+| [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | AAuth's Person Server (the user-held control point) owns contextual governance | Native AAuth access semantics; authority expressed in AAuth's own access model |
 | [**UMA**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) / [**GNAP**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | Protocol research and evaluation | Experimental sketches, authored against the substrate contract |
 
 New bindings are authored against
@@ -296,7 +309,8 @@ maturity, and adoption triggers is [`DRAFTS.md`](DRAFTS.md).
 ## Running code
 
 The reference implementation under [`src/`](src/) (a pnpm monorepo)
-implements the core and the runtime, lifecycle, delegation, and
+builds on the OAuth binding and implements its runtime, lifecycle,
+delegation, and
 transaction surfaces tracked row-by-row in
 [`src/SPEC_VERSIONS.md`](src/SPEC_VERSIONS.md);
 [`src/DEMO.md`](src/DEMO.md) runs the flow end to end.
