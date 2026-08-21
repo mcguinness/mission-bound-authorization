@@ -161,7 +161,7 @@ authority envelope and carry it in an access token
 ({{I-D.draft-mcguinness-oauth-mission}}).  A standalone Mission
 Authority Server (MAS) can manage the relationship without issuing the
 resource credential that exercises authority
-({{I-D.draft-mcguinness-mission-authority-server}}).  An AAuth Policy
+({{I-D.draft-mcguinness-mission-authority-server}}).  An AAuth Person
 Server can keep contextual Mission data private while scopes,
 resource-owned policy, and per-hop authorization decisions provide
 deterministic resource access ({{I-D.draft-mcguinness-mission-aauth}}).
@@ -286,7 +286,7 @@ reliance derived from a Mission is unbounded ({{bounded-reliance}}).
 
 | Kernel duty | The binding defines |
 | --- | --- |
-| Native reference and Controller ({{reference}}) | A stable, non-reassigned Mission Reference, its uniqueness namespace, its unguessability, and how relying components identify the Controller |
+| Native reference and Controller ({{reference}}) | A stable, non-reassigned Mission Reference, its uniqueness namespace, how unguessability is met where the reference is disclosed beyond the Controller, and how relying components identify the Controller |
 | Authority roles ({{authority-roles}}) | The authorities responsible for the functions it uses; roles never collapse silently |
 | Actor binding ({{actor-binding}}) | The Actor handle, its authenticated establishment at approval, and how later decisions establish the acting party |
 | Approved context and immutability ({{approved-context}}) | The immutable approved value or a verifiable commitment to it, distinct from mutable operational fields |
@@ -533,16 +533,17 @@ capability in {{capabilities}}.
 
 # Default Commitment Construction {#default-commitment}
 
-A binding MAY satisfy the commitment duties of {{approved-context}},
-for the Approved Context and
-for any other artifact it commits, with the following default
-construction. The OAuth issuance profile
+Any specification that defines a commitment, a Mission Substrate
+Binding or an importing profile alike, MAY satisfy the commitment
+duties of {{approved-context}}, for the Approved Context and for any
+other artifact it commits, with the following default construction.
+The OAuth issuance profile
 ({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
-profiles import it from this section; a binding with a native or
-member-named commitment (a content address, a signed object, a
+profiles import it from this section; a specification with a native
+or member-named commitment (a content address, a signed object, a
 digest whose member name fixes the algorithm) remains free to use
 that instead, stating its own algorithm identification and agility
-behavior under the duties above.
+behavior under the duties of {{approved-context}}.
 
 The default commits to bytes in one of three species, and a
 specification defining a commitment classifies it:
@@ -1097,9 +1098,11 @@ itself.
 
 The OAuth binding can intentionally claim a broad set of capabilities.
 Its Authorization Server can act as Controller, OAuth identifiers can
-instantiate Actor and subject mappings, Rich Authorization Requests
-can supply Structured Authority, and protected access-token fields can
-supply Credential-Bound.  Its defined subset relation can support
+instantiate Actor and subject mappings, and protected access-token
+fields can supply Credential-Bound.  Registered authorization-detail
+types can supply Structured Authority: each type's semantics owner
+defines its operations, constraints, and comparison behavior, and
+Rich Authorization Requests are the carrier, not the semantics.  Its defined subset relation can support
 Monotonic Derivation within the authorization-detail types and
 operations covered by that relation.
 
@@ -1126,7 +1129,7 @@ between MAS assertions and Authorization Server behavior.
 ## AAuth-Native Mapping: The Private-Context Pole
 
 An AAuth Mission naturally implements the contextual-governance
-kernel: the Policy Server controls approval and contextual decisions,
+kernel: the Person Server (PS) controls approval and contextual decisions,
 the native Mission reference identifies the approved blob, and the
 Mission log records governance interactions.  The private mission
 description need not be a machine-evaluable authorization policy.
@@ -1272,10 +1275,10 @@ unresolvable reference, a failed anchor verification, and an unknown
 condition does not hold, the property is not supplied and a consumer
 MUST NOT rely on it.
 
-The OAuth binding's three OPTIONAL capabilities, named in its Conformance section
-({{I-D.draft-mcguinness-oauth-mission}}), are implementation roles:
-surfaces an implementation may or may not offer, each independent of
-the others. The capability table above states scoped guarantee
+The OAuth binding's three OPTIONAL implementation roles, which its
+Conformance section names OPTIONAL capabilities
+({{I-D.draft-mcguinness-oauth-mission}}), are surfaces an
+implementation may or may not offer, each independent of the others. The capability table above states scoped guarantee
 claims: properties the OAuth binding supplies and the conditions
 under which each is supplied. The two vocabularies answer different
 questions and are not equivalent; the entries below relate them
