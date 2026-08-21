@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 21 February 2027</td>
+<td class="center">Expires 22 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-20" class="published">20 August 2026</time>
+<time datetime="2026-08-21" class="published">21 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-21">21 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-22">22 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 21 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 22 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3773,13 +3773,15 @@ resource.<a href="#section-15.4-1" class="pilcrow">¶</a></p>
 <p id="section-15.4-4">Action-time enforcement and decision evidence are supplied by the
 runtime profile and its evidence companion at the gateway
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); they consume the
-capability claims above as decision inputs. The provider claims are
-the deployment's own: the example assumes a deployment-local Mission
-Substrate Statement extension restating the AAuth binding's claims in
-the current Statement format (supplied, with Mission Management
-deployment as the State-Observable activation condition and the
-binding's temporal and failure elements), not that the published
-binding text already supplies them in that form. The deployment
+capability claims above as decision inputs. The AAuth rows come from
+the binding's own published Mission Substrate Statement: the
+lifecycle claim from the base Statement, and the state claim under
+its Mission Management activation condition, each with the
+Statement's temporal and failure elements
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). The payment policy
+adapter's and the gateway's claims remain the deployment's own,
+stated as deployment-local provider claims; nothing here implies
+every provider claim becomes binding-owned. The deployment
 declaration names the four providers, the two routes, and the
 consequence class; no machine-readable declaration format is defined
 (the Mission Deployment Profile's schema remains reserved future

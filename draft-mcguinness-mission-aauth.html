@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 21 February 2027</td>
+<td class="center">Expires 22 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-aauth-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-20" class="published">20 August 2026</time>
+<time datetime="2026-08-21" class="published">21 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-21">21 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-22">22 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1137,7 +1137,7 @@ structural and where a mission reference is only advisory context.<a href="#sect
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 21 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 22 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2351,7 +2351,10 @@ coverage, ordering, integrity, access, and retention requirements
 of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#section-9-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-9-4">The binding declares these optional capabilities:<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-4">The Statement's capability table follows, one row per capability;
+every supplied row states its activation conditions, and its temporal
+and failure elements in its cells or by express inheritance of the
+Bounded Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-9-4" class="pilcrow">¶</a></p>
 <span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-4">
         <caption>
 <a href="#table-4" class="selfRef">Table 4</a>:
@@ -2361,6 +2364,7 @@ of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#s
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Capability</th>
             <th class="text-left" rowspan="1" colspan="1">Claim</th>
+            <th class="text-left" rowspan="1" colspan="1">Activation</th>
             <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
             <th class="text-left" rowspan="1" colspan="1">Limitations</th>
           </tr>
@@ -2368,50 +2372,76 @@ of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#s
         <tbody>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
-            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">always</td>
             <td class="text-left" rowspan="1" colspan="1">Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued <code>mission_s256</code> claim; decisions fail closed when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>, <a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">Independently issued resource credentials and missionless token requests are outside the claim (<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>); the post-transition residual is bounded by auth-token lifetime and <code>expires_at</code>
 </td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
-            <td class="text-left" rowspan="1" colspan="1">The AAuth Mission Management status operation where deployed: authenticated per-role callers, the <code>active</code> and <code>terminated</code> vocabulary, responses stamped <code>observed_at</code> with a declared <code>fresh_until</code> reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">the AAuth Mission Management status operation active (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Authenticated per-role callers, the <code>active</code> and <code>terminated</code> vocabulary, responses stamped <code>observed_at</code> with a declared <code>fresh_until</code> reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable</td>
             <td class="text-left" rowspan="1" colspan="1">The base binding exposes no consumer-facing state source; token acceptance is not observation</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-            <td class="text-left" rowspan="1" colspan="1">not supported</td>
-            <td class="text-left" rowspan="1" colspan="1">The mission description is private prose; <code>approved_tools</code> is PS-governance input</td>
-            <td class="text-left" rowspan="1" colspan="1">Scopes or a resource-owned policy language can supply structure inside its own boundary</td>
+            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">The mission description is private prose and <code>approved_tools</code> is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
-            <td class="text-left" rowspan="1" colspan="1">not supported</td>
-            <td class="text-left" rowspan="1" colspan="1">No cross-boundary subset relation is defined</td>
-            <td class="text-left" rowspan="1" colspan="1">A resource policy language can define monotonicity within its own vocabulary</td>
+            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
-            <td class="text-left" rowspan="1" colspan="1">PS-asserted and federated modes carry and validate the signed <code>mission_s256</code> claim in PS-issued or PS-brokered artifacts, a binding established at issuance rather than by an external join, for requests whose resource token carries the claim (<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">PS-asserted or federated access mode, for requests whose resource token carries and validates the signed <code>mission_s256</code> claim (<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission</td>
             <td class="text-left" rowspan="1" colspan="1">Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering</td>
           </tr>
           <tr>
+            <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
+            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined</td>
+          </tr>
+          <tr>
             <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
-            <td class="text-left" rowspan="1" colspan="1">not supported</td>
+            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>s256</code> proves byte identity to parties holding the blob</td>
-            <td class="text-left" rowspan="1" colspan="1">It does not prove record properties or current state to third parties</td>
+              <code>s256</code> proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
-            <td class="text-left" rowspan="1" colspan="1">not supported</td>
-            <td class="text-left" rowspan="1" colspan="1">The mission log is PS-local</td>
-            <td class="text-left" rowspan="1" colspan="1">Signed receipts or checkpoints would be an extension</td>
+            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">--</td>
+            <td class="text-left" rowspan="1" colspan="1">The mission log is PS-local; signed receipts or checkpoints would be an extension</td>
           </tr>
         </tbody>
       </table>
+<p id="section-9-6">Each supplied row's temporal elements inherit the binding's own
+bounds unless stated: decisions establish current state at the PS at
+decision time, artifact lifetime is the auth-token lifetime capped by
+<code>expires_at</code>, and the residual after the mission becomes non-active
+is the outstanding auth-token lifetime. Failure behavior is uniformly
+fail-closed: a request whose resource token is missing the
+<code>mission_s256</code> claim its mode requires, carries one that fails
+validation, or mismatches the named mission is processed as
+missionless at best and never as mission-bound; a failed,
+unrecognized, or stale Management status response, or an unavailable
+status surface, refuses the state-dependent decision; unknown input
+never degrades to a weaker mode silently.<a href="#section-9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana-considerations">

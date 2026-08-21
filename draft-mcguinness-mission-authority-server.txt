@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          20 August 2026
-Expires: 21 February 2027
+Intended status: Standards Track                          21 August 2026
+Expires: 22 February 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 21 February 2027.
+   This Internet-Draft will expire on 22 February 2027.
 
 Copyright Notice
 
@@ -319,75 +319,133 @@ Table of Contents
        Mission record; and MUST retain both for the declared audit
        horizon.
 
-   The binding declares these optional capabilities:
+   The Statement's capability table follows, one row per capability;
+   every supplied row states its activation conditions, and its temporal
+   and failure elements in its cells or by express inheritance of the
+   Bounded Reliance floor ([I-D.draft-mcguinness-mission-substrate]):
 
-   +=============+===========+=========================+===============+
-   |Capability   |Claim      |Scope and defining       | Limitations   |
-   |             |           |sections                 |               |
-   +=============+===========+=========================+===============+
-   |Lifecycle-   |conditional|MAS-native authority     | The unchanged |
-   |Gated        |           |operations and, in a     | Authorization |
-   |Authorization|           |Mission-joining PDP      | Server does   |
-   |             |           |deployment, action       | not gate      |
-   |             |           |decisions check current  | token         |
-   |             |           |state (Section 7,        | issuance or   |
-   |             |           |Section 10)              | refresh       |
-   +-------------+-----------+-------------------------+---------------+
-   |State-       |supported  |Signed Mission Status    | Consumers     |
-   |Observable   |           |responses with           | fail closed   |
-   |             |           |mission_max_stale_seconds| when the      |
-   |             |           |(Section 7, Section 9)   | declared      |
-   |             |           |                         | freshness     |
-   |             |           |                         | bound is      |
-   |             |           |                         | exceeded      |
-   +-------------+-----------+-------------------------+---------------+
-   |Structured   |supported  |The issuance profile's   | Semantics     |
-   |Authority    |           |Authority Set and Common | apply only to |
-   |             |           |Constraints are held at  | the declared  |
-   |             |           |the MAS and evaluated at | authority-    |
-   |             |           |the joining PDP          | detail types  |
-   |             |           |                         | and mappings  |
-   +-------------+-----------+-------------------------+---------------+
-   |Monotonic    |conditional|Mission-joining PDP      | A separately  |
-   |Derivation   |           |action evaluation and    | approved      |
-   |             |           |optional native child    | expansion is  |
-   |             |           |creation apply the       | a new         |
-   |             |           |defined no-broader-than  | approval, not |
-   |             |           |relation (Section 10,    | a monotonic   |
-   |             |           |Section 8.4)             | derivation;   |
-   |             |           |                         | unchanged AS  |
-   |             |           |                         | tokens are    |
-   |             |           |                         | outside the   |
-   |             |           |                         | claim         |
-   +-------------+-----------+-------------------------+---------------+
-   |Credential-  |conditional|A verified mapping join  | Neither form  |
-   |Bound        |           |establishes credential-  | proves that   |
-   |             |           |to-Mission correlation;  | the           |
-   |             |           |an optional Join         | Authorization |
-   |             |           |Assertion binds one      | Server issued |
-   |             |           |introspected token more  | the token     |
-   |             |           |strongly (Section 10,    | under the     |
-   |             |           |Section 12)              | Mission       |
-   +-------------+-----------+-------------------------+---------------+
-   |Independently|supported  |Signed Mission Status    | Does not      |
-   |Verifiable   |           |proves record and state  | prove AS      |
-   |             |           |properties as of its     | issuance      |
-   |             |           |freshness window; Join   | under the     |
-   |             |           |Assertions add token-    | Mission or    |
-   |             |           |specific correlation     | current state |
-   |             |           |where used               | after the     |
-   |             |           |                         | observation   |
-   |             |           |                         | window        |
-   +-------------+-----------+-------------------------+---------------+
-   |Portable     |conditional|Consent Evidence, a      | The base MAS  |
-   |Evidence     |           |Mission Mandate, or Audit| audit log is  |
-   |             |           |Transparency when adopted| Controller-   |
-   |             |           |                         | local and is  |
-   |             |           |                         | not portable  |
-   |             |           |                         | evidence      |
-   +-------------+-----------+-------------------------+---------------+
+   +=============+========+============+=========================+=============+
+   |Capability   |Claim   |Activation  |Scope and defining       |Limitations  |
+   |             |        |            |sections                 |             |
+   +=============+========+============+=========================+=============+
+   |Lifecycle-   |supplied|always for  |MAS-native authority     |The unchanged|
+   |Gated        |        |MAS-native  |operations check current |Authorization|
+   |Authorization|        |authority   |state unconditionally;   |Server does  |
+   |             |        |operations; |joined action decisions  |not gate     |
+   |             |        |a Mission-  |do so where a Mission-   |token        |
+   |             |        |joining PDP |joining PDP is deployed  |issuance or  |
+   |             |        |deployment  |(Section 7, Section 10)  |refresh; the |
+   |             |        |for joined  |                         |token-layer  |
+   |             |        |action      |                         |residual runs|
+   |             |        |decisions   |                         |to credential|
+   |             |        |            |                         |expiry       |
+   +-------------+--------+------------+-------------------------+-------------+
+   |State-       |supplied|always      |Signed Mission Status    |Consumers    |
+   |Observable   |        |            |responses with the       |fail closed  |
+   |             |        |            |mission_max_stale_seconds|when the     |
+   |             |        |            |freshness bound          |declared     |
+   |             |        |            |(Section 7, Section 9)   |freshness    |
+   |             |        |            |                         |bound is     |
+   |             |        |            |                         |exceeded     |
+   +-------------+--------+------------+-------------------------+-------------+
+   |Structured   |supplied|always      |The issuance profile's   |Semantics    |
+   |Authority    |        |            |Authority Set and Common |apply only to|
+   |             |        |            |Constraints are held at  |the declared |
+   |             |        |            |the MAS and evaluated at |authority-   |
+   |             |        |            |the joining PDP          |detail types |
+   |             |        |            |                         |and mappings |
+   +-------------+--------+------------+-------------------------+-------------+
+   |Monotonic    |supplied|native child|The defined no-broader-  |PDP action   |
+   |Derivation   |        |creation    |than relation at the     |evaluation is|
+   |             |        |(Section    |native child-creation    |enforcement, |
+   |             |        |8.4)        |derivation point         |never        |
+   |             |        |            |                         |derivation; a|
+   |             |        |            |                         |separately   |
+   |             |        |            |                         |approved     |
+   |             |        |            |                         |expansion is |
+   |             |        |            |                         |a new        |
+   |             |        |            |                         |approval;    |
+   |             |        |            |                         |unchanged AS |
+   |             |        |            |                         |tokens are   |
+   |             |        |            |                         |outside the  |
+   |             |        |            |                         |claim        |
+   +-------------+--------+------------+-------------------------+-------------+
+   |Credential-  |supplied|the Join    |A signed assertion binds |Neither the  |
+   |Bound        |        |Assertion   |one introspected token   |assertion nor|
+   |             |        |endpoint    |digest and cnf thumbprint|the mapping  |
+   |             |        |(Section 12)|to the Mission; fact     |join proves  |
+   |             |        |            |semantics: verified party|the          |
+   |             |        |            |correlation, with the    |Authorization|
+   |             |        |            |assertion's exp bounded  |Server issued|
+   |             |        |            |by the token's remaining |the token    |
+   |             |        |            |lifetime                 |under the    |
+   |             |        |            |                         |Mission; a   |
+   |             |        |            |                         |mapping-join-|
+   |             |        |            |                         |only         |
+   |             |        |            |                         |deployment is|
+   |             |        |            |                         |outside this |
+   |             |        |            |                         |row          |
+   +-------------+--------+------------+-------------------------+-------------+
+   |Authorized   |supplied|always      |The mapping join and the |The          |
+   |Context      |        |            |Join Assertion           |association  |
+   |Correlation  |        |            |(Section 10, Section 12):|proves the   |
+   |             |        |            |the MAS and its joining  |credential   |
+   |             |        |            |PDPs are the joining     |belongs to   |
+   |             |        |            |authority under the      |the Mission's|
+   |             |        |            |enterprise mapping       |parties,     |
+   |             |        |            |contract, joining the    |never that it|
+   |             |        |            |introspected credential, |was issued   |
+   |             |        |            |the subject and client   |for the      |
+   |             |        |            |mappings, and the        |Mission; the |
+   |             |        |            |Mission; a failed join   |bare mapping |
+   |             |        |            |denies mission_mismatch, |join carries |
+   |             |        |            |never falling back       |the (subject,|
+   |             |        |            |                         |client)      |
+   |             |        |            |                         |equivalence- |
+   |             |        |            |                         |class        |
+   |             |        |            |                         |ambiguity,   |
+   |             |        |            |                         |and          |
+   |             |        |            |                         |substitution |
+   |             |        |            |                         |protection   |
+   |             |        |            |                         |requires the |
+   |             |        |            |                         |cnf-bound    |
+   |             |        |            |                         |assertion    |
+   |             |        |            |                         |(Section     |
+   |             |        |            |                         |17.1)        |
+   +-------------+--------+------------+-------------------------+-------------+
+   |Independently|supplied|signed      |Record and state         |Does not     |
+   |Verifiable   |        |Mission     |properties as of the     |prove AS     |
+   |             |        |Status      |response's freshness     |issuance     |
+   |             |        |(Section 7) |window; Join Assertions  |under the    |
+   |             |        |            |add token-specific       |Mission or   |
+   |             |        |            |correlation where used   |current state|
+   |             |        |            |                         |after the    |
+   |             |        |            |                         |observation  |
+   |             |        |            |                         |window       |
+   +-------------+--------+------------+-------------------------+-------------+
+   |Portable     |supplied|Consent     |The adopted profile's    |The base MAS |
+   |Evidence     |        |Evidence, a |artifact and verification|audit log is |
+   |             |        |Mission     |procedure                |Controller-  |
+   |             |        |Mandate, or |                         |local and is |
+   |             |        |Audit       |                         |not portable |
+   |             |        |Transparency|                         |evidence     |
+   |             |        |adopted     |                         |             |
+   +-------------+--------+------------+-------------------------+-------------+
 
            Table 1: Standalone MAS Mission substrate capabilities
+
+   Each supplied row's temporal elements inherit the signed Status
+   freshness contract unless stated: facts are current as of the
+   response's mission_max_stale_seconds window, assertion lifetime is
+   capped by the introspected token's remaining lifetime, and the
+   residual after non-active is bounded by the consumer's declared
+   staleness bound.  Failure behavior is uniformly fail-closed: an
+   unresolvable Mission, a stale or failed Status response, a join
+   failure (mission_mismatch, never a fallback), an unknown or malformed
+   authority-detail type, and an incomparable or invalid constraint each
+   refuse the evaluation rather than comparing best-effort; a Join
+   Assertion that fails validation is an absent assertion, never a
+   downgrade to an unverified join.
 
    The Portable Evidence condition is supplied only when the deployment
    adopts Consent Evidence
