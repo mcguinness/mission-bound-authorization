@@ -317,7 +317,7 @@
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -347,7 +347,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -1814,31 +1814,31 @@
    "tests": [
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
      "level": "unit",
      "surface": "signals"
     },
@@ -8140,7 +8140,7 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
      "level": "unit",
      "surface": "resource-operation"
     },
@@ -8203,13 +8203,13 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority remittance send under external_commitment -> permit with conditions.use_limit 1 too (both high-consequence classes, not just irreversible)",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority remittance send under external_commitment -> permit with conditions.use_limit 1 too (both high-consequence classes, not just irreversible)",
      "level": "unit",
      "surface": "resource-operation"
     }
@@ -8313,19 +8313,19 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority read -> permit",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority read -> permit",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "out-of-authority action -> deny out_of_authority",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > in-authority execute under the cap -> permit with conditions.use_limit 1 for irreversible",
      "level": "unit",
      "surface": "resource-operation"
     }
@@ -9258,7 +9258,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -9288,7 +9288,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -12953,7 +12953,7 @@
     },
     {
      "file": "src/services/authorization-server/test/continuation-assertion.test.ts",
-     "name": "validateContinuationAssertion — rejects > a jti the redeeming caller already consumed",
+     "name": "validateContinuationAssertion \u2014 rejects > a jti the redeeming caller already consumed",
      "level": "unit",
      "surface": "verification"
     }
