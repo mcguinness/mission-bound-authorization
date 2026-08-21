@@ -1648,69 +1648,23 @@ realize the Mission Reference and Controller, the lifecycle realizes
 the governance gate, token validity participates in bounded reliance,
 and the audit horizon participates in the governance record.
 
-## The Mission Identifier and Issuer
+## The Primitives, at a Glance {#substrate-primitives}
 
-An opaque, non-reused Mission Identifier with at least 128 bits of
-entropy and no semantic content, plus `issuer`, the issuer URL of the
-approving Mission Issuer; together they name exactly one Mission.
-This is the issuance profile's form of the contract's Mission
-Reference; the kernel itself requires stability, non-reassignment,
-and unguessability rather than this syntax
-({{I-D.draft-mcguinness-mission-substrate}}).
-Home: the OAuth binding's Mission Record and Mission Identifier Format
-sections. Consumed by every companion: enforcement decisions,
-evidence, harness bindings, the state surfaces, the audit statement
-subject, and the Mandate all key on it.
+| Primitive | The OAuth realization | Normative home | Consumed by |
+|---|---|---|---|
+| Mission Identifier and Issuer | An opaque, non-reused identifier with at least 128 bits of entropy plus the issuer URL; together they name exactly one Mission. The kernel requires stability, non-reassignment, and unguessability, not this syntax | The OAuth binding: Mission Record, Mission Identifier Format | Every companion: decisions, evidence, harness bindings, the state surfaces, the audit statement subject, the Mandate |
+| Lifecycle state space | The states of {{the-mission}}, open to companion-defined states, with the only-`active` rule, fail-safe unrecognized states, and a freshness source with a stated staleness bound | The OAuth binding (state space, only-`active`); the status and runtime profiles (freshness); Status and Signals (observation) | Runtime per-class re-check (fail closed on staleness), harness pause and terminate, the orchestrator's unwind trigger, the Mandate (state as of minting) |
+| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule and the Common Constraints vocabulary | The OAuth binding: Mission Authority, Subset Rule, Common Constraints | Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
+| Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding; the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN binding (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
+| Issuer key material | Signing keys resolvable from `issuer`; across a rotation each key identifier stays resolvable while artifacts signed under it remain within the audit horizon | The OAuth binding: Signing and Key Rotation | Verifiers of Mission-bound credentials, Consent Evidence, the Mandate, the signed state surfaces, Audit Transparency |
+| Audit horizon | The deployment-declared retention window: at least the Mission's lifetime plus a declared post-terminal period | The OAuth binding: Mission Record | Consent and runtime evidence and Audit Transparency (retention), the MAS (record retention), the security model's retention analysis |
+{: title="Substrate primitives in their OAuth realization"}
 
-## The Lifecycle State Space
-
-The states of {{the-mission}}, open to companion-defined states, with
-the only-`active` rule, fail-safe unrecognized states, and a
-freshness source with a stated staleness bound.
-
-Home: the state space and the only-`active` rule are the OAuth binding's (its
-Mission Lifecycle and Gating section); the freshness mechanisms and
-staleness bounds are the status and runtime profiles'; Status and
-Signals add the observation surfaces. Consumed by the runtime layer
-(per-class re-check, fail closed on staleness), the harness (pause,
-suppress, terminate), the orchestrator (the unwind trigger), and the
-Mandate (state only as of minting).
-
-## The Authority Set Representation
-
-An array of authorization details entries ({{RFC9396}} in the OAuth
-binding), each naming a resource, actions, and constraints, governed
-by the subset rule (derived or delegated authority is never broader)
-and the Common Constraints vocabulary (registered names with fixed
-subset and intersection rules).
-
-Home: the OAuth binding's Mission Authority section, with its Subset Rule and
-Common Constraints subsections. Consumed by the runtime layer and
-AuthZEN binding (evaluation), the MAS (served to the PDP), Expansion
-and Completion (growth and retirement), Child Delegation and Offline
-Attenuation (narrowing), Consent Evidence (rendering), and the
-Mandate (optional carriage).
-
-## The Integrity-Anchor Envelope
-
-A committed object is hashed over an envelope domain-separated by
-`typ` and issuer-bound by `iss`, canonicalized by fixed rules, and
-encoded with an algorithm prefix a verifier recognizes or rejects;
-the `typ` space is an extension point for new committed objects.
-
-These are **commitment anchors**, not enforcement proofs
-({{derivation-boundary}}): a narrowed-token Resource Server enforces
-the authority it receives rather than reconstructing authority from
-a hash of a full set it does not hold
+The anchors in the envelope row are **commitment anchors**, not
+enforcement proofs ({{derivation-boundary}}): a narrowed-token
+Resource Server enforces the authority it receives rather than
+reconstructing authority from a hash of a full set it does not hold
 ({{I-D.draft-mcguinness-mission-security-model}}).
-
-Home: the OAuth binding's Integrity Anchors and Canonicalization Rules
-sections, with the extension rule in its Extensibility section.
-Consumed by Consent Evidence (`consent_rendering_hash`), Shaping
-(Shaping Evidence), the runtime layer and AuthZEN binding
-(`mission-policy-view`), Orchestration (`unwind_plan_hash`), the
-Mandate (the encoded digest form), and Audit Transparency (the
-committed evidence types it registers).
 
 ## Token Classes {#token-classes}
 
@@ -1773,26 +1727,7 @@ two: the standalone Mission Issuer mints a Mission Issuance Grant
 that a consuming Authorization Server redeems for Mission-bound
 tokens, providing this primitive compositely.
 
-## Issuer Key Material
-
-The Mission Issuer's signing keys, resolvable from the `issuer` by the
-verifiers of its signed artifacts; across a rotation each key
-identifier's verification key stays resolvable while artifacts signed
-under it remain within the audit horizon. Home: the OAuth binding's Signing and
-Key Rotation section. Consumed by the verifiers of Mission-bound
-OAuth Mission-bound credentials, Consent Evidence, the Mandate, the
-signed state surfaces, and Audit Transparency.
-
-## The Audit Horizon
-
-The deployment-declared retention window for the Mission record and
-its evidence: at least the Mission's lifetime plus a declared
-post-terminal period. Home: the OAuth binding's Mission Record section.
-Consumed by Consent Evidence, runtime evidence, and Audit
-Transparency for retention; by the MAS for record retention; and by
-the security model's retention analysis.
-
-## Approval Fidelity
+## Approval Fidelity {#approval-fidelity}
 
 For the portable-authority bindings, the approval event authenticates
 the Approver, establishes the Subject, derives and renders the Authority
