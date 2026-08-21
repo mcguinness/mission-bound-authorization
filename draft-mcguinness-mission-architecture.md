@@ -388,9 +388,9 @@ and several bindings; this document is the single structural view.
 The bindings are peers of one another. OAuth is the family's
 first-authored binding and the substrate with the most deployed
 infrastructure; that is a deployment fact, not a maturity ranking.
-No binding has production Mission deployments today, and adopting
-Missions on OAuth requires the changes the OAuth binding defines,
-exactly as it does on every other substrate.
+No production Mission deployment is known today on any binding, and
+adopting Missions on OAuth requires the changes the OAuth binding
+defines, exactly as it does on every other substrate.
 
 Read as one system, the family defines a **delegated-authority
 layer** with OAuth 2.0, the standalone Mission Authority Server, and
