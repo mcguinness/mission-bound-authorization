@@ -924,11 +924,10 @@ The Statement MUST then include a capability table with one row for
 each capability in {{capabilities}}.  Each row MUST say `supplied` or
 `not supplied`: a capability is supplied in a named scope when the
 row's stated activation conditions hold, or it is not supplied.
-There is no third state.  The retired `conditional` state conflated
-four different facts, what a specification defines, what an
-implementation supports, what a deployment enables, and where the
-resulting property applies; an activation condition states them
-separately.  A supplied row MUST:
+There is no third state.  An activation condition states separately
+what a specification defines, what an implementation supports, what
+a deployment enables, and where the resulting property applies.  A
+supplied row MUST:
 
 * cite the binding sections that satisfy the capability;
 * state its mode and operational scope;
