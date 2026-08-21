@@ -125,9 +125,10 @@ Mission record's single accountable Approver is unchanged.
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} records
-one accountable Approver and defers multi-party approval and
-approval-authority provenance to a governance layer. An enterprise
+A Mission records one accountable Approver and defers multi-party
+approval and approval-authority provenance to a governance layer
+({{I-D.draft-mcguinness-oauth-mission}} states that rule for the
+OAuth binding). An enterprise
 review surface is often that governance layer: a decision may
 involve several principals, a threshold or separation-of-duty rule,
 and a delegation-of-authority policy, and an auditor later needs to
@@ -149,7 +150,7 @@ by enforcement.
 
 This document is optional. A deployment that records nothing beyond
 the Mission record's accountable `approver` is fully conformant to
-the issuance profile and unaffected by this document. Profiles MAY
+its Mission binding and unaffected by this document. Profiles MAY
 require this record; the Enterprise Mission Authority Profile does
 so under its recording triggers
 ({{I-D.draft-mcguinness-mission-authority-server}}).

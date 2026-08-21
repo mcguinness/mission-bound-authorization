@@ -152,7 +152,8 @@ Agent harnesses preserve execution state across restarts, retries,
 background jobs, tool-connection reuse, and sub-agent orchestration.
 That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization, with OAuth 2.0 as this version's normative substrate.
+Authorization, with the OAuth binding as this version's reference
+host.
 It specifies how a harness binds sessions, task graphs, queues, cached
 tool connections, and sub-agent handles to Mission state; when it must
 re-check Mission status; and how it must pause, suppress, or terminate

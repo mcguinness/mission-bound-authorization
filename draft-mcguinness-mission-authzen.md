@@ -181,9 +181,12 @@ companion owns.
 
 Mission-Bound Runtime Enforcement
 {{I-D.draft-mcguinness-mission-runtime}} (the "runtime profile")
-specifies the runtime enforcement layer for Mission-bound access
-tokens issued under Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"). The
+specifies the runtime enforcement layer for Mission-bound
+authorization; this version's reference host is the OAuth binding,
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile" to
+its OAuth companions), whose Mission-bound access tokens the worked
+surfaces cite. The
 runtime profile is deliberately substrate-independent: it defines the
 decision contract, action classification, PEP placement, parameter
 binding and the time-of-check to time-of-use gap, the consumption-bound

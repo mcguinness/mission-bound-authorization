@@ -312,8 +312,9 @@ What UMA deliberately does not standardize is the object at the
 center. How the authorization server assesses a request, what the
 resource owner approved, in what bounds, with what durable record,
 under what lifecycle: all of it is unspecified policy behind the
-token endpoint. The Mission model of
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") is a
+token endpoint. The Mission model, first specified in its OAuth
+binding ({{I-D.draft-mcguinness-oauth-mission}}, the "issuance
+profile"), is a
 specification of exactly that interior: a durable Mission record
 created by an explicit approval event, integrity anchors committing
 the approved task and its derived authority, a lifecycle whose

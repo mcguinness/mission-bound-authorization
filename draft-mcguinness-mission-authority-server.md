@@ -253,8 +253,9 @@ issued authority to a durable, human-approved Mission. Its Mission
 Issuer role is played by the OAuth Authorization Server (AS)
 {{RFC6749}}: the AS validates the Mission Intent, runs the approval
 event, records the Mission, derives Mission-bound tokens, and gates
-issuance on Mission state. That binding is the strongest deployment of
-the Mission model, and it requires changing the AS.
+issuance on Mission state. That binding places the chokepoint at the
+token plane, the strongest enforcement position, and it requires
+changing the AS.
 
 Many deployments cannot make that change: the AS is a shared or
 third-party service, while the need to govern agent tasks is
@@ -310,8 +311,10 @@ enforcement from this profile and SHOULD NOT claim it
 ({{limitations}}).
 
 The Mission Join ({{mission-join}}) is the newest mechanism in the
-family and not yet exercised in deployment; a deployment that can
-implement the issuance profile obtains the stronger, stable binding.
+family and, like every mechanism in this family, not yet exercised
+in production deployment; a deployment that can implement the OAuth
+binding obtains the token-plane chokepoint, a structural property of
+that binding rather than a maturity difference.
 
 # Conventions and Terminology
 

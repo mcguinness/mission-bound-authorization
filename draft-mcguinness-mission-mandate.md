@@ -241,9 +241,9 @@ OAuth 2.0 mechanics. It consumes these substrate primitives:
 Three bindings host these primitives, and a Mandate minted under any
 of them is verified identically:
 
-- the issuance profile {{I-D.draft-mcguinness-oauth-mission}}, this
-  version's normative substrate, publishing keys through its
-  Authorization Server metadata `jwks_uri`;
+- the OAuth binding {{I-D.draft-mcguinness-oauth-mission}} (the
+  issuance profile), this version's reference host, publishing keys
+  through its Authorization Server metadata `jwks_uri`;
 - the Mission Authority Server
   ({{I-D.draft-mcguinness-mission-authority-server}}), a standalone
   binding of the same primitives with its own metadata `jwks_uri`; and
