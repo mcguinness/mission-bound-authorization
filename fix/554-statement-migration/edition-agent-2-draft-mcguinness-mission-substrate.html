@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 21 February 2027</td>
+<td class="center">Expires 22 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-substrate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-20" class="published">20 August 2026</time>
+<time datetime="2026-08-21" class="published">21 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-21">21 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-22">22 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ authority hashes.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 21 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 22 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2161,10 +2161,15 @@ association is an authorized fact established by the joining
 authority, not an observation that two values coincide.  This
 capability is required whenever one authority did not itself bind all
 required facts in the applicable context (<a href="#context-splicing" class="auto internal xref">Section 7.3</a>).<a href="#section-4.6-2" class="pilcrow">¶</a></p>
-<p id="section-4.6-3">The inverse also holds: a binding whose single authority natively
-binds all required facts in scope does not supply this capability.
-Nothing independently established remains to join, so its Statement
-says <code>not supplied</code> with that reason, rather than presenting native
+<p id="section-4.6-3">Native binding does not automatically supply this capability. It
+supplies it where it authoritatively joins independently established
+facts and satisfies the joining-authority, policy, proof,
+conflict-handling, lifetime, audience, and substitution requirements
+above; one authority can perform that join, and being the same
+authority does not make the facts co-established. Where a binding's
+facts are genuinely co-established at issuance or decision time,
+nothing independently established remains to join, and its Statement
+says <code>not supplied</code> with that reason rather than presenting native
 binding as a join.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -3045,10 +3050,10 @@ with integrity resting on record custody and the typed anchors.<a href="#appendi
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
-              <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">The issuer binds the Mission, Subject, client, and credential natively at issuance; no cross-authority join is defined. Cross-authority joins are the Mission Authority Server's machinery, not this binding's</td>
+              <td class="text-left" rowspan="1" colspan="1">supplied</td>
+              <td class="text-left" rowspan="1" colspan="1">the Delegation role active (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound <code>subject_token</code> with the delegate identity independently established by the <code>actor_token</code> or the delegate's own client authentication, binding both to the newly issued credential</td>
+              <td class="text-left" rowspan="1" colspan="1">The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
@@ -3105,7 +3110,7 @@ never creates a claim beyond the eight already stated above.<a href="#appendix-B
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Delegation</td>
               <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound, Authorized Context Correlation</td>
-              <td class="text-left" rowspan="1" colspan="1">Core delegation subset-checks <code>authorization_details</code>, carries the <code>mission</code> claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. The Token Exchange that issues the delegated credential is itself a grant binding at issuance: the AS joins the Mission and Subject carried by the Mission-bound <code>subject_token</code> with the delegate identity established by the <code>actor_token</code> or the delegate's own client authentication, binding both to the newly issued credential. All five claims are already supplied always; Delegation exercises them rather than creating them. The <code>act</code> chain itself supplies none of them: it is attribution, never authority.</td>
+              <td class="text-left" rowspan="1" colspan="1">Core delegation subset-checks <code>authorization_details</code>, carries the <code>mission</code> claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. The Token Exchange that issues the delegated credential is itself a grant binding at issuance: the AS joins the Mission and Subject carried by the Mission-bound <code>subject_token</code> with the delegate identity established by the <code>actor_token</code> or the delegate's own client authentication, binding both to the newly issued credential. Four of the five claims are supplied always, and Delegation exercises them rather than creating them; Authorized Context Correlation is the exception, activated by this role, whose Token Exchange join is its supplier. The <code>act</code> chain itself supplies none of them: it is attribution, never authority.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Cross-Domain</td>

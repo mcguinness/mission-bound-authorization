@@ -826,97 +826,121 @@ Table of Contents
    and failure elements in its cells or by express inheritance of the
    Bounded Reliance floor ([I-D.draft-mcguinness-mission-substrate]):
 
-   +=============+========+=============+===============+==============+
-   |Capability   |Claim   |Activation   |Scope and      |Limitations   |
-   |             |        |             |defining       |              |
-   |             |        |             |sections       |              |
-   +=============+========+=============+===============+==============+
-   |Lifecycle-   |supplied|always       |RPT issuance   |A self-       |
-   |Gated        |        |             |and upgrade are|contained RPT |
-   |Authorization|        |             |state-gated;   |without a     |
-   |             |        |             |introspection  |state check   |
-   |             |        |             |gates continued|remains       |
-   |             |        |             |reliance       |usable only   |
-   |             |        |             |(Section 7.1,  |for its       |
-   |             |        |             |Section 7.2)   |bounded       |
-   |             |        |             |               |lifetime      |
-   +-------------+--------+-------------+---------------+--------------+
-   |State-       |supplied|authenticated|Those surfaces,|A self-       |
-   |Observable   |        |per-use      |within their   |contained RPT |
-   |             |        |introspection|declared bounds|validated     |
-   |             |        |with a       |               |only to its   |
-   |             |        |deployment-  |               |exp is not    |
-   |             |        |declared     |               |state         |
-   |             |        |cache bound, |               |observation;  |
-   |             |        |or Mission   |               |token         |
-   |             |        |Status active|               |lifetime      |
-   |             |        |(Section 7.2)|               |alone is not  |
-   |             |        |             |               |observation   |
-   +-------------+--------+-------------+---------------+--------------+
-   |Structured   |supplied|always       |The Authority  |UMA           |
-   |Authority    |        |             |Set is the     |permissions   |
-   |             |        |             |approved       |cannot carry  |
-   |             |        |             |representation;|parameter or  |
-   |             |        |             |UMA permissions|consumption   |
-   |             |        |             |are its        |constraints   |
-   |             |        |             |resource/scope |              |
-   |             |        |             |projection     |              |
-   |             |        |             |(Section 8.2)  |              |
-   +-------------+--------+-------------+---------------+--------------+
-   |Monotonic    |supplied|always       |The token      |Applies to    |
-   |Derivation   |        |             |endpoint       |the declared  |
-   |             |        |             |applies the    |Authority Set |
-   |             |        |             |issuance       |projection,   |
-   |             |        |             |profile's no-  |not arbitrary |
-   |             |        |             |broader-than   |UMA policy    |
-   |             |        |             |relation at RPT|values        |
-   |             |        |             |issuance and   |              |
-   |             |        |             |upgrade        |              |
-   |             |        |             |(Section 8.2,  |              |
-   |             |        |             |Section 8.3)   |              |
-   +-------------+--------+-------------+---------------+--------------+
-   |Credential-  |supplied|a protected  |One RPT, Actor,|Introspection |
-   |Bound        |        |RPT claim, or|and Mission    |carriage is   |
-   |             |        |authenticated|Reference      |an online     |
-   |             |        |introspection|associated at  |issuer        |
-   |             |        |(Section 8.1)|issuance; fact |assertion,    |
-   |             |        |             |semantics:     |not offline   |
-   |             |        |             |issuance under |proof         |
-   |             |        |             |the Mission    |              |
-   +-------------+--------+-------------+---------------+--------------+
-   |Authorized   |not     |--           |--             |The           |
-   |Context      |supplied|             |               |authorization |
-   |Correlation  |        |             |               |server binds  |
-   |             |        |             |               |the RPT,      |
-   |             |        |             |               |Actor, and    |
-   |             |        |             |               |Mission       |
-   |             |        |             |               |Reference     |
-   |             |        |             |               |natively at   |
-   |             |        |             |               |issuance; no  |
-   |             |        |             |               |cross-        |
-   |             |        |             |               |authority     |
-   |             |        |             |               |join is       |
-   |             |        |             |               |defined       |
-   +-------------+--------+-------------+---------------+--------------+
-   |Independently|supplied|self-        |Issuance-under-|Opaque RPT    |
-   |Verifiable   |        |contained    |Mission        |introspection |
-   |             |        |signed RPTs, |offline, and   |is online; a  |
-   |             |        |or signed    |state as of a  |signed        |
-   |             |        |Mission      |signed         |observation   |
-   |             |        |Status       |observation's  |proves state  |
-   |             |        |(Section 8.1,|freshness      |only as of    |
-   |             |        |Section 7.2) |window         |its window    |
-   +-------------+--------+-------------+---------------+--------------+
-   |Portable     |supplied|Consent      |The adopted    |The base      |
-   |Evidence     |        |Evidence, a  |profile's      |assessment    |
-   |             |        |Mission      |artifact and   |log is        |
-   |             |        |Mandate, or  |verification   |Controller-   |
-   |             |        |Audit        |procedure      |local and is  |
-   |             |        |Transparency |               |not portable  |
-   |             |        |adopted      |               |evidence      |
-   +-------------+--------+-------------+---------------+--------------+
+   +=============+========+=============+================+=============+
+   |Capability   |Claim   |Activation   |Scope and       |Limitations  |
+   |             |        |             |defining        |             |
+   |             |        |             |sections        |             |
+   +=============+========+=============+================+=============+
+   |Lifecycle-   |supplied|always       |RPT issuance    |A self-      |
+   |Gated        |        |             |and upgrade are |contained RPT|
+   |Authorization|        |             |state-gated;    |without a    |
+   |             |        |             |introspection   |state check  |
+   |             |        |             |gates continued |remains      |
+   |             |        |             |reliance        |usable only  |
+   |             |        |             |(Section 7.1,   |for its      |
+   |             |        |             |Section 7.2)    |bounded      |
+   |             |        |             |                |lifetime     |
+   +-------------+--------+-------------+----------------+-------------+
+   |State-       |supplied|authenticated|Those surfaces, |A self-      |
+   |Observable   |        |per-use      |within their    |contained RPT|
+   |             |        |introspection|declared bounds |validated    |
+   |             |        |with a       |                |only to its  |
+   |             |        |deployment-  |                |exp is not   |
+   |             |        |declared     |                |state        |
+   |             |        |cache bound, |                |observation; |
+   |             |        |or Mission   |                |token        |
+   |             |        |Status active|                |lifetime     |
+   |             |        |(Section 7.2)|                |alone is not |
+   |             |        |             |                |observation  |
+   +-------------+--------+-------------+----------------+-------------+
+   |Structured   |supplied|always       |The Authority   |UMA          |
+   |Authority    |        |             |Set is the      |permissions  |
+   |             |        |             |approved        |cannot carry |
+   |             |        |             |representation; |parameter or |
+   |             |        |             |UMA permissions |consumption  |
+   |             |        |             |are its         |constraints  |
+   |             |        |             |resource/scope  |             |
+   |             |        |             |projection      |             |
+   |             |        |             |(Section 8.2)   |             |
+   +-------------+--------+-------------+----------------+-------------+
+   |Monotonic    |supplied|always       |The token       |Applies to   |
+   |Derivation   |        |             |endpoint        |the declared |
+   |             |        |             |applies the     |Authority Set|
+   |             |        |             |issuance        |projection,  |
+   |             |        |             |profile's no-   |not arbitrary|
+   |             |        |             |broader-than    |UMA policy   |
+   |             |        |             |relation at RPT |values       |
+   |             |        |             |issuance and    |             |
+   |             |        |             |upgrade         |             |
+   |             |        |             |(Section 8.2,   |             |
+   |             |        |             |Section 8.3)    |             |
+   +-------------+--------+-------------+----------------+-------------+
+   |Credential-  |supplied|a protected  |One RPT, Actor, |Introspection|
+   |Bound        |        |RPT claim, or|and Mission     |carriage is  |
+   |             |        |authenticated|Reference       |an online    |
+   |             |        |introspection|associated at   |issuer       |
+   |             |        |(Section 8.1)|issuance; fact  |assertion,   |
+   |             |        |             |semantics:      |not offline  |
+   |             |        |             |issuance under  |proof        |
+   |             |        |             |the Mission     |             |
+   +-------------+--------+-------------+----------------+-------------+
+   |Authorized   |not     |--           |--              |The          |
+   |Context      |supplied|             |                |authorization|
+   |Correlation  |        |             |                |server co-   |
+   |             |        |             |                |establishes  |
+   |             |        |             |                |the RPT,     |
+   |             |        |             |                |Actor, and   |
+   |             |        |             |                |Mission      |
+   |             |        |             |                |Reference at |
+   |             |        |             |                |issuance; no |
+   |             |        |             |                |authoritative|
+   |             |        |             |                |join of      |
+   |             |        |             |                |independently|
+   |             |        |             |                |established  |
+   |             |        |             |                |facts is     |
+   |             |        |             |                |defined      |
+   +-------------+--------+-------------+----------------+-------------+
+   |Independently|supplied|self-        |A signed self-  |Signed Status|
+   |Verifiable   |        |contained    |contained RPT   |alone proves |
+   |             |        |signed RPTs, |proves issuance |nothing about|
+   |             |        |or signed    |under the       |any          |
+   |             |        |Mission      |Mission,        |particular   |
+   |             |        |Status       |offline; a      |RPT's        |
+   |             |        |(Section 8.1,|signed Mission  |issuance;    |
+   |             |        |Section 7.2) |Status response |opaque RPT   |
+   |             |        |             |proves record   |introspection|
+   |             |        |             |and state       |is online    |
+   |             |        |             |properties as   |             |
+   |             |        |             |of its          |             |
+   |             |        |             |observation     |             |
+   |             |        |             |window; each    |             |
+   |             |        |             |activation      |             |
+   |             |        |             |supplies        |             |
+   |             |        |             |exactly its own |             |
+   |             |        |             |half            |             |
+   +-------------+--------+-------------+----------------+-------------+
+   |Portable     |supplied|Consent      |The adopted     |The base     |
+   |Evidence     |        |Evidence, a  |profile's       |assessment   |
+   |             |        |Mission      |artifact and    |log is       |
+   |             |        |Mandate, or  |verification    |Controller-  |
+   |             |        |Audit        |procedure       |local and is |
+   |             |        |Transparency |                |not portable |
+   |             |        |adopted      |                |evidence     |
+   +-------------+--------+-------------+----------------+-------------+
 
                 Table 3: UMA Mission substrate capabilities
+
+   Each supplied row's temporal elements inherit the gating contract
+   unless stated: freshness is established at the state-gated operation
+   or at introspection within its declared cache bound, artifact
+   lifetime is the RPT's expiry capped by the Mission's expires_at, and
+   the residual after non-active is the remaining self-contained RPT
+   lifetime or the introspection cache bound.  Failure behavior is
+   uniformly fail-closed: an unavailable or invalid introspection or
+   Status surface refuses the rows that activate on it (an opaque RPT
+   whose introspection is unavailable is denied, never extended); an
+   incomparable permission projection refuses issuance or upgrade; a
+   stale observation past its window is no observation.
 
    The Portable Evidence condition is supplied only when the deployment
    adopts Consent Evidence

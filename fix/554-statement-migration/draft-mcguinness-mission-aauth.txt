@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          20 August 2026
-Expires: 21 February 2027
+Intended status: Standards Track                          21 August 2026
+Expires: 22 February 2027
 
 
                    Mission Context Binding for AAuth
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 21 February 2027.
+   This Internet-Draft will expire on 22 February 2027.
 
 Copyright Notice
 
@@ -1127,16 +1127,19 @@ Table of Contents
    |             |        |                                                 |brokering under  |              |
    |             |        |                                                 |the mission      |              |
    +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Authorized   |not     |--                                               |--               |The PS binds  |
-   |Context      |supplied|                                                 |                 |the mission,  |
-   |Correlation  |        |                                                 |                 |person, agent,|
+   |Authorized   |not     |--                                               |--               |The PS co-    |
+   |Context      |supplied|                                                 |                 |establishes   |
+   |Correlation  |        |                                                 |                 |the mission,  |
+   |             |        |                                                 |                 |person, agent,|
    |             |        |                                                 |                 |and token     |
-   |             |        |                                                 |                 |natively where|
-   |             |        |                                                 |                 |it is on the  |
-   |             |        |                                                 |                 |path; no      |
-   |             |        |                                                 |                 |cross-        |
-   |             |        |                                                 |                 |authority join|
-   |             |        |                                                 |                 |is defined    |
+   |             |        |                                                 |                 |where it is on|
+   |             |        |                                                 |                 |the path; no  |
+   |             |        |                                                 |                 |authoritative |
+   |             |        |                                                 |                 |join of       |
+   |             |        |                                                 |                 |independently |
+   |             |        |                                                 |                 |established   |
+   |             |        |                                                 |                 |facts is      |
+   |             |        |                                                 |                 |defined       |
    +-------------+--------+-------------------------------------------------+-----------------+--------------+
    |Independently|not     |--                                               |--               |s256 proves   |
    |Verifiable   |supplied|                                                 |                 |byte identity |
@@ -1160,6 +1163,19 @@ Table of Contents
    +-------------+--------+-------------------------------------------------+-----------------+--------------+
 
                Table 4: AAuth Mission substrate capabilities
+
+   Each supplied row's temporal elements inherit the binding's own
+   bounds unless stated: decisions establish current state at the PS at
+   decision time, artifact lifetime is the auth-token lifetime capped by
+   expires_at, and the residual after the mission becomes non-active is
+   the outstanding auth-token lifetime.  Failure behavior is uniformly
+   fail-closed: a request whose resource token is missing the
+   mission_s256 claim its mode requires, carries one that fails
+   validation, or mismatches the named mission is processed as
+   missionless at best and never as mission-bound; a failed,
+   unrecognized, or stale Management status response, or an unavailable
+   status surface, refuses the state-dependent decision; unknown input
+   never degrades to a weaker mode silently.
 
 10.  IANA Considerations
 

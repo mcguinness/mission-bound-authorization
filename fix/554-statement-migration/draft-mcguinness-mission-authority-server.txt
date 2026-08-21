@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          20 August 2026
-Expires: 21 February 2027
+Intended status: Standards Track                          21 August 2026
+Expires: 22 February 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 21 February 2027.
+   This Internet-Draft will expire on 22 February 2027.
 
 Copyright Notice
 
@@ -328,16 +328,16 @@ Table of Contents
    |Capability   |Claim   |Activation  |Scope and defining       |Limitations  |
    |             |        |            |sections                 |             |
    +=============+========+============+=========================+=============+
-   |Lifecycle-   |supplied|a Mission-  |MAS-native authority     |The unchanged|
-   |Gated        |        |joining PDP |operations and joined    |Authorization|
-   |Authorization|        |deployment  |action decisions check   |Server does  |
-   |             |        |            |current state (Section 7,|not gate     |
-   |             |        |            |Section 10)              |token        |
-   |             |        |            |                         |issuance or  |
-   |             |        |            |                         |refresh; the |
-   |             |        |            |                         |token-layer  |
-   |             |        |            |                         |residual runs|
-   |             |        |            |                         |to credential|
+   |Lifecycle-   |supplied|always for  |MAS-native authority     |The unchanged|
+   |Gated        |        |MAS-native  |operations check current |Authorization|
+   |Authorization|        |authority   |state unconditionally;   |Server does  |
+   |             |        |operations; |joined action decisions  |not gate     |
+   |             |        |a Mission-  |do so where a Mission-   |token        |
+   |             |        |joining PDP |joining PDP is deployed  |issuance or  |
+   |             |        |deployment  |(Section 7, Section 10)  |refresh; the |
+   |             |        |for joined  |                         |token-layer  |
+   |             |        |action      |                         |residual runs|
+   |             |        |decisions   |                         |to credential|
    |             |        |            |                         |expiry       |
    +-------------+--------+------------+-------------------------+-------------+
    |State-       |supplied|always      |Signed Mission Status    |Consumers    |
@@ -433,6 +433,19 @@ Table of Contents
    +-------------+--------+------------+-------------------------+-------------+
 
            Table 1: Standalone MAS Mission substrate capabilities
+
+   Each supplied row's temporal elements inherit the signed Status
+   freshness contract unless stated: facts are current as of the
+   response's mission_max_stale_seconds window, assertion lifetime is
+   capped by the introspected token's remaining lifetime, and the
+   residual after non-active is bounded by the consumer's declared
+   staleness bound.  Failure behavior is uniformly fail-closed: an
+   unresolvable Mission, a stale or failed Status response, a join
+   failure (mission_mismatch, never a fallback), an unknown or malformed
+   authority-detail type, and an incomparable or invalid constraint each
+   refuse the evaluation rather than comparing best-effort; a Join
+   Assertion that fails validation is an absent assertion, never a
+   downgrade to an unverified join.
 
    The Portable Evidence condition is supplied only when the deployment
    adopts Consent Evidence
