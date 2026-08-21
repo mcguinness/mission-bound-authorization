@@ -277,7 +277,7 @@ separate, optional layer.
 
 --- middle
 
-# Introduction
+# Introduction {#introduction}
 
 Agent-identity work such as {{I-D.draft-klrc-aiagent-auth}}
 establishes how an AI agent authenticates and how a user delegates
@@ -342,7 +342,7 @@ consequence of what its agents do; the Mission Assurance Levels of
 {{I-D.draft-mcguinness-mission-architecture}} name the composed
 levels informatively.
 
-## Why a New Object
+## Why a New Object {#why-a-new-object}
 
 OAuth already has objects near this need, but none is the approved
 task. A `scope` value or an `authorization_details` entry
@@ -424,7 +424,7 @@ replace it, and revoking the Mission still reaches everything derived
 from it that has not already left the issuer's reach
 ({{revocation}}).
 
-## The Mission, the Plan, and Execution
+## The Mission, the Plan, and Execution {#the-mission-the-plan-and-execution}
 
 The Mission is the durable, AS-held object that commits the approved
 authority and owns the task's lifecycle. Two related things an agent
@@ -492,7 +492,7 @@ places their natural insertion point at the mediating enforcement
 component ({{runtime-boundary}},
 {{I-D.draft-mcguinness-mission-runtime}}).
 
-## Scope and Future Work
+## Scope and Future Work {#scope-and-future-work}
 
 This document is a self-contained, minimum-viable profile: it binds
 Missions to OAuth 2.0 and is implementable on its own, depending only
@@ -603,7 +603,7 @@ considered and where it belongs, not that it was overlooked.
   against that anchor and is therefore future work, not a v1 property
   ({{mission-identifier-correlation}}).
 
-# Conventions and Terminology
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
@@ -697,9 +697,9 @@ Mission-bound token:
   Mission data without the gates is not Mission-bound
   ({{conformance}}).
 
-# Overview
+# Overview {#overview}
 
-## Principal Model
+## Principal Model {#principal-model}
 
 This document maps principals onto native OAuth constructs:
 
@@ -786,7 +786,7 @@ The subject-representation discipline is the same in every source:
 - The actor model does not vary by source: `client_id` names the
   Agent, and delegates ride the `act` chain ({{delegation}}).
 
-## Protocol Flow
+## Protocol Flow {#protocol-flow}
 
 ~~~
  Agent (client)                       Mission Issuer (AS)
@@ -2723,7 +2723,7 @@ claim carry it as `id`; a surface that references a Mission from
 outside carries it as `mission_id`, as in the token-response parameter
 ({{grant-binding}}).
 
-## Worked Example
+## Worked Example {#worked-example}
 
 ~~~ json
 {
@@ -3324,7 +3324,7 @@ non-active and non-deriving. A consumer MUST NOT fail open on an
 unrecognized state. This makes a registered state added by a companion
 profile fail safe for a consumer that predates it.
 
-## Issuance Gating
+## Issuance Gating {#issuance-gating}
 
 The AS MUST refuse to derive a token, at the token endpoint, on
 refresh, and on Token Exchange ({{RFC8693}}), unless the
@@ -3531,7 +3531,7 @@ authorization still good," keyed by the token presented. The
 canonical Mission Status surface (keyed by `mission_id`) remains out of scope
 ({{revocation}}).
 
-## Examples
+## Examples {#examples}
 
 While the Mission is `active`, the response is the standard
 {{RFC7662}} body plus the `mission` member. The canonical ERP token
@@ -3829,7 +3829,7 @@ constraints are applied by the AS at issuance; a Resource Server sees
 only the already-narrowed `authorization_details` and enforces those
 as usual ({{mission-bound-tokens}}).
 
-## Worked Example: Delegated Token
+## Worked Example: Delegated Token {#worked-example-delegated-token}
 
 Suppose the Mission's Authority Set has two entries on the ERP:
 `invoices.read`, delegable to `ai_agent` actors through depth 2; and
@@ -4208,7 +4208,7 @@ Binding Statement"). That Statement is informative here: it restates
 this document, adds no requirement to it, and this document remains
 self-contained.
 
-# Security Considerations
+# Security Considerations {#security-considerations}
 
 ## Consent Binding {#consent-binding}
 
@@ -4538,7 +4538,7 @@ omit the attribute otherwise; when in doubt,
 `insufficient_authority` is the value that reveals least, and
 omission reveals nothing.
 
-## Token Theft
+## Token Theft {#token-theft}
 
 Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
 {{RFC8705}}) at the levels set in {{mission-bound-tokens}} and
@@ -4549,7 +4549,7 @@ cross-domain credentials
 is bounded by the Authority Set and the Mission lifetime regardless,
 but sender-constraint prevents replay by a different party.
 
-## Delegation and Chain Compromise
+## Delegation and Chain Compromise {#delegation-and-chain-compromise}
 
 Delegation ({{delegation}}) widens the set of parties holding
 Mission-derived authority. Because authority only narrows down the
@@ -4642,7 +4642,7 @@ segmentation needs no wire change. Recovery from a signing-key
 compromise is deployment-owned and belongs in the deployment's
 documented procedures.
 
-## Compromised or Over-Broad Derivation
+## Compromised or Over-Broad Derivation {#compromised-or-over-broad-derivation}
 
 The AS is trusted to derive authority no broader than the Mission
 Intent. Both derivation modes ({{authorization-derivation}}) are
@@ -4651,7 +4651,7 @@ rather than free-form inference, and the recorded `policy_version`
 names the policy a derivation ran under so the derivation can be
 audited. General OAuth security guidance {{RFC9700}} applies.
 
-## Authority Hash Is Not a Mission Identifier
+## Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
 
 `authority_hash` commits the approved Authority Set, not the Mission.
 Two distinct Missions that approve byte-identical authority carry the
@@ -4666,7 +4666,7 @@ approved. A consumer that needs to bind to or correlate a specific
 Mission uses the Mission Identifier, and `intent_hash` and `approver`
 distinguish Missions that share an Authority Set.
 
-## Composition and the Effective Ceiling
+## Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
 
 Delegation depth ({{delegation-constraints}}) resets to 0 at each
 cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
@@ -4691,7 +4691,7 @@ profile's role ({{I-D.draft-mcguinness-mission-metering}}), not a
 property this document or its composition partners provide by
 themselves.
 
-## The Containment Materialized-Capability Residual
+## The Containment Materialized-Capability Residual {#the-containment-materialized-capability-residual}
 
 Where a deployment runs the Mission Containment profile
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
@@ -4745,7 +4745,7 @@ Three rules keep the declaration honest:
   duty under {{consent-binding}}, never a property of the committed
   set.
 
-# Privacy Considerations
+# Privacy Considerations {#privacy-considerations}
 
 A Mission Identifier is a correlation handle: a deployment limits
 exposure by giving stable Mission Identifiers only to parties that
@@ -4789,7 +4789,7 @@ per the guidance above, and a deployment that publishes its posture
 records the property there rather than treating documentation as a
 separate duty.
 
-## Token Payload Disclosure
+## Token Payload Disclosure {#token-payload-disclosure}
 
 The carried `constraints` and a multi-resource Authority Set disclose
 the shape of the task and its business bounds (for example, an amount
@@ -4800,7 +4800,7 @@ document recommends them ({{mission-bound-tokens}}). The privacy
 considerations of {{RFC9396}} apply to the carried
 `authorization_details`.
 
-## Intent Retention and Anchor Disclosure
+## Intent Retention and Anchor Disclosure {#intent-retention-and-anchor-disclosure}
 
 The Mission record's Intent members (`goal`, `constraints`) are
 personal-data sinks: they carry whatever task description the user
