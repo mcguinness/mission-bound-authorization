@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-21T03:12:56Z
-Source repository commit: c0a4b08dc0c7c3dd0a42606e949857c35d7e1092
+Generated: 2026-08-21T05:33:48Z
+Source repository commit: 8cfb1e32c6cb982505fa41ef73139cd12433c701
 Member count: 9
 
 Reading order:
@@ -12866,22 +12866,25 @@ Table of Contents
 
 6.8.  Idempotency and Conflicts
 
-   The request nonce (Section 6, Operations) is the idempotency key.
-   The AS MUST deduplicate lifecycle requests by the triple (client,
-   mission_id, nonce) for a bounded window.  On a retransmit carrying a
-   nonce already seen for that client and mission_id, together with a
-   request byte-identical to the original, the AS MUST replay the
-   original response rather than re-execute the operation.  The same
-   nonce paired with a request that is not byte-identical to the
-   original MUST be refused invalid_request (Section 3.7); the AS MUST
-   NOT answer it with the unrelated original response.  The window MUST
-   be at least the validity span of the signed response the AS would
-   replay (its iat to exp, Section 3.4), so any retransmit that could
-   still present a live response is deduplicated.  A deployment MAY use
-   a longer window.  This makes a retransmit safe against reordering: a
-   delayed suspend retry that arrives after a resume is recognized as a
-   duplicate and replays the original suspend response, so it cannot re-
-   suspend an already-resumed Mission.
+   The request nonce (Section 6, Operations) is the idempotency key: an
+   opaque string of 1 to 255 characters.  The AS treats an absent,
+   empty, longer, or non-string nonce as malformed (invalid_request,
+   with no nonce echoed).  The AS MUST deduplicate lifecycle requests by
+   the triple (client, mission_id, nonce) for a bounded window.  On a
+   retransmit carrying a nonce already seen for that client and
+   mission_id, together with a request byte-identical to the original,
+   the AS MUST replay the original response rather than re-execute the
+   operation.  The same nonce paired with a request that is not byte-
+   identical to the original MUST be refused invalid_request
+   (Section 3.7); the AS MUST NOT answer it with the unrelated original
+   response.  The window MUST be at least the validity span of the
+   signed response the AS would replay (its iat to exp, Section 3.4), so
+   any retransmit that could still present a live response is
+   deduplicated.  A deployment MAY use a longer window.  This makes a
+   retransmit safe against reordering: a delayed suspend retry that
+   arrives after a resume is recognized as a duplicate and replays the
+   original suspend response, so it cannot re-suspend an already-resumed
+   Mission.
 
    Deduplication guards a retransmitted request; it does not guard a
    valid request decided over stale state, a fresh suspend issued from a
@@ -13208,6 +13211,18 @@ Table of Contents
    (Section 7.3.2), the same way it learns a Mission is revoked.  A
    runtime Policy Enforcement Point that does not recognize
    terminal_when fails closed for the entry per Section 7.5.
+
+   For that point-of-use denial this document defines the denial-reason
+   identifier authority_discharged, a family-coordinated name under the
+   AuthZEN binding's denial-reason extension rule
+   ([I-D.draft-mcguinness-mission-authzen]), carried wherever the
+   runtime layer's denial reasons travel: the decision response's
+   context.reason and the runtime evidence companion's denial_reason.
+   It means the entry was approved and its completion condition fired,
+   so the Mission Issuer discharged it: distinct from a containment
+   denial (trust withdrawn) and from an out-of-authority denial (never
+   approved).  A consumer treats an unrecognized value as a deny under
+   the binding's own rule; no other semantics attach.
 
 7.8.  Worked Example
 
