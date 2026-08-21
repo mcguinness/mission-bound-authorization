@@ -47,7 +47,9 @@ anchors the AAuth binding and its management companion; and the
 these. The substrate contract publishes before or with any binding
 that claims conformance to it.
 
-In short: the stable adoption path (the core, Status, and the
-runtime enforcement documents) rests on ratified dependencies and
-the tracked in-progress ones noted above; everything experimental is
-additive and can wait.
+In short: a stable adoption path on the OAuth binding (the binding
+itself, Status, and the runtime enforcement documents) rests on
+ratified dependencies and the tracked in-progress ones noted above;
+the MAS and AAuth bindings are equally stable paths per their own
+dependency notes, and everything experimental is additive and can
+wait.
