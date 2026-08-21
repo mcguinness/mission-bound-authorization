@@ -327,17 +327,20 @@ Table of Contents
           Table 1: Orchestration profile capability consumption
 
    The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
-   version's normative substrate: it defines each consumed kernel
-   function and capability for OAuth 2.0.  A binding that provides the
-   required capabilities above, and Structured Authority where a
-   deployment compensates under a separate_mission basis, can host this
-   profile, provided it also supplies a commitment mechanism for the
-   unwind plan: this document's unwind_plan_hash, or a declared adapter
-   in the substrate's sense (Section 6.1).  The portability claim is
-   capability-scoped rather than substrate-wide for the reason the
-   substrate's Capability Confusion consideration states: every property
-   this profile requires matches an explicit capability claim and its
-   scope, never the generic statement that a binding supports Missions.
+   version's reference host (a normative reference for its concrete
+   OAuth surfaces; the family's substrate contract is
+   [I-D.draft-mcguinness-mission-substrate]): it defines each consumed
+   kernel function and capability for OAuth 2.0.  A binding that
+   provides the required capabilities above, and Structured Authority
+   where a deployment compensates under a separate_mission basis, can
+   host this profile, provided it also supplies a commitment mechanism
+   for the unwind plan: this document's unwind_plan_hash, or a declared
+   adapter in the substrate's sense (Section 6.1).  The portability
+   claim is capability-scoped rather than substrate-wide for the reason
+   the substrate's Capability Confusion consideration states: every
+   property this profile requires matches an explicit capability claim
+   and its scope, never the generic statement that a binding supports
+   Missions.
 
 5.  Reversibility Classes
 

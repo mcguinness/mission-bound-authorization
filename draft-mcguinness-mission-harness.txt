@@ -17,17 +17,17 @@ Abstract
    background jobs, tool-connection reuse, and sub-agent orchestration.
    That continuity is not authority.  This document defines an optional
    Mission-aware harness profile for deployments using Mission-Bound
-   Authorization, with OAuth 2.0 as this version's normative substrate.
-   It specifies how a harness binds sessions, task graphs, queues,
-   cached tool connections, and sub-agent handles to Mission state; when
-   it must re-check Mission status; and how it must pause, suppress, or
-   terminate work when the Mission is no longer active.  For the action
-   classes a deployment mediates, the harness also establishes the
-   mediated execution environment: governed work runs with no path to
-   those actions that bypasses the enforcement point, and the harness
-   publishes an execution-environment scope statement.  A conforming
-   harness never treats session continuity as proof that Mission
-   authority continues.
+   Authorization, with the OAuth binding as this version's reference
+   host.  It specifies how a harness binds sessions, task graphs,
+   queues, cached tool connections, and sub-agent handles to Mission
+   state; when it must re-check Mission status; and how it must pause,
+   suppress, or terminate work when the Mission is no longer active.
+   For the action classes a deployment mediates, the harness also
+   establishes the mediated execution environment: governed work runs
+   with no path to those actions that bypasses the enforcement point,
+   and the harness publishes an execution-environment scope statement.
+   A conforming harness never treats session continuity as proof that
+   Mission authority continues.
 
 About This Document
 
@@ -336,17 +336,20 @@ Table of Contents
 
               Table 1: Harness profile capability consumption
 
-   The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
-   version's normative substrate: it defines each consumed kernel
-   function and capability for OAuth 2.0, and every OAuth artifact named
-   in this document enters through it.  A binding that provides the
-   required capabilities above, and whichever conditional capabilities
-   the deployment's governed work relies on, can host this profile.  The
-   portability claim is capability-scoped rather than substrate-wide for
-   the reason the substrate's Capability Confusion consideration states:
-   every property this profile requires matches an explicit capability
-   claim and its scope, never the generic statement that a binding
-   supports Missions.
+   The OAuth binding [I-D.draft-mcguinness-oauth-mission] (the issuance
+   profile to its OAuth companions) is this version's reference host: a
+   normative reference for its concrete OAuth surfaces, not the family's
+   substrate (the substrate contract is
+   [I-D.draft-mcguinness-mission-substrate]).  It defines each consumed
+   kernel function and capability for OAuth 2.0, and every OAuth
+   artifact named in this document enters through it.  A binding that
+   provides the required capabilities above, and whichever conditional
+   capabilities the deployment's governed work relies on, can host this
+   profile.  The portability claim is capability-scoped rather than
+   substrate-wide for the reason the substrate's Capability Confusion
+   consideration states: every property this profile requires matches an
+   explicit capability claim and its scope, never the generic statement
+   that a binding supports Missions.
 
 5.  Mission Mediation
 

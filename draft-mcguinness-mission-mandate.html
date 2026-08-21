@@ -1427,35 +1427,38 @@ OAuth 2.0 mechanics. It consumes these substrate primitives:<a href="#section-4-
           <p id="section-4-2.4.1">the Mission Issuer's published key material, resolvable by <code>kid</code>.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-4-3">Three bindings host these primitives, and a Mandate minted under any
-of them is verified identically:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-3">Two bindings host these primitives natively, and a Mandate minted
+under either is verified identically:<a href="#section-4-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4-4.1">
-          <p id="section-4-4.1.1">the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, this
-version's normative substrate, publishing keys through its
-Authorization Server metadata <code>jwks_uri</code>;<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
+          <p id="section-4-4.1.1">the OAuth binding <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the
+issuance profile), this version's reference host, publishing keys
+through its Authorization Server metadata <code>jwks_uri</code>; and<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-4.2">
           <p id="section-4-4.2.1">the Mission Authority Server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), a standalone
-binding of the same primitives with its own metadata <code>jwks_uri</code>; and<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-4.3">
-          <p id="section-4-4.3.1">the AAuth binding (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), which
-hosts the same primitives at the AAuth Person Server, whose existing
-<code>jwks_uri</code> is the published key material for its signed artifacts.<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
+binding of the same primitives with its own metadata <code>jwks_uri</code>.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-4-5">UMA 2.0's authorization server (<span>[<a href="#I-D.draft-mcguinness-mission-uma" class="cite xref">I-D.draft-mcguinness-mission-uma</a>]</span>)
 realizes the issuance profile's Authorization Server for Mandate
 purposes: it publishes the same key material through the same
 Authorization Server metadata <code>jwks_uri</code>. A Mandate minted there
-verifies as the issuance profile's; UMA adds no fourth Mandate host.<a href="#section-4-5" class="pilcrow">¶</a></p>
-<p id="section-4-6">Its declaration against the optional capabilities, under the rule of
+verifies as the issuance profile's; UMA adds no third Mandate host.<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">This version's payload is defined over the OAuth-shaped record: the
+required claims commit the record members those hosts record (the
+integrity anchors, <code>subject</code>, <code>client_id</code>, <code>policy_version</code>). The
+AAuth binding commits approval through its own construction and
+deliberately carries no OAuth integrity anchors
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>); an AAuth Mandate is
+therefore a distinct payload profile with its own verification
+rules, deliberately not defined by this version.<a href="#section-4-6" class="pilcrow">¶</a></p>
+<p id="section-4-7">Its declaration against the optional capabilities, under the rule of
 Mission Substrate Requirements
 (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>) that a substrate-neutral
 profile declare the kernel functions and optional capabilities it
-consumes:<a href="#section-4-6" class="pilcrow">¶</a></p>
+consumes:<a href="#section-4-7" class="pilcrow">¶</a></p>
 <span id="name-mandate-capability-consumpt"></span><table class="center" id="table-1">
         <caption>
 <a href="#table-1" class="selfRef">Table 1</a>:

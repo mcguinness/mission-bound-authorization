@@ -138,14 +138,15 @@ Table of Contents
    center.  How the authorization server assesses a request, what the
    resource owner approved, in what bounds, with what durable record,
    under what lifecycle: all of it is unspecified policy behind the
-   token endpoint.  The Mission model of
-   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") is a
-   specification of exactly that interior: a durable Mission record
-   created by an explicit approval event, integrity anchors committing
-   the approved task and its derived authority, a lifecycle whose only-
-   active rule gates issuance, and evidence surfaces built on the
-   record.  This document binds the Mission model to the UMA 2.0
-   authorization server by filling UMA's assessment with the Mission.
+   token endpoint.  The Mission model, first specified in its OAuth
+   binding ([I-D.draft-mcguinness-oauth-mission], the "issuance
+   profile"), is a specification of exactly that interior: a durable
+   Mission record created by an explicit approval event, integrity
+   anchors committing the approved task and its derived authority, a
+   lifecycle whose only-active rule gates issuance, and evidence
+   surfaces built on the record.  This document binds the Mission model
+   to the UMA 2.0 authorization server by filling UMA's assessment with
+   the Mission.
 
    Three mechanics the OAuth binding assembles from parts are native
    here.  The pushed Mission Intent rides UMA claims pushing at the

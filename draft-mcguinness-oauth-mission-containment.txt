@@ -371,19 +371,19 @@ Table of Contents
            Table 1: Containment profile capability consumption
 
    The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
-   version's normative substrate: it defines each consumed kernel
-   function and capability for OAuth 2.0, and every OAuth artifact named
-   in this document enters through it.  A binding that provides the
-   required capabilities above, and maps this document's representations
-   onto its own, the Authority Set entries the overlay names and the
-   approved-context commitment the overlay stays outside, hosts this
-   profile's Baseline property; the Runtime-Enforced property
-   additionally requires State-Observable (Section 12).  The portability
-   claim is capability-scoped rather than substrate-wide for the reason
-   the substrate's Capability Confusion consideration states: every
-   property this profile requires matches an explicit capability claim
-   and its scope, never the generic statement that a binding supports
-   Missions.
+   version's base profile (this document is an OAuth-lane companion of
+   that binding): it defines each consumed kernel function and
+   capability for OAuth 2.0, and every OAuth artifact named in this
+   document enters through it.  A binding that provides the required
+   capabilities above, and maps this document's representations onto its
+   own, the Authority Set entries the overlay names and the approved-
+   context commitment the overlay stays outside, hosts this profile's
+   Baseline property; the Runtime-Enforced property additionally
+   requires State-Observable (Section 12).  The portability claim is
+   capability-scoped rather than substrate-wide for the reason the
+   substrate's Capability Confusion consideration states: every property
+   this profile requires matches an explicit capability claim and its
+   scope, never the generic statement that a binding supports Missions.
 
 7.  The Containment Overlay
 

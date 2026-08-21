@@ -1267,9 +1267,12 @@ Mission record's single accountable Approver is unchanged.<a href="#section-abst
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> records
-one accountable Approver and defers multi-party approval and
-approval-authority provenance to a governance layer. An enterprise
+<p id="section-1-1">An authority-bearing binding of the Mission model records one
+accountable Approver and defers multi-party approval and
+approval-authority provenance to a governance layer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> states the rule for the
+OAuth binding, whose record members this document's binding rules
+consume). An enterprise
 review surface is often that governance layer: a decision may
 involve several principals, a threshold or separation-of-duty rule,
 and a delegation-of-authority policy, and an auditor later needs to
@@ -1294,7 +1297,7 @@ by enforcement.<a href="#section-1-2" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-2-1">This document is optional. A deployment that records nothing beyond
 the Mission record's accountable <code>approver</code> is fully conformant to
-the issuance profile and unaffected by this document. Profiles <span class="bcp14">MAY</span>
+its Mission binding and unaffected by this document. Profiles <span class="bcp14">MAY</span>
 require this record; the Enterprise Mission Authority Profile does
 so under its recording triggers
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-2-1" class="pilcrow">¶</a></p>

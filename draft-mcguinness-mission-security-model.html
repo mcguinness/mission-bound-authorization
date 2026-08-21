@@ -1287,8 +1287,8 @@ the profiles it references.<a href="#section-1-3" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-2-1">This document is Informational. It does not place normative requirements
 on implementations; the enforcement obligations are defined by the
-issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and its
-companions. Where this document uses words like "must," it describes an
+selected binding and its companions (for the OAuth binding,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Where this document uses words like "must," it describes an
 expectation the consolidated model places on a deployment that claims the
 suite, realized by the referenced profile, not a new conformance
 requirement of its own.<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -1304,9 +1304,11 @@ in the OAuth binding; the Mission Authority Server in the standalone
 binding; the AAuth Person Server in the AAuth binding,
 <span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), Approver, Subject,
-agent, Authority Set, and Mission state as defined in
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. It uses Mission Shaper as
+agent, Authority Set, and Mission state as the OAuth binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) define them; each peer
+binding carries its equivalents per its Mission Substrate
+Statement. It uses Mission Shaper as
 defined in <span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>, Management Client
 as defined in <span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>, and
 Mission Assurance Levels as defined in
@@ -1319,19 +1321,26 @@ Mission Assurance Levels as defined in
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
 <p id="section-4-1">This model describes the components and trust relationships of the
-Mission model, not of OAuth 2.0 mechanics. Its analysis applies to any
-substrate that provides the Mission primitives the profiles consume:
-the identifier and issuer, the state space with its only-active rule,
-an authority representation with a subset rule, the integrity-anchor
-envelope, and, where the binding provides one, a Mission-bound
-credential; a binding without that credential supplies an externally
-established Mission reference instead, verified under the runtime
-profile's Mission binding establishment step
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is the OAuth 2.0 binding of
-those primitives and the substrate the profiles' security
-considerations assume; a different binding re-derives only the
-substrate-specific entries of this model.
+Mission model, not of OAuth 2.0 mechanics. Its analysis rests on the
+substrate kernel every binding provides: the Mission reference and
+its controller, the state space with its only-active rule, the
+governance gate, and bounded reliance. Entries conditioned on
+optional capabilities apply where the selected binding claims them
+in its Mission Substrate Statement, and the selected binding's own
+document is the normative owner of the cited surfaces: an authority
+representation with a subset rule (Structured Authority), the
+integrity-anchor envelope, and a Mission-bound credential
+(Credential-Bound). A binding without that credential supplies an
+externally established Mission reference instead, verified under the
+runtime profile's Mission binding establishment step
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); a binding without a
+capability inherits the corresponding entries as inapplicable, not
+as failures. The OAuth binding
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is the realization whose
+concrete surfaces this model's entries cite, as the family's
+first-authored binding; a different binding re-derives the
+substrate-specific entries against its own surfaces, and the
+model-level entries apply as written.
 <span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span> consolidates the primitives
 a further binding provides and points at where each is normatively
 defined; it names the seven optional capabilities the consuming

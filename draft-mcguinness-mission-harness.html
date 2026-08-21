@@ -11,7 +11,8 @@
 background jobs, tool-connection reuse, and sub-agent orchestration.
 That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization, with OAuth 2.0 as this version's normative substrate.
+Authorization, with the OAuth binding as this version's reference
+host.
 It specifies how a harness binds sessions, task graphs, queues, cached
 tool connections, and sub-agent handles to Mission state; when it must
 re-check Mission status; and how it must pause, suppress, or terminate
@@ -1097,7 +1098,8 @@ svg {
 background jobs, tool-connection reuse, and sub-agent orchestration.
 That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization, with OAuth 2.0 as this version's normative substrate.
+Authorization, with the OAuth binding as this version's reference
+host.
 It specifies how a harness binds sessions, task graphs, queues, cached
 tool connections, and sub-agent handles to Mission state; when it must
 re-check Mission status; and how it must pause, suppress, or terminate
@@ -1586,10 +1588,13 @@ dependency of <a href="#harness-evidence" class="auto internal xref">Section 15<
           </tr>
         </tbody>
       </table>
-<p id="section-4-5">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
-version's normative substrate: it defines each consumed kernel
-function and capability for OAuth 2.0, and every OAuth artifact named
-in this document enters through it. A binding that provides the
+<p id="section-4-5">The OAuth binding <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the
+issuance profile to its OAuth companions) is this version's
+reference host: a normative reference for its concrete OAuth
+surfaces, not the family's substrate (the substrate contract is
+<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). It defines each
+consumed kernel function and capability for OAuth 2.0, and every
+OAuth artifact named in this document enters through it. A binding that provides the
 required capabilities above, and whichever conditional capabilities
 the deployment's governed work relies on, can host this profile. The
 portability claim is capability-scoped rather than substrate-wide for
