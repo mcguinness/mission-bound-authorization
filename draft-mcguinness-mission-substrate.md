@@ -1135,7 +1135,7 @@ contract was generalized from.  The terms correspond as follows:
 A family document that maps its own vocabulary to the kernel's MUST
 use these correspondences.
 
-The authority-role map ({{authority-roles}}) aligns with the core's
+The authority-role map ({{authority-roles}}) aligns with the OAuth binding's
 Authority Sources: the `authority_source` record member and its three
 sources (user-delegated, service-owned, organizational) are the OAuth
 binding's realization of the authority-source authority role, and its
@@ -1143,7 +1143,7 @@ source ceiling is that role's assertion staying within the named
 source's authority.
 
 Precedence is scoped, not global.  For the OAuth-native binding, the
-core's definitions govern that mapping; this document governs the
+OAuth binding's definitions govern that mapping; this document governs the
 kernel and capability vocabulary.  Neither document depends
 normatively on the other.
 
@@ -1151,11 +1151,11 @@ normatively on the other.
 
 This section is the Mission Substrate Statement of the OAuth Mission
 binding ({{I-D.draft-mcguinness-oauth-mission}}), hosted here so the
-core remains self-contained with no companion normative dependency.
-It applies to the core's editor's-draft lineage and to the kernel and
-capability vocabulary of this document.  The core's own definitions
+OAuth binding remains self-contained with no companion normative dependency.
+It applies to the OAuth binding's editor's-draft lineage and to the kernel and
+capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this Statement claims no property the
-core does not define.
+OAuth binding does not define.
 
 For the kernel:
 
@@ -1168,7 +1168,7 @@ For the kernel:
    established through `mission.issuer` and the deployment's issuer
    trust (AS metadata and published keys).
 3. The Actor handle is the authenticated OAuth client at approval;
-   the external Subject is fixed by the core's injective mapping;
+   the external Subject is fixed by the OAuth binding's injective mapping;
    delegates ride the `act` chain; child and successor lineage is
    recorded through the parent and predecessor members; actor-type
    classification uses `sub_profile` and instance assertions where
@@ -1179,7 +1179,7 @@ For the kernel:
    immutable members; commitments are the typed integrity anchors
    (`intent_hash`, `proposal_hash`, `authority_hash`); a material
    change obtains a new approval through an expansion successor.
-5. The approval ceremony is the core's approval event: authenticated
+5. The approval ceremony is the OAuth binding's approval event: authenticated
    Approver, the distinct-approver rule for write-bearing Missions,
    rendering of the derived Authority Set and the effective expiry,
    and atomic record commit, with deferred, interactive, and dispatch

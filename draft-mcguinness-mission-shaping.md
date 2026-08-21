@@ -450,7 +450,7 @@ the derived Authority Set is the Mission Issuer's product
 ({{proposes-only}}). Concrete candidate authority
 (actions, structured constraints such as `max_amount`, delegation)
 belongs in the authority proposal submitted alongside the Intent,
-where the core
+where the OAuth binding
 treats it as untrusted proposal input and bounds the derivation to a
 subset of it ({{I-D.draft-mcguinness-oauth-mission}}). A shaper that
 has resolved such facts (for

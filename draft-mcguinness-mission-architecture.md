@@ -816,7 +816,7 @@ Access Server, with contextual PS governance when the PS is on path.
 **Only `active` permits**:
 : Issuance, refresh, and reliance require the exact state `active`;
   every other state, including an unrecognized one, fails safe (the
-  core's Mission Lifecycle and Gating section). In AAuth, only PS
+  OAuth binding's Mission Lifecycle and Gating section). In AAuth, only PS
   operations and the PS-asserted and federated authorization paths are
   structurally gated; identity-based and resource-managed decisions do
   not pass through the PS. On the gated paths the gate covers requests
@@ -884,7 +884,7 @@ Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
 invariant; carrying that boundary through non-transitive
 Mission-to-Mission handoff is the Mission Work Products companion's
-role ({{I-D.draft-mcguinness-oauth-mission-work-products}}). The core
+role ({{I-D.draft-mcguinness-oauth-mission-work-products}}). The OAuth binding
 states that rule in its "Authority Does Not Propagate With
 Information" section ({{I-D.draft-mcguinness-oauth-mission}}); that
 section, not this summary, is the normative text this passage tracks.
@@ -981,7 +981,7 @@ AAuth Person Server:
 Resource Server:
 : The protected resource. In the OAuth binding it enforces
   statelessly from the token and can check the `mission` claim (the
-  core's Resource Server Enforcement section); in the standalone
+  OAuth binding's Resource Server Enforcement section); in the standalone
   binding the token carries no Mission signal, and Mission properties
   reach it only through the enforcement path.
 
@@ -1227,7 +1227,7 @@ authorization, instance-grain attribution: the class, the Agent
 Deployment projected as `client_id`, is an authorization subject,
 never an attribution subject, and attribution stays per-instance
 through the instance substrate, which forbids a sender-constraint
-key shared across a client's instances. The core's
+key shared across a client's instances. The OAuth binding's
 `controls.max_derivations` is the explicit fan-out ceiling, and
 consumption bounds attach at Mission grain, so a swarm shares one
 budget ({{I-D.draft-mcguinness-mission-metering}}).

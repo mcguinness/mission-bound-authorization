@@ -495,7 +495,7 @@ The issuer MUST keep the key that verifies each minted Mandate
 resolvable by its `kid` in the published key material for that
 Mandate's evidence lifetime: until `mandate_exp`, or for the
 Mission's audit horizon when `mandate_exp` is absent. A Mandate
-outlives signing-key rotation schedules; this is the core's
+outlives signing-key rotation schedules; this is the OAuth binding's
 retired-key rule ({{I-D.draft-mcguinness-oauth-mission}}), with the
 Mandate's evidence lifetime as the retention bound. Revocation for a
 key known or suspected compromised is distinct from routine

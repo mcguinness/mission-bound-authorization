@@ -1071,5 +1071,5 @@ evidence companion's extension conventions
 # Acknowledgments
 {:numbered="false"}
 
-This document is part of the Mission-Bound Authorization for OAuth 2.0
-work and defines its experimental consumption-metering layer.
+This document is part of the Mission-Bound Authorization work and
+defines its experimental consumption-metering layer.

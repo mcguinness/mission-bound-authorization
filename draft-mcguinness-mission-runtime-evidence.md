@@ -1353,7 +1353,7 @@ Each `evidence` entry is an object. All members REQUIRED:
 
 `digest`:
 : REQUIRED. A string. A `sha-256:` prefixed digest, classified under
-  the core's commitment taxonomy
+  the OAuth binding's commitment taxonomy
   ({{I-D.draft-mcguinness-oauth-mission}}) as a canonical-object
   digest for a JSON evidence record and a raw-octet digest for a
   JWS- or JWT-shaped artifact. For a JSON evidence record the digest

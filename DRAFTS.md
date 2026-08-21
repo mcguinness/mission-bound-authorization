@@ -66,10 +66,11 @@ hand-authored.
 ## The documents
 
 Together these drafts form the **Mission-Bound Authorization suite**.
-The suite takes its name from the model; the core's title,
-"Mission-Bound Authorization for OAuth 2.0", names the binding the
-core defines. The companions refer to the core as the **"issuance profile"**
-(it governs issuance and derivation).
+The suite takes its name from the model; the OAuth binding's title,
+"Mission-Bound Authorization for OAuth 2.0", names what it is: one
+binding of the model. Its OAuth companions refer to it as the
+**"issuance profile"** (it governs issuance and derivation on that
+substrate).
 
 The naming encodes a boundary, by category rather than an exhaustive
 list. `oauth-mission-*` extends the Authorization Server's own
@@ -78,7 +79,7 @@ surfaces: issuance, approval, lifecycle, evidence of consent.
 outside the Authorization Server. Where that component is defined
 against the Mission model's substrate primitives rather than one
 binding, it names those primitives in a Mission Substrate section, and
-the core is that model's OAuth 2.0 binding, so another mission-based
+the OAuth binding is that model's OAuth 2.0 realization, so another mission-based
 protocol that supplies the same primitives can host the component
 unchanged. Runtime enforcement and its AuthZEN binding, the agent
 harness, orchestration, and the security model are examples, not the
@@ -459,7 +460,7 @@ token endpoint (RFC 7523 JWT authorization grant) and mints
 Mission-bound tokens bounded by the grant's authority subset, capped
 at Mission expiry, with refresh gated on Mission state. Restores
 Mission-bound credentials and the issuance-gate kill switch without
-the AS implementing the core's intake, approval, or derivation
+the AS implementing the OAuth binding's intake, approval, or derivation
 surfaces.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)
@@ -500,7 +501,7 @@ pushing at the token endpoint, the resource owner's decision is the
 approval event, the lifecycle gates every RPT (requesting party
 token) issuance and upgrade,
 the RPT is the Mission-bound credential (token-carried or
-introspection-carried via the core's registered `mission` member),
+introspection-carried via the OAuth binding's registered `mission` member),
 and the PCT (persistent claims token) is Mission continuity that is
 never authority. It claims
 the contextual-governance kernel plus lifecycle-gated, state-observable,
@@ -625,7 +626,7 @@ authority through a short-lived, sender-constrained cross-domain grant
 (ID-JAG recommended), and the Resource AS mints its own local
 Mission-bound tokens from it, preserving the `mission` claim unchanged.
 One hop; the single-domain core is complete without it. Extracted from
-the core so the mandatory profile carries no cross-domain dependencies.
+the OAuth binding so that binding carries no cross-domain dependencies.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html)
 

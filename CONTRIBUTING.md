@@ -45,7 +45,7 @@ A draft in this repository lists a reference as normative when any
 BCP 14 requirement, even one conditional on adopting an OPTIONAL
 capability or companion profile, requires implementing or consulting
 it. A conditional dependency stays normative and states its scope in
-the text ("binds only a deployment that adopts X"); the core's Actor
+the text ("binds only a deployment that adopts X"); the OAuth binding's Actor
 Profile reference, confined to its OPTIONAL Delegation capability, is
 the template.
 
@@ -65,7 +65,7 @@ Two bounds:
 
 ## Document History Convention
 
-Only the core carries a Document History appendix today. A companion
+Only the OAuth binding carries a Document History appendix today. A companion
 adds its own by touch: the next substantive revision of a companion
 adds `# Document History {#document-history}` with a real entry
 describing that revision. Empty stubs are never bulk-added; git
@@ -135,7 +135,7 @@ Five classes, machine-enumerated in `family-manifest.json`'s
   out of the Lab is a four-condition check (a Mission Substrate
   Statement where the draft binds a new substrate, the abstract
   dropping deferred/sketch language, a named adopter or implementer
-  commitment on record, and category/maturity/rung updated together
+  commitment on record, and category/maturity updated together
   in one PR).
 
 ## Consolidation Policy

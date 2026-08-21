@@ -1724,7 +1724,7 @@ class whose bound demands that.
   ambient-authority gap this profile exists to close.
 
 For a deployment whose access tokens are short-lived and whose
-issuance and refresh are state-gated per the core
+issuance and refresh are state-gated per the OAuth binding
 ({{I-D.draft-mcguinness-oauth-mission}}), the refresh cycle itself is
 a conforming active freshness source for any action class whose
 published staleness bound the token lifetime meets: the issuance gate

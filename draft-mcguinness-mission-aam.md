@@ -154,8 +154,9 @@ mediation layer, a trust ratchet, task templates with capability
 ceilings, and an agent activity log, plus a grant review loop as a
 supporting system. This document maps each component onto
 Mission-Bound Authorization: every component is realized by an
-existing mechanism of the family, so the model's reference scenario
-runs end to end in Mission vocabulary with no new protocol surface.
+existing mechanism of the family's OAuth lane, so the model's
+reference scenario runs end to end in Mission vocabulary with no new
+protocol surface.
 The mapping also states what it deliberately does not adopt (the
 grant review loop, which has no standing grants to stand over) and
 the honesty boundaries any deployment of it inherits.
@@ -173,11 +174,14 @@ two structuring surfaces (task templates with capability ceilings,
 and an Agent Activity Log), and one supporting process (a Grant
 Review Loop).
 
-Mission-Bound Authorization
+The Mission model's OAuth binding and its companions
 ({{I-D.draft-mcguinness-oauth-mission}}, with the companions cited
 throughout; the family map is
-{{I-D.draft-mcguinness-mission-architecture}}) realizes each of the
-six components as a first-class mechanism it already defines. This document is that mapping, stated
+{{I-D.draft-mcguinness-mission-architecture}}) realize each of the
+six components as a first-class mechanism already defined. The
+mapping is expressed on the OAuth lane, as the Conformance section
+scopes precisely; a peer binding would realize the components per
+its own documents. This document is that mapping, stated
 in both vocabularies: which Mission mechanism realizes each AAM
 component, how the model's reference scenario (a nightly
 reconciliation job with one human-gated external communication) runs

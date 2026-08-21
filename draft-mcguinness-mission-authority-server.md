@@ -2130,7 +2130,7 @@ machinery or the Estate Prerequisites' AS features
    token-layer kill switch returns without moving approval into the
    AS.
 6. Where a particular AS later becomes natively Mission-aware, it
-   adds the core's own issuance for its resources, while the MAS
+   adds the OAuth binding's own issuance for its resources, while the MAS
    record, lifecycle, and authority model continue to govern the
    rest of the estate.
 

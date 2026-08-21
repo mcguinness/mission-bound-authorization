@@ -444,7 +444,7 @@ Approver deciding asynchronously ({{approval}}).
 UMA permits the requesting party and the resource owner to be the
 same natural person, and in the agent deployments this profile
 targets they usually are: the person's agent is the client, and the
-person is both Subject and Approver, the core's default geometry.
+person is both Subject and Approver, the OAuth binding's default geometry.
 Nothing in this binding requires them to differ.
 
 # Mission Flow {#flow}
