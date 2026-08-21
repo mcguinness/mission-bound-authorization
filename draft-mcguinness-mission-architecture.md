@@ -3263,11 +3263,36 @@ bound profiled by `aauth-mission-expiry`.
 
 # Security Considerations {#security-considerations}
 
-This document introduces no mechanism and therefore no new security
-considerations. The consolidated trusted base and compromise analysis
-are the Mission Security Model's
-({{I-D.draft-mcguinness-mission-security-model}}), and each profile's
-own Security Considerations remain normative.
+This document defines no wire mechanism; each profile's own Security
+Considerations remain normative, and the consolidated trusted base
+and compromise analysis are the Mission Security Model's
+({{I-D.draft-mcguinness-mission-security-model}}). What this
+document does introduce is composition, and the risks that emerge
+only at composition are its security subject matter:
+
+- stale state and materialized authority: every already-issued
+  credential, redeemed grant, and minted attenuation root runs to
+  its own bound past a lifecycle transition ({{validity-model}},
+  {{kill-switch-composition}});
+- unmediated paths: enforcement claims hold only inside the declared
+  PEP boundary, and the Enforcement Scope Statement's exclusions are
+  where a compromised agent goes first;
+- semantic-derivation trust: the derivation boundary
+  ({{derivation-boundary}}) concentrates meaning-to-authority
+  translation at the issuer, and the anchors commit its output, not
+  its correctness;
+- component compromise: issuer, PDP, PEP, state source, and evidence
+  producer each void a different guarantee when compromised, and the
+  security model prices each;
+- context splicing and join ambiguity: independently valid identity,
+  credential, and Mission facts compose into an unauthorized whole
+  wherever a join is inferred rather than carried
+  ({{I-D.draft-mcguinness-mission-substrate}});
+- false but correctly signed evidence: signatures make records
+  tamper-evident, never true; and
+- correlation: the Mission Identifier, actor chain, and evidence
+  joins that make audit possible are the same joins that correlate
+  activity across audiences ({{privacy-considerations}}).
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -3282,6 +3307,18 @@ transparency-side mechanism
 ({{I-D.draft-mcguinness-mission-audit}}). The status profile's
 anti-oracle property bounds what its status surfaces disclose
 ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+Read across profiles rather than per document, the dataflow
+concentrates in three places: the record and its evidence at the
+issuer (task prose, principals, authority, provenance); the decision
+and execution evidence joined on the Mission Identifier at the
+runtime and audit layers; and the correlation surface that
+identifier creates wherever it travels (tokens, status responses,
+evidence, receipts, the Mandate). Minimization therefore has one
+shape everywhere: audience-scope what each party receives, disclose
+references rather than content, and let the record's access
+governance, not possession of a reference, decide who reads the
+concentrated view.
 
 The AAuth binding's privacy posture is its own
 ({{I-D.draft-mcguinness-mission-aauth}}): the private mission blob
