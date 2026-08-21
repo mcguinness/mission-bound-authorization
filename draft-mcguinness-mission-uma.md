@@ -963,10 +963,22 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | Structured Authority | supplied | always | The Authority Set is the approved representation; UMA permissions are its resource/scope projection ({{subset}}) | UMA permissions cannot carry parameter or consumption constraints |
 | Monotonic Derivation | supplied | always | The token endpoint applies the issuance profile's no-broader-than relation at RPT issuance and upgrade ({{subset}}, {{drawdown}}) | Applies to the declared Authority Set projection, not arbitrary UMA policy values |
 | Credential-Bound | supplied | a protected RPT claim, or authenticated introspection ({{mission-claim}}) | One RPT, Actor, and Mission Reference associated at issuance; fact semantics: issuance under the Mission | Introspection carriage is an online issuer assertion, not offline proof |
-| Authorized Context Correlation | not supplied | -- | -- | The authorization server binds the RPT, Actor, and Mission Reference natively at issuance; no cross-authority join is defined |
-| Independently Verifiable | supplied | self-contained signed RPTs, or signed Mission Status ({{mission-claim}}, {{state-surfaces}}) | Issuance-under-Mission offline, and state as of a signed observation's freshness window | Opaque RPT introspection is online; a signed observation proves state only as of its window |
+| Authorized Context Correlation | not supplied | -- | -- | The authorization server co-establishes the RPT, Actor, and Mission Reference at issuance; no authoritative join of independently established facts is defined |
+| Independently Verifiable | supplied | self-contained signed RPTs, or signed Mission Status ({{mission-claim}}, {{state-surfaces}}) | A signed self-contained RPT proves issuance under the Mission, offline; a signed Mission Status response proves record and state properties as of its observation window; each activation supplies exactly its own half | Signed Status alone proves nothing about any particular RPT's issuance; opaque RPT introspection is online |
 | Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base assessment log is Controller-local and is not portable evidence |
 {: title="UMA Mission substrate capabilities"}
+
+Each supplied row's temporal elements inherit the gating contract
+unless stated: freshness is established at the state-gated operation
+or at introspection within its declared cache bound, artifact
+lifetime is the RPT's expiry capped by the Mission's `expires_at`,
+and the residual after non-active is the remaining self-contained
+RPT lifetime or the introspection cache bound. Failure behavior is
+uniformly fail-closed: an unavailable or invalid introspection or
+Status surface refuses the rows that activate on it (an opaque RPT
+whose introspection is unavailable is denied, never extended); an
+incomparable permission projection refuses issuance or upgrade; a
+stale observation past its window is no observation.
 
 The Portable Evidence condition is supplied only when the deployment
 adopts Consent Evidence

@@ -871,10 +871,23 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
 | Credential-Bound | supplied | PS-asserted or federated access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
-| Authorized Context Correlation | not supplied | -- | -- | The PS binds the mission, person, agent, and token natively where it is on the path; no cross-authority join is defined |
+| Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
 | Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
 {: title="AAuth Mission substrate capabilities"}
+
+Each supplied row's temporal elements inherit the binding's own
+bounds unless stated: decisions establish current state at the PS at
+decision time, artifact lifetime is the auth-token lifetime capped by
+`expires_at`, and the residual after the mission becomes non-active
+is the outstanding auth-token lifetime. Failure behavior is uniformly
+fail-closed: a request whose resource token is missing the
+`mission_s256` claim its mode requires, carries one that fails
+validation, or mismatches the named mission is processed as
+missionless at best and never as mission-bound; a failed,
+unrecognized, or stale Management status response, or an unavailable
+status surface, refuses the state-dependent decision; unknown input
+never degrades to a weaker mode silently.
 
 # IANA Considerations
 

@@ -409,7 +409,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
 | Capability | Claim | Activation | Scope and defining sections | Limitations |
 | --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | a Mission-joining PDP deployment | MAS-native authority operations and joined action decisions check current state ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh; the token-layer residual runs to credential expiry |
+| Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP deployment for joined action decisions | MAS-native authority operations check current state unconditionally; joined action decisions do so where a Mission-joining PDP is deployed ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh; the token-layer residual runs to credential expiry |
 | State-Observable | supplied | always | Signed Mission Status responses with the `mission_max_stale_seconds` freshness bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
 | Structured Authority | supplied | always | The issuance profile's Authority Set and Common Constraints are held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
 | Monotonic Derivation | supplied | native child creation ({{native-child}}) | The defined no-broader-than relation at the native child-creation derivation point | PDP action evaluation is enforcement, never derivation; a separately approved expansion is a new approval; unchanged AS tokens are outside the claim |
@@ -418,6 +418,19 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | Independently Verifiable | supplied | signed Mission Status ({{lifecycle-and-state}}) | Record and state properties as of the response's freshness window; Join Assertions add token-specific correlation where used | Does not prove AS issuance under the Mission or current state after the observation window |
 | Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base MAS audit log is Controller-local and is not portable evidence |
 {: title="Standalone MAS Mission substrate capabilities"}
+
+Each supplied row's temporal elements inherit the signed Status
+freshness contract unless stated: facts are current as of the
+response's `mission_max_stale_seconds` window, assertion lifetime is
+capped by the introspected token's remaining lifetime, and the
+residual after non-active is bounded by the consumer's declared
+staleness bound. Failure behavior is uniformly fail-closed: an
+unresolvable Mission, a stale or failed Status response, a join
+failure (`mission_mismatch`, never a fallback), an unknown or
+malformed authority-detail type, and an incomparable or invalid
+constraint each refuse the evaluation rather than comparing
+best-effort; a Join Assertion that fails validation is an absent
+assertion, never a downgrade to an unverified join.
 
 The Portable Evidence condition is supplied only when the deployment
 adopts Consent Evidence
