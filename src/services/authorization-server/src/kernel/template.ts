@@ -361,6 +361,10 @@ export function dispatchFromTemplate(
     },
     activation_actor: { iss: template.issuer, sub: input.dispatcher },
     root_commitment: template.template_hash,
+    // @spec mission#mission-record (#580) — from the RETAINED template
+    // record (the consent instant of this exact template version), never
+    // from the dispatch request.
+    approved_at: template.created_at,
   };
   const record: MissionRecord = {
     id,

@@ -460,6 +460,11 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     },
     activation_actor: { iss: parent.issuer, sub: parent.client_id },
     root_commitment: primaryPolicyId ?? parent.authority_hash,
+    // @spec mission#mission-record (#580) — the consented root (the parent's
+    // authority_hash, or the entry-carried child_creation_policy reference
+    // riding the committed entry) was approved at the PARENT's approval
+    // event: retained state, never the child-creation request.
+    approved_at: parent.created_at,
   };
 
   const child: MissionRecord = {

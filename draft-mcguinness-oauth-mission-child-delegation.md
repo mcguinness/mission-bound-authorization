@@ -1050,6 +1050,19 @@ delegation event identifier as `activation_event_id`. The record's
 `approver` is `consent_principal`: the Parent Mission's human
 Approver, never the policy and never the requesting agent.
 
+`approved_at` (the issuance profile's standing-consent requirement)
+is the human approval instant of the consented root that
+`root_commitment` commits, and it follows the root. Both forms above
+were consented at the Parent Mission's approval event, since an
+entry-carried `child_creation_policy` reference rides the committed
+entry that approval covered, so `approved_at` is that approval
+event's instant, read from the retained Parent record, never from
+the child-creation request. Where a deployment separately versions
+and re-approves the referenced policy's content as a standing
+consent of its own, `approved_at` is that policy version's
+human-approval instant, verified from the deployment's retained
+governance record.
+
 # Attenuation Rules {#attenuation}
 
 A Child Mission MUST be bounded by the Parent Mission:
