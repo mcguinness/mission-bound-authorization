@@ -377,6 +377,9 @@ describe("approval basis (@spec mission#approval-basis, mission-template#templat
       },
       activation_actor: { iss: ISS, sub: "orchestrator" },
       root_commitment: t.template_hash,
+      // @spec mission#mission-record (#580) — the RETAINED template record's
+      // consent instant for this exact version, never the dispatch request's.
+      approved_at: t.created_at,
     });
     // approver IS approval_basis.consent_principal (D48/O-38 convergence).
     expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);

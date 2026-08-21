@@ -11,6 +11,10 @@ import type { JsonValue } from "@mission/core";
  */
 export interface MissionIntent {
   goal: string;
+  /** @spec mission#mission-intent — OPTIONAL BCP 47 language tag for the
+   *  Intent's human-readable prose; disclosure metadata, no authority
+   *  semantics, committed by intent_hash like every member. */
+  goal_lang?: string;
   resources: string[];
   expires_at: string;
   constraints?: string[];
@@ -395,6 +399,13 @@ export interface ApprovalBasisTemplate {
   activation_actor: { iss: string; sub: string };
   /** The template's integrity anchor (`template_hash`). */
   root_commitment: string;
+  /**
+   * @spec mission#mission-record (#580) — the human approval instant of the
+   * exact consented root `root_commitment` commits: the instant this
+   * template version was consented, read from the issuer's RETAINED
+   * template record at dispatch, never from the dispatch request.
+   */
+  approved_at: string;
 }
 
 /**
@@ -423,6 +434,16 @@ export interface ApprovalBasisPolicyDrawdown {
    * (the integrity anchor of the consented root that grants the drawdown).
    */
   root_commitment: string;
+  /**
+   * @spec mission#mission-record (#580), child-delegation#child-creation —
+   * the human approval instant of the exact consented root
+   * `root_commitment` commits. Both root forms here were consented at the
+   * PARENT's approval event (an entry-carried `child_creation_policy`
+   * reference rides the committed entry the human approved), so this is the
+   * parent record's own `created_at`, read from retained state, never from
+   * the child-creation request.
+   */
+  approved_at: string;
 }
 
 /** @spec mission#mission-record */

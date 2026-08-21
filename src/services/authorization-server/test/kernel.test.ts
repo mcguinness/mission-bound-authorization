@@ -16,6 +16,7 @@ import {
   newMissionId,
   validateAuthorityProposal,
   validateMissionIntent,
+  validateMissionIntentSubmission,
 } from "../src/index.js";
 
 const ISS = "https://as.test";
@@ -64,6 +65,68 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
     expect(() => validateMissionIntent(intent({ controls: { max_derivations: 0 } }))).toThrow(
       /max_derivations/,
     );
+  });
+  it("accepts well-formed goal_lang, refuses malformed with invalid_request, and commits it in intent_hash (@spec mission#mission-intent)", () => {
+    const wellFormed = [
+      "en",
+      "en-US",
+      "zh-Hant-TW",
+      "de-419",
+      "x-private",
+      "i-klingon", // grandfathered irregular
+      "art-lojban", // grandfathered regular
+      "sl-rozaj-biske", // two variants
+      "en-Latn-US-variant-a-extended-x-private", // 39 chars: valid past RFC 5646 4.4.1's 35-char support floor
+    ];
+    for (const ok of wellFormed) {
+      expect(validateMissionIntent(intent({ goal_lang: ok })).goal_lang).toBe(ok);
+    }
+    const malformed = [
+      "", // empty
+      "english language", // not a tag
+      "-en", // leading separator
+      "en--US", // empty subtag
+      "a1", // digit in primary language
+      "en-", // trailing separator
+      "e", // one-char primary that is not a singleton form
+      "x", // private use requires at least one following subtag
+      "i-foo", // i-* is not a general form; only fixed grandfathered tags
+      "de-419-DE", // two region subtags
+      "en-a", // extension singleton without content
+      "en-x", // private-use singleton without content
+      "ar-a-aaa-b-bbb-a-ccc", // repeated extension singleton
+      "de-DE-1901-1901", // repeated variant
+      7, // not a string
+    ];
+    for (const bad of malformed) {
+      let thrown: unknown;
+      try {
+        validateMissionIntent(intent({ goal_lang: bad }));
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown, JSON.stringify(bad)).toBeInstanceOf(IntentError);
+      // The registered refusal the conformance row claims, not just any throw.
+      expect((thrown as IntentError).code, JSON.stringify(bad)).toBe("invalid_request");
+      expect((thrown as IntentError).message).toMatch(/goal_lang/);
+    }
+    // Committed like every Intent member: two Intents differing only in
+    // goal_lang commit to different intent hashes.
+    const a = approve(intent({ goal_lang: "en" }), 534001);
+    const b = approve(intent({ goal_lang: "de" }), 534002);
+    expect(a.intent_hash).not.toBe(b.intent_hash);
+  });
+  it("refuses a malformed goal_lang at the Submission-envelope intake with invalid_request (@spec mission#submission-via-par)", () => {
+    let thrown: unknown;
+    try {
+      validateMissionIntentSubmission(
+        JSON.stringify({ intent: JSON.parse(intent({ goal_lang: "de-419-DE" })) }),
+      );
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(IntentError);
+    expect((thrown as IntentError).code).toBe("invalid_request");
   });
   it("rejects proposed_authority resources outside the Intent's resources", () => {
     expect(() =>

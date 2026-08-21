@@ -39,8 +39,8 @@
     "content_sha256": "8a769d44b6dc559847d60e34b6e966eab0d75c2db921ab93f431f8c880aebefb"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
-    "content_sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
+    "revision": "cf8727d1fb9205a796efd38bf125bcb601313bb1",
+    "content_sha256": "67e69e8fcc324b2b90ee5f9001332fbd350e97d648fcb0ec2ad3046f4f606ed4"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
@@ -134,7 +134,9 @@
    "substrate.independently-verifiable",
    "substrate.portable-evidence",
    "issuance-grant.state-integration",
-   "mas.enterprise"
+   "mas.enterprise",
+   "core.standing-consent",
+   "core.standing-consent-recency"
   ]
  },
  "profiles": [
@@ -383,6 +385,106 @@
      "surface": "par"
     }
    ]
+  },
+  {
+   "id": "core.intent.goal-lang-well-formed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "the AS MUST refuse a `goal_lang` that is not a well-formed language tag with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed BCP 47 tag is refused invalid_request at submission acceptance; a well-formed tag rides the Intent and is committed by intent_hash"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "intent validation (@spec mission#submission-via-par) > accepts well-formed goal_lang, refuses malformed with invalid_request, and commits it in intent_hash (@spec mission#mission-intent)",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "intent validation (@spec mission#submission-via-par) > refuses a malformed goal_lang at the Submission-envelope intake with invalid_request (@spec mission#submission-via-par)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "Well-formedness is a faithful RFC 5646 Section 2.1 check (langtag/privateuse/grandfathered ABNF plus no-duplicate-singleton/-variant), never a registry validity lookup; the AS never verifies the prose is in the declared language. No length cap beyond the Intent's size bound: RFC 5646 4.4.1's 35 characters is a support floor, not a maximum (review of PR #625). Tests assert the registered invalid_request code per malformed case, including the envelope intake path."
+  },
+  {
+   "id": "core.approval-basis.approved-at-standing-consent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "The activating issuer MUST verify `approved_at` against its retained, authenticated record of that standing consent for that exact version",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a standing-consent activation whose approved_at is absent, or does not match the issuer's retained record of the exact consented version, is refused; the request's own clock value is never accepted uncorroborated"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-recency",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "activating an instance whose `approved_at` is older than the ceiling MUST be refused",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent-recency"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a deployment declares a recency ceiling for a consequence class, a standing-consent activation older than the ceiling is refused rather than activated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",

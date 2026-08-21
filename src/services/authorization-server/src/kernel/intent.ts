@@ -44,6 +44,7 @@ import type {
 // closed-top-level rule below (@spec mission#submission-via-par).
 const TOP_LEVEL = new Set([
   "goal",
+  "goal_lang",
   "resources",
   "expires_at",
   "constraints",
@@ -55,6 +56,91 @@ const TOP_LEVEL = new Set([
 const MAX_INTENT_BYTES = 65536;
 const MAX_ARRAY_LEN = 64;
 const MAX_GOAL_CHARS = 4096;
+
+/**
+ * @spec mission#mission-intent — `goal_lang` well-formedness: a faithful
+ * RFC 5646 Section 2.1 ABNF check (langtag / privateuse / grandfathered),
+ * plus the no-duplicate-singleton and no-duplicate-variant rules. Syntactic
+ * only: the AS never verifies the prose is in the declared language, and no
+ * registry validity lookup is performed. No maximum length is imposed
+ * beyond the Intent's own size bound: RFC 5646 Section 4.4.1's 35
+ * characters is a minimum support capacity, not a cap, and longer valid
+ * tags exist.
+ */
+const BCP47_GRANDFATHERED = new Set([
+  // irregular
+  "en-gb-oed", "i-ami", "i-bnn", "i-default", "i-enochian", "i-hak",
+  "i-klingon", "i-lux", "i-mingo", "i-navajo", "i-pwn", "i-tao", "i-tay",
+  "i-tsu", "sgn-be-fr", "sgn-be-nl", "sgn-ch-de",
+  // regular
+  "art-lojban", "cel-gaulish", "no-bok", "no-nyn", "zh-guoyu", "zh-hakka",
+  "zh-min", "zh-min-nan", "zh-xiang",
+]);
+
+function isWellFormedBcp47(tag: string): boolean {
+  const lower = tag.toLowerCase();
+  if (BCP47_GRANDFATHERED.has(lower)) return true;
+  const subs = lower.split("-");
+  if (subs.some((s) => s.length === 0 || s.length > 8 || !/^[a-z0-9]+$/.test(s))) return false;
+  const isAlpha = (s: string) => /^[a-z]+$/.test(s);
+  const isDigits = (s: string) => /^[0-9]+$/.test(s);
+  // privateuse-only form: "x" 1*("-" 1*8alphanum)
+  if (subs[0] === "x") return subs.length >= 2;
+  let i = 0;
+  // language = 2*3ALPHA ["-" extlang] / 4ALPHA / 5*8ALPHA
+  const lang = subs[i] as string;
+  if (!isAlpha(lang) || lang.length < 2) return false;
+  i += 1;
+  if (lang.length <= 3) {
+    // extlang = 3ALPHA *2("-" 3ALPHA)
+    let extlang = 0;
+    while (i < subs.length && extlang < 3 && (subs[i] as string).length === 3 && isAlpha(subs[i] as string)) {
+      i += 1;
+      extlang += 1;
+    }
+  }
+  // script = 4ALPHA
+  if (i < subs.length && (subs[i] as string).length === 4 && isAlpha(subs[i] as string)) i += 1;
+  // region = 2ALPHA / 3DIGIT (at most one)
+  if (
+    i < subs.length &&
+    (((subs[i] as string).length === 2 && isAlpha(subs[i] as string)) ||
+      ((subs[i] as string).length === 3 && isDigits(subs[i] as string)))
+  ) {
+    i += 1;
+  }
+  // variant = 5*8alphanum / (DIGIT 3alphanum), no duplicates
+  const variants = new Set<string>();
+  while (i < subs.length) {
+    const s = subs[i] as string;
+    const isVariant = s.length >= 5 || (s.length === 4 && /^[0-9]/.test(s));
+    if (!isVariant) break;
+    if (variants.has(s)) return false;
+    variants.add(s);
+    i += 1;
+  }
+  // extension = singleton 1*("-" 2*8alphanum); singletons unique, never "x"
+  const singletons = new Set<string>();
+  while (i < subs.length && (subs[i] as string).length === 1 && subs[i] !== "x") {
+    const singleton = subs[i] as string;
+    if (singletons.has(singleton)) return false;
+    singletons.add(singleton);
+    i += 1;
+    let ext = 0;
+    while (i < subs.length && (subs[i] as string).length >= 2) {
+      i += 1;
+      ext += 1;
+    }
+    if (ext === 0) return false;
+  }
+  // privateuse = "x" 1*("-" 1*8alphanum)
+  if (i < subs.length && subs[i] === "x") {
+    i += 1;
+    if (i >= subs.length) return false;
+    i = subs.length;
+  }
+  return i === subs.length;
+}
 
 /** @spec mission#submission-via-par — the envelope's own closed top level. */
 const SUBMISSION_TOP_LEVEL = new Set(["intent", "evidence"]);
@@ -384,6 +470,15 @@ function validateMissionIntentObject(obj: Record<string, JsonValue>): MissionInt
   const goal = obj.goal;
   if (typeof goal !== "string" || goal.length === 0 || goal.length > MAX_GOAL_CHARS) {
     throw new IntentError("invalid_request", "goal is required (string, <= 4096 chars)");
+  }
+  // @spec mission#mission-intent — a malformed `goal_lang` is refused
+  // invalid_request at submission acceptance. Disclosure metadata only: it is
+  // committed by intent_hash like every member and never feeds derivation.
+  const goalLang = obj.goal_lang;
+  if (goalLang !== undefined) {
+    if (typeof goalLang !== "string" || !isWellFormedBcp47(goalLang)) {
+      throw new IntentError("invalid_request", "goal_lang must be a well-formed BCP 47 language tag");
+    }
   }
   const resources = obj.resources;
   if (!isStringArray(resources) || resources.length === 0 || resources.length > MAX_ARRAY_LEN) {

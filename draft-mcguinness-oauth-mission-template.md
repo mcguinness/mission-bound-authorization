@@ -486,8 +486,12 @@ The Mission Issuer adjudicates a Dispatch in this order:
      {{grant-type}}), `template_version`, and `template_hash` (the
      `template` lineage member's fields, {{template-member}}), plus
      this Dispatch's `dispatch_event_id`; `activation_actor` is the
-     Dispatcher, distinct from `consent_principal`; and
-     `root_commitment` is `template_hash`. This makes the
+     Dispatcher, distinct from `consent_principal`;
+     `root_commitment` is `template_hash`; and `approved_at` (the
+     issuance profile's standing-consent requirement) is the instant
+     the consenting human approved this exact `template_version`,
+     read from the Mission Issuer's retained template record at
+     Dispatch, never from the Dispatch request. This makes the
      approver-of-record shift from a fresh human decision to policy
      adjudication under a prior human consent structured and flagged
      consistently across the family, superseding a bare

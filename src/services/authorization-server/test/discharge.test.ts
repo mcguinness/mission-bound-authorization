@@ -935,7 +935,12 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     const record = approveOnAs();
     const body = dischargeBody(record, {
       evidence_ref: "https://close.example/q3",
-      observed_at: "2026-08-20T11:59:00Z",
+      // Relative to the REAL clock: this HTTP harness runs on real time (no
+      // injected `now`), and the endpoint bounds observed_at to +/- 24h of the
+      // AS clock, so a hardcoded instant is a time bomb that arms as the wall
+      // clock drifts past the window (it did: authored 2026-08-20, failing
+      // from 2026-08-21).
+      observed_at: new Date(Date.now() - 60_000).toISOString(),
     });
     const first = await lifecycle(record.id, body);
     expect(await dischargeResultOf(first)).toMatchObject({

@@ -743,6 +743,9 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
       // consenting human ("bob").
       activation_actor: { iss: ISS, sub: "parent-agent" },
       root_commitment: parent.authority_hash,
+      // @spec mission#mission-record (#580) — the consented root was approved
+      // at the PARENT's approval event: retained state, never the request.
+      approved_at: parent.created_at,
     });
     // approver IS approval_basis.consent_principal (D48/O-38 convergence).
     expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);
