@@ -94,6 +94,15 @@ export interface EvaluationRequest {
 export type DenialReason =
   | "out_of_authority"
   | "authority_contained"
+  /**
+   * @spec status#runtime, runtime#input-authority — the entry was approved and
+   * its `terminal_when` completion condition has FIRED, so the Mission Issuer
+   * discharged it: the task it was granted for is done. Distinct from
+   * `authority_contained` (trust lost) and from `out_of_authority` (never
+   * approved), and never expansion-eligible in the containment sense: a
+   * discharged entry retired itself.
+   */
+  | "authority_discharged"
   | "stale_state"
   | "view_inconsistent"
   | "mission_inactive"
@@ -304,6 +313,31 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
           denial_reason: "authority_contained",
           reason: "authority_contained",
           containment_version: containment.version,
+        }),
+      };
+    }
+  }
+
+  // 5b. Discharge overlay: the entry WAS approved (step 5 matched), but its
+  //     `terminal_when` completion condition has fired and the Mission Issuer
+  //     committed the discharge, so the entry no longer derives and MUST NOT be
+  //     honored at the point of use either (@spec status#runtime: a PEP/PDP that
+  //     recognizes `terminal_when` denies a discharged entry, closing the window
+  //     between discharge and token expiry). Keyed by the entry commitment, the
+  //     same `entry_digest` a permit already carries, so an equivalence class of
+  //     byte-identical entries is covered by one delta member. Ordering mirrors
+  //     5a: `out_of_authority` stays "never approved", `authority_contained` is
+  //     "approved, trust lost", `authority_discharged` is "approved, work done".
+  const dischargedDigests = view.discharged?.entry_digests;
+  if (dischargedDigests?.length) {
+    const digest = computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never);
+    if (dischargedDigests.includes(digest)) {
+      return {
+        decision: false,
+        context: base({
+          denial_reason: "authority_discharged",
+          reason: "authority_discharged",
+          entry_digest: digest,
         }),
       };
     }

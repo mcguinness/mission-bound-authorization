@@ -52,6 +52,18 @@ export interface MissionView {
    * `mission_version`, which every contain transition bumps.
    */
   containment?: { version: number; contained: Array<{ resource: string; actions?: string[] }> };
+  /**
+   * @spec status#visibility, status#runtime, runtime#input-authority — the
+   * DISCHARGE delta: the Authority Set entry commitments the Mission Issuer has
+   * discharged (`terminal_when` fired, so the entry no longer derives). Carried
+   * as a delta for the same reason containment is: it lets the PDP tell
+   * never-approved (`out_of_authority`) from approved-then-completed
+   * (`authority_discharged`), rather than the entry simply vanishing from the
+   * authority input. Absent means nothing is discharged. `policyViewId` needs no
+   * discharge input: it already commits `mission_version`, which every discharge
+   * commit increments.
+   */
+  discharged?: { entry_digests: string[] };
 }
 
 export function policyViewId(view: MissionView, modelId: string): string {
