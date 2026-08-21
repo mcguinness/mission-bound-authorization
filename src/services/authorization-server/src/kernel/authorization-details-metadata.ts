@@ -58,6 +58,20 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           additionalProperties: false,
         },
         vendors: { type: "array", items: { type: "string" } },
+        // @spec status#terminal-when — the completion-condition constraint. Its
+        // member set is CLOSED (additionalProperties: false): condition identity
+        // is byte equality of the canonical form, which `condition_digest`
+        // digests, so an unrecognized member would silently change identity.
+        terminal_when: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            properties: { event_type: { type: "string" }, discharge_policy: { type: "string" } },
+            required: ["event_type"],
+            additionalProperties: false,
+          },
+        },
       },
       additionalProperties: true,
     },
@@ -181,6 +195,34 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
     if (c.vendors !== undefined) {
       if (!Array.isArray(c.vendors) || !c.vendors.every((v) => typeof v === "string")) {
         return "constraints.vendors must be an array of strings";
+      }
+    }
+    // @spec status#terminal-when — one or more completion conditions, each a
+    // CLOSED { event_type, discharge_policy? } object (identity is the canonical
+    // form of exactly these members). The selector's own charset and its
+    // resolution against the issuer-held mapping are checked at derivation and
+    // record creation (@spec status#discharge-authority), not here: this is the
+    // wire-shape gate the published schema describes.
+    if (c.terminal_when !== undefined) {
+      if (!Array.isArray(c.terminal_when) || c.terminal_when.length === 0) {
+        return "constraints.terminal_when must be a non-empty array of completion conditions";
+      }
+      for (const condition of c.terminal_when) {
+        if (condition === null || typeof condition !== "object" || Array.isArray(condition)) {
+          return "constraints.terminal_when entries must be objects";
+        }
+        const cc = condition as Record<string, unknown>;
+        if (typeof cc.event_type !== "string") {
+          return "constraints.terminal_when entries need a string event_type";
+        }
+        if (cc.discharge_policy !== undefined && typeof cc.discharge_policy !== "string") {
+          return "constraints.terminal_when discharge_policy must be a string";
+        }
+        for (const k of Object.keys(cc)) {
+          if (k !== "event_type" && k !== "discharge_policy") {
+            return `constraints.terminal_when entries carry no member '${k}'`;
+          }
+        }
       }
     }
   }

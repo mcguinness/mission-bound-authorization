@@ -108,6 +108,23 @@ export type ChildFanoutControls = {
   [k: string]: JsonValue | undefined;
 };
 
+/**
+ * @spec status#terminal-when — one entry completion condition carried in
+ * `constraints.terminal_when`. `event_type` identifies the completion event
+ * (deployment- or registry-defined, opaque here). `discharge_policy` is a
+ * stable, opaque selector naming the AS-side discharge-authority mapping for
+ * this condition (@spec status#discharge-authority): the AS resolves it
+ * whenever the condition FIRST enters an immutable Mission-record entry and
+ * refuses the derivation when it maps to nothing. Condition identity is byte
+ * equality of the canonical form of THIS object, which is also what
+ * `condition_digest` digests, so the member set is closed: an unrecognized
+ * member would silently change identity.
+ */
+export interface TerminalWhenCondition {
+  event_type: string;
+  discharge_policy?: string;
+}
+
 /** @spec mission#authorization-derivation (type mission_resource_access) */
 export interface AuthorityEntry {
   type: "mission_resource_access";
@@ -116,6 +133,17 @@ export interface AuthorityEntry {
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
+    /**
+     * @spec status#terminal-when — the OPTIONAL Common Constraint carrying one
+     * or more entry completion conditions. When any condition is met the entry
+     * is DISCHARGED and no longer derives (@spec status#discharge). MONOTONIC
+     * under the subset rule: a derived entry carries every parent condition
+     * unchanged and MAY add more (an added condition can only discharge
+     * sooner), so dropping or altering one WIDENS and is refused
+     * (@spec status#subset-extension). Fired status is evaluated state, never
+     * part of this array and never part of `authority_hash`.
+     */
+    terminal_when?: TerminalWhenCondition[];
     /**
      * @spec txn-authorization#applicability — the Common Constraint that puts
      * this entry's operations under the Transaction Authorization profile: the
@@ -272,6 +300,31 @@ export interface MissionContainment {
   contained: Array<{ resource: string; actions?: string[] }>;
   /** The applied containment events, in order. `event_id` is the idempotency key. */
   events: ContainmentEventRecord[];
+}
+
+/**
+ * @spec status#discharge-operation, status#determining — one committed entry
+ * DISCHARGE latch: the issuer-held record that a `terminal_when` condition of
+ * the named entry fired, so the entry no longer derives
+ * (@spec status#discharge). Keyed by `entry_digest`, the Authority Set entry
+ * commitment over the IMMUTABLE Mission-record entry, which makes the latch an
+ * EQUIVALENCE-CLASS latch: every recorded entry resolving to that digest is
+ * discharged by this one row, in one transition with one version increment
+ * (@spec status#discharge-operation, "Duplicate entries"). MONOTONIC: a latch
+ * is never removed and never re-latched, so a later delivery is acknowledged
+ * `already_discharged` (@spec status#discharge-result). `condition_digest` /
+ * `event_type` / `event_id` record WHICH condition fired and the asserted
+ * occurrence, for audit and event correlation; the evidence members and
+ * caller-asserted `observed_at` are audit metadata held by the event store,
+ * never authorization input.
+ */
+export interface DischargedEntry {
+  entry_digest: string;
+  condition_digest: string;
+  event_type: string;
+  event_id: string;
+  /** The AS's own commit time (`received_at` in audit), never `observed_at`. */
+  discharged_at: string;
 }
 
 /** One applied containment event: the triggering signal plus what it removed. */
@@ -456,6 +509,15 @@ export interface MissionRecord {
    * `authority_set`, byte-identical behavior. Written only by `contain()`.
    */
   containment?: MissionContainment;
+  /**
+   * @spec status#discharge, status#determining — the committed entry-discharge
+   * latches (see {@link DischargedEntry}), the SECOND issuer-held narrowing
+   * overlay beside `containment` and, like it, evaluated state:
+   * `authority_set`/`authority_hash` stay immutable. Absent means nothing has
+   * ever been discharged (byte-identical behavior). Written only by
+   * `discharge()`; MUST NOT revert.
+   */
+  discharged?: DischargedEntry[];
 }
 
 /**
