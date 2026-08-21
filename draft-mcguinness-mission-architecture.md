@@ -416,10 +416,15 @@ and its life, {{the-mission}}; what the family does not do,
 ({{reference-architecture}}), the semantic ground rules
 ({{invariants}}), the components and identity model
 ({{components}}), the binding-neutral substrate summary
-({{substrate}}), and the deployment layer: patterns and entry ramps
+({{substrate}}) with the derivation boundary behind it
+({{derivation-boundary}}), and the deployment layer: patterns and
+entry ramps
 ({{deployment}}), assurance levels and binding properties
-({{assurance-levels}}), and the Deployment Profile
-({{deployment-profile}}). {{document-map}} locates every document;
+({{assurance-levels}}), the Deployment Profile
+({{deployment-profile}}), and the prevention-detection and
+containment matrices ({{prevention-detection}}). The requirements
+the family answers are {{requirements}}; {{document-map}} locates
+every document;
 DRAFTS.md in the repository is the full catalog.
 
 # Status: An Informational Architecture {#status}
@@ -462,8 +467,8 @@ resources over a long time, spawning sub-agents and surviving
 restarts, and independently issued tokens cannot express the
 approved task, its boundary, or its end (the OAuth binding's Introduction).
 
-The family separates the task from the authority, and the model is
-four objects: the Intent (proposed work, inert until approved), the
+The family separates the task from the authority, and the
+authorization flow separates four objects: the Intent (proposed work, inert until approved), the
 Mission (the approved, governed work), the Authority derived for it,
 and each Action that uses it, with lifecycle cutting through the
 last three. The Mission is the
@@ -708,9 +713,11 @@ The approval-to-permit path in sequence:
 
 Under the standalone binding the same life runs with ordinary tokens
 and the Mission Join in place of step 3's claim carriage
-({{deployment}}); under the AAuth binding the Person Server governs
-the native Mission Context through the same arc, without the AS's
-Authority Set or anchors ({{the-mission}}).
+({{deployment}}). Under the AAuth binding, the Person Server instead
+governs the native Mission Context through propose, clarify, approve,
+and the mission log; it does not emulate the AS's Authority Set,
+integrity anchors, PDP permits, Child Missions, or portable evidence
+({{the-mission}}).
 
 # Non-Goals {#non-goals}
 
@@ -1156,7 +1163,8 @@ this summary, is the normative text this passage tracks.
 
 ## The Ontology Contract {#ontology-contract}
 
-The derivation boundary settles who commits authority; this section
+The derivation boundary ({{derivation-boundary}}, later in this
+document) settles who commits authority; this section
 settles who owns what an operation means. The ownership statement is
 one sentence: the resource owns the ontology, its operations, its
 constraint semantics, and their consequences, while derivation,
@@ -1507,8 +1515,10 @@ lineage exists to close.
 
 ## Three Objects, Three Lifecycles {#three-objects}
 
-A deployment that runs agents under both an agent identity system
-and this family governs three distinct objects. Each has its own
+Separately from the authorization flow's four objects
+({{the-mission}}), a deployment that runs agents under both an agent
+identity system and this family governs three independently
+lifecycle-bearing objects. Each has its own
 owner, lifecycle, and revocation, and the model stays clean only
 while none absorbs another's job:
 
@@ -1652,10 +1662,10 @@ and the audit horizon participates in the governance record.
 
 | Primitive | The OAuth realization | Normative home | Consumed by |
 |---|---|---|---|
-| Mission Identifier and Issuer | An opaque, non-reused identifier with at least 128 bits of entropy plus the issuer URL; together they name exactly one Mission. The kernel requires stability, non-reassignment, and unguessability, not this syntax | The OAuth binding: Mission Record, Mission Identifier Format | Every companion: decisions, evidence, harness bindings, the state surfaces, the audit statement subject, the Mandate |
-| Lifecycle state space | The states of {{the-mission}}, open to companion-defined states, with the only-`active` rule, fail-safe unrecognized states, and a freshness source with a stated staleness bound | The OAuth binding (state space, only-`active`); the status and runtime profiles (freshness); Status and Signals (observation) | Runtime per-class re-check (fail closed on staleness), harness pause and terminate, the orchestrator's unwind trigger, the Mandate (state as of minting) |
-| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule and the Common Constraints vocabulary | The OAuth binding: Mission Authority, Subset Rule, Common Constraints | Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
-| Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding; the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN binding (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
+| Mission Identifier and Issuer | An opaque, non-reused identifier with at least 128 bits of entropy and no semantic content, plus the issuer URL; together they name exactly one Mission. The kernel requires stability, non-reassignment, and unguessability, not this syntax | The OAuth binding: Mission Record, Mission Identifier Format | Every companion: decisions, evidence, harness bindings, the state surfaces, the audit statement subject, the Mandate |
+| Lifecycle state space | The states of {{the-mission}}, open to companion-defined states, with the only-`active` rule, fail-safe unrecognized states, and a freshness source with a stated staleness bound | The OAuth binding (state space, only-`active`); the status and runtime profiles (freshness); Status and Signals (observation) | Runtime per-class re-check (fail closed on staleness), harness pause, suppress, and terminate, the orchestrator's unwind trigger, the Mandate (state as of minting) |
+| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule, Common Constraints | Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
+| Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding a verifier recognizes or rejects (unknown prefixes refuse; no downgrade); the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN binding (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
 | Issuer key material | Signing keys resolvable from `issuer`; across a rotation each key identifier stays resolvable while artifacts signed under it remain within the audit horizon | The OAuth binding: Signing and Key Rotation | Verifiers of Mission-bound credentials, Consent Evidence, the Mandate, the signed state surfaces, Audit Transparency |
 | Audit horizon | The deployment-declared retention window: at least the Mission's lifetime plus a declared post-terminal period | The OAuth binding: Mission Record | Consent and runtime evidence and Audit Transparency (retention), the MAS (record retention), the security model's retention analysis |
 {: title="Substrate primitives in their OAuth realization"}
@@ -3116,7 +3126,13 @@ operator plane) as its satellites; AAuth keeps its native two-state
 lifecycle, served by `mission-aauth-management`, with the expiry
 bound profiled by `aauth-mission-expiry`.
 
-**The model and its bindings:**
+**Architecture mappings:**
+
+| Document | Role |
+|---|---|
+| `mission-aam` | Experimental sketch. Cloudflare's Agent Access Model realized on the family: the six AAM components map onto issuance, the PDP, the mediated harness, Containment, Mission Templates, and the evidence join, and the grant review loop is deliberately not adopted. It defines no binding and no new mechanism. |
+
+**The substrate and the bindings:**
 
 | Document | Role |
 |---|---|
@@ -3127,7 +3143,6 @@ bound profiled by `aauth-mission-expiry`.
 | `mission-uma` | Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent rides claims pushing, the resource owner's decision fills UMA's authorization assessment, the RPT is the Mission-bound credential, and the PCT is continuity that is never authority; the first binding authored against the substrate contract. |
 | `mission-gnap` | Experimental sketch. The GNAP binding: the Mission Intent rides a registered grant request member, interaction or a companion-supplied standing basis is the approval event, grant modification splits into in-Mission drawdown and Approver-routed expansion, and the continuation access token is continuity that is never authority; the second binding authored against the substrate contract. |
 | `mission-substrate` | The binding-neutral kernel contract: normative on any further binding, conformed to by the existing bindings through their published Substrate Statements, with vocabulary ownership migrating to it by touch. |
-| `mission-aam` | Experimental sketch. Cloudflare's Agent Access Model realized on the family: the six AAM components map onto issuance, the PDP, the mediated harness, Containment, Mission Templates, and the evidence join, and the grant review loop is deliberately not adopted. It defines no binding and no new mechanism. |
 
 **Approval time:**
 
@@ -3153,6 +3168,11 @@ bound profiled by `aauth-mission-expiry`.
 | `oauth-mission-management` | Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics. |
 | `mission-aauth-management` | AAuth-native status, permanent termination, optional expiry, and delegation-tree queries at the Person Server, keyed only by `{approver, s256}` and preserving AAuth's `active` and `terminated` states. |
 | `aauth-mission-expiry` | Profile of AAuth's `expires_at` mission lifetime bound (RFC 3339 precision, skew documentation, prompt termination). The base protocol enforces the bound on every Person Server decision path and caps every token carrying `mission_s256`; the AAuth binding requires the member on every mission. |
+
+**Cross-domain projection and continuity:**
+
+| Document | Role |
+|---|---|
 | `oauth-mission-cross-domain` | Single-hop projection of a Mission to another trust domain via the cross-domain grant. |
 | `oauth-mission-cross-org-delegation` | Recursive cross-organizational delegation as a profile of offline attenuation: the chain is the portable authority proof, each hop names its own actor under the identity-binding rule, and projection turns a verified chain into a local token. |
 | `oauth-mission-continuation` | The authorization-continuity profile: a Mission continues its authorization over identity-continuity transports (Identity Continuation, async delegation, cross-domain), state-gated, with the invariant that a continuation handle grants nothing. |
@@ -3183,12 +3203,6 @@ bound profiled by `aauth-mission-expiry`.
 | `oauth-mission-child-delegation` | Child Missions with lineage, strict-subset authority, cascade revocation. |
 | `oauth-mission-attenuation` | Experimental: narrower Mission-bound tokens minted offline; the kill switch preserved by runtime re-check. |
 
-**Work products:**
-
-| Document | Role |
-|---|---|
-| `oauth-mission-work-products` | Experimental: work-product provenance, attribution and not authority, and the non-transitive Mission-to-Mission handoff rule; a work product crossing into a Mission is input, re-evaluated under the receiver's Authority Set. |
-
 **Proof and portability:**
 
 | Document | Role |
@@ -3200,6 +3214,7 @@ bound profiled by `aauth-mission-expiry`.
 
 | Document | Role |
 |---|---|
+| `oauth-mission-work-products` | Experimental: work-product provenance, attribution and not authority, and the non-transitive Mission-to-Mission handoff rule; a work product crossing into a Mission is input, re-evaluated under the receiver's Authority Set. |
 | `mission-security-model` | The trusted base in one view: what each component must achieve and what its compromise costs. |
 
 # Security Considerations {#security-considerations}

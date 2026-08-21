@@ -315,17 +315,55 @@ function main() {
     }
   }
 
-  // (d) Architecture document-map coverage: every draft (other than the
-  // architecture document itself) must be named by its short form.
+  // (d) Architecture document-map coverage AND group agreement: every draft
+  // (other than the architecture document itself) must be named by its short
+  // form INSIDE the doc-map group that corresponds to its manifest `group`,
+  // so the two maps cannot drift (review of PR #630).
+  const DOCMAP_GROUP_HEADERS = {
+    "architecture": "Architecture mappings",
+    "bindings-substrate": "The substrate and the bindings",
+    "approval-time": "Approval time",
+    "lifecycle": "Lifecycle",
+    "cross-domain-projection": "Cross-domain projection and continuity",
+    "runtime-enforcement": "Runtime enforcement",
+    "agent-runtime": "Agent runtime",
+    "sub-agents": "Sub-agents",
+    "proof-portability": "Proof and portability",
+    "security-model": "Security model",
+  };
   const architecture = readFile(ARCHITECTURE_PATH, "draft-mcguinness-mission-architecture.md");
   const docMapSection = extractSection(architecture, (t, l) => l === 1 && t === "Mission Document Map");
   if (docMapSection === null) {
     fail("architecture-map", `could not find a "# Mission Document Map" section in draft-mcguinness-mission-architecture.md`);
   } else {
+    // Split the map into segments by its bold group headers.
+    const segRe = /^\*\*(.+):\*\*$/gm;
+    const headers = [];
+    let sm;
+    while ((sm = segRe.exec(docMapSection))) headers.push({ name: sm[1], at: sm.index });
+    const segments = {};
+    for (let i = 0; i < headers.length; i++) {
+      const end = i + 1 < headers.length ? headers[i + 1].at : docMapSection.length;
+      segments[headers[i].name] = docMapSection.slice(headers[i].at, end);
+    }
     for (const d of drafts) {
       if (d.slug === ARCHITECTURE_SLUG) continue;
-      if (!containsToken(docMapSection, shortForm(d.slug))) {
-        fail("architecture-map", `${d.slug} (short form "${shortForm(d.slug)}") is not named in the architecture's Mission Document Map`);
+      const header = DOCMAP_GROUP_HEADERS[d.group];
+      if (header === undefined) {
+        fail("architecture-map", `group "${d.group}" has no doc-map header mapping in this checker; add it to DOCMAP_GROUP_HEADERS`);
+        continue;
+      }
+      const seg = segments[header];
+      if (seg === undefined) {
+        fail("architecture-map", `the Mission Document Map has no "**${header}:**" group for manifest group "${d.group}"`);
+        continue;
+      }
+      if (!containsToken(seg, shortForm(d.slug))) {
+        const where = Object.entries(segments).find(([, s]) => containsToken(s, shortForm(d.slug)));
+        fail(
+          "architecture-map",
+          `${d.slug} (short form "${shortForm(d.slug)}") is not under the doc-map group "**${header}:**" its manifest group "${d.group}" places it${where ? ` (found under "**${where[0]}:**" instead)` : " (not named in the map at all)"}`
+        );
       }
     }
   }
