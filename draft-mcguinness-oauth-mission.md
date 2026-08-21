@@ -514,7 +514,7 @@ document ({{conformance}}), so that companion is not a normative
 dependency.
 
 Separate from this document, and not required to implement it,
-several capabilities are now specified as OPTIONAL companion
+several capabilities are specified as OPTIONAL companion
 profiles:
 
 - an additional integrity anchor over a structured consent
@@ -600,7 +600,7 @@ considered and where it belongs, not that it was overlooked.
   evidence to one approved Mission, which is a core goal of this
   document and its companion profiles.
   Pairwise or unlinkable presentation of Mission-bound authority works
-  against that anchor and is therefore future work, not a v1 property
+  against that anchor and is therefore future work
   ({{mission-identifier-correlation}}).
 
 # Conventions and Terminology {#conventions-and-terminology}
@@ -709,9 +709,7 @@ This document maps principals onto native OAuth constructs:
 - The **Subject** and **Approver** are each an (`iss`,
   `sub`) pair, matching the access token `sub` model of {{RFC9068}}.
   The Approver is the accountable principal whose approval created
-  the Mission; it may be a human or an authorized policy authority,
-  and the provenance standing behind a delegated or policy approval
-  is governance state this document does not model
+  the Mission; it may be a human or an authorized policy authority
   ({{multi-party-approval}}).
 
 On a derived token the `sub` claim is the AS-local `sub` the AS
@@ -1024,10 +1022,7 @@ presented about it: `intent_hash` commits exactly the `intent`
 object, never the Submission envelope or its `evidence` array
 ({{integrity-anchors}}), so an evidence artifact can commit to the
 `intent_hash` of the Intent it supports without becoming part of the
-object that hash covers. Earlier revisions of this document defined
-the parameter value as the bare Mission Intent object; this document
-does not ({{document-history}}), and the bare shape is refused under
-the closed-envelope rule below.
+object that hash covers.
 
 The AS returns a `request_uri` as usual, which the client uses to
 start authorization. An AS that cannot parse `mission_intent` as a
@@ -1132,16 +1127,15 @@ the standard {{RFC9396}} `authorization_details` request parameter,
 a JSON array of `authorization_details` objects, alongside
 `mission_intent` in the same pushed request
 ({{submission-via-par}}). The Mission Intent carries no authority
-members: earlier revisions of this document carried the proposal
-inside the Intent as a `proposed_authority` member, this document
-does not ({{document-history}}), and an Intent carrying that member
-is refused as an unknown top-level member under the closed-top-level
-rule of {{submission-via-par}}.
+members: an Intent carrying one (a `proposed_authority` member
+among them) is refused as an unknown top-level member under the
+closed-top-level rule of {{submission-via-par}}.
 
 The submitted `authorization_details` is a proposal, never
-authority. The AS MUST treat it as untrusted input, MUST derive and
-bound the Authority Set by policy regardless of what was submitted
-({{authorization-derivation}}), and MUST NOT grant authority beyond
+authority, under the submission trust rule of
+{{submission-via-par}}: the AS derives and bounds the Authority Set
+by policy regardless of what was submitted
+({{authorization-derivation}}) and MUST NOT grant authority beyond
 what the Mission Intent yields.
 
 Each submitted entry MUST be of a type the AS advertises and MUST
@@ -3174,7 +3168,7 @@ A deployment MUST NOT route a delegated Mission-bound token to a
 Mission-unaware Resource Server that authorizes or logs the caller on
 `client_id` without processing the `act` chain. The requirement above
 binds a Mission-aware RS; a Mission-unaware {{RFC9068}} RS reads
-`client_id` as the immediate client, which is now accurate for that
+`client_id` as the immediate client, which is accurate for that
 single token, but it still cannot see the delegation lineage carried
 in the `act` chain, and it has no way to look up the
 originally-approved agent from the Mission Record, so it cannot apply
@@ -3490,9 +3484,8 @@ The introspection endpoint is protected per {{RFC7662}}. The AS:
   audiences ({{mission-bound-tokens}}).
 
 Because this profile returns the `mission` member and `mission.state`
-even when `active` is `false` (diverging from the {{RFC7662}}
-SHOULD NOT against disclosing detail for inactive tokens), the AS
-MUST apply this same
+even when `active` is `false` (the deviation stated in
+{{introspection}}), the AS MUST apply this same
 authorization and minimization to that data and MUST NOT reveal
 Mission detail to an unauthorized introspection caller.
 
@@ -3511,9 +3504,7 @@ caller holds the bound key.
 When the token is otherwise valid but the Mission is `revoked` or
 `expired`, the AS MUST return `active: false` and include
 `mission.state` giving the reason, so a Resource Server can
-distinguish a dead Mission from a bad token. (This deviates from the
-{{RFC7662}} SHOULD NOT against including members when `active` is
-`false`.) A
+distinguish a dead Mission from a bad token. A
 Mission transition does not by itself revoke the token as an
 individual credential; introspection reports the composite
 authorization as inactive.
@@ -3625,7 +3616,7 @@ the following:
   `client_id` is the OAuth client that requested it, per {{RFC8693}}
   Section 4.3 and {{RFC9068}} Section 2.2; this profile does not
   override that definition. The Mission's originally-approved agent
-  is no longer named by `client_id` on such a token; it remains
+  is not named by `client_id` on such a token; it remains
   recorded in the Mission Record ({{mission-record}}).
 - **The `act` chain identifies the delegates.** The delegated token
   carries an `act` claim per the Actor Profile
@@ -3689,53 +3680,25 @@ structural reference for the actor object.
 
 ## Adopted Model: client_id Names the Requesting Client {#client-id-rebinding}
 
-This profile keeps `client_id`'s ordinary meaning under {{RFC8693}}
-Section 4.3, which {{RFC9068}} Section 2.2 incorporates: the OAuth
-client that requested the token, the immediate client, on every
-issued or derived token, including a delegated one. It does not
-override that definition for delegated tokens. The Mission's
-originally-approved agent is no longer carried in a token claim; it
-remains recorded in the Mission Record ({{mission-record}}), without
-redefining a registered claim. Downstream delegates are carried in
-the `act` chain
-({{delegation}}), whose outermost entry is the current delegate;
-earlier delegates nest inward through `act.act`.
-
-A design considered and rejected: freezing `client_id` to the
-Mission's approved agent on every derived token, overriding its
-meaning under {{RFC8693}} and {{RFC9068}}. That design kept the
-approved party at a fixed claim name, but only by having `client_id`
-silently mean
-something other than what {{RFC9068}} Section 2.2 registers it to
-mean: a generic {{RFC9068}} Resource Server or logging pipeline,
-which reads `client_id` as the immediate client because that is its
-registered meaning, would attribute a delegate's action to the
-approved agent instead of to the actor that performed it, with no
-error to surface the mismatch. It also bought no operational
-relaxation: it is safe only where every Resource Server processes the
-`act` chain anyway, since that is where the executing party's
-identity then lives, which is exactly the discipline this profile
-already requires of a Mission-aware Resource Server
-({{rs-enforcement}}). The Mission Record ({{mission-record}}) gives
-the same stable approved-agent binding without that conformance
-cost.
-
-The operational rule of {{rs-enforcement}} holds under the adopted
-model too, for a different reason: a Resource Server that authorizes
-or logs the caller on a token carrying an `act` chain MUST process
-that chain to see the delegation lineage, and a deployment MUST NOT
-route a delegated Mission-bound token to a Mission-unaware Resource
-Server that authorizes or logs on `client_id` alone
-({{rs-enforcement}}). Under the adopted model such a Resource Server
-attributes the immediate action correctly, since `client_id` is
-accurate, but it still cannot see the delegation lineage or the
-originally-approved agent, and so cannot apply actor-chain policy or
-join an actor's execution back to the Mission's approval. It is the
-`mission` claim's presence, not the binding choice, that signals a
-token may carry an `act` chain a consumer needs to process; a
-consumer that is not Mission-aware has no way to opt into or out of
-that need, which is why routing a delegated token to one remains
-forbidden.
+This profile keeps `client_id`'s registered meaning, stated
+normatively in {{mission-bound-tokens}} and enforced in
+{{rs-enforcement}}: the OAuth client that requested the token, on
+every issued or derived token, a delegated one included. Downstream
+delegates ride the `act` chain ({{delegation}}), and the Mission's
+originally-approved agent remains recorded in the Mission Record
+({{mission-record}}), without redefining a registered claim. The
+alternative, freezing `client_id` to the approved agent on every
+derived token, would have a generic {{RFC9068}} Resource Server or
+logging pipeline attribute a delegate's action to the approved agent
+with no error to surface the mismatch, and it buys no relaxation: it
+is safe only where every Resource Server already processes the `act`
+chain, the discipline a Mission-aware Resource Server owes anyway
+({{rs-enforcement}}). The routing rule of {{rs-enforcement}} is
+independent of this choice: the `mission` claim's presence, not the
+binding choice, is what signals a token may carry an `act` chain a
+consumer needs to process, a Mission-unaware Resource Server cannot
+opt into that need, and routing a delegated token to one therefore
+remains forbidden.
 
 ## Self-Exchange Down-Scoping {#self-exchange}
 
@@ -3884,9 +3847,10 @@ itself, not because this profile requires the two to match. A
 deployment where a different, already-authenticated client requests
 the exchange on a delegate's behalf, asserting the delegate only
 through an `actor_token`, would instead show that client's own
-identifier in `client_id`. `client_id` no longer names
-`s6BhdRkqt3`, the originally-approved agent; it remains recoverable
-from the Mission Record via `mission_id` ({{mission-record}}). The
+identifier in `client_id`. `client_id` does not name
+`s6BhdRkqt3`, the originally-approved agent; that identity remains
+recoverable from the Mission Record via `mission_id`
+({{mission-record}}). The
 `cnf` is `tool-runner-7`'s own key, not the
 agent's, so this token cannot be replayed as the agent. The
 non-delegable write entry was dropped; the read entry survives,
@@ -4192,7 +4156,7 @@ a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
-The smallest useful conforming deployment, noted here informatively,
+The smallest useful conforming deployment,
 is a Mission Issuer that derives in narrowing mode from the client's
 authority proposal ({{authorization-derivation}}), emits only the
 Common Constraints of {{common-constraints}}, and implements none of
@@ -4320,15 +4284,6 @@ As that profile makes explicit, such a commitment binds the structured
 disclosure the AS records, not the pixels actually presented; it
 narrows this gap for audit but does not close it.
 
-## Mission Drift
-
-Because issuance is gated on Mission state and bounded by the
-Authority Set, an agent cannot escalate beyond the approved task by
-acquiring additional tokens: every derived token is a subset of the
-approved authority ({{subset}}), and no token can be derived once the
-Mission is `revoked` or `expired`. Deployments SHOULD keep derived
-token lifetimes short so state transitions take effect promptly.
-
 ## Downgrade by Omission {#downgrade-by-omission}
 
 A token bearing equivalent `authorization_details` but no `mission`
@@ -4384,9 +4339,9 @@ does not define.
 
 ## Authority Does Not Propagate With Information {#information-propagation}
 
-The Mission Drift consideration above bounds escalation by token
-acquisition: an agent cannot exceed the approved task by acquiring
-additional tokens. The same bound holds for information. No authority
+Issuance gating bounds escalation by token acquisition
+({{lifecycle}}, {{subset}}): an agent cannot exceed the approved
+task by acquiring additional tokens. The same bound holds for information. No authority
 may be acquired by information propagation alone. An agent may inherit
 another agent's knowledge; it never inherits another agent's authority.
 Information may cross a boundary without authority crossing with it.
@@ -4448,12 +4403,10 @@ this profile and is out of scope here. Which party enforces each
 Mission-carried bound is summarized in the enforcement table
 ({{mission-intent}}). Short token lifetimes and
 narrow authority bound, but do not eliminate, this exposure. Where
-the Resource Server or a composing runtime layer does match a
-concrete request URI against a `prefix` entry, that match MUST apply
-the same RFC 3986 {{RFC3986}} normalization the AS uses for
-containment ({{subset}}, {{rs-enforcement}}), so the boundary
-enforced at the point of use is the one the AS derived, not a
-divergent one.
+the Resource Server or a composing runtime layer matches a concrete
+request URI against a `prefix` entry, the single-normalization rule
+of {{resource-boundary-canonicalization}} binds that match the same
+way.
 
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
@@ -4776,12 +4729,12 @@ cross-domain Resource AS, and an auditor bind credentials and evidence
 to one approved Mission, which the governance and audit properties of
 this document and its companion profiles depend on. The cost is that
 this profile does not provide
-cross-audience unlinkability, and that is a deliberate non-goal for this
-version ({{non-goals}}), not an unfinished feature. Audience-pairwise
+cross-audience unlinkability, and that is a deliberate non-goal
+({{non-goals}}), not an unfinished feature. Audience-pairwise
 (or request-pairwise) Mission references, in which the issuer projects a
 distinct opaque identifier per audience and resolves them server-side,
 are the fuller mechanism for unlinkability; because they work against
-the stable anchor, they are future work rather than a v1 property. A
+the stable anchor, they are future work. A
 deployment that carries the canonical Mission Identifier on the wire
 accepts this correlation as part of its privacy posture; the
 operative control is limiting who receives the stable identifier,
