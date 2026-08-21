@@ -25,6 +25,7 @@ import {
   conditionDigest,
   type DischargeAuthorityPolicy,
   entryDigest,
+  type LifecycleCommit,
   MissionKernel,
   type MissionRecord,
   validateMissionIntent,
@@ -230,5 +231,64 @@ describe("discharge compatibility: authority_changed emission and the delivery g
     expect(w.declaredSets).toHaveLength(3);
     expect(w.undeclaredSets).toHaveLength(2); // still gated
     expect(w.declared.needsRematerialization(mission.id)).toBe(true);
+  });
+});
+
+describe("the delivery gate survives an emitter restart: provenance is commit-carried, never cursor-inferred", () => {
+  const baseCommit = (over: Partial<LifecycleCommit>): LifecycleCommit => ({
+    id: "msn_restart_1",
+    issuer: ISS,
+    state: "active",
+    prior_state: "active",
+    version: 3,
+    committed_at: NOW.toISOString(),
+    expires_at: EXPIRES_AT,
+    ...over,
+  });
+
+  /** An emitter with NO delivery history, as after a process restart. */
+  async function freshEmitter() {
+    const keys = await generateKeyPair("ES256", { extractable: true });
+    const emitter = new MissionSignalEmitter({
+      key: keys.privateKey,
+      kid: "as-status",
+      consumers: [
+        { audience: DECLARED_AUD, mission_capabilities_supported: [AUTHORITY_CHANGED_CAPABILITY] },
+        { audience: UNDECLARED_AUD },
+      ],
+    });
+    const declared: string[] = [];
+    const undeclared: string[] = [];
+    emitter.onDeliver(DECLARED_AUD, (set) => declared.push(set));
+    emitter.onDeliver(UNDECLARED_AUD, (set) => undeclared.push(set));
+    return { emitter, declared, undeclared };
+  }
+
+  it("a discharge on a previously contained Mission stays gated on a fresh emitter (containment_version 1, no advance)", async () => {
+    const { emitter, declared, undeclared } = await freshEmitter();
+    // First commit this emitter ever sees: an authority_changed narrowing
+    // carrying containment_version 1 UNCHANGED (the Mission was contained
+    // before the restart; this commit is a discharge). A cursor-inferring
+    // gate mistook this for the first containment advance and delivered it
+    // to the undeclared consumer, which ignores authority_changed and keeps
+    // using stale authority.
+    emitter.onCommit(baseCommit({ authority_changed: true, containment_version: 1 }));
+    await emitter.drain();
+    expect(declared).toHaveLength(1);
+    expect(undeclared).toHaveLength(0);
+  });
+
+  it("a real containment advance first observed above version 1 still reaches an undeclared stream on a fresh emitter", async () => {
+    const { emitter, declared, undeclared } = await freshEmitter();
+    // The converse failure: a cursor-inferring gate WITHHELD a genuine
+    // containment event whose first observed version exceeds 1. The kernel's
+    // commit-carried discriminator makes it deliverable regardless of what
+    // this emitter has seen before.
+    emitter.onCommit(
+      baseCommit({ authority_changed: true, containment_version: 5, containment_advanced: true }),
+    );
+    await emitter.drain();
+    expect(declared).toHaveLength(1);
+    expect(undeclared).toHaveLength(1);
   });
 });

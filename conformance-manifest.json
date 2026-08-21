@@ -32,7 +32,7 @@
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "2399f170964924d80f8ceaad81d41892411d4465",
-    "content_sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
+    "content_sha256": "99b26772bde92ff2d7b88729f4da84f432920ad65274269c940493e3fcb428b5"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "12b540f5c8e547a61cac16259c98515eca7ec504",
@@ -1632,7 +1632,7 @@
     "normative": "the entry latch, version increment, audit and result record, and durable propagation work (outbox entry or signal enqueue) are never observed partially committed under concurrent or interrupted delivery"
    },
    "level": "concurrency",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
@@ -1641,7 +1641,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "The latch rows, the version increment, and the event-dedup row share ONE SQLite transaction (latchDischarge's `accompany` hook), and the lifecycle commit that carries the durable propagation work fires inside it as its last action, so no subscriber can observe an enqueue without the latch. The race is two concurrent HTTP discharges of the same entry with DISTINCT nonces and DISTINCT event_ids, so neither idempotency store is what serializes them: one returns `discharged`, the other `already_discharged`, with exactly one increment and one latch row. Note the store is in-process better-sqlite3 (synchronous), so this proves the funnel's serialization, not multi-process contention."
+   "notes": "PARTIAL (review of PR #622): the latch rows, version increment, and event-dedup row share one SQLite transaction (latchDischarge's accompany hook) and the lifecycle commit fires inside it, so no subscriber observes an enqueue without the latch; the concurrency test (two concurrent HTTP discharges, distinct nonces and event_ids: one discharged, one already_discharged, one increment) proves that funnel's serialization. What is NOT established is durable propagation under interrupted delivery: the store is in-process in-memory better-sqlite3, signal delivery is best-effort with retry/dead-letter deferred to the SSF transport, and no multi-connection recovery test exists. Flips to tested with a transactional persistent outbox plus a recovery test that interrupts delivery between commit and emission."
   },
   {
    "id": "status.discharge.child-propagation",

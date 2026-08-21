@@ -43,7 +43,10 @@ import {
   ChildDelegationError,
   conditionDigest,
   createChildMission,
+  type DischargeAuthorityMapping,
   type DischargeAuthorityPolicy,
+  DischargeConflictError,
+  DischargeNotFoundError,
   entryDigest,
   GateError,
   isSubsetEntry,
@@ -505,6 +508,73 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
 // ---------------------------------------------------------------------------
 // The lifecycle endpoint, over real HTTP.
 // ---------------------------------------------------------------------------
+
+describe("review hardening: mapping pinning and terminal idempotency", () => {
+  it("pins the approved mapping at record creation: a later policy edit never re-points who may discharge", () => {
+    // A LIVE policy object the deployment later edits in place: "version 2"
+    // re-points the selector at a different principal AFTER approval.
+    const livePolicy: DischargeAuthorityPolicy = JSON.parse(JSON.stringify(DISCHARGE_AUTHORITY));
+    const { kernel } = makeKernel({ dischargeAuthority: livePolicy });
+    const record = approve(kernel);
+    const s = selectorsFor(record);
+    (livePolicy.policies as Record<string, DischargeAuthorityMapping>)[CLOSE_POLICY] = {
+      mapping_id: "close-management",
+      mapping_version: "2",
+      event_types: [CLOSE_EVENT],
+      principals: ["svc:intruder"],
+    };
+    // The principal the EDITED policy names may not discharge the
+    // already-approved entry (premature authority retirement)...
+    expect(() =>
+      kernel.discharge(record.id, {
+        authority: "svc:intruder",
+        entry_digest: s.entry_digest,
+        condition_digest: s.condition_digest,
+        event_type: s.event_type,
+        event_id: "pin-intruder-1",
+      }),
+    ).toThrow(DischargeNotFoundError);
+    // ...and the pin retains the approved identifier, version, and content,
+    // so the originally admitted principal still may.
+    expect(kernel.dischargePins.find(record.id, s.entry_digest, s.condition_digest)).toMatchObject({
+      mapping_id: "close-management",
+      mapping_version: "1",
+    });
+    const { result } = kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      entry_digest: s.entry_digest,
+      condition_digest: s.condition_digest,
+      event_type: s.event_type,
+      event_id: "pin-original-1",
+    });
+    expect(result.outcome).toBe("discharged");
+  });
+
+  it("terminal_noop records through the event store: same-fingerprint replay returns it, divergent re-assertion conflicts", () => {
+    const { kernel } = makeKernel();
+    const record = approve(kernel);
+    const s = selectorsFor(record);
+    kernel.transition(record.id, "revoke");
+    const req = {
+      authority: "svc:close-management",
+      entry_digest: s.entry_digest,
+      condition_digest: s.condition_digest,
+      event_type: s.event_type,
+      event_id: "terminal-idem-1",
+    };
+    const first = kernel.discharge(record.id, { ...req });
+    expect(first.result.outcome).toBe("terminal_noop");
+    // Same tuple, same fingerprint (an at-least-once retry under a fresh
+    // HTTP nonce lands here): the STORED outcome and versions, no rework.
+    const replay = kernel.discharge(record.id, { ...req });
+    expect(replay.result).toEqual(first.result);
+    // Same tuple, different fingerprint: a divergent re-assertion of the
+    // occurrence is a conflict, never a second terminal_noop.
+    expect(() =>
+      kernel.discharge(record.id, { ...req, evidence_ref: "https://evidence.test/divergent" }),
+    ).toThrow(DischargeConflictError);
+  });
+});
 
 const PORT = 14545;
 const ISSUER = `http://localhost:${PORT}`;
@@ -1010,5 +1080,67 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(as.kernel.effectiveAuthoritySet(after).map((e) => e.actions)).toEqual([
       ["payments:invoice.read"],
     ]);
+  });
+
+  it("never authenticates an inherited Object.prototype name as a service token", async () => {
+    const record = approveOnAs();
+    for (const inherited of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+      const res = await lifecycle(record.id, dischargeBody(record), inherited);
+      expect(res.status, `x-service-token: ${inherited} on lifecycle`).toBe(401);
+      // The template admin plane gates on the same registry via
+      // requireServiceToken and must refuse identically.
+      const tpl = await fetch(`${ISSUER}/templates`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-service-token": inherited },
+        body: "{}",
+      });
+      expect(tpl.status, `x-service-token: ${inherited} on /templates`).toBe(401);
+    }
+    expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+  });
+
+  it("refuses malformed wire shapes as invalid_request, never a 500", async () => {
+    const record = approveOnAs();
+    const overrides: Array<Record<string, unknown>> = [
+      { entry_digest: "sha-256:tooshort" }, // not 43 base64url chars
+      { entry_digest: `sha-256:${"A".repeat(44)}` }, // one char too long
+      { condition_digest: `sha-256:${"+".repeat(43)}` }, // base64, not base64url
+      { observed_at: "Aug 20, 2026" }, // Date.parse-friendly, not RFC 3339
+      { observed_at: "2026-08-20" }, // bare date, not RFC 3339 date-time
+      { nonce: null }, // JSON null must be malformed-nonce, not a crash
+      { nonce: "n".repeat(256) }, // exceeds the documented 255-char bound
+    ];
+    for (const over of overrides) {
+      const res = await lifecycle(record.id, dischargeBody(record, over));
+      expect(res.status, JSON.stringify(over)).toBe(400);
+      expect(((await res.json()) as Record<string, unknown>).error).toBe("invalid_request");
+    }
+    // A valid-JSON body that is not an object lands as an empty member set:
+    // no operation resolves, so it collapses into the endpoint's own
+    // `not_found` vocabulary — a refusal, never a member-access 500.
+    const nullBody = await lifecycle(record.id, null);
+    expect(nullBody.status).toBe(404);
+    expect(await nullBody.json()).toMatchObject({ error: "not_found" });
+    expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+  });
+
+  it("terminal_noop over HTTP is event-idempotent: fresh-nonce replay returns the stored outcome, divergent re-assertion conflicts", async () => {
+    const record = approveOnAs();
+    expect((await lifecycle(record.id, { operation: "revoke", nonce: freshNonce() })).status).toBe(200);
+    const body = dischargeBody(record);
+    const first = await dischargeResultOf(await lifecycle(record.id, body));
+    expect(first.outcome).toBe("terminal_noop");
+    // An at-least-once sender's retry under a FRESH nonce: the stored
+    // outcome with the original versions, not a second processing.
+    const replay = await dischargeResultOf(await lifecycle(record.id, { ...body, nonce: freshNonce() }));
+    expect(replay).toEqual(first);
+    // The same tuple re-asserted with a different fingerprint: conflict.
+    const divergent = await lifecycle(record.id, {
+      ...body,
+      nonce: freshNonce(),
+      evidence_ref: "https://evidence.test/divergent",
+    });
+    expect(divergent.status).toBe(409);
+    expect(await divergent.json()).toMatchObject({ error: "conflict" });
   });
 });

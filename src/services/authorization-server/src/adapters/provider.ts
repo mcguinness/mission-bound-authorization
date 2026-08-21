@@ -1454,10 +1454,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     return undefined;
   };
 
-  const serviceTokenPrincipals: Record<string, ServiceTokenPrincipal> = {
-    ...DEFAULT_SERVICE_TOKEN_PRINCIPALS,
-    ...(opts.serviceTokenPrincipals ?? {}),
-  };
+  // Null-prototype registry + own-property lookup below: a presented token
+  // must NEVER authenticate through an inherited Object.prototype name
+  // (`__proto__`, `constructor`, `toString`, ...), which a plain object
+  // lookup would resolve for an unregistered token.
+  const serviceTokenPrincipals: Record<string, ServiceTokenPrincipal> = Object.assign(
+    Object.create(null) as Record<string, ServiceTokenPrincipal>,
+    DEFAULT_SERVICE_TOKEN_PRINCIPALS,
+    opts.serviceTokenPrincipals ?? {},
+  );
 
   /**
    * @spec status#mission-status-authentication, status#discharge-authority —
@@ -1469,7 +1474,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    */
   const authenticateService = (ctx: KoaCtx): ServiceTokenPrincipal | undefined => {
     const presented = ctx.get("x-service-token");
-    const principal = presented ? serviceTokenPrincipals[presented] : undefined;
+    const principal =
+      presented && Object.hasOwn(serviceTokenPrincipals, presented)
+        ? serviceTokenPrincipals[presented]
+        : undefined;
     if (!principal) {
       ctx.status = 401;
       ctx.body = { error: "unauthorized" };
@@ -2768,10 +2776,22 @@ export const MISSION_STATUS_RESPONSE_MEDIA_TYPE = "application/mission-status-re
  */
 const OBSERVED_AT_SKEW_MS = 24 * 60 * 60 * 1000;
 
-/** A prefixed digest of the family's only defined algorithm. */
+/**
+ * A prefixed digest of the family's only defined algorithm: exactly 32 bytes,
+ * base64url without padding (43 characters). Anything looser admits values no
+ * digest computation can ever match.
+ */
+const FAMILY_DIGEST_RE = /^sha-256:[A-Za-z0-9_-]{43}$/;
 function isFamilyDigest(value: unknown): value is string {
-  return typeof value === "string" && value.startsWith(DIGEST_PREFIX) && value.length > DIGEST_PREFIX.length;
+  return typeof value === "string" && FAMILY_DIGEST_RE.test(value);
 }
+
+/**
+ * Strict RFC 3339 date-time shape, gated BEFORE `Date.parse`: the platform
+ * parser accepts many non-RFC3339 forms (bare dates, RFC 2822 strings) that
+ * the wire contract does not.
+ */
+const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
 
 /**
  * @spec status#discharge-operation, status#discharge-anti-oracle,
@@ -2854,7 +2874,8 @@ async function handleDischarge(input: {
   }
   const observedAt = body.observed_at;
   if (observedAt !== undefined) {
-    const parsed = typeof observedAt === "string" ? Date.parse(observedAt) : Number.NaN;
+    const parsed =
+      typeof observedAt === "string" && RFC3339_RE.test(observedAt) ? Date.parse(observedAt) : Number.NaN;
     if (Number.isNaN(parsed) || Math.abs(parsed - kernel.nowDate().getTime()) > OBSERVED_AT_SKEW_MS) {
       input.sendInvalidRequest("observed_at must be an RFC 3339 date-time within reasonable clock bounds");
       return;
@@ -2913,7 +2934,16 @@ async function readBodyWithDigest(
   const text = bytes.toString("utf8");
   if (!text) return { body: {}, digest };
   try {
-    return { body: JSON.parse(text) as Record<string, unknown>, digest };
+    const parsed: unknown = JSON.parse(text);
+    // A valid-JSON body that is not an object (`null`, an array, a number, a
+    // string) must land as an EMPTY member set — request-shape validation
+    // then refuses it as `invalid_request` — never reach member access and
+    // turn into a 500.
+    const body =
+      parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    return { body, digest };
   } catch {
     return { body: Object.fromEntries(new URLSearchParams(text)), digest };
   }

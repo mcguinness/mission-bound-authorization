@@ -548,14 +548,25 @@ export interface LifecycleCommit {
    * than inferring it from `prior_state === state`: that equality marks a
    * commit metadata-only, but a metadata-only commit does not always narrow
    * (`contain()`'s fresh-`event_id`/already-represented-removal case is
-   * metadata-only yet narrows nothing). `contain` is today the only funnel
-   * that ever passes `true`, and only after comparing the effective set
-   * before/after and proving a strict narrowing. CONSTRAINT for a future
-   * metadata-only funnel (entry discharge is the named case,
-   * {{I-D.draft-mcguinness-oauth-mission-status}}): it too MUST compute and
+   * metadata-only yet narrows nothing). `contain` and the discharge funnel
+   * (`latchDischarge`) are the two funnels that pass `true`, each only after
+   * comparing the effective set before/after and proving a strict narrowing.
+   * CONSTRAINT for any future metadata-only funnel: it too MUST compute and
    * pass its own value; there is no inference to rely on.
    */
   authority_changed?: boolean;
+  /**
+   * @spec signals#discharge-compatibility — event PROVENANCE discriminator:
+   * true exactly when THIS commit advanced `containment_version` (it came
+   * through `contain()`), absent otherwise. The Signals emitter's delivery
+   * gate keys on it directly: a narrowing commit with `authority_changed`
+   * and NO containment advance is a discharge commit, deliverable to a
+   * consumer only under the declared `authority_changed` capability. Set by
+   * the kernel at commit, never inferred from emitter-side version history,
+   * which does not survive an emitter restart. Internal discriminator only:
+   * the SET builder does not copy it to the wire.
+   */
+  containment_advanced?: boolean;
   /**
    * @spec containment#propagation — the Mission's current
    * {@link MissionContainment.containment_version}, present whenever

@@ -188,6 +188,10 @@ export type DischargeRefusalReason =
   | "no_terminal_when"
   | "unknown_condition"
   | "event_type_mismatch"
+  // No mapping was pinned for this condition at record creation: fail closed
+  // (the pin is written in insertRecord's transaction, so this marks a store
+  // predating the pin funnel, never a policy question).
+  | "unpinned_mapping"
   | "unauthorized_target";
 
 /** @spec status#discharge-anti-oracle — collapses to `not_found` on the wire. */

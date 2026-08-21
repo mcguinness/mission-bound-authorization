@@ -525,16 +525,6 @@ export interface EmitterOptions {
 export class MissionSignalEmitter {
   private readonly deliveries: Array<{ audience: string; deliver: (set: string) => unknown }> = [];
   private inflight: Array<Promise<void>> = [];
-  /**
-   * @spec signals#discharge-compatibility — the last `containment_version` this
-   * emitter has emitted per Mission, the cursor that decides whether a
-   * narrowing commit is ALSO represented by `containment_version`. It mirrors
-   * the receiver's own cursor ({@link CachedState.containment_version}), and for
-   * the same reason: presence of the member says nothing, an ADVANCE does. A
-   * discharge on a previously-contained Mission carries `containment_version`
-   * unchanged, so the gate below must still catch it.
-   */
-  private readonly emittedContainmentVersion = new Map<string, number>();
 
   constructor(private readonly opts: EmitterOptions) {}
 
@@ -551,18 +541,19 @@ export class MissionSignalEmitter {
    * narrowing is also represented by a `containment_version` ADVANCE follows the
    * containment profile's existing delivery rules unchanged, and every event
    * that narrows nothing is unaffected.
+   *
+   * Provenance comes from the kernel's own commit-time discriminator
+   * ({@link LifecycleCommit.containment_advanced}), never from emitter-side
+   * version history: an in-memory cursor does not survive restart, and a
+   * fresh emitter would either mistake a discharge on a previously contained
+   * Mission (unchanged `containment_version`) for the first containment
+   * advance — delivering an `authority_changed`-only narrowing to a consumer
+   * that never declared the capability — or withhold a real containment
+   * event first observed above version 1.
    */
   private deliverable(commit: LifecycleCommit, consumer: SignalConsumer): boolean {
     if (commit.authority_changed !== true) return true;
-    const prior = this.emittedContainmentVersion.get(commit.id);
-    // With no prior observation, only `containment_version` 1 is unambiguously
-    // an advance (the FIRST contain commit, whose delivery rules must not
-    // change). A higher value with no cursor means this emitter missed earlier
-    // commits, which is ambiguous, and a GATE resolves ambiguity by withholding.
-    const containmentAdvanced =
-      commit.containment_version !== undefined &&
-      (prior === undefined ? commit.containment_version === 1 : commit.containment_version > prior);
-    if (containmentAdvanced) return true;
+    if (commit.containment_advanced === true) return true;
     return (consumer.mission_capabilities_supported ?? []).includes(AUTHORITY_CHANGED_CAPABILITY);
   }
 
@@ -581,14 +572,6 @@ export class MissionSignalEmitter {
       // delivered an event whose narrowing rides `authority_changed` alone.
       if (!this.deliverable(commit, consumer)) continue;
       this.inflight.push(this.emitOne(commit, consumer.audience));
-    }
-    // Advance the cursor once per commit, after every consumer decision, so the
-    // gate reads the same value for all of them.
-    if (commit.containment_version !== undefined) {
-      const prior = this.emittedContainmentVersion.get(commit.id);
-      if (prior === undefined || commit.containment_version > prior) {
-        this.emittedContainmentVersion.set(commit.id, commit.containment_version);
-      }
     }
   };
 

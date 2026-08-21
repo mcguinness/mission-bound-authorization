@@ -1464,7 +1464,10 @@ request.
 ## Idempotency and Conflicts {#idempotency}
 
 The request `nonce` ({{mission-lifecycle-endpoint}}, Operations) is
-the idempotency key. The AS MUST deduplicate lifecycle requests by the
+the idempotency key: an opaque string of 1 to 255 characters. The AS
+treats an absent, empty, longer, or non-string `nonce` as malformed
+(`invalid_request`, with no `nonce` echoed). The AS MUST deduplicate
+lifecycle requests by the
 triple (client, `mission_id`, `nonce`) for a bounded window. On a
 retransmit carrying a `nonce` already seen for that client and
 `mission_id`, together with a request byte-identical to the original,
@@ -1810,6 +1813,18 @@ Mission Status operation or the token introspection projection
 ({{visibility}}), the same way it learns a Mission is revoked. A runtime
 Policy Enforcement Point that does not recognize `terminal_when` fails
 closed for the entry per {{forward-compat}}.
+
+For that point-of-use denial this document defines the denial-reason
+identifier `authority_discharged`, a family-coordinated name under the
+AuthZEN binding's denial-reason extension rule
+({{I-D.draft-mcguinness-mission-authzen}}), carried wherever the
+runtime layer's denial reasons travel: the decision response's
+`context.reason` and the runtime evidence companion's
+`denial_reason`. It means the entry was approved and its completion
+condition fired, so the Mission Issuer discharged it: distinct from a
+containment denial (trust withdrawn) and from an out-of-authority
+denial (never approved). A consumer treats an unrecognized value as a
+deny under the binding's own rule; no other semantics attach.
 
 ## Worked Example {#example}
 

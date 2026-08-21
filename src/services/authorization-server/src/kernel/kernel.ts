@@ -30,6 +30,7 @@ import {
   resolveConditionMapping,
   terminalWhenOf,
 } from "./discharge.js";
+import { DischargeMappingPinStore } from "./discharge-pin-store.js";
 import { DischargeEventStore, type DischargeEventKey } from "./lifecycle-idempotency.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
@@ -227,6 +228,12 @@ export class MissionKernel {
    * latch it records (@spec status#discharge-operation, "Atomicity").
    */
   readonly dischargeEvents: DischargeEventStore;
+  /**
+   * @spec status#discharge-authority — the pinned mapping per condition,
+   * written in `insertRecord`'s transaction and the ONLY resolution discharge
+   * target authorization reads (never the live policy).
+   */
+  readonly dischargePins: DischargeMappingPinStore;
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
@@ -241,6 +248,7 @@ export class MissionKernel {
         ? { retentionSeconds: opts.dischargeEventRetentionSeconds }
         : {}),
     });
+    this.dischargePins = new DischargeMappingPinStore(this.db);
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -459,6 +467,29 @@ export class MissionKernel {
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
         );
+      // @spec status#discharge-authority — bind the RESOLVED mapping
+      // (identifier, version, and content) to this exact entry_digest +
+      // condition_digest, in the SAME transaction as the record: discharge
+      // target authorization reads this pin, never the live policy, so a
+      // later policy edit cannot retroactively change who may discharge an
+      // already-approved entry.
+      for (const entry of record.authority_set) {
+        const conditions = terminalWhenOf(entry);
+        if (!conditions) continue;
+        const eDigest = entryDigest(record.issuer, entry);
+        for (const condition of conditions) {
+          const mapping = resolveConditionMapping(this.opts.dischargeAuthority, condition);
+          // Unreachable: assertDischargePoliciesResolvable above refused any
+          // condition that maps to nothing. Guarded anyway so a future
+          // reordering fails the creation, never creates an unpinned record.
+          if (!mapping) {
+            throw new Error(
+              `no discharge-authority mapping resolvable for event_type '${condition.event_type}' at pin time`,
+            );
+          }
+          this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
+        }
+      }
     });
     // The activating event: version 1, no prior_state. Shared by approve() and
     // expansion; the commit is built from the persisted row.
@@ -900,7 +931,7 @@ export class MissionKernel {
     // is passed explicitly (never inferred from prior === state).
     const fresh = this.get(record.id);
     if (!fresh) throw new Error(`unknown mission: ${id}`);
-    this.emitCommit(fresh, fresh.state, undefined, authorityChanged);
+    this.emitCommit(fresh, fresh.state, undefined, authorityChanged, true);
     // @spec child-delegation#child-state — containment propagates entry-wise to
     // existing children justified by the now-contained parent entry, so a child
     // cannot keep deriving contained authority while the parent stays `active`.
@@ -1021,8 +1052,18 @@ export class MissionKernel {
       );
     }
     // --- target authorization (@spec status#discharge-authority) ---
-    const mapping = resolveConditionMapping(this.opts.dischargeAuthority, condition);
-    if (!mapping || !mappingPermits(mapping, input.authority, input.event_type)) {
+    // Against the mapping PINNED when this condition entered the record
+    // (identifier, version, and resolved content), never the live policy: an
+    // edit to the policy after approval must not retroactively change who may
+    // discharge an already-approved entry.
+    const mapping = this.dischargePins.find(record.id, input.entry_digest, input.condition_digest);
+    if (!mapping) {
+      throw new DischargeNotFoundError(
+        "unpinned_mapping",
+        "no discharge-authority mapping was pinned for this condition at record creation",
+      );
+    }
+    if (!mappingPermits(mapping, input.authority, input.event_type)) {
       throw new DischargeNotFoundError(
         "unauthorized_target",
         `${input.authority} is not a discharge authority for '${input.event_type}' on this condition`,
@@ -1084,15 +1125,20 @@ export class MissionKernel {
     };
     // --- terminal states: acknowledged, never a transition ---
     if (TERMINAL_STATES.has(record.state)) {
-      return {
-        record,
-        result: {
-          ...selectors,
-          outcome: "terminal_noop",
-          prior_version: record.version,
-          current_version: record.version,
-        },
+      const result: DischargeResult = {
+        ...selectors,
+        outcome: "terminal_noop",
+        prior_version: record.version,
+        current_version: record.version,
       };
+      // Recorded like `already_discharged` below (@spec
+      // status#discharge-idempotency): a fresh-nonce replay of THIS occurrence
+      // must recover this stored outcome and these versions, and the same
+      // tuple re-asserted with a DIFFERENT fingerprint must be `conflict` —
+      // neither holds if the terminal acknowledgement bypasses the event
+      // store.
+      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit);
+      return { record, result };
     }
     // --- the monotonic latch: `active` OR `suspended` (a suspended Mission
     // still narrows monotonically). A later delivery presenting any valid
@@ -1622,6 +1668,7 @@ export class MissionKernel {
     prior?: MissionState,
     successor?: string,
     authorityChanged = false,
+    containmentAdvanced = false,
   ): void {
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
@@ -1635,6 +1682,10 @@ export class MissionKernel {
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
+      // @spec signals#discharge-compatibility — provenance, set ONLY by the
+      // one funnel that advances containment_version (`contain`); the Signals
+      // gate must never have to reconstruct this from version history.
+      ...(containmentAdvanced ? { containment_advanced: true } : {}),
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),
