@@ -3232,7 +3232,10 @@ request.<a href="#section-6.7-12" class="pilcrow">¶</a></p>
 <a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-idempotency-and-conflicts" class="section-name selfRef">Idempotency and Conflicts</a>
         </h3>
 <p id="section-6.8-1">The request <code>nonce</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>, Operations) is
-the idempotency key. The AS <span class="bcp14">MUST</span> deduplicate lifecycle requests by the
+the idempotency key: an opaque string of 1 to 255 characters. The AS
+treats an absent, empty, longer, or non-string <code>nonce</code> as malformed
+(<code>invalid_request</code>, with no <code>nonce</code> echoed). The AS <span class="bcp14">MUST</span> deduplicate
+lifecycle requests by the
 triple (client, <code>mission_id</code>, <code>nonce</code>) for a bounded window. On a
 retransmit carrying a <code>nonce</code> already seen for that client and
 <code>mission_id</code>, together with a request byte-identical to the original,
@@ -3630,6 +3633,17 @@ Mission Status operation or the token introspection projection
 (<a href="#visibility" class="auto internal xref">Section 7.3.2</a>), the same way it learns a Mission is revoked. A runtime
 Policy Enforcement Point that does not recognize <code>terminal_when</code> fails
 closed for the entry per <a href="#forward-compat" class="auto internal xref">Section 7.5</a>.<a href="#section-7.7-1" class="pilcrow">¶</a></p>
+<p id="section-7.7-2">For that point-of-use denial this document defines the denial-reason
+identifier <code>authority_discharged</code>, a family-coordinated name under the
+AuthZEN binding's denial-reason extension rule
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), carried wherever the
+runtime layer's denial reasons travel: the decision response's
+<code>context.reason</code> and the runtime evidence companion's
+<code>denial_reason</code>. It means the entry was approved and its completion
+condition fired, so the Mission Issuer discharged it: distinct from a
+containment denial (trust withdrawn) and from an out-of-authority
+denial (never approved). A consumer treats an unrecognized value as a
+deny under the binding's own rule; no other semantics attach.<a href="#section-7.7-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
