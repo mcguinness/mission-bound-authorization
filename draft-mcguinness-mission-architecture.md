@@ -386,11 +386,14 @@ each interface small but spreads the structure across many documents
 and several bindings; this document is the single structural view.
 
 The bindings are peers of one another. OAuth is the family's
-first-authored binding and the substrate with the most deployed
-infrastructure; that is a deployment fact, not a maturity ranking.
-No production Mission deployment is known today on any binding, and
-adopting Missions on OAuth requires the changes the OAuth binding
-defines, exactly as it does on every other substrate.
+first-authored binding, and OAuth 2.0 is the substrate with the most
+deployed infrastructure; that is a deployment fact, not a maturity
+ranking, and no production Mission deployment is known today on any
+binding. Adopting Missions on OAuth requires the changes the OAuth
+binding defines. Peer standing implies neither identical
+capabilities nor identical adoption cost: AAuth, natively
+contextual, adds no new wire members, and each binding's Mission
+Substrate Statement declares what it supplies.
 
 Read as one system, the family defines a **delegated-authority
 layer** with OAuth 2.0, the standalone Mission Authority Server, and
@@ -467,7 +470,7 @@ each digest from the record alone (the OAuth binding's Mission Approval,
 Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).
 
-The core lifecycle states are `active`, `revoked`, and `expired`, and
+The Mission lifecycle states are `active`, `revoked`, and `expired`, and
 only `active` permits issuance or continued reliance. A non-active
 state stops new derivation at once; authority already issued ends at
 the earliest of delivered revocation, a runtime or state-aware
@@ -556,11 +559,14 @@ stacks, each containing the previous, are the shapes deployments
 actually take, and the second is the reference:
 
 **Protocol core**:
-: one issuer binding alone, shown throughout in its OAuth
-  realization (the substrate with the most deployed infrastructure):
-  the standardizable primitive (approved, anchored, state-gated
+: the OAuth issuance binding alone, the realization these stacks are
+  expressed in (chosen for OAuth 2.0's deployed infrastructure): the
+  standardizable primitive (approved, anchored, state-gated
   Missions), Mission-substrate conformance ({{requirements}}), no
-  per-action control (Baseline Issuance, {{assurance-levels}}).
+  per-action control (Baseline Issuance, {{assurance-levels}}). The
+  stacks are this OAuth realization throughout; a peer binding
+  realizes the levels per its own document, and peer standing does
+  not imply identical rungs or capabilities.
 
 **Reference security architecture**:
 : core plus runtime enforcement, its AuthZEN binding, and a
@@ -861,8 +867,8 @@ that companion profiles use to define others: `template`, a dispatch
 drawing on a ceiling the human consented to once, and
 `policy_drawdown`, a child instance a policy adjudicates within a
 bound the parent's human already consented to. This is never an
-eighth invariant: every value of the basis, core-defined or
-companion-defined, fixes the same accountable human as
+eighth invariant: every value of the basis, defined by the OAuth
+binding or by a companion, fixes the same accountable human as
 `consent_principal`; they differ only in what activated this instance
 and what root that activation traces to (the OAuth binding).
 
@@ -896,7 +902,8 @@ cross-domain and child-delegation profiles' role
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
 {{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and bounding
 aggregate consumption is the metering profile's
-({{I-D.draft-mcguinness-mission-metering}}). The core states the same
+({{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
+states the same
 composition property in its "Composition and the Effective Ceiling"
 section ({{I-D.draft-mcguinness-oauth-mission}}); that section, not
 this summary, is the normative text this passage tracks.
@@ -3389,7 +3396,8 @@ own Security Considerations remain normative.
 The privacy properties of the Mission record and the Mission Intent
 are the OAuth binding's ({{I-D.draft-mcguinness-oauth-mission}}) and each
 adopted profile's; this document describes them and adds no data
-element of its own. The core's Privacy Considerations cover Mission
+element of its own. The OAuth binding's Privacy Considerations
+cover Mission
 Identifier correlation, token payload disclosure, and Intent
 retention, with the audit profile's erasure record as the
 transparency-side mechanism

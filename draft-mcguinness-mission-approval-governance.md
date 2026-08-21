@@ -125,10 +125,12 @@ Mission record's single accountable Approver is unchanged.
 
 # Introduction
 
-A Mission records one accountable Approver and defers multi-party
-approval and approval-authority provenance to a governance layer
-({{I-D.draft-mcguinness-oauth-mission}} states that rule for the
-OAuth binding). An enterprise
+An authority-bearing binding of the Mission model records one
+accountable Approver and defers multi-party approval and
+approval-authority provenance to a governance layer
+({{I-D.draft-mcguinness-oauth-mission}} states the rule for the
+OAuth binding, whose record members this document's binding rules
+consume). An enterprise
 review surface is often that governance layer: a decision may
 involve several principals, a threshold or separation-of-duty rule,
 and a delegation-of-authority policy, and an auditor later needs to

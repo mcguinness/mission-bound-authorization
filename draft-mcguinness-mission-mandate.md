@@ -238,24 +238,30 @@ OAuth 2.0 mechanics. It consumes these substrate primitives:
 - the lifecycle state space with its only-`active`-permits rule; and
 - the Mission Issuer's published key material, resolvable by `kid`.
 
-Three bindings host these primitives, and a Mandate minted under any
-of them is verified identically:
+Two bindings host these primitives natively, and a Mandate minted
+under either is verified identically:
 
 - the OAuth binding {{I-D.draft-mcguinness-oauth-mission}} (the
   issuance profile), this version's reference host, publishing keys
-  through its Authorization Server metadata `jwks_uri`;
+  through its Authorization Server metadata `jwks_uri`; and
 - the Mission Authority Server
   ({{I-D.draft-mcguinness-mission-authority-server}}), a standalone
-  binding of the same primitives with its own metadata `jwks_uri`; and
-- the AAuth binding ({{I-D.draft-mcguinness-mission-aauth}}), which
-  hosts the same primitives at the AAuth Person Server, whose existing
-  `jwks_uri` is the published key material for its signed artifacts.
+  binding of the same primitives with its own metadata `jwks_uri`.
 
 UMA 2.0's authorization server ({{I-D.draft-mcguinness-mission-uma}})
 realizes the issuance profile's Authorization Server for Mandate
 purposes: it publishes the same key material through the same
 Authorization Server metadata `jwks_uri`. A Mandate minted there
-verifies as the issuance profile's; UMA adds no fourth Mandate host.
+verifies as the issuance profile's; UMA adds no third Mandate host.
+
+This version's payload is defined over the OAuth-shaped record: the
+required claims commit the record members those hosts record (the
+integrity anchors, `subject`, `client_id`, `policy_version`). The
+AAuth binding commits approval through its own construction and
+deliberately carries no OAuth integrity anchors
+({{I-D.draft-mcguinness-mission-aauth}}); an AAuth Mandate is
+therefore a distinct payload profile with its own verification
+rules, deliberately not defined by this version.
 
 Its declaration against the optional capabilities, under the rule of
 Mission Substrate Requirements

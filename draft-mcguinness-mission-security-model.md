@@ -330,8 +330,8 @@ the profiles it references.
 
 This document is Informational. It does not place normative requirements
 on implementations; the enforcement obligations are defined by the
-issuance profile ({{I-D.draft-mcguinness-oauth-mission}}) and its
-companions. Where this document uses words like "must," it describes an
+selected binding and its companions (for the OAuth binding,
+{{I-D.draft-mcguinness-oauth-mission}}). Where this document uses words like "must," it describes an
 expectation the consolidated model places on a deployment that claims the
 suite, realized by the referenced profile, not a new conformance
 requirement of its own.
@@ -356,15 +356,21 @@ Mission Assurance Levels as defined in
 # Mission Substrate {#mission-substrate}
 
 This model describes the components and trust relationships of the
-Mission model, not of OAuth 2.0 mechanics. Its analysis applies to any
-substrate that provides the Mission primitives the profiles consume:
-the identifier and issuer, the state space with its only-active rule,
-an authority representation with a subset rule, the integrity-anchor
-envelope, and, where the binding provides one, a Mission-bound
-credential; a binding without that credential supplies an externally
-established Mission reference instead, verified under the runtime
-profile's Mission binding establishment step
-({{I-D.draft-mcguinness-mission-runtime}}). The OAuth binding
+Mission model, not of OAuth 2.0 mechanics. Its analysis rests on the
+substrate kernel every binding provides: the Mission reference and
+its controller, the state space with its only-active rule, the
+governance gate, and bounded reliance. Entries conditioned on
+optional capabilities apply where the selected binding claims them
+in its Mission Substrate Statement, and the selected binding's own
+document is the normative owner of the cited surfaces: an authority
+representation with a subset rule (Structured Authority), the
+integrity-anchor envelope, and a Mission-bound credential
+(Credential-Bound). A binding without that credential supplies an
+externally established Mission reference instead, verified under the
+runtime profile's Mission binding establishment step
+({{I-D.draft-mcguinness-mission-runtime}}); a binding without a
+capability inherits the corresponding entries as inapplicable, not
+as failures. The OAuth binding
 {{I-D.draft-mcguinness-oauth-mission}} is the realization whose
 concrete surfaces this model's entries cite, as the family's
 first-authored binding; a different binding re-derives the
