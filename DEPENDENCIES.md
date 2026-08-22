@@ -7,19 +7,32 @@ the per-document catalog is in [DRAFTS.md](DRAFTS.md).
 
 ## Dependency stability
 
+<!-- external-normative-ids: BEGIN (generated; validated by scripts/check-family-manifest.mjs) -->
+- I-D.draft-gerber-oauth-deferred-token-response (cited normatively by: oauth-mission-approval, oauth-mission-approval-revision)
+- I-D.draft-hardt-oauth-aauth-protocol (cited normatively by: aauth-mission-expiry, mission-aauth, mission-aauth-management)
+- I-D.draft-ietf-cose-hash-envelope (cited normatively by: mission-audit)
+- I-D.draft-ietf-oauth-identity-assertion-authz-grant (cited normatively by: oauth-mission-cross-domain)
+- I-D.draft-ietf-oauth-identity-chaining (cited normatively by: oauth-mission-cross-domain)
+- I-D.draft-ietf-oauth-status-list (cited normatively by: oauth-mission-status)
+- I-D.draft-niyikiza-oauth-attenuating-agent-tokens (cited normatively by: oauth-mission-attenuation, oauth-mission-cross-org-delegation)
+- I-D.draft-rosomakho-oauth-txn-challenge (cited normatively by: oauth-mission-transaction-authorization)
+- I-D.draft-zehavi-oauth-rar-metadata (cited normatively by: mission-authzen)
+<!-- external-normative-ids: END -->
+
 Bold shorthand below names the family's documents informally;
 [DRAFTS.md](DRAFTS.md) maps every document to its full draft name.
 
 Outside the family itself, every normative dependency is a ratified
 RFC, a finalized OpenID specification, or (for the **uma** sketch) a
 final Kantara Initiative Recommendation, with these tracked
-exceptions: **oauth-mission** (the OAuth binding) has a normative dependency on an
-unratified individual draft (OAuth 2.0 RAR Metadata and Error
-Remediation): an AS that advertises Mission-bound authorization
-support MUST advertise the authorization-details type-metadata
-endpoint that draft defines, and its reference to the OAuth Actor
-Profile is informative and confined to its optional Delegation
-capability; **status** depends on the OAuth Status List (a
+exceptions: **oauth-mission** (the OAuth binding) cites the OAuth 2.0
+RAR Metadata and Error Remediation individual draft informatively
+only: an AS that implements that draft's type-metadata endpoint
+SHOULD advertise it, conformance does not depend on it, and the
+stable baseline is RFC 9396's `authorization_details_types_supported`
+(a MUST for an advertising AS); its reference to the OAuth Actor
+Profile is likewise informative and confined to its optional
+Delegation capability; **status** depends on the OAuth Status List (a
 working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
