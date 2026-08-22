@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-21T23:06:48Z
-Source repository commit: 1fc7618b2b59868df6db41982a44ce4908ee00cd
+Generated: 2026-08-22T05:26:47Z
+Source repository commit: 963efb7aac13cfda4a2cd13232236a1a8dd57152
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            21 August 2026
-Expires: 22 February 2027
+Intended status: Informational                            22 August 2026
+Expires: 23 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -3348,8 +3348,9 @@ Table of Contents
       at approval, reproducible from the record alone (oauth-mission).
 
    *  *R3*: Task proposals are untrusted input: fields the agent can
-      influence never derive, widen, or gate authority (oauth-mission;
-      mission-shaping).
+      influence select and narrow what derivation considers, and can
+      request gates the issuer enforces, but never grant or widen
+      authority by their own assertion (oauth-mission; mission-shaping).
 
 16.2.  Consent and Approval
 
@@ -4185,8 +4186,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                      Mission Substrate Requirements
@@ -4244,7 +4245,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -5181,9 +5182,16 @@ Table of Contents
 
 7.1.  Mission Substrate Statement
 
-   A Mission Substrate Binding MUST contain a section titled "Mission
-   Substrate Statement".  It MUST identify the specification version and
-   mode to which the statement applies.
+   A specification that itself claims conformance to this document MUST
+   contain a section titled "Mission Substrate Statement".  For a
+   specification that makes no such claim, this document MAY instead
+   publish a hosted Statement describing that specification's mapping
+   (Appendix B does so for the OAuth binding): the hosted Statement is
+   normative as this document's own content, the conformance claim it
+   embodies is this document's claim about the described specification,
+   and the described specification neither makes the claim nor takes any
+   requirement from it.  Either form MUST identify the specification
+   version and mode to which the Statement applies.
 
    For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -5509,9 +5517,9 @@ Table of Contents
 
 Appendix A.  Binding Mapping Guidance
 
-   This appendix is informative.  Each of the five bindings publishes
-   the normative Mission Substrate Statement for its substrate: the
-   OAuth binding's Statement is Appendix B.1 of this document, and the
+   This appendix is informative.  Four bindings publish their own
+   normative Mission Substrate Statements, and this document publishes
+   the hosted Statement describing the OAuth binding (Appendix B.1): the
    standalone MAS ([I-D.draft-mcguinness-mission-authority-server]),
    AAuth ([I-D.draft-mcguinness-mission-aauth]), UMA
    ([I-D.draft-mcguinness-mission-uma]), and GNAP
@@ -5640,13 +5648,19 @@ Appendix B.  Mission-Bound Authorization Family Use
 
 B.1.  OAuth Mission Binding Statement
 
-   This section is the Mission Substrate Statement of the OAuth Mission
-   binding ([I-D.draft-mcguinness-oauth-mission]), hosted here so the
-   OAuth binding remains self-contained with no companion normative
-   dependency.  It applies to the OAuth binding's editor's-draft lineage
-   and to the kernel and capability vocabulary of this document.  The
-   OAuth binding's own definitions govern every mapped construct; this
-   Statement claims no property the OAuth binding does not define.
+   This section is the hosted Mission Substrate Statement describing the
+   OAuth Mission binding ([I-D.draft-mcguinness-oauth-mission]),
+   published under the hosted form of Section 7.1.  The conformance
+   claim it embodies is this document's own: this document asserts, and
+   maintains against the OAuth binding's text, that the binding
+   satisfies the kernel and supplies the capabilities below.  The OAuth
+   binding itself makes no substrate-conformance claim and takes no
+   requirement from this document; its pointer to this section is
+   informative on its side, and the two documents' no-mutual-dependency
+   rule stands.  It applies to the OAuth binding's editor's-draft
+   lineage and to the kernel and capability vocabulary of this document.
+   The OAuth binding's own definitions govern every mapped construct;
+   this Statement claims no property the OAuth binding does not define.
 
    For the kernel:
 
@@ -5680,10 +5694,12 @@ B.1.  OAuth Mission Binding Statement
        effective expiry, and atomic record commit, with deferred,
        interactive, and dispatch realizations.
 
-   6.  The active predicate is state equal to active, exactly; any other
-       value, recognized or not, is non-active; transitions are
-       authenticated lifecycle operations; a non-active Mission refuses
-       issuance and derivation.
+   6.  The active predicate is stored state equal to active with the
+       decision time strictly before the record's effective expires_at,
+       the issuer materializing the resulting expired transition lazily
+       where it chooses; any other stored value, recognized or not, is
+       non-active; transitions are authenticated lifecycle operations; a
+       non-active Mission refuses issuance and derivation.
 
    7.  The reliance bound is the record's effective expires_at (never
        later than the requested ceiling), which caps every derived
@@ -5862,8 +5878,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -5922,7 +5938,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -6464,8 +6480,11 @@ Table of Contents
 
    *  The *Subject* and *Approver* are each an (iss, sub) pair, matching
       the access token sub model of [RFC9068].  The Approver is the
-      accountable principal whose approval created the Mission; it may
-      be a human or an authorized policy authority (Section 6.2).
+      accountable consent principal whose approval created the Mission,
+      always equal to approval_basis.consent_principal; under a
+      standing-consent basis a policy adjudicates the activation while
+      the Approver remains the human whose consent roots it
+      (Section 3.2, Section 6.2).
 
    On a derived token the sub claim is the AS-local sub the AS maps the
    Subject to under the injective mapping of Section 6, verbatim
@@ -6791,11 +6810,12 @@ Table of Contents
       goal and sibling members are unknown envelope members.  The
       Mission Intent's own top level is likewise closed: the AS MUST
       reject with invalid_request an intent containing a top-level
-      member this document does not define; extension data belongs under
-      controls (Section 4), so deployment-defined semantics are explicit
-      and cannot masquerade as core Intent semantics.  Both top levels
-      are closed because their members feed approval rendering, the
-      intent_hash commitment, and evidence dispatch, and the closure
+      member this document does not define; control extensions belong
+      under controls (Section 4) and presented evidence under the
+      envelope's evidence member, so deployment-defined semantics are
+      explicit and cannot masquerade as core Intent semantics.  Both top
+      levels are closed because their members feed approval rendering,
+      the intent_hash commitment, and evidence dispatch, and the closure
       also keeps issuer-output members, such as a client-planted
       authority_hash, out of the Intent.
 
@@ -6889,15 +6909,14 @@ Table of Contents
    (Section 5) and MUST NOT grant authority beyond what the Mission
    Intent yields.
 
-   Each submitted entry MUST be of a type the AS advertises and MUST
-   validate against that type's published JSON Schema (Section 5.3,
-   Section 14); where a deployment arranges Mission-bound authorization
-   out of band rather than advertising the metadata endpoint, the
-   supported types and their schemas are established out of band, and
-   this rule applies over that knowledge the same way.  This is the
-   [RFC9396] Section 5 validation of the standard parameter: the AS MUST
-   refuse a request carrying an entry of an unadvertised type, or an
-   entry that fails its type's schema, with
+   Each submitted entry MUST be of a supported type (Section 5.3,
+   Section 14) and MUST validate against that type's documented
+   definition; where a machine-readable JSON Schema for the type is
+   advertised (Section 14) or established out of band, the entry MUST
+   also validate against that schema.  This is the [RFC9396] Section 5
+   validation of the standard parameter: the AS MUST refuse a request
+   carrying an entry of an unsupported type, or an entry that fails its
+   type's documented definition or applicable schema, with
    invalid_authorization_details; a validation failure is never repaired
    by omitting the entry.  Policy narrowing is distinct.  During
    derivation the AS MAY narrow or omit a syntactically valid entry that
@@ -7583,13 +7602,12 @@ Table of Contents
    the Authority Set MAY include other AS-supported [RFC9396]
    authorization_details types when an audience consumes them.
    ("Supported" here means the AS recognizes and documents the type: it
-   appears as a key in the AS's
-   authorization_details_types_metadata_endpoint response, the source of
-   truth for the supported set (Section 14);
-   authorization_details_types_supported, where the AS also advertises
-   it, mirrors that key set.  RFC 9396 establishes no IANA registry of
-   type identifiers.)  The Mission apparatus is type-agnostic toward
-   such entries:
+   appears in authorization_details_types_supported or, where the AS
+   advertises the schema endpoint, as a key in its
+   authorization_details_types_metadata_endpoint response, then the
+   source of truth for the supported set (Section 14).  RFC 9396
+   establishes no IANA registry of type identifiers.)  The Mission
+   apparatus is type-agnostic toward such entries:
 
    *  they are committed by authority_hash and gated on Mission state
       exactly as mission_resource_access entries are;
@@ -9091,6 +9109,15 @@ Table of Contents
    registered state added by a companion profile fail safe for a
    consumer that predates it.
 
+   One rule makes the clock boundary authoritative ahead of stored
+   state: for every state-dependent decision this document defines, the
+   AS MUST evaluate expires_at before relying on stored state, and a
+   Mission is effectively active only when its stored state is active
+   and the decision time is strictly before expires_at.  Persisting the
+   expired transition, and emitting any corresponding lifecycle event
+   where a state-distribution companion is deployed, MAY happen lazily,
+   after the decision that observed the boundary.
+
 10.1.  Issuance Gating
 
    The AS MUST refuse to derive a token, at the token endpoint, on
@@ -9261,6 +9288,14 @@ Table of Contents
    AS MUST apply this same authorization and minimization to that data
    and MUST NOT reveal Mission detail to an unauthorized introspection
    caller.
+
+   Disclosure is member-scoped as well as caller-scoped:
+   derivations_remaining and proposal_hash serve the issuance-budget and
+   audit consumers, not Resource Server enforcement, and the AS MUST
+   disclose each only to a caller the deployment has granted that
+   member's disclosure privilege; an audience-authorized Resource Server
+   receives the ordinary audience-filtered enforcement projection
+   defined above, without them, by default.
 
 11.2.  Composite Active State
 
@@ -9794,24 +9829,30 @@ Table of Contents
    since a Mission Intent is accepted only through PAR (Section 4.1).
 
    An AS that advertises mission_bound_authorization_supported: true
-   MUST also advertise authorization_details_types_metadata_endpoint
-   [I-D.draft-zehavi-oauth-rar-metadata].  That endpoint's response is a
-   JSON object keyed by authorization_details type identifier, each
-   value carrying, per [I-D.draft-zehavi-oauth-rar-metadata], a JSON
-   Schema for exactly one authorization_details object of that type
-   (schema or schema_uri) and optionally version, description,
-   documentation_uri, and examples.  That response's key set is the
-   source of truth for which types the AS supports:
-   authorization_details_types_supported ([RFC9396]), where the AS also
+   SHOULD also advertise authorization_details_types_metadata_endpoint
+   [I-D.draft-zehavi-oauth-rar-metadata] where it implements that
+   endpoint; the endpoint is defined by an individual draft without
+   formal standing, and conformance to this document does not depend on
+   it.  The stable baseline is [RFC9396]:
+   authorization_details_types_supported listing
+   mission_resource_access, with Section 20.3 the normative definition
+   of the type and its documentation established out of band.  Where the
+   endpoint IS advertised: its response is a JSON object keyed by
+   authorization_details type identifier, each value carrying, per
+   [I-D.draft-zehavi-oauth-rar-metadata], a JSON Schema for exactly one
+   authorization_details object of that type (schema or schema_uri) and
+   optionally version, description, documentation_uri, and examples; its
+   key set is then the source of truth for which types the AS supports,
+   and authorization_details_types_supported, where the AS also
    advertises it, mirrors those keys and MUST NOT list a type absent
-   from them.  The AS MUST publish, within that response, an entry for
-   mission_resource_access whose schema validates the object shape
+   from them; and the AS MUST publish, within that response, an entry
+   for mission_resource_access whose schema validates the object shape
    Section 20.3 defines, including the Common Constraints structure
-   (Section 5.2); Section 20.3 remains the normative definition, and the
-   published schema is its machine-readable form.  Where a deployment
-   arranges Mission-bound authorization out of band rather than
-   advertising mission_bound_authorization_supported, the supported
-   types and their schemas are likewise established out of band.
+   (Section 5.2), the published schema being that definition's machine-
+   readable form.  Where a deployment arranges Mission-bound
+   authorization out of band rather than advertising
+   mission_bound_authorization_supported, the supported types and their
+   schemas are likewise established out of band.
 
    This member and the mission_bound_authorization_required member of
    Section 15 are unauthenticated discovery data: their integrity rests
@@ -9941,9 +9982,12 @@ Table of Contents
    capability table these surfaces supply to the family's substrate
    contract, is published in the substrate companion's family appendix
    ([I-D.draft-mcguinness-mission-substrate], Section "OAuth Mission
-   Binding Statement").  That Statement is informative here: it restates
-   this document, adds no requirement to it, and this document remains
-   self-contained.
+   Binding Statement"), the hosted form the substrate contract defines.
+   The claim that Statement embodies is the substrate document's own
+   assertion about this binding, made and maintained there; this
+   document makes no substrate-conformance claim, takes no requirement
+   from the substrate, and remains self-contained, and this pointer is
+   informative.
 
 17.  Security Considerations
 
@@ -11879,8 +11923,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -11933,7 +11977,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -14524,8 +14568,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -14584,7 +14628,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -16524,6 +16568,22 @@ Table of Contents
 
    *  exactly which fields enter the parameter_digest;
 
+   *  for each Common Constraint or other registered constraint the
+      operation's authority entries can carry
+      ([I-D.draft-mcguinness-oauth-mission]): the authoritative
+      operation input or derived attribute that satisfies it, the
+      extraction and normalization rule producing the compared value,
+      its unit or currency interpretation (conversion prohibited unless
+      the profile defines one), the comparison procedure in the
+      constraint's value space, and the fail-closed behavior for a
+      missing or malformed input, together with constraint-evaluation
+      fixtures separate from the digest vectors: at least one permitting
+      value, one value beyond the bound, a missing and a malformed
+      input, and, where the constraint admits incomparability, an
+      incomparable pair (for max_amount: the mapping to {amount,
+      currency}, the exact-bound permit, the over-bound refusal, an
+      absent amount, a malformed decimal, and a mismatched currency);
+
    *  digest test vectors for the operation, each carrying the operation
       input before normalization, the exact normalized parameter value,
       the exact JCS UTF-8 serialization (or an unambiguous byte
@@ -18337,8 +18397,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                         Mission Runtime Evidence
@@ -18388,7 +18448,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -18446,10 +18506,11 @@ Table of Contents
      11.4.  Mission Receipt
    12. IANA Considerations
      12.1.  Media Type Registry
-       12.1.1.  Decision Evidence Media Type
-       12.1.2.  Execution Evidence Media Type
-       12.1.3.  Refusal Record Media Type
-       12.1.4.  Mission Receipt Media Type
+       12.1.1.  Secured Runtime Evidence Media Type
+       12.1.2.  Decision Evidence Media Type
+       12.1.3.  Execution Evidence Media Type
+       12.1.4.  Refusal Record Media Type
+       12.1.5.  Mission Receipt Media Type
    13. References
      13.1.  Normative References
      13.2.  Informative References
@@ -18905,7 +18966,11 @@ Table of Contents
    decision:  REQUIRED.  A string.  Always deny.
 
    denial_reason:  REQUIRED.  A string.  For a PEP refusal, one of
-      token_invalid, mission_claim_missing, channel_failure,
+      token_invalid, mission_claim_missing, mission_reference_conflict
+      (reference sources naming different Missions, or an unusable
+      propagated reference where governance requires one, the Mission
+      Reference Propagation channel's conflict rule,
+      [I-D.draft-mcguinness-mission-authority-server]), channel_failure,
       pdp_unreachable, or state_unavailable (where the deployment's
       state-source placement has the PEP supply state, and it cannot
       establish it).  For a PDP refusal of an in-scope request that
@@ -18966,8 +19031,8 @@ Table of Contents
 
    evidence_envelope:  REQUIRED.  An object.  Integrity protection in
       the form of Section 4.3, emitted by the refusing component, whose
-      JWS protected typ is application/mission-refusal-record+json
-      (Section 12).
+      JWS protected cty is application/mission-refusal-record+json under
+      the protected typ of Section 4.3 (Section 12).
 
    A Refusal Record is closed to uncoordinated extension under the same
    rule as Decision Evidence (Section 8).
@@ -19101,20 +19166,27 @@ Table of Contents
    *  alg: ES256 [RFC7518] is mandatory to implement; an implementation
       MAY offer other JOSE algorithms but MUST implement ES256.
 
-   *  typ: the registered media type of the evidence object being signed
-      (application/mission-decision-evidence+json for Decision Evidence,
-      application/mission-execution-evidence+json for Execution
-      Evidence, application/mission-refusal-record+json for Refusal
-      Records, application/mission-receipt+json for Mission Receipts,
-      Section 12).  A verifier MUST reject a JWS whose protected typ is
-      not the media type of the object it is verifying, so signatures
-      over one record kind cannot be cross-used for another.
+   *  typ: application/mission-runtime-evidence+jws, the secured
+      runtime-evidence representation this document registers
+      (Section 12): one value for every record kind this envelope
+      secures, identifying the complete JWS ([RFC7515], Section 4.1.9).
+
+   *  cty: the registered media type of the evidence object being signed
+      ([RFC7515], Section 4.1.10): application/mission-decision-
+      evidence+json for Decision Evidence, application/mission-
+      execution-evidence+json for Execution Evidence, application/
+      mission-refusal-record+json for Refusal Records, and application/
+      mission-receipt+json for Mission Receipts (Section 12).  A
+      verifier MUST reject a JWS whose protected typ is not application/
+      mission-runtime-evidence+jws or whose protected cty is not the
+      media type of the object it is verifying, so signatures over one
+      record kind cannot be cross-used for another.
 
    This rule is unaffected by the members Decision Evidence, Execution
    Evidence, and Refusal Records share with each other and with other
    evidence types, named once as a base shape
    ([I-D.draft-mcguinness-mission-audit]).  Shared member names describe
-   a common shape for readability; they carry no exemption, and the typ
+   a common shape for readability; they carry no exemption, and the cty
    check above remains the sole authority for which kind a signature
    covers.
 
@@ -19519,8 +19591,9 @@ Table of Contents
    evidence_envelope:  REQUIRED.  An object.  Integrity protection in
       the same form as Decision Evidence (Section 4.3), carrying a
       format (string, required) and a value (string, required).  The
-      default format is jws-compact; the JWS protected typ is
-      application/mission-receipt+json (Section 12).
+      default format is jws-compact; the JWS protected typ is that of
+      Section 4.3 with a cty of application/mission-receipt+json
+      (Section 12).
 
    kind:  REQUIRED.  A string.  One of decision, execution, or refusal
       (Section 6.1).
@@ -19682,7 +19755,8 @@ Table of Contents
        compute the JCS canonical bytes of the receipt with
        evidence_envelope removed, and require byte-for-byte equality,
        rejecting on any difference (Section 4.3).  Confirm the JWS
-       protected typ is application/mission-receipt+json and verify the
+       protected typ is application/mission-runtime-evidence+jws, the
+       protected cty is application/mission-receipt+json, and verify the
        signature against the published key resolved by the JWS kid for
        the party named in emitter, through the enforcement scope
        statement's published key sets (Section 10.2).  Confirm that
@@ -20328,9 +20402,60 @@ Table of Contents
 
 12.1.  Media Type Registry
 
-   This document registers four media types per [RFC6838].
+   This document registers five media types per [RFC6838]: the four
+   evidence-object payload types below, and the JWS-secured runtime
+   evidence representation their shared envelope carries (using the +jws
+   structured syntax suffix already registered with IANA).
 
-12.1.1.  Decision Evidence Media Type
+12.1.1.  Secured Runtime Evidence Media Type
+
+   *  Type name: application
+
+   *  Subtype name: mission-runtime-evidence+jws
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; a JWS Compact Serialization:
+      base64url-encoded values separated by period characters.  The
+      secured payload's own media type travels in the JWS protected cty
+      (Section 4.3).
+
+   *  Security considerations: see Section 10
+
+   *  Interoperability considerations: see this document (Section 4.3)
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: Mission-bound runtime
+      enforcement deployments
+
+   *  Fragment identifier considerations: N/A
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): none
+
+      -  Macintosh file type code(s): N/A
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
+
+12.1.2.  Decision Evidence Media Type
 
    *  Type name: application
 
@@ -20375,7 +20500,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.2.  Execution Evidence Media Type
+12.1.3.  Execution Evidence Media Type
 
    *  Type name: application
 
@@ -20420,7 +20545,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.3.  Refusal Record Media Type
+12.1.4.  Refusal Record Media Type
 
    *  Type name: application
 
@@ -20465,7 +20590,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.4.  Mission Receipt Media Type
+12.1.5.  Mission Receipt Media Type
 
    *  Type name: application
 
@@ -20587,6 +20712,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-audit.html>.
 
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
+
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
@@ -20633,8 +20763,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -20686,7 +20816,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -23198,8 +23328,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -23251,7 +23381,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -25094,8 +25224,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -25150,7 +25280,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -25200,7 +25330,8 @@ Table of Contents
    13. IANA Considerations
      13.1.  Media Type Registry
        13.1.1.  application/mission-consent-evidence+json
-       13.1.2.  application/mission-consent-disclosure+json
+       13.1.2.  application/mission-consent-evidence+jws
+       13.1.3.  application/mission-consent-disclosure+json
    14. References
      14.1.  Normative References
      14.2.  Informative References
@@ -26053,11 +26184,13 @@ Table of Contents
    jwks_uri), identifying a signing key controlled by the Mission Issuer
    or an evidence service authorized by the Mission Issuer.  The typ
    names the secured representation, the JWS itself rather than its
-   payload: the payload's identifier stays application/mission-consent-
-   evidence+json, the value the audit profile's evidence-type table and
-   its payload-preimage-content-type carry
-   ([I-D.draft-mcguinness-mission-audit]).  Exact validation of the
-   protected typ, together with the profile-specific JWS validation
+   payload: its value is the application/mission-consent-evidence+jws
+   media type (Section 13) with the application/ prefix omitted
+   ([RFC7515], Section 4.1.9), while the payload's identifier stays
+   application/mission-consent-evidence+json, the value the audit
+   profile's evidence-type table and its payload-preimage-content-type
+   carry ([I-D.draft-mcguinness-mission-audit]).  Exact validation of
+   the protected typ, together with the profile-specific JWS validation
    rules below, supplies a substitution defense analogous to [RFC8725],
    Sections 3.11 and 3.12; this object is not a JWT and inherits no
    other JWT BCP requirement.  A verifier:
@@ -26370,11 +26503,14 @@ Table of Contents
 
 13.1.  Media Type Registry
 
-   IANA is requested to register two media types per [RFC6838]: one for
-   the Consent Evidence object and a distinct one for the Consent
-   Disclosure object it may reference (Section 9.1).  The Mission audit
-   profile ([I-D.draft-mcguinness-mission-audit]) references the Consent
-   Evidence media type.
+   IANA is requested to register three media types per [RFC6838]: one
+   for the Consent Evidence object, a distinct one for the Consent
+   Disclosure object it may reference (Section 9.1), and one for the
+   JWS-secured Consent Evidence representation that the
+   evidence_envelope's protected typ names (Section 7.1).  The Mission
+   audit profile ([I-D.draft-mcguinness-mission-audit]) references the
+   Consent Evidence media type.  The third registration uses the +jws
+   structured syntax suffix already registered with IANA.
 
 13.1.1.  application/mission-consent-evidence+json
 
@@ -26421,7 +26557,54 @@ Table of Contents
 
    *  Change controller: IETF
 
-13.1.2.  application/mission-consent-disclosure+json
+13.1.2.  application/mission-consent-evidence+jws
+
+   *  Type name: application
+
+   *  Subtype name: mission-consent-evidence+jws
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; a JWS Compact Serialization
+      ([RFC7515], Section 3.1): base64url-encoded values separated by
+      period characters
+
+   *  Security considerations: see Section 11 and [RFC7515], Section 10
+
+   *  Interoperability considerations: see this document (Section 7.1)
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: OAuth Mission-Bound consent
+      and audit deployments
+
+   *  Fragment identifier considerations: N/A
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): none
+
+      -  Macintosh file type code(s): N/A
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
+
+13.1.3.  application/mission-consent-disclosure+json
 
    *  Type name: application
 

@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 22 February 2027</td>
+<td class="center">Expires 23 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-substrate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-21" class="published">21 August 2026</time>
+<time datetime="2026-08-22" class="published">22 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-22">22 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-23">23 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ authority hashes.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 22 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 23 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2411,9 +2411,16 @@ scope in the Mission Substrate Statement are the conformance result.<a href="#se
         <h3 id="name-mission-substrate-statement">
 <a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-substrate-statement" class="section-name selfRef">Mission Substrate Statement</a>
         </h3>
-<p id="section-7.1-1">A Mission Substrate Binding <span class="bcp14">MUST</span> contain a section titled "Mission
-Substrate Statement".  It <span class="bcp14">MUST</span> identify the specification version and
-mode to which the statement applies.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-1">A specification that itself claims conformance to this document
+<span class="bcp14">MUST</span> contain a section titled "Mission Substrate Statement".  For a
+specification that makes no such claim, this document <span class="bcp14">MAY</span> instead
+publish a hosted Statement describing that specification's mapping
+(<a href="#family" class="auto internal xref">Appendix B</a> does so for the OAuth binding): the hosted Statement is
+normative as this document's own content, the conformance claim it
+embodies is this document's claim about the described
+specification, and the described specification neither makes the
+claim nor takes any requirement from it.  Either form <span class="bcp14">MUST</span> identify
+the specification version and mode to which the Statement applies.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-2">For the kernel, the Statement <span class="bcp14">MUST</span> provide a checkable mapping for:<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-7.1-3">
 <li id="section-7.1-3.1">
@@ -2816,10 +2823,10 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
       <h2 id="name-binding-mapping-guidance">
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-binding-mapping-guidance" class="section-name selfRef">Binding Mapping Guidance</a>
       </h2>
-<p id="appendix-A-1">This appendix is informative.  Each of the five bindings publishes
-the normative Mission Substrate Statement for its substrate: the
-OAuth binding's Statement is <a href="#oauth-statement" class="auto internal xref">Appendix B.1</a> of this document,
-and the standalone MAS
+<p id="appendix-A-1">This appendix is informative.  Four bindings publish their own
+normative Mission Substrate Statements, and this document publishes
+the hosted Statement describing the OAuth binding
+(<a href="#oauth-statement" class="auto internal xref">Appendix B.1</a>): the standalone MAS
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), AAuth
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), UMA
 (<span>[<a href="#I-D.draft-mcguinness-mission-uma" class="cite xref">I-D.draft-mcguinness-mission-uma</a>]</span>), and GNAP
@@ -2970,9 +2977,16 @@ reference to it; no change is ever made solely to move words.<a href="#appendix-
         <h3 id="name-oauth-mission-binding-state">
 <a href="#appendix-B.1" class="section-number selfRef">B.1. </a><a href="#name-oauth-mission-binding-state" class="section-name selfRef">OAuth Mission Binding Statement</a>
         </h3>
-<p id="appendix-B.1-1">This section is the Mission Substrate Statement of the OAuth Mission
-binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), hosted here so the
-OAuth binding remains self-contained with no companion normative dependency.
+<p id="appendix-B.1-1">This section is the hosted Mission Substrate Statement describing
+the OAuth Mission binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), published under the
+hosted form of <a href="#statement" class="auto internal xref">Section 7.1</a>.  The conformance claim it embodies is
+this document's own: this document asserts, and maintains against
+the OAuth binding's text, that the binding satisfies the kernel and
+supplies the capabilities below.  The OAuth binding itself makes no
+substrate-conformance claim and takes no requirement from this
+document; its pointer to this section is informative on its side,
+and the two documents' no-mutual-dependency rule stands.
 It applies to the OAuth binding's editor's-draft lineage and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this Statement claims no property the
@@ -3015,10 +3029,13 @@ and atomic record commit, with deferred, interactive, and dispatch
 realizations.<a href="#appendix-B.1-3.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-B.1-3.6">
-            <p id="appendix-B.1-3.6.1">The active predicate is <code>state</code> equal to <code>active</code>, exactly; any
-other value, recognized or not, is non-active; transitions are
-authenticated lifecycle operations; a non-active Mission refuses
-issuance and derivation.<a href="#appendix-B.1-3.6.1" class="pilcrow">¶</a></p>
+            <p id="appendix-B.1-3.6.1">The active predicate is stored <code>state</code> equal to <code>active</code> with
+the decision time strictly before the record's effective
+<code>expires_at</code>, the issuer materializing the resulting <code>expired</code>
+transition lazily where it chooses; any other stored value,
+recognized or not, is non-active; transitions are authenticated
+lifecycle operations; a non-active Mission refuses issuance and
+derivation.<a href="#appendix-B.1-3.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-B.1-3.7">
             <p id="appendix-B.1-3.7.1">The reliance bound is the record's effective <code>expires_at</code> (never

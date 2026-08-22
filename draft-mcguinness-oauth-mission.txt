@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -606,8 +606,11 @@ Table of Contents
 
    *  The *Subject* and *Approver* are each an (iss, sub) pair, matching
       the access token sub model of [RFC9068].  The Approver is the
-      accountable principal whose approval created the Mission; it may
-      be a human or an authorized policy authority (Section 6.2).
+      accountable consent principal whose approval created the Mission,
+      always equal to approval_basis.consent_principal; under a
+      standing-consent basis a policy adjudicates the activation while
+      the Approver remains the human whose consent roots it
+      (Section 3.2, Section 6.2).
 
    On a derived token the sub claim is the AS-local sub the AS maps the
    Subject to under the injective mapping of Section 6, verbatim
@@ -933,11 +936,12 @@ Table of Contents
       goal and sibling members are unknown envelope members.  The
       Mission Intent's own top level is likewise closed: the AS MUST
       reject with invalid_request an intent containing a top-level
-      member this document does not define; extension data belongs under
-      controls (Section 4), so deployment-defined semantics are explicit
-      and cannot masquerade as core Intent semantics.  Both top levels
-      are closed because their members feed approval rendering, the
-      intent_hash commitment, and evidence dispatch, and the closure
+      member this document does not define; control extensions belong
+      under controls (Section 4) and presented evidence under the
+      envelope's evidence member, so deployment-defined semantics are
+      explicit and cannot masquerade as core Intent semantics.  Both top
+      levels are closed because their members feed approval rendering,
+      the intent_hash commitment, and evidence dispatch, and the closure
       also keeps issuer-output members, such as a client-planted
       authority_hash, out of the Intent.
 
@@ -1031,15 +1035,14 @@ Table of Contents
    (Section 5) and MUST NOT grant authority beyond what the Mission
    Intent yields.
 
-   Each submitted entry MUST be of a type the AS advertises and MUST
-   validate against that type's published JSON Schema (Section 5.3,
-   Section 14); where a deployment arranges Mission-bound authorization
-   out of band rather than advertising the metadata endpoint, the
-   supported types and their schemas are established out of band, and
-   this rule applies over that knowledge the same way.  This is the
-   [RFC9396] Section 5 validation of the standard parameter: the AS MUST
-   refuse a request carrying an entry of an unadvertised type, or an
-   entry that fails its type's schema, with
+   Each submitted entry MUST be of a supported type (Section 5.3,
+   Section 14) and MUST validate against that type's documented
+   definition; where a machine-readable JSON Schema for the type is
+   advertised (Section 14) or established out of band, the entry MUST
+   also validate against that schema.  This is the [RFC9396] Section 5
+   validation of the standard parameter: the AS MUST refuse a request
+   carrying an entry of an unsupported type, or an entry that fails its
+   type's documented definition or applicable schema, with
    invalid_authorization_details; a validation failure is never repaired
    by omitting the entry.  Policy narrowing is distinct.  During
    derivation the AS MAY narrow or omit a syntactically valid entry that
@@ -1725,13 +1728,12 @@ Table of Contents
    the Authority Set MAY include other AS-supported [RFC9396]
    authorization_details types when an audience consumes them.
    ("Supported" here means the AS recognizes and documents the type: it
-   appears as a key in the AS's
-   authorization_details_types_metadata_endpoint response, the source of
-   truth for the supported set (Section 14);
-   authorization_details_types_supported, where the AS also advertises
-   it, mirrors that key set.  RFC 9396 establishes no IANA registry of
-   type identifiers.)  The Mission apparatus is type-agnostic toward
-   such entries:
+   appears in authorization_details_types_supported or, where the AS
+   advertises the schema endpoint, as a key in its
+   authorization_details_types_metadata_endpoint response, then the
+   source of truth for the supported set (Section 14).  RFC 9396
+   establishes no IANA registry of type identifiers.)  The Mission
+   apparatus is type-agnostic toward such entries:
 
    *  they are committed by authority_hash and gated on Mission state
       exactly as mission_resource_access entries are;
@@ -3233,6 +3235,15 @@ Table of Contents
    registered state added by a companion profile fail safe for a
    consumer that predates it.
 
+   One rule makes the clock boundary authoritative ahead of stored
+   state: for every state-dependent decision this document defines, the
+   AS MUST evaluate expires_at before relying on stored state, and a
+   Mission is effectively active only when its stored state is active
+   and the decision time is strictly before expires_at.  Persisting the
+   expired transition, and emitting any corresponding lifecycle event
+   where a state-distribution companion is deployed, MAY happen lazily,
+   after the decision that observed the boundary.
+
 10.1.  Issuance Gating
 
    The AS MUST refuse to derive a token, at the token endpoint, on
@@ -3403,6 +3414,14 @@ Table of Contents
    AS MUST apply this same authorization and minimization to that data
    and MUST NOT reveal Mission detail to an unauthorized introspection
    caller.
+
+   Disclosure is member-scoped as well as caller-scoped:
+   derivations_remaining and proposal_hash serve the issuance-budget and
+   audit consumers, not Resource Server enforcement, and the AS MUST
+   disclose each only to a caller the deployment has granted that
+   member's disclosure privilege; an audience-authorized Resource Server
+   receives the ordinary audience-filtered enforcement projection
+   defined above, without them, by default.
 
 11.2.  Composite Active State
 
@@ -3936,24 +3955,30 @@ Table of Contents
    since a Mission Intent is accepted only through PAR (Section 4.1).
 
    An AS that advertises mission_bound_authorization_supported: true
-   MUST also advertise authorization_details_types_metadata_endpoint
-   [I-D.draft-zehavi-oauth-rar-metadata].  That endpoint's response is a
-   JSON object keyed by authorization_details type identifier, each
-   value carrying, per [I-D.draft-zehavi-oauth-rar-metadata], a JSON
-   Schema for exactly one authorization_details object of that type
-   (schema or schema_uri) and optionally version, description,
-   documentation_uri, and examples.  That response's key set is the
-   source of truth for which types the AS supports:
-   authorization_details_types_supported ([RFC9396]), where the AS also
+   SHOULD also advertise authorization_details_types_metadata_endpoint
+   [I-D.draft-zehavi-oauth-rar-metadata] where it implements that
+   endpoint; the endpoint is defined by an individual draft without
+   formal standing, and conformance to this document does not depend on
+   it.  The stable baseline is [RFC9396]:
+   authorization_details_types_supported listing
+   mission_resource_access, with Section 20.3 the normative definition
+   of the type and its documentation established out of band.  Where the
+   endpoint IS advertised: its response is a JSON object keyed by
+   authorization_details type identifier, each value carrying, per
+   [I-D.draft-zehavi-oauth-rar-metadata], a JSON Schema for exactly one
+   authorization_details object of that type (schema or schema_uri) and
+   optionally version, description, documentation_uri, and examples; its
+   key set is then the source of truth for which types the AS supports,
+   and authorization_details_types_supported, where the AS also
    advertises it, mirrors those keys and MUST NOT list a type absent
-   from them.  The AS MUST publish, within that response, an entry for
-   mission_resource_access whose schema validates the object shape
+   from them; and the AS MUST publish, within that response, an entry
+   for mission_resource_access whose schema validates the object shape
    Section 20.3 defines, including the Common Constraints structure
-   (Section 5.2); Section 20.3 remains the normative definition, and the
-   published schema is its machine-readable form.  Where a deployment
-   arranges Mission-bound authorization out of band rather than
-   advertising mission_bound_authorization_supported, the supported
-   types and their schemas are likewise established out of band.
+   (Section 5.2), the published schema being that definition's machine-
+   readable form.  Where a deployment arranges Mission-bound
+   authorization out of band rather than advertising
+   mission_bound_authorization_supported, the supported types and their
+   schemas are likewise established out of band.
 
    This member and the mission_bound_authorization_required member of
    Section 15 are unauthenticated discovery data: their integrity rests
@@ -4083,9 +4108,12 @@ Table of Contents
    capability table these surfaces supply to the family's substrate
    contract, is published in the substrate companion's family appendix
    ([I-D.draft-mcguinness-mission-substrate], Section "OAuth Mission
-   Binding Statement").  That Statement is informative here: it restates
-   this document, adds no requirement to it, and this document remains
-   self-contained.
+   Binding Statement"), the hosted form the substrate contract defines.
+   The claim that Statement embodies is the substrate document's own
+   assertion about this binding, made and maintained there; this
+   document makes no substrate-conformance claim, takes no requirement
+   from the substrate, and remains self-contained, and this pointer is
+   informative.
 
 17.  Security Considerations
 

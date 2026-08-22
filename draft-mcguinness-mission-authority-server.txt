@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          21 August 2026
-Expires: 22 February 2027
+Intended status: Standards Track                          22 August 2026
+Expires: 23 February 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -1540,7 +1540,13 @@ Table of Contents
       set under its extensibility rule beside mission_mismatch
       (Section 10): mission_mismatch stays the subject-or-client join
       failure, and mission_reference_conflict is reference sources
-      naming different Missions or an unusable reference.
+      naming different Missions or an unusable reference.  A PEP that
+      establishes the conflict before any evaluation surfaces the same
+      reason as a coordinated pre-decision refusal, recorded as a
+      Refusal Record with this denial_reason
+      ([I-D.draft-mcguinness-mission-runtime-evidence]); an evaluating
+      PDP surfaces it as the AuthZEN denial reason above.  One reason,
+      two surfacings, never a silent resolution.
 
    *  The selection assertion applies only to the request it
       accompanies: it selects the Mission the join is evaluated against,

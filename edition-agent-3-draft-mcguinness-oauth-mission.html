@@ -1070,7 +1070,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 22 February 2027</td>
+<td class="center">Expires 23 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-21" class="published">21 August 2026</time>
+<time datetime="2026-08-22" class="published">22 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-22">22 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-23">23 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1156,7 +1156,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 22 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 23 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2059,9 +2059,12 @@ identity and credentialing are out of scope (see
           <li class="normal" id="section-3.1-2.2">
             <p id="section-3.1-2.2.1">The <strong>Subject</strong> and <strong>Approver</strong> are each an (<code>iss</code>,
 <code>sub</code>) pair, matching the access token <code>sub</code> model of <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>.
-The Approver is the accountable principal whose approval created
-the Mission; it may be a human or an authorized policy authority
-(<a href="#multi-party-approval" class="auto internal xref">Section 6.2</a>).<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
+The Approver is the accountable consent principal whose approval
+created the Mission, always equal to
+<code>approval_basis.consent_principal</code>; under a standing-consent basis
+a policy adjudicates the activation while the Approver remains the
+human whose consent roots it (<a href="#authority-sources" class="auto internal xref">Section 3.2</a>,
+<a href="#multi-party-approval" class="auto internal xref">Section 6.2</a>).<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.1-3">On a derived token the <code>sub</code> claim is the AS-local <code>sub</code> the AS
@@ -2479,8 +2482,9 @@ Mission Intent submitted as the parameter value fails this rule,
 since its <code>goal</code> and sibling members are unknown envelope members.
 The Mission Intent's own top level is likewise closed: the AS <span class="bcp14">MUST</span>
 reject with <code>invalid_request</code> an <code>intent</code> containing a top-level
-member this document does not define; extension data belongs under
-<code>controls</code> (<a href="#mission-intent" class="auto internal xref">Section 4</a>), so deployment-defined semantics
+member this document does not define; control extensions belong
+under <code>controls</code> (<a href="#mission-intent" class="auto internal xref">Section 4</a>) and presented evidence under
+the envelope's <code>evidence</code> member, so deployment-defined semantics
 are explicit and cannot masquerade as core Intent semantics. Both
 top levels are closed because their members feed approval
 rendering, the <code>intent_hash</code> commitment, and evidence dispatch,
@@ -2594,15 +2598,15 @@ authority, under the submission trust rule of
 by policy regardless of what was submitted
 (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>) and <span class="bcp14">MUST NOT</span> grant authority beyond
 what the Mission Intent yields.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
-<p id="section-4.2-3">Each submitted entry <span class="bcp14">MUST</span> be of a type the AS advertises and <span class="bcp14">MUST</span>
-validate against that type's published JSON Schema (<a href="#other-types" class="auto internal xref">Section 5.3</a>,
-<a href="#discovery" class="auto internal xref">Section 14</a>); where a deployment arranges Mission-bound
-authorization out of band rather than advertising the metadata
-endpoint, the supported types and their schemas are established out
-of band, and this rule applies over that knowledge the same way.
+<p id="section-4.2-3">Each submitted entry <span class="bcp14">MUST</span> be of a supported type (<a href="#other-types" class="auto internal xref">Section 5.3</a>,
+<a href="#discovery" class="auto internal xref">Section 14</a>) and <span class="bcp14">MUST</span> validate against that type's documented
+definition; where a machine-readable JSON Schema for the type is
+advertised (<a href="#discovery" class="auto internal xref">Section 14</a>) or established out of band, the entry
+<span class="bcp14">MUST</span> also validate against that schema.
 This is the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> Section 5 validation of the standard
 parameter: the AS <span class="bcp14">MUST</span> refuse a request carrying an entry of an
-unadvertised type, or an entry that fails its type's schema, with
+unsupported type, or an entry that fails its type's documented
+definition or applicable schema, with
 <code>invalid_authorization_details</code>; a validation failure is never
 repaired by omitting the entry. Policy narrowing is distinct.
 During derivation the AS <span class="bcp14">MAY</span> narrow or omit a syntactically valid
@@ -3402,12 +3406,12 @@ rather than a JSON number.<a href="#section-5.2-10" class="pilcrow">¶</a></p>
 <p id="section-5.3-1"><code>mission_resource_access</code> is the only type this document defines, but
 the Authority Set <span class="bcp14">MAY</span> include other AS-supported <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
           <code>authorization_details</code> types when an audience consumes them.
-("Supported" here means the AS recognizes and documents the type: it
-appears as a key in the AS's <code>authorization_details_types_metadata_endpoint</code>
-response, the source of truth for the supported set
-(<a href="#discovery" class="auto internal xref">Section 14</a>); <code>authorization_details_types_supported</code>, where the
-AS also advertises it, mirrors that key set. RFC 9396 establishes no
-IANA registry of type identifiers.) The Mission apparatus is
+("Supported" here means the AS recognizes and documents the type:
+it appears in <code>authorization_details_types_supported</code> or, where the
+AS advertises the schema endpoint, as a key in its
+<code>authorization_details_types_metadata_endpoint</code> response, then the
+source of truth for the supported set (<a href="#discovery" class="auto internal xref">Section 14</a>). RFC 9396
+establishes no IANA registry of type identifiers.) The Mission apparatus is
 type-agnostic toward such entries:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.3-2.1">
@@ -5251,6 +5255,14 @@ including a value the consumer does not recognize, <span class="bcp14">MUST</spa
 non-active and non-deriving. A consumer <span class="bcp14">MUST NOT</span> fail open on an
 unrecognized state. This makes a registered state added by a companion
 profile fail safe for a consumer that predates it.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6">One rule makes the clock boundary authoritative ahead of stored
+state: for every state-dependent decision this document defines, the
+AS <span class="bcp14">MUST</span> evaluate <code>expires_at</code> before relying on stored state, and a
+Mission is effectively <code>active</code> only when its stored state is
+<code>active</code> and the decision time is strictly before <code>expires_at</code>.
+Persisting the <code>expired</code> transition, and emitting any corresponding
+lifecycle event where a state-distribution companion is deployed,
+<span class="bcp14">MAY</span> happen lazily, after the decision that observed the boundary.<a href="#section-10-6" class="pilcrow">¶</a></p>
 <div id="issuance-gating">
 <section id="section-10.1">
         <h3 id="name-issuance-gating">
@@ -5437,6 +5449,13 @@ even when <code>active</code> is <code>false</code> (the deviation stated in
 <a href="#introspection" class="auto internal xref">Section 11</a>), the AS <span class="bcp14">MUST</span> apply this same
 authorization and minimization to that data and <span class="bcp14">MUST NOT</span> reveal
 Mission detail to an unauthorized introspection caller.<a href="#section-11.1-3" class="pilcrow">¶</a></p>
+<p id="section-11.1-4">Disclosure is member-scoped as well as caller-scoped:
+<code>derivations_remaining</code> and <code>proposal_hash</code> serve the issuance-budget
+and audit consumers, not Resource Server enforcement, and the AS
+<span class="bcp14">MUST</span> disclose each only to a caller the deployment has granted that
+member's disclosure privilege; an audience-authorized Resource
+Server receives the ordinary audience-filtered enforcement
+projection defined above, without them, by default.<a href="#section-11.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="composite-active">
@@ -6057,25 +6076,31 @@ Issuer binding is the governed alternative
 (<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), since a Mission Intent is accepted only through PAR
 (<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>).<a href="#section-14-6" class="pilcrow">¶</a></p>
 <p id="section-14-7">An AS that advertises <code>mission_bound_authorization_supported: true</code>
-        <span class="bcp14">MUST</span> also advertise <code>authorization_details_types_metadata_endpoint</code>
-        <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>. That endpoint's response is a
-JSON object keyed by <code>authorization_details</code> type identifier, each
-value carrying, per <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>, a JSON
-Schema for exactly one <code>authorization_details</code> object of that type
+        <span class="bcp14">SHOULD</span> also advertise <code>authorization_details_types_metadata_endpoint</code>
+        <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span> where it implements that
+endpoint; the endpoint is defined by an individual draft without
+formal standing, and conformance to this document does not depend on
+it. The stable baseline is <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>:
+<code>authorization_details_types_supported</code> listing
+<code>mission_resource_access</code>, with <a href="#type-registration" class="auto internal xref">Section 20.3</a> the normative
+definition of the type and its documentation established out of
+band. Where the endpoint IS advertised: its response is a JSON
+object keyed by <code>authorization_details</code> type identifier, each value
+carrying, per <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>, a JSON Schema
+for exactly one <code>authorization_details</code> object of that type
 (<code>schema</code> or <code>schema_uri</code>) and optionally <code>version</code>, <code>description</code>,
-<code>documentation_uri</code>, and <code>examples</code>. That response's key set is the
-source of truth for which types the AS supports:
-<code>authorization_details_types_supported</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), where the AS
-also advertises it, mirrors those keys and <span class="bcp14">MUST NOT</span> list a type
-absent from them. The AS <span class="bcp14">MUST</span> publish, within that response, an entry
-for <code>mission_resource_access</code> whose schema validates the object shape
-<a href="#type-registration" class="auto internal xref">Section 20.3</a> defines, including the Common Constraints
-structure (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>); <a href="#type-registration" class="auto internal xref">Section 20.3</a> remains the
-normative definition, and the published schema is its machine-readable
-form. Where a deployment arranges Mission-bound authorization out of
-band rather than advertising <code>mission_bound_authorization_supported</code>,
-the supported types and their schemas are likewise established out of
-band.<a href="#section-14-7" class="pilcrow">¶</a></p>
+<code>documentation_uri</code>, and <code>examples</code>; its key set is then the source
+of truth for which types the AS supports, and
+<code>authorization_details_types_supported</code>, where the AS also
+advertises it, mirrors those keys and <span class="bcp14">MUST NOT</span> list a type absent
+from them; and the AS <span class="bcp14">MUST</span> publish, within that response, an entry
+for <code>mission_resource_access</code> whose schema validates the object
+shape <a href="#type-registration" class="auto internal xref">Section 20.3</a> defines, including the Common
+Constraints structure (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>), the published schema
+being that definition's machine-readable form. Where a deployment
+arranges Mission-bound authorization out of band rather than
+advertising <code>mission_bound_authorization_supported</code>, the supported
+types and their schemas are likewise established out of band.<a href="#section-14-7" class="pilcrow">¶</a></p>
 <p id="section-14-8">This member and the <code>mission_bound_authorization_required</code> member of
 <a href="#protected-resource-metadata" class="auto internal xref">Section 15</a> are unauthenticated discovery data:
 their integrity rests on the metadata retrieval protections of
@@ -6232,9 +6257,12 @@ starting point and creates no new conformance class.<a href="#section-16-12" cla
 capability table these surfaces supply to the family's substrate
 contract, is published in the substrate companion's family appendix
 (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>, Section "OAuth Mission
-Binding Statement"). That Statement is informative here: it restates
-this document, adds no requirement to it, and this document remains
-self-contained.<a href="#section-16-13" class="pilcrow">¶</a></p>
+Binding Statement"), the hosted form the substrate contract
+defines. The claim that Statement embodies is the substrate
+document's own assertion about this binding, made and maintained
+there; this document makes no substrate-conformance claim, takes no
+requirement from the substrate, and remains self-contained, and
+this pointer is informative.<a href="#section-16-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">

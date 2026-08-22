@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            21 August 2026
-Expires: 22 February 2027
+Intended status: Informational                            22 August 2026
+Expires: 23 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 February 2027.
+   This Internet-Draft will expire on 23 February 2027.
 
 Copyright Notice
 
@@ -3322,8 +3322,9 @@ Table of Contents
       at approval, reproducible from the record alone (oauth-mission).
 
    *  *R3*: Task proposals are untrusted input: fields the agent can
-      influence never derive, widen, or gate authority (oauth-mission;
-      mission-shaping).
+      influence select and narrow what derivation considers, and can
+      request gates the issuer enforces, but never grant or widen
+      authority by their own assertion (oauth-mission; mission-shaping).
 
 16.2.  Consent and Approval
 
