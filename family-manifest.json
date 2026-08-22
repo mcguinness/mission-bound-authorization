@@ -1169,7 +1169,9 @@
    ],
    "summary": "For authors of new bindings: a small, normative contextual-governance kernel (native Mission reference, identified Controller, authenticated Actor binding, immutable Approved Context, approval event, active/non-active gate, context propagation, ordered governance record), with stronger properties declared separately as capabilities.",
    "pull_when": "Runtime implementers consume its commitment construction and kernel contract; binding authors profile it.",
-   "normative_references": [],
+   "normative_references": [
+    "draft-mcguinness-oauth-mission"
+   ],
    "adoption_requires": [],
    "references": [
     "draft-mcguinness-mission-aauth",

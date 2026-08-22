@@ -499,6 +499,42 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(predRecord?.successor ?? undefined).toBeUndefined();
   });
 
+  it("round 4 (#639 review): a committed activation is recovered on re-poll, never converted to access_denied", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    approveDeferral(ob.deferral_code as string);
+    const first = await pollExpansion(ob.deferral_code as string);
+    const fb = (await first.json()) as { access_token?: string };
+    expect(first.status, JSON.stringify(fb)).toBe(200);
+    const successorId = (decodeJwt(fb.access_token as string) as { mission: { id: string } }).mission.id;
+    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+
+    // Simulate the crash window: the activation transaction committed but
+    // the deferral was never marked redeemed, and the durable finalization
+    // job was never drained.
+    as.expansionDeferrals.db
+      .prepare("UPDATE expansion_deferrals SET redeemed = 0 WHERE deferral_code = ?")
+      .run(ob.deferral_code as string);
+    as.kernel.db.prepare("UPDATE lifecycle_outbox SET done = 0").run();
+
+    const second = await pollExpansion(ob.deferral_code as string);
+    const sb = (await second.json()) as { access_token?: string; error?: string };
+    // Committed, therefore recovered: the SAME successor, never access_denied.
+    expect(second.status, JSON.stringify(sb)).toBe(200);
+    const recoveredId = (decodeJwt(sb.access_token as string) as { mission: { id: string } }).mission.id;
+    expect(recoveredId).toBe(successorId);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    // The replayed outbox job completed (idempotent drain, marked done).
+    const undone = as.kernel.db
+      .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
+      .get() as { n: number };
+    expect(undone.n).toBe(0);
+  });
+
   it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [

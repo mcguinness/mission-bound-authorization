@@ -111,6 +111,14 @@ CREATE TABLE IF NOT EXISTS missions (
   discharged_json TEXT,
   submission_evidence_json TEXT
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS lifecycle_outbox (
+  job_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  successor_id TEXT,
+  done INTEGER NOT NULL DEFAULT 0
+) STRICT;
 `;
 
 export class LifecycleConflictError extends Error {}
@@ -531,7 +539,14 @@ export class MissionKernel {
     const successor = this.get(successorId);
     if (!successor?.predecessor) return undefined;
     const pred = this.get(successor.predecessor);
-    if (!pred || this.applyExpiry(pred).state !== "active") return undefined;
+    // Read-only effective-active check (@spec mission#lifecycle): the caller
+    // may be suppressing emission inside its transaction, so the expired
+    // transition is never materialized here; lazy materialization stays with
+    // the ordinary gates, and an effectively expired predecessor simply
+    // refuses supersession.
+    if (!pred || pred.state !== "active" || Date.parse(pred.expires_at) <= this.now().getTime()) {
+      return undefined;
+    }
     // This raw UPDATE bypasses setState (the only funnel that skips it); the
     // CAS on state='active' is the belt under the check above.
     const res = this.db
@@ -551,6 +566,20 @@ export class MissionKernel {
       // outside the withTransaction block above (cascadeChildren -> setState uses
       // a bare UPDATE, so there is no nested transaction).
     this.cascadeChildren(predecessorId);
+  }
+
+  /**
+   * Round-4 (#639 review) recovery lookup: the committed successor created
+   * for a predecessor under a specific approval event, if any. Used by
+   * expansion redemption to recognize an operation whose activation
+   * transaction committed but whose deferral was never marked redeemed, so
+   * a committed operation is returned, never converted to access_denied.
+   */
+  successorByApprovalEvent(predecessorId: string, approvalEventId: string): MissionRecord | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM missions WHERE predecessor = ? AND approval_event_id = ?")
+      .get(predecessorId, approvalEventId) as Record<string, unknown> | undefined;
+    return row ? rowToRecord(row) : undefined;
   }
 
   get(id: string): MissionRecord | undefined {
@@ -1681,6 +1710,54 @@ export class MissionKernel {
    * effective set strictly narrowed. Rides the wire absent-means-false,
    * mirroring `containment_version`'s absent-means-none convention.
    */
+  /**
+   * Round-4 (#639 review): while a caller-owned activation transaction is
+   * open, direct emission is suppressed; the transaction instead writes a
+   * durable outbox job, and {@link drainExpansionOutbox} emits from
+   * persisted rows after the commit (at-least-once; consumers dedupe on the
+   * event tuple). A rolled-back transaction therefore never leaks an event
+   * for state that does not exist.
+   */
+  private emitSuppressed = false;
+
+  suppressEmits<T>(fn: () => T): T {
+    const prior = this.emitSuppressed;
+    this.emitSuppressed = true;
+    try {
+      return fn();
+    } finally {
+      this.emitSuppressed = prior;
+    }
+  }
+
+  /** Enqueue the expansion finalization job inside the caller's transaction. */
+  enqueueExpansionFinalize(predecessorId: string, successorId: string): void {
+    this.db
+      .prepare("INSERT INTO lifecycle_outbox (kind, mission_id, successor_id) VALUES ('expansion-finalize', ?, ?)")
+      .run(predecessorId, successorId);
+  }
+
+  /**
+   * Drain committed-but-unfinalized expansion work: emit the successor's
+   * activation event and run the predecessor's supersession finalize
+   * (lifecycle hook + mandatory child cascade), each rebuilt from persisted
+   * rows, then mark the job done. Idempotently replayable: a crash between
+   * commit and drain is recovered by the next redemption poll (or any later
+   * drain call); the cascade is state-guarded and event consumers dedupe on
+   * the event tuple.
+   */
+  drainExpansionOutbox(): void {
+    const jobs = this.db
+      .prepare("SELECT job_id, mission_id, successor_id FROM lifecycle_outbox WHERE done = 0 AND kind = 'expansion-finalize' ORDER BY job_id")
+      .all() as Array<{ job_id: number; mission_id: string; successor_id: string }>;
+    for (const job of jobs) {
+      const successor = this.get(job.successor_id);
+      if (successor) this.emitCommit(successor);
+      this.finalizeSupersession(job.mission_id, job.successor_id);
+      this.db.prepare("UPDATE lifecycle_outbox SET done = 1 WHERE job_id = ?").run(job.job_id);
+    }
+  }
+
   private emitCommit(
     record: MissionRecord,
     prior?: MissionState,
@@ -1688,6 +1765,7 @@ export class MissionKernel {
     authorityChanged = false,
     containmentAdvanced = false,
   ): void {
+    if (this.emitSuppressed) return;
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
     onCommit({
