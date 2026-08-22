@@ -697,9 +697,12 @@ This document maps principals onto native OAuth constructs:
   {{I-D.draft-klrc-aiagent-auth}}).
 - The **Subject** and **Approver** are each an (`iss`,
   `sub`) pair, matching the access token `sub` model of {{RFC9068}}.
-  The Approver is the accountable principal whose approval created
-  the Mission; it may be a human or an authorized policy authority
-  ({{multi-party-approval}}).
+  The Approver is the accountable consent principal whose approval
+  created the Mission, always equal to
+  `approval_basis.consent_principal`; under a standing-consent basis
+  a policy adjudicates the activation while the Approver remains the
+  human whose consent roots it ({{authority-sources}},
+  {{multi-party-approval}}).
 
 On a derived token the `sub` claim is the AS-local `sub` the AS
 maps the Subject to under the injective mapping of
@@ -1028,8 +1031,9 @@ Submission is governed by the following rules:
   since its `goal` and sibling members are unknown envelope members.
   The Mission Intent's own top level is likewise closed: the AS MUST
   reject with `invalid_request` an `intent` containing a top-level
-  member this document does not define; extension data belongs under
-  `controls` ({{mission-intent}}), so deployment-defined semantics
+  member this document does not define; control extensions belong
+  under `controls` ({{mission-intent}}) and presented evidence under
+  the envelope's `evidence` member, so deployment-defined semantics
   are explicit and cannot masquerade as core Intent semantics. Both
   top levels are closed because their members feed approval
   rendering, the `intent_hash` commitment, and evidence dispatch,
@@ -1818,12 +1822,12 @@ rather than a JSON number.
 `mission_resource_access` is the only type this document defines, but
 the Authority Set MAY include other AS-supported {{RFC9396}}
 `authorization_details` types when an audience consumes them.
-("Supported" here means the AS recognizes and documents the type: it
-appears as a key in the AS's `authorization_details_types_metadata_endpoint`
-response, the source of truth for the supported set
-({{discovery}}); `authorization_details_types_supported`, where the
-AS also advertises it, mirrors that key set. RFC 9396 establishes no
-IANA registry of type identifiers.) The Mission apparatus is
+("Supported" here means the AS recognizes and documents the type:
+it appears in `authorization_details_types_supported` or, where the
+AS advertises the schema endpoint, as a key in its
+`authorization_details_types_metadata_endpoint` response, then the
+source of truth for the supported set ({{discovery}}). RFC 9396
+establishes no IANA registry of type identifiers.) The Mission apparatus is
 type-agnostic toward such entries:
 
 - they are committed by `authority_hash` and gated on Mission state
@@ -3331,6 +3335,15 @@ non-active and non-deriving. A consumer MUST NOT fail open on an
 unrecognized state. This makes a registered state added by a companion
 profile fail safe for a consumer that predates it.
 
+One rule makes the clock boundary authoritative ahead of stored
+state: for every state-dependent decision this document defines, the
+AS MUST evaluate `expires_at` before relying on stored state, and a
+Mission is effectively `active` only when its stored state is
+`active` and the decision time is strictly before `expires_at`.
+Persisting the `expired` transition, and emitting any corresponding
+lifecycle event where a state-distribution companion is deployed,
+MAY happen lazily, after the decision that observed the boundary.
+
 ## Issuance Gating {#issuance-gating}
 
 The AS MUST refuse to derive a token, at the token endpoint, on
@@ -3501,6 +3514,15 @@ even when `active` is `false` (the deviation stated in
 {{introspection}}), the AS MUST apply this same
 authorization and minimization to that data and MUST NOT reveal
 Mission detail to an unauthorized introspection caller.
+
+Disclosure is member-scoped as well as caller-scoped:
+`derivations_remaining` and `proposal_hash` serve the issuance-budget
+and audit consumers, not Resource Server enforcement, and the AS
+MUST disclose each only to a caller the deployment has granted that
+member's disclosure privilege; an audience-authorized Resource
+Server receives the enforcement projection (`id`, `issuer`,
+`authority_hash`, and, from the issuer, `state`) without them by
+default.
 
 ## Composite Active State {#composite-active}
 
@@ -4039,25 +4061,31 @@ MUST also publish `pushed_authorization_request_endpoint`
 ({{submission-via-par}}).
 
 An AS that advertises `mission_bound_authorization_supported: true`
-MUST also advertise `authorization_details_types_metadata_endpoint`
-{{I-D.draft-zehavi-oauth-rar-metadata}}. That endpoint's response is a
-JSON object keyed by `authorization_details` type identifier, each
-value carrying, per {{I-D.draft-zehavi-oauth-rar-metadata}}, a JSON
-Schema for exactly one `authorization_details` object of that type
+SHOULD also advertise `authorization_details_types_metadata_endpoint`
+{{I-D.draft-zehavi-oauth-rar-metadata}} where it implements that
+endpoint; the endpoint is defined by an individual draft without
+formal standing, and conformance to this document does not depend on
+it. The stable baseline is {{RFC9396}}:
+`authorization_details_types_supported` listing
+`mission_resource_access`, with {{type-registration}} the normative
+definition of the type and its documentation established out of
+band. Where the endpoint IS advertised: its response is a JSON
+object keyed by `authorization_details` type identifier, each value
+carrying, per {{I-D.draft-zehavi-oauth-rar-metadata}}, a JSON Schema
+for exactly one `authorization_details` object of that type
 (`schema` or `schema_uri`) and optionally `version`, `description`,
-`documentation_uri`, and `examples`. That response's key set is the
-source of truth for which types the AS supports:
-`authorization_details_types_supported` ({{RFC9396}}), where the AS
-also advertises it, mirrors those keys and MUST NOT list a type
-absent from them. The AS MUST publish, within that response, an entry
-for `mission_resource_access` whose schema validates the object shape
-{{type-registration}} defines, including the Common Constraints
-structure ({{common-constraints}}); {{type-registration}} remains the
-normative definition, and the published schema is its machine-readable
-form. Where a deployment arranges Mission-bound authorization out of
-band rather than advertising `mission_bound_authorization_supported`,
-the supported types and their schemas are likewise established out of
-band.
+`documentation_uri`, and `examples`; its key set is then the source
+of truth for which types the AS supports, and
+`authorization_details_types_supported`, where the AS also
+advertises it, mirrors those keys and MUST NOT list a type absent
+from them; and the AS MUST publish, within that response, an entry
+for `mission_resource_access` whose schema validates the object
+shape {{type-registration}} defines, including the Common
+Constraints structure ({{common-constraints}}), the published schema
+being that definition's machine-readable form. Where a deployment
+arranges Mission-bound authorization out of band rather than
+advertising `mission_bound_authorization_supported`, the supported
+types and their schemas are likewise established out of band.
 
 This member and the `mission_bound_authorization_required` member of
 {{protected-resource-metadata}} are unauthenticated discovery data:
@@ -4181,8 +4209,12 @@ This binding's Mission Substrate Statement, the kernel mapping and
 capability table these surfaces supply to the family's substrate
 contract, is published in the substrate companion's family appendix
 ({{I-D.draft-mcguinness-mission-substrate}}, Section "OAuth Mission
-Binding Statement"). That Statement is informative here: it restates
-this document, adds no requirement to it, and this document remains
+Binding Statement"), the hosted form the substrate contract defines
+for a binding that must stay free of companion normative
+dependencies. The Statement is this binding's normative Mission
+Substrate Statement where it is published; read from this document
+the pointer is informative, the Statement restates this document,
+adds no requirement to it, and this document remains
 self-contained.
 
 # Security Considerations {#security-considerations}

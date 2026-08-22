@@ -897,8 +897,12 @@ scope in the Mission Substrate Statement are the conformance result.
 ## Mission Substrate Statement {#statement}
 
 A Mission Substrate Binding MUST contain a section titled "Mission
-Substrate Statement".  It MUST identify the specification version and
-mode to which the statement applies.
+Substrate Statement", or, where the binding must remain free of
+normative dependencies on this document, publish its Statement
+through the hosted form of {{family}}: this document then carries
+the binding's normative Statement on its behalf, and the hosted
+form satisfies this requirement.  Either way, the Statement MUST
+identify the specification version and mode to which it applies.
 
 For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -1195,8 +1199,11 @@ reference to it; no change is ever made solely to move words.
 ## OAuth Mission Binding Statement {#oauth-statement}
 
 This section is the Mission Substrate Statement of the OAuth Mission
-binding ({{I-D.draft-mcguinness-oauth-mission}}), hosted here so the
-OAuth binding remains self-contained with no companion normative dependency.
+binding ({{I-D.draft-mcguinness-oauth-mission}}), published through
+the hosted form of {{statement}} so the published OAuth binding
+takes no normative dependency on this document.  Hosted or in-line,
+the Statement is the binding's normative Statement; the OAuth
+binding's own pointer to it stays informative on its side.
 It applies to the OAuth binding's editor's-draft lineage and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this Statement claims no property the
