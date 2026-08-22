@@ -898,7 +898,8 @@ The decoded protected header of the `evidence_envelope` value:
 {
   "alg": "ES256",
   "kid": "pdp-key-2026",
-  "typ": "application/mission-decision-evidence+json"
+  "typ": "application/mission-runtime-evidence+jws",
+  "cty": "application/mission-decision-evidence+json"
 }
 ~~~
 

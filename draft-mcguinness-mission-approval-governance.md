@@ -533,9 +533,11 @@ treat a record as verified if any step fails:
    record it is retained with.
 
 The JWS protected header MUST carry a `kid` resolvable in the Mission
-Issuer's published key material and a `typ` of
+Issuer's published key material, a `typ` of
+`application/mission-approval-governance+jws`, and a `cty` of
 `application/mission-approval-governance+json` ({{iana}}); a verifier
-MUST reject a JWS whose protected `typ` is not this value. This
+MUST reject a JWS whose protected `typ` and `cty` are not exactly
+this pair ({{RFC7515}}, Sections 4.1.9 and 4.1.10). This
 document defines only the `jws-compact` format; an implementation
 MUST reject an envelope whose `format` is unsupported rather than
 accepting it unverified.
@@ -692,7 +694,38 @@ the issuer's audit-log discipline for approval-event records
 
 ## Media Type Registration
 
-IANA is requested to register one media type per {{RFC6838}}.
+IANA is requested to register two media types per {{RFC6838}}: the
+Approval Governance Record object, and the JWS-secured representation
+its `envelope` carries (using the `+jws` structured syntax suffix
+already registered with IANA).
+
+### application/mission-approval-governance+jws
+
+- Type name: application
+- Subtype name: mission-approval-governance+jws
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; a JWS Compact Serialization:
+  base64url-encoded values separated by period characters. The
+  secured payload's media type travels in the JWS protected `cty`
+  ({{envelope}}).
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document ({{envelope}})
+- Published specification: this document
+- Applications that use this media type: Mission-Bound Authorization
+  approval governance
+- Fragment identifier considerations: N/A
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): none
+  - Macintosh file type code(s): N/A
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 ### application/mission-approval-governance+json
 
