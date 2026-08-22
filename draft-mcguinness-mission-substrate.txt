@@ -124,7 +124,7 @@ Table of Contents
      A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
      A.3.  AAuth-Native Mapping: The Private-Context Pole
    Appendix B.  Mission-Bound Authorization Family Use
-     B.1.  OAuth Mission Binding Statement
+     B.1.  OAuth Binding Mapping Assessment
    Acknowledgments
    Author's Address
 
@@ -1003,13 +1003,16 @@ Table of Contents
    A specification that itself claims conformance to this document MUST
    contain a section titled "Mission Substrate Statement".  For a
    specification that makes no such claim, this document MAY instead
-   publish a hosted Statement describing that specification's mapping
-   (Appendix B does so for the OAuth binding): the hosted Statement is
-   normative as this document's own content, the conformance claim it
-   embodies is this document's claim about the described specification,
-   and the described specification neither makes the claim nor takes any
-   requirement from it.  Either form MUST identify the specification
-   version and mode to which the Statement applies.
+   publish a *Mapping Assessment*: this document's own normative
+   assessment of how that specification realizes the kernel and
+   capabilities, in the Statement's form (Appendix B carries one for the
+   OAuth binding).  A Mapping Assessment is not the described
+   specification's conformance result, and no such result exists unless
+   a specification claims conformance itself; the assessment binds this
+   document's readers (family documents use it as the mapping), and the
+   described specification neither claims nor takes any requirement from
+   it.  Either form MUST identify the specification version and mode to
+   which it applies.
 
    For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -1243,6 +1246,11 @@ Table of Contents
 
 11.1.  Normative References
 
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -1323,11 +1331,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-mission-uma.html>.
 
-   [I-D.draft-mcguinness-oauth-mission]
-              McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission.html>.
-
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -1337,7 +1340,7 @@ Appendix A.  Binding Mapping Guidance
 
    This appendix is informative.  Four bindings publish their own
    normative Mission Substrate Statements, and this document publishes
-   the hosted Statement describing the OAuth binding (Appendix B.1): the
+   its Mapping Assessment of the OAuth binding (Appendix B.1): the
    standalone MAS ([I-D.draft-mcguinness-mission-authority-server]),
    AAuth ([I-D.draft-mcguinness-mission-aauth]), UMA
    ([I-D.draft-mcguinness-mission-uma]), and GNAP
@@ -1456,29 +1459,40 @@ Appendix B.  Mission-Bound Authorization Family Use
 
    Precedence is scoped, not global.  For the OAuth-native binding, the
    OAuth binding's definitions govern that mapping; this document
-   governs the kernel and capability vocabulary.  Neither document
-   depends normatively on the other.
+   governs the kernel and capability vocabulary.  The dependency is one-
+   way and creates no cycle: this appendix takes a normative reference
+   to the OAuth binding, the specification its Mapping Assessment is
+   asserted against, while the OAuth binding takes no normative
+   dependency on this document (its pointer back is informative, and the
+   family manifest's typed edges record it as such).
 
    Ownership migrates by touch, not by relocation.  When a binding-
    neutral definition next changes substantively, the change MUST land
    in this document, and the owning family section becomes a reference
    to it; no change is ever made solely to move words.
 
-B.1.  OAuth Mission Binding Statement
+B.1.  OAuth Binding Mapping Assessment
 
-   This section is the hosted Mission Substrate Statement describing the
-   OAuth Mission binding ([I-D.draft-mcguinness-oauth-mission]),
-   published under the hosted form of Section 7.1.  The conformance
-   claim it embodies is this document's own: this document asserts, and
-   maintains against the OAuth binding's text, that the binding
-   satisfies the kernel and supplies the capabilities below.  The OAuth
-   binding itself makes no substrate-conformance claim and takes no
-   requirement from this document; its pointer to this section is
-   informative on its side, and the two documents' no-mutual-dependency
-   rule stands.  It applies to the OAuth binding's editor's-draft
-   lineage and to the kernel and capability vocabulary of this document.
-   The OAuth binding's own definitions govern every mapped construct;
-   this Statement claims no property the OAuth binding does not define.
+   This section is this document's Mapping Assessment of the OAuth
+   Mission binding ([I-D.draft-mcguinness-oauth-mission]), published
+   under Section 7.1.  The assessment is normative as this document's
+   own content: this document asserts, and maintains against the OAuth
+   binding's text, the kernel mapping and capability claims below.  It
+   is not the OAuth binding's conformance result: the OAuth binding
+   makes no substrate-conformance claim and takes no requirement from
+   this document; its pointer to this section is informative on its
+   side, and the two documents' no-mutual-dependency rule stands.  It
+   applies to the OAuth binding edition published from the same
+   repository revision as this document (the two editions revise and
+   publish in lockstep, so the assessed revision is exact; for a copy
+   obtained independently of the repository, the family's conformance
+   manifest publishes the assessed binding's content digest in its
+   source.specs entry, identifying the exact assessed bytes), in the
+   binding's base single-domain mode with the OPTIONAL capabilities as
+   the activation conditions below state, and to the kernel and
+   capability vocabulary of this document.  The OAuth binding's own
+   definitions govern every mapped construct; this assessment claims no
+   property the OAuth binding does not define.
 
    For the kernel:
 

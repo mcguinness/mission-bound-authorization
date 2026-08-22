@@ -6044,10 +6044,11 @@ which are discovered out of band or by attempt (<a href="#conformance" class="au
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-14-3">An AS that advertises this profile <span class="bcp14">SHOULD</span> also include
+<p id="section-14-3">An AS that advertises this profile <span class="bcp14">MUST</span> include
 <code>mission_resource_access</code> in its <code>authorization_details_types_supported</code>
-metadata (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), so that RFC 9396-aware clients
-discover the authorization details type through the standard mechanism.
+metadata (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>): the standard type signal is the stable
+baseline a Mission-aware client relies on, and this specification,
+not out-of-band documentation, is the type's normative definition.
 A client <span class="bcp14">MAY</span> use the RFC 9396 client metadata <code>authorization_details_types</code>
 at registration to declare the types it understands.<a href="#section-14-3" class="pilcrow">¶</a></p>
 <p id="section-14-4">An advertised type, <code>mission_resource_access</code> included, appears in
@@ -6082,9 +6083,8 @@ endpoint; the endpoint is defined by an individual draft without
 formal standing, and conformance to this document does not depend on
 it. The stable baseline is <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>:
 <code>authorization_details_types_supported</code> listing
-<code>mission_resource_access</code>, with <a href="#type-registration" class="auto internal xref">Section 20.3</a> the normative
-definition of the type and its documentation established out of
-band. Where the endpoint IS advertised: its response is a JSON
+<code>mission_resource_access</code> (a <span class="bcp14">MUST</span> for an advertising AS, above),
+with <a href="#type-registration" class="auto internal xref">Section 20.3</a> the normative definition of the type. Where the endpoint IS advertised: its response is a JSON
 object keyed by <code>authorization_details</code> type identifier, each value
 carrying, per <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>, a JSON Schema
 for exactly one <code>authorization_details</code> object of that type
@@ -6256,13 +6256,13 @@ starting point and creates no new conformance class.<a href="#section-16-12" cla
 <p id="section-16-13">This binding's Mission Substrate Statement, the kernel mapping and
 capability table these surfaces supply to the family's substrate
 contract, is published in the substrate companion's family appendix
-(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>, Section "OAuth Mission
-Binding Statement"), the hosted form the substrate contract
-defines. The claim that Statement embodies is the substrate
-document's own assertion about this binding, made and maintained
-there; this document makes no substrate-conformance claim, takes no
-requirement from the substrate, and remains self-contained, and
-this pointer is informative.<a href="#section-16-13" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>, Section "OAuth Binding
+Mapping Assessment"), the substrate contract's own normative
+assessment of this binding's mapping, made and maintained there. It
+is not this document's conformance result: this document makes no
+substrate-conformance claim, takes no requirement from the
+substrate, and remains self-contained, and this pointer is
+informative.<a href="#section-16-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">

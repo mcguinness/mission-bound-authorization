@@ -1324,7 +1324,7 @@ authority hashes.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-mission-bound-authorization" class="internal xref">Mission-Bound Authorization Family Use</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#appendix-B.1" class="auto internal xref">B.1</a>.  <a href="#name-oauth-mission-binding-state" class="internal xref">OAuth Mission Binding Statement</a></p>
+                <p id="section-toc.1-1.13.2.1.1"><a href="#appendix-B.1" class="auto internal xref">B.1</a>.  <a href="#name-oauth-binding-mapping-asses" class="internal xref">OAuth Binding Mapping Assessment</a></p>
 </li>
             </ul>
 </li>
@@ -2414,13 +2414,16 @@ scope in the Mission Substrate Statement are the conformance result.<a href="#se
 <p id="section-7.1-1">A specification that itself claims conformance to this document
 <span class="bcp14">MUST</span> contain a section titled "Mission Substrate Statement".  For a
 specification that makes no such claim, this document <span class="bcp14">MAY</span> instead
-publish a hosted Statement describing that specification's mapping
-(<a href="#family" class="auto internal xref">Appendix B</a> does so for the OAuth binding): the hosted Statement is
-normative as this document's own content, the conformance claim it
-embodies is this document's claim about the described
-specification, and the described specification neither makes the
-claim nor takes any requirement from it.  Either form <span class="bcp14">MUST</span> identify
-the specification version and mode to which the Statement applies.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+publish a <strong>Mapping Assessment</strong>: this document's own normative
+assessment of how that specification realizes the kernel and
+capabilities, in the Statement's form (<a href="#family" class="auto internal xref">Appendix B</a> carries one for
+the OAuth binding).  A Mapping Assessment is not the described
+specification's conformance result, and no such result exists
+unless a specification claims conformance itself; the assessment
+binds this document's readers (family documents use it as the
+mapping), and the described specification neither claims nor takes
+any requirement from it.  Either form <span class="bcp14">MUST</span> identify the
+specification version and mode to which it applies.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-2">For the kernel, the Statement <span class="bcp14">MUST</span> provide a checkable mapping for:<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-7.1-3">
 <li id="section-7.1-3.1">
@@ -2732,6 +2735,10 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-3-draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc2119</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -2805,10 +2812,6 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for UMA 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-3-draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-4-draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
@@ -2825,7 +2828,7 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
       </h2>
 <p id="appendix-A-1">This appendix is informative.  Four bindings publish their own
 normative Mission Substrate Statements, and this document publishes
-the hosted Statement describing the OAuth binding
+its Mapping Assessment of the OAuth binding
 (<a href="#oauth-statement" class="auto internal xref">Appendix B.1</a>): the standalone MAS
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), AAuth
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), UMA
@@ -2965,31 +2968,42 @@ binding's realization of the authority-source authority role, and its
 source ceiling is that role's assertion staying within the named
 source's authority.<a href="#appendix-B-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-6">Precedence is scoped, not global.  For the OAuth-native binding, the
-OAuth binding's definitions govern that mapping; this document governs the
-kernel and capability vocabulary.  Neither document depends
-normatively on the other.<a href="#appendix-B-6" class="pilcrow">¶</a></p>
+OAuth binding's definitions govern that mapping; this document governs
+the kernel and capability vocabulary.  The dependency is one-way and
+creates no cycle: this appendix takes a normative reference to the
+OAuth binding, the specification its Mapping Assessment is asserted
+against, while the OAuth binding takes no normative dependency on
+this document (its pointer back is informative, and the family
+manifest's typed edges record it as such).<a href="#appendix-B-6" class="pilcrow">¶</a></p>
 <p id="appendix-B-7">Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
 <span class="bcp14">MUST</span> land in this document, and the owning family section becomes a
 reference to it; no change is ever made solely to move words.<a href="#appendix-B-7" class="pilcrow">¶</a></p>
 <div id="oauth-statement">
 <section id="appendix-B.1">
-        <h3 id="name-oauth-mission-binding-state">
-<a href="#appendix-B.1" class="section-number selfRef">B.1. </a><a href="#name-oauth-mission-binding-state" class="section-name selfRef">OAuth Mission Binding Statement</a>
+        <h3 id="name-oauth-binding-mapping-asses">
+<a href="#appendix-B.1" class="section-number selfRef">B.1. </a><a href="#name-oauth-binding-mapping-asses" class="section-name selfRef">OAuth Binding Mapping Assessment</a>
         </h3>
-<p id="appendix-B.1-1">This section is the hosted Mission Substrate Statement describing
-the OAuth Mission binding
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), published under the
-hosted form of <a href="#statement" class="auto internal xref">Section 7.1</a>.  The conformance claim it embodies is
-this document's own: this document asserts, and maintains against
-the OAuth binding's text, that the binding satisfies the kernel and
-supplies the capabilities below.  The OAuth binding itself makes no
-substrate-conformance claim and takes no requirement from this
-document; its pointer to this section is informative on its side,
-and the two documents' no-mutual-dependency rule stands.
-It applies to the OAuth binding's editor's-draft lineage and to the kernel and
+<p id="appendix-B.1-1">This section is this document's Mapping Assessment of the OAuth
+Mission binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), published
+under <a href="#statement" class="auto internal xref">Section 7.1</a>.  The assessment is normative as this
+document's own content: this document asserts, and maintains
+against the OAuth binding's text, the kernel mapping and capability
+claims below.  It is not the OAuth binding's conformance result:
+the OAuth binding makes no substrate-conformance claim and takes no
+requirement from this document; its pointer to this section is
+informative on its side, and the two documents' no-mutual-dependency
+rule stands.
+It applies to the OAuth binding edition published from the same
+repository revision as this document (the two editions revise and
+publish in lockstep, so the assessed revision is exact; for a copy
+obtained independently of the repository, the family's conformance
+manifest publishes the assessed binding's content digest in its
+<code>source.specs</code> entry, identifying the exact assessed bytes), in the
+binding's base single-domain mode with the <span class="bcp14">OPTIONAL</span> capabilities as
+the activation conditions below state, and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
-govern every mapped construct; this Statement claims no property the
+govern every mapped construct; this assessment claims no property the
 OAuth binding does not define.<a href="#appendix-B.1-1" class="pilcrow">¶</a></p>
 <p id="appendix-B.1-2">For the kernel:<a href="#appendix-B.1-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="appendix-B.1-3">

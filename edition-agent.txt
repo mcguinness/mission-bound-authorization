@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-22T05:26:47Z
-Source repository commit: 963efb7aac13cfda4a2cd13232236a1a8dd57152
+Generated: 2026-08-22T19:59:49Z
+Source repository commit: 191e69672d95e236090554676029607d351b53c4
 Member count: 9
 
 Reading order:
@@ -4306,7 +4306,7 @@ Table of Contents
      A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
      A.3.  AAuth-Native Mapping: The Private-Context Pole
    Appendix B.  Mission-Bound Authorization Family Use
-     B.1.  OAuth Mission Binding Statement
+     B.1.  OAuth Binding Mapping Assessment
    Acknowledgments
    Author's Address
 
@@ -5185,13 +5185,16 @@ Table of Contents
    A specification that itself claims conformance to this document MUST
    contain a section titled "Mission Substrate Statement".  For a
    specification that makes no such claim, this document MAY instead
-   publish a hosted Statement describing that specification's mapping
-   (Appendix B does so for the OAuth binding): the hosted Statement is
-   normative as this document's own content, the conformance claim it
-   embodies is this document's claim about the described specification,
-   and the described specification neither makes the claim nor takes any
-   requirement from it.  Either form MUST identify the specification
-   version and mode to which the Statement applies.
+   publish a *Mapping Assessment*: this document's own normative
+   assessment of how that specification realizes the kernel and
+   capabilities, in the Statement's form (Appendix B carries one for the
+   OAuth binding).  A Mapping Assessment is not the described
+   specification's conformance result, and no such result exists unless
+   a specification claims conformance itself; the assessment binds this
+   document's readers (family documents use it as the mapping), and the
+   described specification neither claims nor takes any requirement from
+   it.  Either form MUST identify the specification version and mode to
+   which it applies.
 
    For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -5425,6 +5428,11 @@ Table of Contents
 
 11.1.  Normative References
 
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -5505,11 +5513,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-mission-uma.html>.
 
-   [I-D.draft-mcguinness-oauth-mission]
-              McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission.html>.
-
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -5519,7 +5522,7 @@ Appendix A.  Binding Mapping Guidance
 
    This appendix is informative.  Four bindings publish their own
    normative Mission Substrate Statements, and this document publishes
-   the hosted Statement describing the OAuth binding (Appendix B.1): the
+   its Mapping Assessment of the OAuth binding (Appendix B.1): the
    standalone MAS ([I-D.draft-mcguinness-mission-authority-server]),
    AAuth ([I-D.draft-mcguinness-mission-aauth]), UMA
    ([I-D.draft-mcguinness-mission-uma]), and GNAP
@@ -5638,29 +5641,40 @@ Appendix B.  Mission-Bound Authorization Family Use
 
    Precedence is scoped, not global.  For the OAuth-native binding, the
    OAuth binding's definitions govern that mapping; this document
-   governs the kernel and capability vocabulary.  Neither document
-   depends normatively on the other.
+   governs the kernel and capability vocabulary.  The dependency is one-
+   way and creates no cycle: this appendix takes a normative reference
+   to the OAuth binding, the specification its Mapping Assessment is
+   asserted against, while the OAuth binding takes no normative
+   dependency on this document (its pointer back is informative, and the
+   family manifest's typed edges record it as such).
 
    Ownership migrates by touch, not by relocation.  When a binding-
    neutral definition next changes substantively, the change MUST land
    in this document, and the owning family section becomes a reference
    to it; no change is ever made solely to move words.
 
-B.1.  OAuth Mission Binding Statement
+B.1.  OAuth Binding Mapping Assessment
 
-   This section is the hosted Mission Substrate Statement describing the
-   OAuth Mission binding ([I-D.draft-mcguinness-oauth-mission]),
-   published under the hosted form of Section 7.1.  The conformance
-   claim it embodies is this document's own: this document asserts, and
-   maintains against the OAuth binding's text, that the binding
-   satisfies the kernel and supplies the capabilities below.  The OAuth
-   binding itself makes no substrate-conformance claim and takes no
-   requirement from this document; its pointer to this section is
-   informative on its side, and the two documents' no-mutual-dependency
-   rule stands.  It applies to the OAuth binding's editor's-draft
-   lineage and to the kernel and capability vocabulary of this document.
-   The OAuth binding's own definitions govern every mapped construct;
-   this Statement claims no property the OAuth binding does not define.
+   This section is this document's Mapping Assessment of the OAuth
+   Mission binding ([I-D.draft-mcguinness-oauth-mission]), published
+   under Section 7.1.  The assessment is normative as this document's
+   own content: this document asserts, and maintains against the OAuth
+   binding's text, the kernel mapping and capability claims below.  It
+   is not the OAuth binding's conformance result: the OAuth binding
+   makes no substrate-conformance claim and takes no requirement from
+   this document; its pointer to this section is informative on its
+   side, and the two documents' no-mutual-dependency rule stands.  It
+   applies to the OAuth binding edition published from the same
+   repository revision as this document (the two editions revise and
+   publish in lockstep, so the assessed revision is exact; for a copy
+   obtained independently of the repository, the family's conformance
+   manifest publishes the assessed binding's content digest in its
+   source.specs entry, identifying the exact assessed bytes), in the
+   binding's base single-domain mode with the OPTIONAL capabilities as
+   the activation conditions below state, and to the kernel and
+   capability vocabulary of this document.  The OAuth binding's own
+   definitions govern every mapped construct; this assessment claims no
+   property the OAuth binding does not define.
 
    For the kernel:
 
@@ -9796,11 +9810,12 @@ Table of Contents
       introspection, cross-domain projection), which are discovered out
       of band or by attempt (Section 16).
 
-   An AS that advertises this profile SHOULD also include
+   An AS that advertises this profile MUST include
    mission_resource_access in its authorization_details_types_supported
-   metadata ([RFC9396]), so that RFC 9396-aware clients discover the
-   authorization details type through the standard mechanism.  A client
-   MAY use the RFC 9396 client metadata authorization_details_types at
+   metadata ([RFC9396]): the standard type signal is the stable baseline
+   a Mission-aware client relies on, and this specification, not out-of-
+   band documentation, is the type's normative definition.  A client MAY
+   use the RFC 9396 client metadata authorization_details_types at
    registration to declare the types it understands.
 
    An advertised type, mission_resource_access included, appears in
@@ -9834,11 +9849,11 @@ Table of Contents
    endpoint; the endpoint is defined by an individual draft without
    formal standing, and conformance to this document does not depend on
    it.  The stable baseline is [RFC9396]:
-   authorization_details_types_supported listing
-   mission_resource_access, with Section 20.3 the normative definition
-   of the type and its documentation established out of band.  Where the
-   endpoint IS advertised: its response is a JSON object keyed by
-   authorization_details type identifier, each value carrying, per
+   authorization_details_types_supported listing mission_resource_access
+   (a MUST for an advertising AS, above), with Section 20.3 the
+   normative definition of the type.  Where the endpoint IS advertised:
+   its response is a JSON object keyed by authorization_details type
+   identifier, each value carrying, per
    [I-D.draft-zehavi-oauth-rar-metadata], a JSON Schema for exactly one
    authorization_details object of that type (schema or schema_uri) and
    optionally version, description, documentation_uri, and examples; its
@@ -9981,13 +9996,12 @@ Table of Contents
    This binding's Mission Substrate Statement, the kernel mapping and
    capability table these surfaces supply to the family's substrate
    contract, is published in the substrate companion's family appendix
-   ([I-D.draft-mcguinness-mission-substrate], Section "OAuth Mission
-   Binding Statement"), the hosted form the substrate contract defines.
-   The claim that Statement embodies is the substrate document's own
-   assertion about this binding, made and maintained there; this
-   document makes no substrate-conformance claim, takes no requirement
-   from the substrate, and remains self-contained, and this pointer is
-   informative.
+   ([I-D.draft-mcguinness-mission-substrate], Section "OAuth Binding
+   Mapping Assessment"), the substrate contract's own normative
+   assessment of this binding's mapping, made and maintained there.  It
+   is not this document's conformance result: this document makes no
+   substrate-conformance claim, takes no requirement from the substrate,
+   and remains self-contained, and this pointer is informative.
 
 17.  Security Considerations
 
@@ -16571,18 +16585,25 @@ Table of Contents
    *  for each Common Constraint or other registered constraint the
       operation's authority entries can carry
       ([I-D.draft-mcguinness-oauth-mission]): the authoritative
-      operation input or derived attribute that satisfies it, the
-      extraction and normalization rule producing the compared value,
-      its unit or currency interpretation (conversion prohibited unless
-      the profile defines one), the comparison procedure in the
-      constraint's value space, and the fail-closed behavior for a
-      missing or malformed input, together with constraint-evaluation
-      fixtures separate from the digest vectors: at least one permitting
-      value, one value beyond the bound, a missing and a malformed
-      input, and, where the constraint admits incomparability, an
-      incomparable pair (for max_amount: the mapping to {amount,
-      currency}, the exact-bound permit, the over-bound refusal, an
-      absent amount, a malformed decimal, and a mismatched currency);
+      operation input or derived attribute that satisfies it, and the
+      extraction and normalization rule mapping that input into the
+      constraint's own value domain.  The constraint's defining
+      specification owns its syntax, subset, intersection, comparison,
+      and point-of-use satisfaction semantics; an Operation Profile MUST
+      NOT override them, and unit or currency conversion is never part
+      of the mapping (a deployment wanting converted evaluation composes
+      a distinct registered constraint type, whose defining
+      specification or profile fixes the rate source, observation time,
+      rounding, freshness bound, and evidence rules as that new
+      constraint's own semantics).  The profile also fixes the fail-
+      closed behavior for a missing or malformed input, together with
+      constraint-evaluation fixtures separate from the digest vectors:
+      at least one permitting value, one value beyond the bound, a
+      missing and a malformed input, and, where the constraint admits
+      incomparability, an incomparable pair (for max_amount: the mapping
+      to {amount, currency}, the exact-bound permit, the over-bound
+      refusal, an absent amount, a malformed decimal, and a mismatched
+      currency);
 
    *  digest test vectors for the operation, each carrying the operation
       input before normalization, the exact normalized parameter value,
@@ -18263,8 +18284,14 @@ Appendix A.  Parameter Digest Worked Example
    members are amount_usd and source_invoice_id; amount_usd is a decimal
    string with exactly two fractional digits; no defaults are inserted
    and no optional members are omitted; there are no set-like arrays to
-   order.  For a 423.50 USD journal entry, within the ceiling, the
-   normalized parameter object is:
+   order.  For the entry's max_amount ceiling the profile declares the
+   constraint binding Section 8 requires: the authoritative input is
+   amount_usd, mapped into the constraint's value domain as { "amount":
+   <amount_usd>, "currency": "USD" } with no conversion; the Common
+   Constraint's own decimal value-space comparison applies unchanged; a
+   missing or malformed amount_usd fails closed.  For a 423.50 USD
+   journal entry, within the ceiling, the normalized parameter object
+   is:
 
    {
      "amount_usd": "423.50",
@@ -18286,6 +18313,13 @@ Appendix A.  Parameter Digest Worked Example
    recomputes it over the parameters it is about to use immediately
    before acting (Section 8); any change to a normalized parameter
    yields a different digest and the permit is refused.
+
+   The profile's constraint-evaluation fixtures, separate from the
+   digest vector above: "500.00" permits (the exact bound); "500.01"
+   refuses (over the bound); an absent amount_usd refuses (missing
+   input); "4,235.0" refuses (malformed decimal); and a ceiling
+   denominated in EUR against this USD mapping refuses as incomparable,
+   with no conversion.
 
 Appendix B.  Policy View Worked Example
 

@@ -291,9 +291,9 @@ Table of Contents
    |Portable     |not        |The Mandate is registrable Mission evidence     |
    |Evidence     |consumed   |(Section 8.3) that a binding's Mission Substrate|
    |             |           |Statement can name as its supply mechanism; the |
-   |             |           |OAuth Mission Binding Statement, the standalone |
-   |             |           |binding's Statement, and the UMA binding's      |
-   |             |           |Statement already do                            |
+   |             |           |substrate's OAuth Binding Mapping Assessment,   |
+   |             |           |the standalone binding's Statement, and the UMA |
+   |             |           |binding's Statement already do                  |
    |             |           |([I-D.draft-mcguinness-mission-substrate],      |
    |             |           |[I-D.draft-mcguinness-mission-authority-server],|
    |             |           |[I-D.draft-mcguinness-mission-uma]); the AAuth  |
