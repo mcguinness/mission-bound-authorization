@@ -2288,9 +2288,34 @@
     "normative": "duplicate keys, member parameters, non-String values, and extra members are rejected before RFC 9651 map collapse, so last-duplicate-wins smuggling is foreclosed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects a duplicate member before map collapse",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects a parameter on either member",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects an Inner List or non-String value",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects any member other than id and issuer",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
   },
   {
    "id": "mas.reference.length-bounds",
@@ -2309,9 +2334,16 @@
     "normative": "over-limit id or issuer values are malformed at the receiver; sender and receiver bounds are the same numbers"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects an id longer than 256 or an issuer longer than 512",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
   },
   {
    "id": "mas.reference.fail-closed-carriage",
@@ -2330,9 +2362,22 @@
     "normative": "governed work with no establishable Mission reference is refused before evaluation"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a malformed reference (extra member) is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects more than one field line",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
   },
   {
    "id": "mas.reference.reject-extra-data",
@@ -2351,9 +2396,28 @@
     "normative": "state, anchors, authority, or policy data carried in the propagation channel refuses the request rather than being dropped"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects any member other than id and issuer",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a malformed reference (extra member) is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a malformed _meta reference (extra member) is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
   },
   {
    "id": "mas.reference.conflict-deny",
@@ -2371,10 +2435,29 @@
    "observation": {
     "normative": "credential-carried claim, PEP-recorded binding, and propagated reference naming different Missions denies with mission_reference_conflict; no source is silently preferred except the credential-carried claim governing"
    },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a propagated reference naming a different Mission is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a propagated reference naming a different issuer is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a conflicting _meta reference is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
   },
   {
    "id": "mas.reference.mcp-unsupported-refusal",
