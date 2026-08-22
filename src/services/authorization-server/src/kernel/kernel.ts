@@ -507,32 +507,50 @@ export class MissionKernel {
    * `superseded` atomically. Returns false if already superseded.
    */
   supersedeOnRedemption(successorId: string): boolean {
-    const successor = this.get(successorId);
-    if (!successor?.predecessor) return false;
-    // This raw UPDATE bypasses setState (the only funnel that skips it), so the
-    // lifecycle-commit hook is fired here explicitly, from the persisted row.
-    let predId: string | undefined;
+    let out: { predecessorId: string } | undefined;
     const superseded = withTransaction(this.db, () => {
-      const pred = this.get(successor.predecessor as string);
-      if (!pred || pred.state !== "active") return false;
-      predId = pred.id;
-      this.db
-        .prepare("UPDATE missions SET state = 'superseded', successor = ?, version = version + 1 WHERE id = ? AND state = 'active'")
-        .run(successorId, pred.id);
-      return true;
+      out = this.supersedeInCallerTx(successorId);
+      return out !== undefined;
     });
-    if (superseded && predId) {
-      const fresh = this.get(predId);
-      if (fresh) this.emitCommit(fresh, "active", successorId);
+    if (superseded && out) this.finalizeSupersession(out.predecessorId, successorId);
+    return superseded;
+  }
+
+  /**
+   * The supersession CAS alone, for a caller that already holds the
+   * kernel-db transaction: expansion redemption commits successor creation,
+   * idempotency completion, and predecessor supersession as ONE transaction
+   * (@spec expansion#superseded-state), and the predecessor check is
+   * expiry-aware (@spec mission#lifecycle, the effective-active rule), so an
+   * effectively expired predecessor is never superseded and no successor
+   * authority survives a predecessor that stopped being effectively active.
+   * The caller MUST invoke {@link finalizeSupersession} after its
+   * transaction commits (the lifecycle hook and cascade run post-commit).
+   */
+  supersedeInCallerTx(successorId: string): { predecessorId: string } | undefined {
+    const successor = this.get(successorId);
+    if (!successor?.predecessor) return undefined;
+    const pred = this.get(successor.predecessor);
+    if (!pred || this.applyExpiry(pred).state !== "active") return undefined;
+    // This raw UPDATE bypasses setState (the only funnel that skips it); the
+    // CAS on state='active' is the belt under the check above.
+    const res = this.db
+      .prepare("UPDATE missions SET state = 'superseded', successor = ?, version = version + 1 WHERE id = ? AND state = 'active'")
+      .run(successorId, pred.id);
+    return res.changes === 1 ? { predecessorId: pred.id } : undefined;
+  }
+
+  /** Post-commit half of redemption supersession: lifecycle hook + cascade. */
+  finalizeSupersession(predecessorId: string, successorId: string): void {
+    const fresh = this.get(predecessorId);
+    if (fresh) this.emitCommit(fresh, "active", successorId);
       // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
       // trigger; the successor does NOT inherit the predecessor's children (their
       // strict-subset proof was against the predecessor's Authority Set). This
       // funnel bypasses setState, so the cascade is invoked explicitly here,
       // outside the withTransaction block above (cascadeChildren -> setState uses
       // a bare UPDATE, so there is no nested transaction).
-      this.cascadeChildren(predId);
-    }
-    return superseded;
+    this.cascadeChildren(predecessorId);
   }
 
   get(id: string): MissionRecord | undefined {

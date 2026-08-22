@@ -489,6 +489,14 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const pb = (await poll.json()) as { error?: string };
     expect(poll.status, JSON.stringify(pb)).toBe(400);
     expect(pb.error).toBe("access_denied");
+
+    // Atomicity rollback proof (@spec expansion#superseded-state + the
+    // effective-active rule): the denied completion left NO trace of
+    // activation. The predecessor keeps its terminal state, was never
+    // superseded, and gained no successor link.
+    const predRecord = as.kernel.get(pred.missionId);
+    expect(predRecord?.state).toBe("revoked");
+    expect(predRecord?.successor ?? undefined).toBeUndefined();
   });
 
   it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {
