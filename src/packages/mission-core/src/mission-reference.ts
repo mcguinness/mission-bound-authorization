@@ -24,9 +24,7 @@ export const MCP_REFERENCE_META_KEY = "com.karlmcguinness.mission/reference";
  * requires a reference; silently ignoring a bad reference is the
  * non-conforming behavior the spec names.
  */
-export type PropagatedMissionReference =
-  | { id: string; issuer: string }
-  | { malformed: true };
+export type PropagatedMissionReference = { id: string; issuer: string } | { malformed: true };
 
 /** RFC 9651 Dictionary key: lc-alpha or `*` first, then lc-alnum `_-.*`. */
 const SF_KEY = /^[a-z*][a-z0-9_.*-]*$/;
@@ -101,8 +99,8 @@ export function parseMissionReferenceField(
       if (i >= s.length) return { malformed: true }; // trailing comma
     }
   }
-  const id = seen["id"];
-  const issuer = seen["issuer"];
+  const id = seen.id;
+  const issuer = seen.issuer;
   if (id === undefined || issuer === undefined) return { malformed: true };
   if (id.length > 256 || issuer.length > 512) return { malformed: true };
   return { id, issuer };
@@ -116,9 +114,7 @@ export function parseMissionReferenceField(
  * owns the parse), so pre-collapse duplicate detection is not reachable on
  * this carriage; membership closure and type checks are.
  */
-export function parseMcpReferenceMeta(
-  value: unknown,
-): PropagatedMissionReference | undefined {
+export function parseMcpReferenceMeta(value: unknown): PropagatedMissionReference | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return { malformed: true };
@@ -128,8 +124,8 @@ export function parseMcpReferenceMeta(
   if (keys.length !== 2 || !("mission_id" in record) || !("issuer" in record)) {
     return { malformed: true };
   }
-  const missionId = record["mission_id"];
-  const issuer = record["issuer"];
+  const missionId = record.mission_id;
+  const issuer = record.issuer;
   if (typeof missionId !== "string" || typeof issuer !== "string") {
     return { malformed: true };
   }

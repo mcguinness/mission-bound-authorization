@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseMcpReferenceMeta,
-  parseMissionReferenceField,
-} from "../src/mission-reference.js";
+import { parseMcpReferenceMeta, parseMissionReferenceField } from "../src/mission-reference.js";
 
 const ID = "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-";
 const ISS = "https://mas.example.com";
@@ -60,7 +57,7 @@ describe("Mission-Reference field parsing (@spec authority-server#mission-refere
 
   it("rejects an id longer than 256 or an issuer longer than 512", () => {
     const longId = "x".repeat(257);
-    const longIss = "https://" + "y".repeat(512);
+    const longIss = `https://${"y".repeat(512)}`;
     expect(parseMissionReferenceField(`id="${longId}", issuer="${ISS}"`)).toEqual({
       malformed: true,
     });
@@ -91,9 +88,9 @@ describe("MCP _meta reference parsing (@spec authority-server#mcp-reference)", (
   });
 
   it("rejects extra members and non-string values", () => {
-    expect(
-      parseMcpReferenceMeta({ mission_id: ID, issuer: ISS, state: "active" }),
-    ).toEqual({ malformed: true });
+    expect(parseMcpReferenceMeta({ mission_id: ID, issuer: ISS, state: "active" })).toEqual({
+      malformed: true,
+    });
     expect(parseMcpReferenceMeta({ mission_id: ID })).toEqual({ malformed: true });
     expect(parseMcpReferenceMeta({ mission_id: 7, issuer: ISS })).toEqual({
       malformed: true,

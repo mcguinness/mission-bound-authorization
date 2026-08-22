@@ -68,6 +68,13 @@ export {
   type DpopProofReplay,
   newDpopProofReplay,
 } from "./dpop-replay.js";
+export {
+  MCP_REFERENCE_META_KEY,
+  MISSION_REFERENCE_HEADER,
+  type PropagatedMissionReference,
+  parseMcpReferenceMeta,
+  parseMissionReferenceField,
+} from "./mission-reference.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {
   ACCEPT_TXN_CHALLENGE_HEADER,
@@ -89,10 +96,3 @@ export {
   type TxnPollError,
   txnApprovalBindingDigest,
 } from "./txn-authorization.js";
-export {
-  MCP_REFERENCE_META_KEY,
-  MISSION_REFERENCE_HEADER,
-  parseMcpReferenceMeta,
-  parseMissionReferenceField,
-  type PropagatedMissionReference,
-} from "./mission-reference.js";
