@@ -887,7 +887,8 @@ Table of Contents
    {
      "alg": "ES256",
      "kid": "pdp-key-2026",
-     "typ": "application/mission-decision-evidence+json"
+     "typ": "application/mission-runtime-evidence+jws",
+     "cty": "application/mission-decision-evidence+json"
    }
 
    The evidence bytes are the JCS canonical bytes of that complete

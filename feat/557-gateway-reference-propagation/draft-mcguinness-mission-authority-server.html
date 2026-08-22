@@ -3092,7 +3092,12 @@ denial-reason set under its extensibility rule beside
 <code>mission_mismatch</code> (<a href="#mission-join" class="auto internal xref">Section 10</a>): <code>mission_mismatch</code> stays the
 subject-or-client join failure, and <code>mission_reference_conflict</code> is
 reference sources naming different Missions or an unusable
-reference.<a href="#section-11.4-1.4.1" class="pilcrow">¶</a></p>
+reference. A PEP that establishes the conflict before any
+evaluation surfaces the same reason as a coordinated pre-decision
+refusal, recorded as a Refusal Record with this <code>denial_reason</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); an evaluating
+PDP surfaces it as the AuthZEN denial reason above. One reason, two
+surfacings, never a silent resolution.<a href="#section-11.4-1.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-1.5">
             <p id="section-11.4-1.5.1">The selection assertion applies only to the request it accompanies:
