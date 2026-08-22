@@ -15,12 +15,12 @@
     "content_sha256": "dc7a13b018c0e0fdb5c1a637261e62c05851a68f0651c061da6c6154fdb32fa7"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "b5e35e2cb5bb8d3cb27394764dfe49a312bc75ff",
-    "content_sha256": "31bc6a2ed17fb1ee1632dce7f62588ae53879d14c8cd5926a0ebb4934a64b652"
+    "revision": "24bb17d4471f43e84fb95f466a70806e945474de",
+    "content_sha256": "4b2916e8204cae420ac94ad8ee7cf8eb78fbe77a3337af3b3798a312cd3ba248"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "a6b06042ccb22076641fa7d8b645c99230bb6186",
-    "content_sha256": "fcdccb7f53b4730303113ba10d361e8af3d1789ef8f3ec7280febb899ce1a885"
+    "revision": "24bb17d4471f43e84fb95f466a70806e945474de",
+    "content_sha256": "4d611acacfbf53081b85a5dcb3ec3c99dee7faa313a9fe6338bdd79613d61bd5"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "942d2b0f577d71e8d3d0c1043506ebde04639271",
@@ -39,8 +39,8 @@
     "content_sha256": "8a769d44b6dc559847d60e34b6e966eab0d75c2db921ab93f431f8c880aebefb"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ab2378cfc3a9783f1a2b078175e431d7b43a5351",
-    "content_sha256": "7482ee2dcfb0bffd6e972fb3cfb70b83d34f223345216750b79adedbba7a8318"
+    "revision": "24bb17d4471f43e84fb95f466a70806e945474de",
+    "content_sha256": "b7606a93c730ac3d4f5b210c4ed9454ee43fc392de2e4ee8422ec14060f59766"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
@@ -5733,6 +5733,29 @@
    "tests": []
   },
   {
+   "id": "runtime.parameter-binding.constraint-input-binding",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "parameter-binding",
+   "text": "for each Common Constraint or other registered constraint the operation's authority entries can carry ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative operation input or derived attribute that satisfies it, the extraction and normalization rule producing the compared value",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Operation Profile names, per constraint, which normalized input satisfies it and how; the max_amount-to-amount mapping stops being implicit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Closes the adapter-contract hole between the issuance profile's constraint algebra and runtime parameter binding (tri-doc review, Aug 2026). The implementation's amount mapping predates this duty; rows flip when an Operation Profile artifact carries the declaration."
+  },
+  {
    "id": "runtime.parameter-binding.digest-test-vectors-required",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "parameter-binding",
@@ -10743,7 +10766,7 @@
    "id": "substrate.statement.section-required-with-version-and-mode",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "A Mission Substrate Binding MUST contain a section titled \"Mission Substrate Statement\".  It MUST identify the specification version and mode to which the statement applies.",
+   "text": "A Mission Substrate Binding MUST contain a section titled \"Mission Substrate Statement\", or, where the binding must remain free of normative dependencies on this document, publish its Statement through the hosted form of",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
