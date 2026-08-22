@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-22T01:58:14Z
-Source repository commit: 11c45a0dbe128c071a3ef1bba6c8be5fc87723cb
+Generated: 2026-08-22T04:25:43Z
+Source repository commit: c383469ad1e908b387573ddf5b0c1eaca0851dec
 Member count: 9
 
 Reading order:
@@ -18285,10 +18285,11 @@ Table of Contents
      11.4.  Mission Receipt
    12. IANA Considerations
      12.1.  Media Type Registry
-       12.1.1.  Decision Evidence Media Type
-       12.1.2.  Execution Evidence Media Type
-       12.1.3.  Refusal Record Media Type
-       12.1.4.  Mission Receipt Media Type
+       12.1.1.  Secured Runtime Evidence Media Type
+       12.1.2.  Decision Evidence Media Type
+       12.1.3.  Execution Evidence Media Type
+       12.1.4.  Refusal Record Media Type
+       12.1.5.  Mission Receipt Media Type
    13. References
      13.1.  Normative References
      13.2.  Informative References
@@ -18805,8 +18806,8 @@ Table of Contents
 
    evidence_envelope:  REQUIRED.  An object.  Integrity protection in
       the form of Section 4.3, emitted by the refusing component, whose
-      JWS protected typ is application/mission-refusal-record+json
-      (Section 12).
+      JWS protected cty is application/mission-refusal-record+json under
+      the protected typ of Section 4.3 (Section 12).
 
    A Refusal Record is closed to uncoordinated extension under the same
    rule as Decision Evidence (Section 8).
@@ -18940,20 +18941,27 @@ Table of Contents
    *  alg: ES256 [RFC7518] is mandatory to implement; an implementation
       MAY offer other JOSE algorithms but MUST implement ES256.
 
-   *  typ: the registered media type of the evidence object being signed
-      (application/mission-decision-evidence+json for Decision Evidence,
-      application/mission-execution-evidence+json for Execution
-      Evidence, application/mission-refusal-record+json for Refusal
-      Records, application/mission-receipt+json for Mission Receipts,
-      Section 12).  A verifier MUST reject a JWS whose protected typ is
-      not the media type of the object it is verifying, so signatures
-      over one record kind cannot be cross-used for another.
+   *  typ: application/mission-runtime-evidence+jws, the secured
+      runtime-evidence representation this document registers
+      (Section 12): one value for every record kind this envelope
+      secures, identifying the complete JWS ([RFC7515], Section 4.1.9).
+
+   *  cty: the registered media type of the evidence object being signed
+      ([RFC7515], Section 4.1.10): application/mission-decision-
+      evidence+json for Decision Evidence, application/mission-
+      execution-evidence+json for Execution Evidence, application/
+      mission-refusal-record+json for Refusal Records, and application/
+      mission-receipt+json for Mission Receipts (Section 12).  A
+      verifier MUST reject a JWS whose protected typ is not application/
+      mission-runtime-evidence+jws or whose protected cty is not the
+      media type of the object it is verifying, so signatures over one
+      record kind cannot be cross-used for another.
 
    This rule is unaffected by the members Decision Evidence, Execution
    Evidence, and Refusal Records share with each other and with other
    evidence types, named once as a base shape
    ([I-D.draft-mcguinness-mission-audit]).  Shared member names describe
-   a common shape for readability; they carry no exemption, and the typ
+   a common shape for readability; they carry no exemption, and the cty
    check above remains the sole authority for which kind a signature
    covers.
 
@@ -19358,8 +19366,9 @@ Table of Contents
    evidence_envelope:  REQUIRED.  An object.  Integrity protection in
       the same form as Decision Evidence (Section 4.3), carrying a
       format (string, required) and a value (string, required).  The
-      default format is jws-compact; the JWS protected typ is
-      application/mission-receipt+json (Section 12).
+      default format is jws-compact; the JWS protected typ is that of
+      Section 4.3 with a cty of application/mission-receipt+json
+      (Section 12).
 
    kind:  REQUIRED.  A string.  One of decision, execution, or refusal
       (Section 6.1).
@@ -19521,7 +19530,8 @@ Table of Contents
        compute the JCS canonical bytes of the receipt with
        evidence_envelope removed, and require byte-for-byte equality,
        rejecting on any difference (Section 4.3).  Confirm the JWS
-       protected typ is application/mission-receipt+json and verify the
+       protected typ is application/mission-runtime-evidence+jws, the
+       protected cty is application/mission-receipt+json, and verify the
        signature against the published key resolved by the JWS kid for
        the party named in emitter, through the enforcement scope
        statement's published key sets (Section 10.2).  Confirm that
@@ -20167,9 +20177,60 @@ Table of Contents
 
 12.1.  Media Type Registry
 
-   This document registers four media types per [RFC6838].
+   This document registers five media types per [RFC6838]: the four
+   evidence-object payload types below, and the JWS-secured runtime
+   evidence representation their shared envelope carries (using the +jws
+   structured syntax suffix already registered with IANA).
 
-12.1.1.  Decision Evidence Media Type
+12.1.1.  Secured Runtime Evidence Media Type
+
+   *  Type name: application
+
+   *  Subtype name: mission-runtime-evidence+jws
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; a JWS Compact Serialization:
+      base64url-encoded values separated by period characters.  The
+      secured payload's own media type travels in the JWS protected cty
+      (Section 4.3).
+
+   *  Security considerations: see Section 10
+
+   *  Interoperability considerations: see this document (Section 4.3)
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: Mission-bound runtime
+      enforcement deployments
+
+   *  Fragment identifier considerations: N/A
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): none
+
+      -  Macintosh file type code(s): N/A
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
+
+12.1.2.  Decision Evidence Media Type
 
    *  Type name: application
 
@@ -20214,7 +20275,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.2.  Execution Evidence Media Type
+12.1.3.  Execution Evidence Media Type
 
    *  Type name: application
 
@@ -20259,7 +20320,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.3.  Refusal Record Media Type
+12.1.4.  Refusal Record Media Type
 
    *  Type name: application
 
@@ -20304,7 +20365,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.4.  Mission Receipt Media Type
+12.1.5.  Mission Receipt Media Type
 
    *  Type name: application
 
@@ -25041,7 +25102,6 @@ Table of Contents
        13.1.1.  application/mission-consent-evidence+json
        13.1.2.  application/mission-consent-evidence+jws
        13.1.3.  application/mission-consent-disclosure+json
-     13.2.  Structured Syntax Suffix Registry
    14. References
      14.1.  Normative References
      14.2.  Informative References
@@ -26220,8 +26280,7 @@ Table of Contents
    evidence_envelope's protected typ names (Section 7.1).  The Mission
    audit profile ([I-D.draft-mcguinness-mission-audit]) references the
    Consent Evidence media type.  The third registration uses the +jws
-   structured syntax suffix, whose registration this document also
-   requests below.
+   structured syntax suffix already registered with IANA.
 
 13.1.1.  application/mission-consent-evidence+json
 
@@ -26301,7 +26360,7 @@ Table of Contents
 
       -  File extension(s): none
 
-      -  Macintosh file type code(s): TEXT
+      -  Macintosh file type code(s): N/A
 
    *  Person & email address to contact for further information: Karl
       McGuinness public@karlmcguinness.com
@@ -26359,38 +26418,6 @@ Table of Contents
    *  Author: IETF
 
    *  Change controller: IETF
-
-13.2.  Structured Syntax Suffix Registry
-
-   IANA is requested to register the following structured syntax suffix
-   per [RFC6838], Section 6.
-
-   *  Name: JSON Web Signature (JWS)
-
-   *  +suffix: +jws
-
-   *  References: [RFC7515]
-
-   *  Encoding considerations: binary; a JWS Compact Serialization is a
-      sequence of base64url-encoded values separated by period
-      characters
-
-   *  Interoperability considerations: the JWS Compact Serialization is
-      defined in [RFC7515], Section 3.1.  A receiver expecting a
-      specific secured object type verifies the JOSE protected typ
-      exactly; the suffix conveys the serialization, not the payload
-      semantics, which the subtype preceding the suffix names.
-
-   *  Fragment identifier considerations: the syntax and semantics of
-      fragment identifiers specified for +jws SHOULD be as specified for
-      application/jose ([RFC7515])
-
-   *  Security considerations: see [RFC7515], Section 10
-
-   *  Contact: Karl McGuinness public@karlmcguinness.com
-      (mailto:public@karlmcguinness.com)
-
-   *  Author/Change controller: IETF
 
 14.  References
 
