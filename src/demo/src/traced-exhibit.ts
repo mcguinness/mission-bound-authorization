@@ -36,7 +36,7 @@ async function main() {
     sub: "alice",
     clientId: "ap-agent",
     clientInstanceId: "inst-1",
-    mission: { id: mission.id, authority_hash: record?.authority_hash ?? "" },
+    mission: { id: mission.id, issuer: "https://as.example.com", authority_hash: record?.authority_hash ?? "" },
     cnfJkt: "jkt-demo",
   });
 

@@ -10,7 +10,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
-import { TXN_AUTHORIZATION_REQUIRED, type JsonValue, type TxnMissionClaim } from "@mission/core";
+import { TXN_AUTHORIZATION_REQUIRED, type JsonValue, type TxnMissionClaim , type PropagatedMissionReference } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
@@ -63,7 +63,7 @@ export interface TokenFacts {
   clientId: string;
   clientInstanceId?: string;
   act?: ActObject;
-  mission: { id: string; authority_hash: string };
+  mission: { id: string; issuer: string; authority_hash: string };
   /**
    * @spec txn-authorization#resource-challenge — the VERIFIED token's whole
    * `mission` claim. A challenge copies it unchanged (including the invariant
@@ -270,6 +270,15 @@ export interface PepDeps {
  */
 export interface RequestSignals {
   acceptTxnChallenge?: boolean;
+  /**
+   * @spec authority-server#reference-propagation — the propagated Mission
+   * Reference the transport carried (HTTP `Mission-Reference` or the MCP
+   * `_meta` key), parsed but UNVERIFIED: a selection assertion the
+   * enforcement path checks against the credential-carried reference.
+   * `{ malformed: true }` is carried, not dropped, because unusable
+   * carriage denies where governance requires a reference.
+   */
+  missionReference?: PropagatedMissionReference;
 }
 
 export interface ActionApprovalInput {
@@ -407,6 +416,22 @@ export class Pep {
   ): Promise<EnforceResult> {
     const mapping = this.toolAction(tool);
     if (!mapping) return this.refuse(token, "unknown_tool", tool);
+
+    // @spec authority-server#reference-verification — a propagated Mission
+    // Reference is a selection assertion, never authority. Every credential
+    // on this path carries the `mission` claim, so the credential-carried
+    // reference governs: a propagated reference naming a different Mission,
+    // and a malformed reference where governance requires one (every tool
+    // here is governed), deny as `mission_reference_conflict`, never a
+    // silent pick-one and never a silent ignore.
+    const propagated = signals?.missionReference;
+    if (propagated) {
+      const matches =
+        !("malformed" in propagated) &&
+        propagated.id === token.mission.id &&
+        propagated.issuer === token.mission.issuer;
+      if (!matches) return this.refuse(token, "mission_reference_conflict", mapping.action);
+    }
 
     const loaded = this.deps.loadView(token.mission.id);
     if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);

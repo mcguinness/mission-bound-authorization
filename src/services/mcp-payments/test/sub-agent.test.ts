@@ -60,7 +60,7 @@ const orchestratorToken = (): TokenFacts => ({
   clientId: "ap-agent",
   clientInstanceId: "inst-orchestrator",
   act: ORCH,
-  mission: { id: "msn_m12", authority_hash: "sha-256:m12hash" },
+  mission: { id: "msn_m12", issuer: "https://as.test", authority_hash: "sha-256:m12hash" },
   cnfJkt: "jkt-orch",
 });
 const subAgentToken = (): TokenFacts => ({
@@ -68,7 +68,7 @@ const subAgentToken = (): TokenFacts => ({
   clientId: "ap-agent",
   clientInstanceId: "inst-subagent",
   act: SUBAGENT_ACT,
-  mission: { id: "msn_m12", authority_hash: "sha-256:m12hash" },
+  mission: { id: "msn_m12", issuer: "https://as.test", authority_hash: "sha-256:m12hash" },
   cnfJkt: "jkt-sub",
 });
 

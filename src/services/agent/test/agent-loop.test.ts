@@ -87,7 +87,7 @@ async function signMissionToken(): Promise<string> {
   return new SignJWT({
     client_id: "ap-agent",
     client_instance_id: "inst-1",
-    mission: { id: VIEW.id, authority_hash: AUTHORITY_HASH },
+    mission: { id: VIEW.id, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnf: { jkt: CNF_JKT },
   })
     .setProtectedHeader({ alg: "ES256", kid: "mission-key" })

@@ -55,7 +55,7 @@ const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
   clientInstanceId: "inst-1",
-  mission: { id: "msn_m4", authority_hash: "sha-256:m4hash" },
+  mission: { id: "msn_m4", issuer: "https://as.test", authority_hash: "sha-256:m4hash" },
   cnfJkt: "jkt-1",
 };
 

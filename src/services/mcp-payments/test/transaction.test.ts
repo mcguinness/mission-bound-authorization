@@ -101,7 +101,7 @@ const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
   clientInstanceId: "inst-1",
-  mission: { id: "msn_m5", authority_hash: "sha-256:m5hash" },
+  mission: { id: "msn_m5", issuer: "https://as.test", authority_hash: "sha-256:m5hash" },
   // @spec txn-authorization#resource-challenge — the VERIFIED token's whole
   // mission claim, which a challenge copies unchanged.
   missionClaim: {

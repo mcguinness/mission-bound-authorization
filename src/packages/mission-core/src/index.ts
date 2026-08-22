@@ -89,3 +89,10 @@ export {
   type TxnPollError,
   txnApprovalBindingDigest,
 } from "./txn-authorization.js";
+export {
+  MCP_REFERENCE_META_KEY,
+  MISSION_REFERENCE_HEADER,
+  parseMcpReferenceMeta,
+  parseMissionReferenceField,
+  type PropagatedMissionReference,
+} from "./mission-reference.js";

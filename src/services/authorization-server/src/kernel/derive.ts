@@ -651,7 +651,7 @@ export interface EffectiveAuthoritySource {
 export class SourceUnavailableError extends Error {}
 
 /**
- * @spec containment#derivation-gating, status#effective-authority-set,
+ * @spec containment#derivation-gating, status#conformance,
  * issuance-grant#effective-set-projection (issue #589) — the Effective
  * Authority Set projection PRIMITIVE for an already-issued credential's
  * `rar`: project it through the Mission's CURRENT effective set (resolved

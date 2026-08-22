@@ -87,7 +87,7 @@ async function signMissionToken(opts: {
   const token = new SignJWT({
     client_id: "ap-agent",
     client_instance_id: "inst-1",
-    mission: { id: opts.missionId ?? VIEW.id, authority_hash: opts.authorityHash ?? AUTHORITY_HASH },
+    mission: { id: opts.missionId ?? VIEW.id, issuer: ISSUER, authority_hash: opts.authorityHash ?? AUTHORITY_HASH },
     cnf: { jkt: opts.cnfJkt ?? CNF_JKT },
     ...(opts.identityContinuationHandle ? { identity_continuation_handle: opts.identityContinuationHandle } : {}),
   })
@@ -107,7 +107,7 @@ function tokenFacts(missionId: string = VIEW.id): TokenFacts {
     sub: "alice",
     clientId: "ap-agent",
     clientInstanceId: "inst-1",
-    mission: { id: missionId, authority_hash: AUTHORITY_HASH },
+    mission: { id: missionId, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnfJkt: CNF_JKT,
   };
 }
@@ -299,5 +299,57 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     expect(overCap.denial_reason).toBe("constraint_exceeded");
     const wrongVendor = await client.callTool("execute_wire_transfer", { invoice_id: "inv-3" }, jwt);
     expect(wrongVendor.denial_reason).toBe("out_of_authority");
+  });
+});
+
+// @spec authority-server#mcp-reference — the reference rides params._meta on
+// tools/call under the namespaced key; a conforming Mission PEP never
+// silently ignores it.
+d("MCP _meta Mission reference propagation", () => {
+  beforeAll(async () => {
+    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    fga = conn.fga;
+    modelId = conn.modelId;
+    const kp = await generateKeyPair("ES256", { extractable: true });
+    signKey = kp.privateKey;
+    pubJwk = { ...(await exportJWK(kp.publicKey)), kid: "mission-key", alg: "ES256" };
+  });
+
+  it("a matching _meta reference permits the call", async () => {
+    const { client } = await build();
+    const jwt = await signMissionToken({});
+    const res = await client.callTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1" },
+      jwt,
+      { mission_id: VIEW.id, issuer: ISSUER },
+    );
+    expect(res.ok).toBe(true);
+  });
+
+  it("a conflicting _meta reference is refused with mission_reference_conflict", async () => {
+    const { client } = await build();
+    const jwt = await signMissionToken({});
+    const res = await client.callTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1" },
+      jwt,
+      { mission_id: "msn_other", issuer: ISSUER },
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("a malformed _meta reference (extra member) is refused with mission_reference_conflict", async () => {
+    const { client } = await build();
+    const jwt = await signMissionToken({});
+    const res = await client.callTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1" },
+      jwt,
+      { mission_id: VIEW.id, issuer: ISSUER, state: "active" },
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
   });
 });

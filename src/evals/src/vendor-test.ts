@@ -13,7 +13,7 @@ import type { HarnessDeps } from "./index.js";
 import type { TokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE } from "@mission/mcp-payments";
 
-const MISSION = { id: "msn_eval", authority_hash: "sha-256:evalhash" };
+const MISSION = { id: "msn_eval", issuer: "https://as.eval", authority_hash: "sha-256:evalhash" };
 const validToken = (over: Partial<TokenFacts> = {}): TokenFacts => ({
   sub: "alice",
   clientId: "ap-agent",
