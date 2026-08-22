@@ -1131,15 +1131,15 @@ by policy regardless of what was submitted
 ({{authorization-derivation}}) and MUST NOT grant authority beyond
 what the Mission Intent yields.
 
-Each submitted entry MUST be of a type the AS advertises and MUST
-validate against that type's published JSON Schema ({{other-types}},
-{{discovery}}); where a deployment arranges Mission-bound
-authorization out of band rather than advertising the metadata
-endpoint, the supported types and their schemas are established out
-of band, and this rule applies over that knowledge the same way.
+Each submitted entry MUST be of a supported type ({{other-types}},
+{{discovery}}) and MUST validate against that type's documented
+definition; where a machine-readable JSON Schema for the type is
+advertised ({{discovery}}) or established out of band, the entry
+MUST also validate against that schema.
 This is the {{RFC9396}} Section 5 validation of the standard
 parameter: the AS MUST refuse a request carrying an entry of an
-unadvertised type, or an entry that fails its type's schema, with
+unsupported type, or an entry that fails its type's documented
+definition or applicable schema, with
 `invalid_authorization_details`; a validation failure is never
 repaired by omitting the entry. Policy narrowing is distinct.
 During derivation the AS MAY narrow or omit a syntactically valid
@@ -3520,9 +3520,8 @@ Disclosure is member-scoped as well as caller-scoped:
 and audit consumers, not Resource Server enforcement, and the AS
 MUST disclose each only to a caller the deployment has granted that
 member's disclosure privilege; an audience-authorized Resource
-Server receives the enforcement projection (`id`, `issuer`,
-`authority_hash`, and, from the issuer, `state`) without them by
-default.
+Server receives the ordinary audience-filtered enforcement
+projection defined above, without them, by default.
 
 ## Composite Active State {#composite-active}
 
@@ -4209,13 +4208,12 @@ This binding's Mission Substrate Statement, the kernel mapping and
 capability table these surfaces supply to the family's substrate
 contract, is published in the substrate companion's family appendix
 ({{I-D.draft-mcguinness-mission-substrate}}, Section "OAuth Mission
-Binding Statement"), the hosted form the substrate contract defines
-for a binding that must stay free of companion normative
-dependencies. The Statement is this binding's normative Mission
-Substrate Statement where it is published; read from this document
-the pointer is informative, the Statement restates this document,
-adds no requirement to it, and this document remains
-self-contained.
+Binding Statement"), the hosted form the substrate contract
+defines. The claim that Statement embodies is the substrate
+document's own assertion about this binding, made and maintained
+there; this document makes no substrate-conformance claim, takes no
+requirement from the substrate, and remains self-contained, and
+this pointer is informative.
 
 # Security Considerations {#security-considerations}
 

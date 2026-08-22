@@ -57,9 +57,11 @@ const SAAS = DERIVATION_POLICY.ceiling[1].resource;
 
 // Registered introspection principals (config/introspection.json): rs-payments
 // is authorized for the payments audience and holds the provenance +
-// status_list disclosure privileges; rs-saas is authorized for the saas
+// status_list + budget disclosure privileges; rs-payments-basic is authorized
+// for the same audience and holds none; rs-saas is authorized for the saas
 // audience and holds none.
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
+const RS_PAYMENTS_BASIC = ["rs-payments-basic", "dev-introspection-rs-payments-basic"] as const;
 const RS_SAAS = ["rs-saas", "dev-introspection-rs-saas"] as const;
 
 let as: BuiltAs;
@@ -582,6 +584,24 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     const details = res.body.authorization_details as AuthorityEntry[];
     expect(details.length).toBeGreaterThan(0);
     for (const entry of details) expect(entry.resource).toBe(PAYMENTS);
+  });
+
+  it("budget disclosure is privilege-gated: an authorized RS without the budget privilege never sees derivations_remaining", async () => {
+    // flow1 carries max_derivations, but rs-payments-basic holds no
+    // disclosure privileges: the enforcement projection arrives without
+    // derivations_remaining (and without proposal_hash).
+    const res = await introspect(flow1.at, { principal: RS_PAYMENTS_BASIC });
+    expect(res.body.active).toBe(true);
+    const mission = res.body.mission as Record<string, unknown>;
+    expect(Object.keys(mission).sort()).toEqual([
+      "approval_basis",
+      "authority_hash",
+      "expires_at",
+      "id",
+      "issuer",
+      "state",
+      "version",
+    ]);
   });
 
   it("issuer-only members are disclosure-gated: a privilege-less principal never sees them", async () => {

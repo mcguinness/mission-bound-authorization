@@ -1968,8 +1968,14 @@ implementers of the same operation bind the same bytes:
   its unit or currency interpretation (conversion prohibited unless
   the profile defines one), the comparison procedure in the
   constraint's value space, and the fail-closed behavior for a
-  missing or malformed input, with at least one digest test vector
-  exercising each such constraint binding;
+  missing or malformed input, together with constraint-evaluation
+  fixtures separate from the digest vectors: at least one permitting
+  value, one value beyond the bound, a missing and a malformed
+  input, and, where the constraint admits incomparability, an
+  incomparable pair (for `max_amount`: the mapping to
+  `{amount, currency}`, the exact-bound permit, the over-bound
+  refusal, an absent amount, a malformed decimal, and a mismatched
+  currency);
 - digest test vectors for the operation, each carrying the operation
   input before normalization, the exact normalized parameter value,
   the exact JCS UTF-8 serialization (or an unambiguous byte
