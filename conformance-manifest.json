@@ -11765,7 +11765,7 @@
    "id": "evidence.integrity.typ-rejects-cross-use",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "decision-evidence-integrity",
-   "text": "A verifier MUST reject a JWS whose protected `typ` is not the media type of the object it is verifying, so signatures over one record kind cannot be cross-used for another.",
+   "text": "A verifier MUST reject a JWS whose protected `typ` is not `application/mission-runtime-evidence+jws` or whose protected `cty` is not the media type of the object it is verifying, so signatures over one record kind cannot be cross-used for another",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -11777,7 +11777,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a JWS whose typ does not match the media type of the object being verified is rejected; shared member names among Decision Evidence, Execution Evidence, and Refusal Records carry no exemption, and the typ check is the sole authority for which record kind a signature covers"
+    "normative": "the protected typ names the secured runtime-evidence representation and the protected cty names the record kind; a wrong value in either position is rejected, so cross-kind signature reuse is foreclosed"
    },
    "level": "unit",
    "coverage": "todo",

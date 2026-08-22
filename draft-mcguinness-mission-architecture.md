@@ -457,9 +457,13 @@ is defined by {{I-D.draft-mcguinness-mission-aauth}}.
 
 # The Mission {#the-mission}
 
-OAuth 2.0 issues access tokens for individual resource requests; it
-has no durable, approved artifact for the larger task a client
-pursues on a user's behalf.
+OAuth 2.0 standardizes authorization: an access token represents
+authorization granted to the client, for a delegating user or for
+the client's own behalf, and can serve many requests, and a
+deployment may retain durable grant or consent state behind it. What
+OAuth does not standardize is an independently addressable,
+lifecycle-bearing approved-task object: an artifact whose semantics
+persist across tokens, actors, audiences, and evidence.
 
 That matters for AI agents: given a mission (book the trip,
 reconcile the ledger), an agent takes many actions across many
@@ -495,7 +499,8 @@ Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).
 
 The Mission lifecycle states are `active`, `revoked`, and `expired`, and
-only `active` permits issuance or continued reliance. A non-active
+only `active` permits issuance or a new positive governance
+decision. A non-active
 state stops new derivation at once; authority already issued ends at
 the earliest of delivered revocation, a runtime or state-aware
 re-check, or the credential's own expiry ({{validity-model}}).
@@ -999,8 +1004,12 @@ actually take, and the second is the reference:
   not imply identical rungs or capabilities.
 
 **Reference security architecture**:
-: core plus runtime enforcement, its AuthZEN binding, and a
-  freshness source (the Runtime-Enforced level,
+: core plus runtime enforcement, its AuthZEN binding, runtime
+  evidence (the decision and execution objects AuthZEN consumes),
+  and a freshness source, Status being the reference choice; the
+  substrate contract arrives with them as runtime and AuthZEN's
+  normative kernel, by adoption closure, and the family manifest
+  records the stack's exact membership (the Runtime-Enforced level,
   {{assurance-levels}}). This is the architecture this document
   means when it says a Mission is enforced, and the one an
   evaluation should picture by default. It presumes an
@@ -1022,8 +1031,10 @@ actually take, and the second is the reference:
 
 Independent of how the drafts are cut for standardization, the
 system decomposes into five architecture packages; the document map
-({{document-map}}) names every draft, and each belongs to one
-package:
+({{document-map}}) names every draft, and its groups, not this list,
+are the maintained assignment. The packages are the product
+architect's view of the same system, and a draft can serve more than
+one package:
 
 1. **Mission Control**: the object, approval (including deferred and
    revision), lifecycle, status and signals, expansion, completion,
@@ -1067,9 +1078,12 @@ Access Server, with contextual PS governance when the PS is on path.
   gate authority.
 
 **Only `active` permits**:
-: Issuance, refresh, and reliance require the exact state `active`;
-  every other state, including an unrecognized one, fails safe (the
-  OAuth binding's Mission Lifecycle and Gating section). In AAuth, only PS
+: Issuance, refresh, and every new positive governance decision
+  require the exact state `active`; every other state, including an
+  unrecognized one, fails safe (the OAuth binding's Mission Lifecycle
+  and Gating section). A state-aware consumer relies only while it
+  observes `active`; a state-unaware consumer retains the bounded
+  materialized-credential residual ({{validity-model}}). In AAuth, only PS
   operations and the PS-asserted and federated authorization paths are
   structurally gated; identity-based and resource-managed decisions do
   not pass through the PS. On the gated paths the gate covers requests
@@ -1248,12 +1262,16 @@ Proposed RAR-type metadata
 `authorization_details` types and fields it understands, is the
 OAuth-native descriptive surface the direction builds on.
 
-Both directions close the same loop: the meaning source's digest
-becomes part of the derived authority. A catalog-sourced capability
-pins its `source_digest`; a resource declaration pins `r3_s256`; in
-each case the Authority Set carries the version of the meaning it
-was derived under, and the point of use compares against the meaning
-in force. Meaning is not consulted at approval and assumed at
+Where a deployed semantic-binding mechanism is in force, both
+directions close the same loop: the meaning source's digest becomes
+part of the derived authority. A catalog-sourced capability pins its
+`source_digest`; a resource declaration pins `r3_s256`; in each case
+the Authority Set carries the version of the meaning it was derived
+under, and the point of use compares against the meaning in force.
+An ordinary registered `authorization_details` type can carry stable
+semantics with neither digest; the loop is closed by the mechanism a
+deployment runs, not by the family universally. Under such a
+mechanism, meaning is not consulted at approval and assumed at
 enforcement; it is committed at approval and re-verified at use.
 
 The contract's failure mode is already normative in each home: a
@@ -1275,11 +1293,12 @@ call.
 
 "Delete database" in isolation is indistinguishable from
 catastrophe. "Delete database" inside an approved migration whose
-copy steps already completed is a priced, checkable step. The only
-place that judgment is possible is where Decision and Execution
-Evidence join on the Mission's identity, because that join is the
-undertaking's recorded history and no resource-local view contains
-it. The runtime profile names the mechanism: sequence-aware
+copy steps already completed is a priced, checkable step. That judgment needs the
+undertaking's history, and no resource-local view contains it. The
+join of Decision and Execution Evidence on the Mission's identity is
+where that history is reconstructible after the fact; at decision
+time, a task-aware decision point can draw the same history from
+trusted prior workflow state or another authoritative source. The runtime profile names the mechanism: sequence-aware
 evaluation over the undertaking's history is an optional decision
 input, guarded so that history informs a decision and never widens
 one ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -1678,10 +1697,10 @@ reconstructing authority from a hash of a full set it does not hold
 
 ## Token Classes {#token-classes}
 
-"Mission-bound" is a specific claim. This document names three token
-shapes descriptively, so a weak one is not read as the strong one; the
-names below are this document's own, and the properties the strong
-class requires are the OAuth binding's:
+"Mission-bound" is a specific claim. This document uses three token
+shapes descriptively, so a weak one is not read as the strong one;
+the names are defined by the OAuth binding's Terminology, and the
+properties the strong class requires are its conformance rule's:
 
 - a **Mission-referenced token** carries a Mission identifier only;
 - a **Mission-derived token** carries authority derived from an
@@ -1801,9 +1820,10 @@ Mission-state decision point, this realizes the **lifecycle-gated**
 capability with reliance bounded by credential lifetime alone
 ({{I-D.draft-mcguinness-mission-substrate}}). It is not a property of
 every access mode: AAuth's PS-asserted and federated paths have that
-gate, while its direct modes do not. That posture is the right choice at action grain, where
-an artifact lives seconds to minutes and no revocation can land
-inside its window, and for short missions; the family's own
+gate, while its direct modes do not. That posture is the right choice at action grain, where an artifact
+lives seconds to minutes and a revocation landing inside its window
+has no observation point that could reach the artifact before its
+own expiry does, and for short missions; the family's own
 short-lived artifacts (the permit, the cross-domain grant, the Join
 Assertion) already sit at this end. What a lifetime cannot do is
 suspend, complete, or kill now, which is the task-grain residue the
@@ -2030,8 +2050,8 @@ condition:
 
 | Estate starting condition | Entry ramp | Day-one delta |
 |---|---|---|
-| AS changeable; PAR, RAR, and JWT access tokens in place | The OAuth binding | AS adds intent intake, derivation, approval, record, and gating; scope-only Resource Servers and clients continue unchanged |
-| AS changeable; RAR absent or tokens opaque | MAS first; the OAuth binding once the AS gains the token plane (a peer move, not an upgrade) | A MAS beside the AS; nothing else changes |
+| AS changeable; PAR, RAR, and JWT access tokens in place | The OAuth binding | AS adds intent intake, derivation, approval, record, and gating; a Mission-creating client changes with it, submitting `mission_intent` through PAR and handling Mission responses and lifecycle refusals; scope-only Resource Servers continue unchanged at scope grain, per-entry constraints reaching them only through a projection or a PEP |
+| AS changeable; RAR absent or tokens opaque | MAS first; the OAuth binding once the AS gains the token plane (a peer move, not an upgrade) | A MAS beside the AS; tokens are unchanged, while governance requires approval integration and Mission correlation, and enforcement waits on PEP/PDP coverage with a trustworthy join |
 | AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
 | Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
 | No PEP/PDP over consequential paths | The OAuth binding where the AS allows; runtime layer next | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
@@ -2044,7 +2064,8 @@ One ramp cuts across the rows: the **short mission**. A Mission whose
 `expires_at` sits minutes out, run in records mode with
 lifetime-bounded reliance, is a durable approval record with
 TTL-grade operational cost: audit, anchors, and bounded exposure
-with no state surface anywhere ({{validity-model}}). A deployment
+with no external state-observation surface, the issuer still owning
+Mission state and the issuance gate ({{validity-model}}). A deployment
 can adopt the family this way first, per task, and add state
 surfaces only where missions grow long enough to need suspend,
 complete, or kill-now.
@@ -2297,35 +2318,30 @@ generalized to another resource's vocabulary.
 
 # Mission Assurance Levels {#assurance-levels}
 
-Two questions get asked of a Mission deployment: what to deploy for a
-goal, and what guarantee it has earned. They share one progression, so
-this document states a single set of levels, each carrying both
-facets, the document set and the proof obligations, and names them so
-a deployment, a procurement, or a review can cite one level. The
-levels are guidance, not a conformance class; every companion is
-optional and states its own scoped conformance.
-
-Because the family's strongest properties are deployment properties,
-not protocol properties (complete PEP placement, a trusted freshness
-source, and credential custody are things a deployment does, not
-things a token proves), a level is a claim, verifiable in the sense
-the runtime profile fixes ({{I-D.draft-mcguinness-mission-runtime}}),
-not a label: a deployment states the highest level it has earned in
-its Enforcement Scope Statement, and a consumer treats an unstated or
-unproven level as not claimed.
+Two questions get asked of a Mission deployment: what to deploy for
+a goal, and what a relying party can verify. This document answers
+them on two different axes. The levels below are **adoption
+bundles**: which documents a deployment runs, in the order
+deployments build, named so a deployment, a procurement, or a review
+can cite one bundle. They are guidance, never a conformance class or
+an earned label. What a deployment proves is the orthogonal claims
+axis ({{assurance-claims-axis}}): scoped, named claims whose proof
+obligations existing profiles fix, listed in the Deployment Profile
+beside the residuals each leaves. Because the family's strongest
+properties are deployment properties, not protocol properties
+(complete PEP placement, a trusted freshness source, and credential
+custody are things a deployment does, not things a token proves),
+the claims, never a level name, are what a relying party compares.
 
 The levels build on one another: a deployment adopts recording and
 governing the approved task (Baseline Issuance), then per-action
-enforcement (Runtime-Enforced), then full agent safety (Governed and
-High-Assurance Agent), advancing to the level its risk warrants and
-stopping there.
+enforcement (Runtime-Enforced), then agent-governance and
+compromise-resistance (Governed and High-Assurance Agent), advancing
+to the bundle its risk warrants and stopping there.
 
-A level is a dependency bundle: which documents a deployment runs,
-in adoption order. What a deployment can prove is the orthogonal
-claims axis ({{assurance-claims-axis}}), and the proof obligations
-noted with each level below are the claims that become available at
-that level, not properties the level name itself asserts; the
-claims, not the level, are what a relying party compares.
+The proof obligations noted with each level below are the claims
+that become available at that bundle, not properties the level name
+asserts.
 
 The levels are one axis; the **binding** is an orthogonal one. The
 authority-bearing bindings name their level separately from their
@@ -2366,8 +2382,10 @@ The levels, cumulative:
   than the deployment's tolerated staleness
   ({{I-D.draft-mcguinness-oauth-mission-status}}), gives a
   quantified cutoff, revocation within one token lifetime, with no
-  Resource Server changes and no status traffic; expiry is a state
-  check performed by the clock. Revocation latency is a number, not
+  Resource Server changes and no status traffic; expiry closes the
+  temporal bound by the clock alone, observing no revocation,
+  suspension, completion, or containment, which is why the lifetime
+  must not exceed the tolerated staleness. Revocation latency is a number, not
   a level: what the higher levels add is per-action enforcement,
   parameter binding, and evidence, not a faster clock.
 
@@ -2397,12 +2415,13 @@ The levels, cumulative:
   per-action enforcement: a half-step into the next level, not a
   level of its own.
 
-  A deployment demonstrates Baseline Issuance with the following
-  minimum test set, scoped by the capabilities its Mission Substrate
-  Statement claims, so a standalone MAS is never asked to prove a
-  credential behavior it does not claim. The executable realization
-  is planned in the family's conformance suite; no executable rows
-  exist yet.
+  The verification coverage below is profile-owned: each test
+  verifies a rule its home profile states normatively, grouped here
+  in reading order, never as a conformance class a level confers.
+  Coverage is scoped by the capabilities a binding's Mission
+  Substrate Statement claims, so a standalone MAS is never asked to
+  verify a credential behavior it does not claim; the family's
+  conformance manifest carries the profile-owned rows.
 
   Kernel, every Baseline deployment:
 
@@ -2429,7 +2448,7 @@ The levels, cumulative:
      positive result (the forward-compatibility rule: only `active`
      permits reliance, and lost state never fails open).
 
-  The OAuth binding additionally demonstrates:
+  For the OAuth binding, the same coverage includes:
 
   1. refresh while the Mission is active succeeds within policy and
      is refused after a terminal transition; and
@@ -2447,14 +2466,17 @@ The levels, cumulative:
 
   This is the smallest deployment that turns a Mission from governed
   issuance into action-time defense, and every normative dependency
-  it needs is ratified; it is a substantial build, not a wedge, and
+  it needs is a non-experimental family document; it is a
+  substantial build, not a wedge, and
   a deployment sizes the effort from the runtime profile's
   conformance section rather than from this level's one-line
   summary.
 
   Proof obligations: PEP-placement completeness and the declared
-  freshness source and bound. Documents: Baseline plus runtime, its
-  AuthZEN binding, and a freshness source.
+  freshness source and bound. Documents: Baseline plus the substrate
+  contract (the kernel runtime and AuthZEN consume normatively),
+  runtime, its AuthZEN binding, runtime evidence, and a concrete
+  freshness source, Status being the reference choice.
 
 **Governed Agent** (recommended for AI agents):
 : adds Consent Evidence and the harness, growing with Child Delegation,
@@ -2501,9 +2523,9 @@ with the binding; the Mission Deployment Profile
 
 | Level | What a deployment can defensibly grant |
 | --- | --- |
-| Baseline Issuance | Consequential reads that are attributable and killable at the issuance gate: the governed pilot |
-| Runtime-Enforced | Consequential writes inside approved bounds, reversible under the deployment's own authority |
-| Governed Agent | Unattended operation and delegation, with approval evidence behind every grant |
+| Baseline Issuance | Consequential reads that are attributable and killable at the issuance gate, outstanding tokens running to their own expiry: the governed pilot |
+| Runtime-Enforced | Consequential writes inside approved bounds; reversal and compensation stay the orchestration profile's, where adopted |
+| Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
 
 Every level above Baseline Issuance also carries the cross-cutting
@@ -2577,9 +2599,12 @@ level:
 
 - **Approved-record integrity**: the anchors reproduce from the
   record alone (the OAuth binding's integrity anchors).
-- **Bounded revocation latency**: the published staleness bound plus
-  the permit window and the class's execution bound
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+- **Bounded revocation latency**, per path and mechanism, the claim
+  naming the paths it covers: for a runtime-gated class, the
+  published staleness bound plus the permit window plus the class's
+  execution bound ({{I-D.draft-mcguinness-mission-runtime}}); for a
+  lifecycle-gated path, the outstanding credential lifetime; an
+  ungated path has no bound to claim.
 - **Action-time enforcement**: PEP coverage for the Enforcement Scope
   Statement's mediated set, and nothing outside it.
 - **Parameter-bound enforcement**: permits bound to concrete
@@ -2588,8 +2613,8 @@ level:
   transaction-assurance tier machinery (single-use permits, leases,
   outcome reconciliation) for the classes claimed
   ({{I-D.draft-mcguinness-mission-runtime}}).
-- **Compromise-resistant custody** and **trifecta containment**: the
-  two named High-Assurance claims, unchanged
+- **Agent-compromise-resistant enforcement** and **trifecta
+  containment**: the two named High-Assurance claims, unchanged
   ({{assurance-levels}}).
 
 Two deployments at the same level under different bindings can hold
@@ -2775,12 +2800,22 @@ illustrative and the per-profile statements are the checkable form.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
-it does not cover. An illustrative shape:
+it does not cover. An illustrative shape, for a deployment that
+runs mediated credential custody but makes neither High-Assurance
+claim: the agent-compromise-resistant claim requires the runtime
+profile's per-condition evidence bindings (EAT profile and claim
+identifiers, measurements, appraisal policy, attester identity,
+freshness, signed approval configuration, rendering evidence, and a
+path-completeness audit), and this shape's generic attestation
+reference is declaration input, not that proof:
 
 ~~~ json
 {
   "profile": "mission-governed-agent-runtime",
-  "assurance_level": "high-assurance-agent",
+  "assurance_claims": [
+    "action-time enforcement", "parameter-bound enforcement",
+    "bounded revocation latency"
+  ],
   "mission_issuer": "https://as.example.com",
   "state_sources": [
     { "type": "status_endpoint", "max_staleness_seconds": 30 }
@@ -2795,10 +2830,11 @@ it does not cover. An illustrative shape:
     "pep_locations": ["tool-gateway", "browser-action-proxy"],
     "mediated_action_classes": [
       "irreversible_action", "external_commitment",
-      "external_communication", "privileged_administration"
+      "privileged_administration"
     ],
     "action_bound_approval_classes": [
-      "irreversible_action", "privileged_administration"
+      "irreversible_action", "external_commitment",
+      "privileged_administration"
     ],
     "unmediated_exclusions": [
       "internal_reasoning", "local_cache_read"
@@ -2846,6 +2882,9 @@ it does not cover. An illustrative shape:
   "approval_rendering": {
     "rendered_by": "agent-isolated-component"
   },
+  "execution_environment": {
+    "attestation_ref": "https://attest.example.com/runtime/2026"
+  },
   "harness": {
     "subagent_inheritance": "explicit_delegation_only",
     "resume_requires_active_state": true,
@@ -2854,7 +2893,8 @@ it does not cover. An illustrative shape:
   },
   "exposure": {
     "taint_rule": "enforced",
-    "egress_channels_enumerated": true
+    "egress_channels_enumerated": true,
+    "egress_mediated": true
   },
   "standing_charters": {
     "ceiling_review_cadence_days": 90,
@@ -2880,6 +2920,7 @@ it does not cover. An illustrative shape:
     }
   },
   "residual_risks": [
+    "mediated custody is declared, not evidenced: no High-Assurance claim is made",
     "unmediated local reasoning is outside enforcement",
     "revocation latency up to 30 seconds",
     "PEP compromise is not prevented",
@@ -2919,9 +2960,9 @@ verifier for this declaration exists.
 
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
-profile is what makes that difference legible. A deployment claiming
-a level ({{assurance-levels}}) states it here and lists the residuals
-that level leaves.
+profile is what makes that difference legible. A deployment lists
+its assurance claims ({{assurance-claims-axis}}) here, beside the
+residuals each leaves.
 
 # Prevention, Detection, and Residue {#prevention-detection}
 
@@ -3007,27 +3048,34 @@ contract's kernel ({{I-D.draft-mcguinness-mission-substrate}}), hold:
 4. **Governance history**: decisions and interactions are correlated to
    the stable reference in an ordered audit or governance record.
 
-A design additionally provides **structured-authority** capabilities
-when two more properties hold:
+Two further properties are separately claimable capabilities, not
+one bundle: the second requires the first, and a design can hold the
+first alone ({{I-D.draft-mcguinness-mission-substrate}}):
 
-5. **Deterministic authority representation**: credentials or decisions
-   carry authority that an identified enforcement point can evaluate.
-6. **Monotonic derivation**: derived and delegated authority only
-   narrows, and widening requires a fresh approval or a drawdown already
+5. **Structured Authority**: credentials or decisions carry
+   authority that an identified enforcement point can evaluate.
+6. **Monotonic Derivation**, available only where Structured
+   Authority holds: derived and delegated authority only narrows,
+   and widening requires a fresh approval or a drawdown already
    bounded by an approved ceiling.
 
-A design provides **Runtime-Enforced Mission** capabilities when two
+A design provides **Runtime-Enforced Mission** capabilities when,
+over a State-Observable source with a stated staleness bound, two
 further properties hold:
 
 7. **Per-action runtime enforcement**: consequential actions are
    checkable against the object at the point of use.
-8. **Evidence that joins**: what was approved, shown, decided, and done
-   is reconstructible from evidence joined on the object's identity.
+8. **Decision accountability, growing to a joined record**: every
+   gated action yields Decision Evidence joined on the object's
+   identity. What was shown requires Consent Evidence and what was
+   done requires Execution Evidence for the covered classes; with
+   those adopted, what was approved, shown, decided, and done is
+   reconstructible from the join.
 
 AAuth supplies the first four natively (its `expires_at` member
 carries the reliance bound), with its lifecycle gate scoped to PS
 endpoints and PS-mediated paths carrying the validated reference. The OAuth binding
-supplies the structured-authority layer as well. Runtime and portable
+supplies both authority capabilities as well. Runtime and portable
 evidence remain separately claimed capabilities; the requirements below
 unpack the family mechanisms without implying every binding implements
 every one.
@@ -3056,8 +3104,10 @@ every one.
 
 ## Lifecycle {#req-lifecycle}
 
-- **R8**: Reliance is gated on task state: only `active` permits it,
-  and unrecognized states fail safe (oauth-mission).
+- **R8**: New reliance is gated on task state: only `active` permits
+  a new governed decision, unrecognized states fail safe, and an
+  already-issued artifact ends at its bounded residual
+  (oauth-mission).
 - **R9**: Revocation is independent of credential possession, and
   state changes propagate by pull or push (oauth-mission;
   oauth-mission-status; oauth-mission-signals).
@@ -3078,15 +3128,19 @@ every one.
 - **R15**: Each consequential action is checked at the point of use,
   the permit bound to the concrete parameters (mission-runtime;
   mission-authzen).
-- **R16**: When a task stops, governed work stops with it and
-  in-flight work unwinds safely (mission-harness;
+- **R16**: When a task stops, governed work stops with it, and
+  in-flight work is classified, then suppressed or cancelled where
+  possible, compensated where authorized, or escalated; irreversible
+  and unknown outcomes remain (mission-harness;
   mission-orchestration).
 - **R17**: Task evidence is tamper-evident and verifiable outside the
   deployment (mission-audit; mission-mandate).
-- **R18**: A Mission's committed facts and authority are honorable in
-  another trust domain without widening, and verification needs no
-  session with the issuer (oauth-mission-cross-domain;
-  mission-mandate).
+- **R18**: Two distinct cross-domain properties, never one: a
+  Mission's authority is honorable in another trust domain without
+  widening, through the projection grant
+  (oauth-mission-cross-domain); and a Mission's committed facts are
+  verifiable there without a session with the issuer, granting
+  nothing (mission-mandate).
 - **R19**: Delegation history follows authorization continuity, never
   organizational topology. A Child Mission, an Expansion successor,
   or any fresh approval starts a new approval basis and actor chain;
@@ -3219,11 +3273,39 @@ bound profiled by `aauth-mission-expiry`.
 
 # Security Considerations {#security-considerations}
 
-This document introduces no mechanism and therefore no new security
-considerations. The consolidated trusted base and compromise analysis
-are the Mission Security Model's
-({{I-D.draft-mcguinness-mission-security-model}}), and each profile's
-own Security Considerations remain normative.
+This document defines no wire mechanism; each profile's own Security
+Considerations remain normative, and the consolidated trusted base
+and compromise analysis are the Mission Security Model's
+({{I-D.draft-mcguinness-mission-security-model}}). What this
+document does introduce is composition, and the risks that emerge
+only at composition are its security subject matter:
+
+- stale state and materialized authority: an already-issued
+  credential, redeemed grant, or minted attenuation root stays
+  usable to its artifact-specific bound only where no timely
+  state-aware or action-time gate reaches it; where one does,
+  reliance ends at that earlier gate ({{validity-model}},
+  {{kill-switch-composition}});
+- unmediated paths: enforcement claims hold only inside the declared
+  PEP boundary, and the Enforcement Scope Statement's exclusions are
+  where a compromised agent goes first;
+- semantic-derivation trust: the derivation boundary
+  ({{derivation-boundary}}) concentrates meaning-to-authority
+  translation at the issuer, and the anchors commit its output, not
+  its correctness;
+- component compromise: issuer, PDP, PEP, state source, and evidence
+  producer each void a different guarantee when compromised, and the
+  security model prices each;
+- context splicing and join ambiguity: independently valid identity,
+  credential, and Mission facts compose into an unauthorized whole
+  wherever they are combined without an authorized joining
+  authority, verified inputs, an association policy, and conflict
+  handling ({{I-D.draft-mcguinness-mission-substrate}});
+- false but correctly signed evidence: signatures make records
+  tamper-evident, never true; and
+- correlation: the Mission Identifier, actor chain, and evidence
+  joins that make audit possible are the same joins that correlate
+  activity across audiences ({{privacy-considerations}}).
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -3238,6 +3320,19 @@ transparency-side mechanism
 ({{I-D.draft-mcguinness-mission-audit}}). The status profile's
 anti-oracle property bounds what its status surfaces disclose
 ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+Read across profiles rather than per document, the dataflow
+concentrates in three places: the record and its evidence at the
+issuer (task prose, principals, authority, provenance); the decision
+and execution evidence joined on the Mission Identifier at the
+runtime and audit layers; and the correlation surface that
+identifier creates wherever it travels (tokens, status responses,
+evidence, receipts, the Mandate). Minimization therefore has one
+shape everywhere: audience-scope what each party receives, prefer
+audience-scoped references over content (a stable reference reused
+across audiences is itself a correlation surface), and let the
+record's access governance, not possession of a reference, decide
+who reads the concentrated view.
 
 The AAuth binding's privacy posture is its own
 ({{I-D.draft-mcguinness-mission-aauth}}): the private mission blob

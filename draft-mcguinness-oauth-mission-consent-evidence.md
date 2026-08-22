@@ -1006,7 +1006,10 @@ MUST carry a `typ` of `mission-consent-evidence+jws` and a `kid` that
 resolves in the Mission Issuer's published key material (its `jwks_uri`),
 identifying a signing key controlled by the Mission Issuer or an evidence
 service authorized by the Mission Issuer. The `typ` names the secured
-representation, the JWS itself rather than its payload: the payload's
+representation, the JWS itself rather than its payload: its value is
+the `application/mission-consent-evidence+jws` media type ({{iana}})
+with the `application/` prefix omitted ({{RFC7515}}, Section 4.1.9),
+while the payload's
 identifier stays `application/mission-consent-evidence+json`, the value
 the audit profile's evidence-type table and its
 `payload-preimage-content-type` carry
@@ -1297,11 +1300,15 @@ per audit scope rather than use a single global counter.
 
 ## Media Type Registry
 
-IANA is requested to register two media types per {{RFC6838}}: one for
-the Consent Evidence object and a distinct one for the Consent
-Disclosure object it may reference ({{minimization}}). The Mission audit
-profile ({{I-D.draft-mcguinness-mission-audit}}) references the Consent
-Evidence media type.
+IANA is requested to register three media types per {{RFC6838}}: one
+for the Consent Evidence object, a distinct one for the Consent
+Disclosure object it may reference ({{minimization}}), and one for
+the JWS-secured Consent Evidence representation that the
+`evidence_envelope`'s protected `typ` names ({{integrity}}). The
+Mission audit profile ({{I-D.draft-mcguinness-mission-audit}})
+references the Consent Evidence media type. The third registration
+uses the `+jws` structured syntax suffix already registered with
+IANA.
 
 ### application/mission-consent-evidence+json
 
@@ -1321,6 +1328,34 @@ Evidence media type.
   - Magic number(s): none
   - File extension(s): `.json`
   - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+### application/mission-consent-evidence+jws
+
+- Type name: application
+- Subtype name: mission-consent-evidence+jws
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; a JWS Compact Serialization
+  ({{RFC7515}}, Section 3.1): base64url-encoded values separated by
+  period characters
+- Security considerations: see {{security-considerations}} and
+  {{RFC7515}}, Section 10
+- Interoperability considerations: see this document ({{integrity}})
+- Published specification: this document
+- Applications that use this media type: OAuth Mission-Bound consent and
+  audit deployments
+- Fragment identifier considerations: N/A
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): none
+  - Macintosh file type code(s): N/A
 - Person & email address to contact for further information:
   Karl McGuinness <public@karlmcguinness.com>
 - Intended usage: COMMON
