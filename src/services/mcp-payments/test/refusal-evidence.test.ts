@@ -30,7 +30,7 @@ import {
 const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
-  mission: { id: "msn_refusal", authority_hash: "sha-256:refusalhash" },
+  mission: { id: "msn_refusal", issuer: "https://as.test", authority_hash: "sha-256:refusalhash" },
   cnfJkt: "jkt-1",
 };
 

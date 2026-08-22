@@ -69,6 +69,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -580,7 +588,12 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
 
 `denial_reason`:
 : REQUIRED. A string. For a PEP refusal, one of `token_invalid`,
-  `mission_claim_missing`, `channel_failure`, `pdp_unreachable`, or
+  `mission_claim_missing`, `mission_reference_conflict` (reference
+  sources naming different Missions, or an unusable propagated
+  reference where governance requires one, the Mission Reference
+  Propagation channel's conflict rule,
+  {{I-D.draft-mcguinness-mission-authority-server}}),
+  `channel_failure`, `pdp_unreachable`, or
   `state_unavailable` (where the deployment's state-source placement
   has the PEP supply state, and it cannot establish it). For a PDP
   refusal of an in-scope request that reaches it without the Mission

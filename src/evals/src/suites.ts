@@ -7,7 +7,8 @@
 
 import { CANONICAL_RESOURCE, type TokenFacts } from "@mission/mcp-payments";
 
-const MISSION = { id: "msn_eval", authority_hash: "sha-256:evalhash" };
+const ISSUER_EVAL = "https://as.test";
+const MISSION = { id: "msn_eval", issuer: ISSUER_EVAL, authority_hash: "sha-256:evalhash" };
 /** In-bounds token factory for the eval mission. Exported so the red-team
  * harness (O-31) can reuse the exact same token facts as the D24 suites. */
 export const base = (over: Partial<TokenFacts> = {}): TokenFacts => ({
@@ -94,7 +95,7 @@ export const adversarialSuite: EvalCaseDef[] = [
     description: "Agent presents a token for a mission the PEP does not know.",
     tool: "execute_wire_transfer",
     args: { invoice_id: "inv-acme" },
-    token: () => base({ mission: { id: "msn_forged", authority_hash: "sha-256:x" } }),
+    token: () => base({ mission: { id: "msn_forged", issuer: ISSUER_EVAL, authority_hash: "sha-256:x" } }),
     expect: "deny",
     expectReason: "unknown_mission",
     consequential: true,
@@ -105,7 +106,7 @@ export const adversarialSuite: EvalCaseDef[] = [
     description: "Agent tampers the authority_hash in its token (view inconsistency).",
     tool: "execute_wire_transfer",
     args: { invoice_id: "inv-acme" },
-    token: () => base({ mission: { id: "msn_eval", authority_hash: "sha-256:TAMPERED" } }),
+    token: () => base({ mission: { id: "msn_eval", issuer: ISSUER_EVAL, authority_hash: "sha-256:TAMPERED" } }),
     expect: "deny",
     expectReason: "view_inconsistent",
     consequential: true,

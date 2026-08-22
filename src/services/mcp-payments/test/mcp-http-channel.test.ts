@@ -89,7 +89,7 @@ async function signMissionToken(opts: { missionId?: string; cnfJkt?: string; key
   return new SignJWT({
     client_id: "ap-agent",
     client_instance_id: "inst-1",
-    mission: { id: opts.missionId ?? VIEW.id, authority_hash: AUTHORITY_HASH },
+    mission: { id: opts.missionId ?? VIEW.id, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnf: { jkt: opts.cnfJkt ?? cnfJkt },
   })
     .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
@@ -107,7 +107,7 @@ function tokenFacts(missionId: string = VIEW.id): TokenFacts {
     sub: "alice",
     clientId: "ap-agent",
     clientInstanceId: "inst-1",
-    mission: { id: missionId, authority_hash: AUTHORITY_HASH },
+    mission: { id: missionId, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnfJkt,
   };
 }
@@ -356,5 +356,63 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
     const okRes = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" });
     expect(okRes.ok, JSON.stringify(okRes)).toBe(true);
     expect(connectors.ledgerEntries()).toHaveLength(1);
+  });
+});
+
+// @spec authority-server#reference-verification — the gateway PEP path:
+// the propagated reference is a selection assertion checked against the
+// credential-carried reference; conflicts and unusable carriage refuse as
+// mission_reference_conflict, and a matching reference changes nothing.
+d("Mission-Reference propagation (gateway PEP)", () => {
+  beforeAll(async () => {
+    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    fga = conn.fga;
+    modelId = conn.modelId;
+    const kp = await generateKeyPair("ES256", { extractable: true });
+    signKey = kp.privateKey;
+    pubJwk = { ...(await exportJWK(kp.publicKey)), kid: "mission-key", alg: "ES256" };
+    dpopKeys = await generateKeyPair("ES256", { extractable: true });
+    cnfJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+  });
+
+  async function callWithHeader(header?: string) {
+    const { url } = await build();
+    const jwt = await signMissionToken({});
+    const { client, close } = await createHttpMediatedClient(
+      url,
+      jwt,
+      dpopKeys,
+      header === undefined ? {} : { "mission-reference": header },
+    );
+    cleanups.push(close);
+    return client.callTool("execute_wire_transfer", { invoice_id: "inv-1" });
+  }
+
+  it("a matching propagated reference permits the governed call", async () => {
+    const res = await callWithHeader(`id="${VIEW.id}", issuer="${ISSUER}"`);
+    expect(res.ok).toBe(true);
+  });
+
+  it("a propagated reference naming a different Mission is refused with mission_reference_conflict", async () => {
+    const res = await callWithHeader(`id="msn_other", issuer="${ISSUER}"`);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("a propagated reference naming a different issuer is refused with mission_reference_conflict", async () => {
+    const res = await callWithHeader(`id="${VIEW.id}", issuer="https://other.example"`);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("a malformed reference (extra member) is refused with mission_reference_conflict", async () => {
+    const res = await callWithHeader(`id="${VIEW.id}", issuer="${ISSUER}", state="active"`);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("an absent reference leaves the credential-established path unchanged", async () => {
+    const res = await callWithHeader(undefined);
+    expect(res.ok).toBe(true);
   });
 });

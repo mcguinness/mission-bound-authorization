@@ -41,7 +41,7 @@ const request = (amount: string): EvaluationRequest => ({
   action: { name: "payments:payment.execute" },
   context: {
     audience: RESOURCE,
-    mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+    mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     amount: { amount, currency: "USD" },
   },
 });

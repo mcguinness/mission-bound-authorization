@@ -33,7 +33,8 @@ import {
   type ListToolsResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { type InsufficientAuthorization, TOOL_ACTIONS, type TokenFacts } from "./pep.js";
+import { MCP_REFERENCE_META_KEY, parseMcpReferenceMeta } from "@mission/core";
+import { type InsufficientAuthorization, type RequestSignals, TOOL_ACTIONS, type TokenFacts } from "./pep.js";
 import type { McpPaymentsServer, ToolDef } from "./server.js";
 
 /**
@@ -90,15 +91,16 @@ async function route(
   name: string,
   args: Record<string, unknown>,
   token: TokenFacts,
+  signals?: RequestSignals,
 ): Promise<MediatedToolResult> {
   const mapping = TOOL_ACTIONS[name];
   if (mapping?.actionClass && paymentsServer.hasTransactionTier()) {
-    return paymentsServer.callTransactionTool(name, args, token);
+    return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
   }
   if (name === "schedule_payment" || (mapping?.actionClass && !paymentsServer.hasTransactionTier())) {
-    return paymentsServer.callWriteTool(name, args, token);
+    return paymentsServer.callWriteTool(name, args, token, undefined, signals);
   }
-  return paymentsServer.callReadTool(name, args, token);
+  return paymentsServer.callReadTool(name, args, token, undefined, signals);
 }
 
 /**
@@ -151,7 +153,20 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
       }
       return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
     }
-    const verdict = await route(paymentsServer, request.params.name, args, token);
+    // @spec authority-server#mcp-reference — the propagated reference rides
+    // params._meta on each tools/call under the namespaced key; a server
+    // that silently ignored it would not be a conforming Mission PEP, so
+    // presence (well-formed or not) always reaches the enforcement path.
+    const missionReference = parseMcpReferenceMeta(
+      request.params._meta?.[MCP_REFERENCE_META_KEY],
+    );
+    const verdict = await route(
+      paymentsServer,
+      request.params.name,
+      args,
+      token,
+      missionReference ? { missionReference } : undefined,
+    );
     return toCallToolResult(verdict);
   });
 
@@ -197,11 +212,25 @@ export class MediatedClient {
   }
 
   /** tools/call over MCP (credential in `_meta`); returns the PEP verdict. */
-  async callTool(name: string, args: Record<string, unknown>, missionToken: string): Promise<MediatedToolResult> {
+  async callTool(
+    name: string,
+    args: Record<string, unknown>,
+    missionToken: string,
+    missionReference?: unknown,
+  ): Promise<MediatedToolResult> {
+    // @spec authority-server#mcp-reference — the optional propagated
+    // reference rides `_meta` beside the credential, typed `unknown` so a
+    // caller (and a test) can present a malformed shape; the SERVER decides
+    // what is well-formed, never the client helper.
     const res = await this.client.callTool({
       name,
       arguments: args,
-      _meta: { [MISSION_TOKEN_META_KEY]: missionToken },
+      _meta: {
+        [MISSION_TOKEN_META_KEY]: missionToken,
+        ...(missionReference !== undefined
+          ? { [MCP_REFERENCE_META_KEY]: missionReference }
+          : {}),
+      },
     });
     return (res.structuredContent ?? { ok: false, refusal_reason: "no_result" }) as unknown as MediatedToolResult;
   }

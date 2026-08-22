@@ -50,7 +50,7 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   action: { name: "payments:invoice.read" },
   context: {
     audience: RESOURCE,
-    mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+    mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   },
   ...over,
 });
@@ -62,7 +62,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       action: { name: "payments:payment.execute" },
       context: {
         audience: RESOURCE,
-        mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+        mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
         parameter_digest: "sha-256:pd",
       },
     });
@@ -86,7 +86,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:pd",
           action_approval: approval,
         },
@@ -133,7 +133,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       req({
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:pd",
           action_approval: approval,
         },
@@ -152,7 +152,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       req({
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:pd",
         },
       }),
@@ -170,7 +170,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
         action: { name: "payments:invoice.read" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: "irreversible_action", // 30s staleness bound
           freshness: { observed_at: "2026-07-22T11:58:00Z", source: "status" }, // 120s stale
         },
@@ -230,7 +230,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
     subject: { id: "alice" },
     resource: { type: "vendor", id: vendorIds[0] as string, properties: { vendor_id: vendorIds[0], vendor_ids: vendorIds } },
     action: { name: "payments:invoice.list" },
-    context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" } },
+    context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
   });
   const listOpts = (fga: Fga) => ({
     view: listView,
@@ -263,7 +263,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
       subject: { id: "alice" },
       resource: { type: "vendor", id: "acme", properties: { vendor_id: "acme" } },
       action: { name: "payments:invoice.list" },
-      context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" } },
+      context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
     };
     const denyGlobex = {
       checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",

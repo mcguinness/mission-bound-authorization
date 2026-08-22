@@ -40,6 +40,7 @@ import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core"
 import { exportJWK, SignJWT } from "jose";
 import { accessTokenHash } from "./dpop.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
+import { MISSION_REFERENCE_HEADER, parseMissionReferenceField } from "@mission/core";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
 import { serveResourceMetadata } from "./resource-metadata.js";
 import type { McpPaymentsServer, ToolDef } from "./server.js";
@@ -138,9 +139,9 @@ async function route(
     return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
   }
   if (name === "schedule_payment" || (mapping?.actionClass && !paymentsServer.hasTransactionTier())) {
-    return paymentsServer.callWriteTool(name, args, token);
+    return paymentsServer.callWriteTool(name, args, token, undefined, signals);
   }
-  return paymentsServer.callReadTool(name, args, token);
+  return paymentsServer.callReadTool(name, args, token, undefined, signals);
 }
 
 /**
@@ -223,12 +224,28 @@ async function authenticate(
   // request header (an RFC 8941 Boolean, so `?1` and nothing else is
   // acceptance) and is carried to the PEP alongside the validated facts.
   const acceptTxnChallenge = acceptsTxnChallenge(req.headers[ACCEPT_TXN_CHALLENGE_HEADER]);
+  // @spec authority-server#mission-reference-field — the propagated Mission
+  // Reference is a Structured Fields Dictionary on exactly one field line;
+  // the raw header view supplies the line count (node joins repeats), and a
+  // malformed parse is CARRIED to the PEP, which refuses governed work on
+  // it, rather than dropped here.
+  let referenceLines = 0;
+  for (let i = 0; i < req.rawHeaders.length; i += 2) {
+    if ((req.rawHeaders[i] ?? "").toLowerCase() === MISSION_REFERENCE_HEADER) referenceLines++;
+  }
+  const missionReference = parseMissionReferenceField(
+    req.headers[MISSION_REFERENCE_HEADER] as string | string[] | undefined,
+    referenceLines || 1,
+  );
   // The SDK's AuthInfo shape; the MCP handlers read facts from extra.tokenFacts.
   req.auth = {
     token: accessToken,
     clientId: facts.clientId,
     scopes: [],
-    extra: { tokenFacts: facts, signals: { acceptTxnChallenge } },
+    extra: {
+      tokenFacts: facts,
+      signals: { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}) },
+    },
   };
   await transport.handleRequest(req, res);
 }

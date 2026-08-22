@@ -391,7 +391,7 @@ const evalAction = async (missionId: string, action: string) => {
       subject: { id: as.kernel.get(missionId)?.subject.sub ?? "unknown" },
       resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
       action: { name: action },
-      context: { audience: RESOURCE, mission: { id: view.id, authority_hash: view.authority_hash } },
+      context: { audience: RESOURCE, mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } },
     },
     { view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction },
   );
@@ -405,7 +405,7 @@ function tokenFactsFor(missionId: string): TokenFacts {
     sub: r.subject.sub,
     clientId: "subagent-invoice-extractor",
     clientInstanceId: "aam-reconciler-inst",
-    mission: { id: r.id, authority_hash: r.authority_hash },
+    mission: { id: r.id, issuer: r.issuer, authority_hash: r.authority_hash },
     cnfJkt: dispatcherJkt,
   };
 }

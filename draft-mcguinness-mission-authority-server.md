@@ -1511,7 +1511,12 @@ section's.
   `mission_mismatch` ({{mission-join}}): `mission_mismatch` stays the
   subject-or-client join failure, and `mission_reference_conflict` is
   reference sources naming different Missions or an unusable
-  reference.
+  reference. A PEP that establishes the conflict before any
+  evaluation surfaces the same reason as a coordinated pre-decision
+  refusal, recorded as a Refusal Record with this `denial_reason`
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}); an evaluating
+  PDP surfaces it as the AuthZEN denial reason above. One reason, two
+  surfacings, never a silent resolution.
 - The selection assertion applies only to the request it accompanies:
   it selects the Mission the join is evaluated against, and does not
   by itself establish request provenance or attribution.

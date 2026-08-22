@@ -81,7 +81,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
   const TOKEN: TokenFacts = {
     sub: "alice",
     clientId: "ap-agent",
-    mission: { id: missionId, authority_hash: "sha-256:g1hash" },
+    mission: { id: missionId, issuer: "https://as.test", authority_hash: "sha-256:g1hash" },
     cnfJkt: "jkt-1",
   };
 
@@ -316,7 +316,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
   const TOKEN: TokenFacts = {
     sub: "alice",
     clientId: "ap-agent",
-    mission: { id: missionId, authority_hash: "sha-256:g3hash" },
+    mission: { id: missionId, issuer: "https://as.test", authority_hash: "sha-256:g3hash" },
     cnfJkt: "jkt-1",
   };
   const view: MissionView = {
@@ -383,7 +383,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
   const TOKEN: TokenFacts = {
     sub: "alice",
     clientId: "ap-agent",
-    mission: { id: missionId, authority_hash: "sha-256:g2hash" },
+    mission: { id: missionId, issuer: "https://as.test", authority_hash: "sha-256:g2hash" },
     cnfJkt: "jkt-1",
   };
   const view: MissionView = {

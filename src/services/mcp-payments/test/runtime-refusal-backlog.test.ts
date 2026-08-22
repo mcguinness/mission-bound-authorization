@@ -49,7 +49,7 @@ const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
-  mission: { id: "msn_test", authority_hash: "sha-256:testhash" },
+  mission: { id: "msn_test", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   cnfJkt: "jkt-1",
 };
 
@@ -318,7 +318,7 @@ describe("the PEP establishes token validity before using any of its claims as d
       sub: "alice",
       client_id: "ap-agent",
       cnf: { jkt: "jkt-1" },
-      mission: { id: "msn_test", authority_hash: "sha-256:testhash" },
+      mission: { id: "msn_test", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     })
       .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
       .setIssuer(ISSUER)
@@ -339,7 +339,7 @@ describe("the PEP establishes token validity before using any of its claims as d
       sub: "alice",
       client_id: "ap-agent",
       cnf: { jkt: "jkt-1" },
-      mission: { id: "msn_test", authority_hash: "sha-256:testhash" },
+      mission: { id: "msn_test", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     })
       .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
       .setIssuer(ISSUER)

@@ -247,13 +247,20 @@ export class McpPaymentsServer {
     // itself (`ath`), under the same verifier the transaction path uses.
     await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
 
-    const mission = payload.mission as { id: string; authority_hash: string } | undefined;
-    if (!mission?.id) throw new Error("token missing mission claim");
+    const mission = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
+    if (
+      !mission ||
+      typeof mission.id !== "string" ||
+      typeof mission.issuer !== "string" ||
+      typeof mission.authority_hash !== "string"
+    ) {
+      throw new Error("token missing mission claim");
+    }
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
       ...(payload.act ? { act: payload.act as ActObject } : {}),
-      mission: { id: mission.id, authority_hash: mission.authority_hash },
+      mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
       ...(readTxnMissionClaim(payload.mission) ? { missionClaim: readTxnMissionClaim(payload.mission) as never } : {}),
       cnfJkt: cnf.jkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
@@ -282,14 +289,21 @@ export class McpPaymentsServer {
     });
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
-    const mission = payload.mission as { id: string; authority_hash: string } | undefined;
-    if (!mission?.id) throw new Error("token missing mission claim");
+    const mission = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
+    if (
+      !mission ||
+      typeof mission.id !== "string" ||
+      typeof mission.issuer !== "string" ||
+      typeof mission.authority_hash !== "string"
+    ) {
+      throw new Error("token missing mission claim");
+    }
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
       ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
       ...(payload.act ? { act: payload.act as ActObject } : {}),
-      mission: { id: mission.id, authority_hash: mission.authority_hash },
+      mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
       ...(readTxnMissionClaim(payload.mission) ? { missionClaim: readTxnMissionClaim(payload.mission) as never } : {}),
       cnfJkt: cnf.jkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
@@ -432,7 +446,7 @@ export class McpPaymentsServer {
         sub: payload.sub,
         clientId: payload.client_id,
         ...(payload.act ? { act: payload.act as ActObject } : {}),
-        mission: { id: mission.id, authority_hash: mission.authority_hash },
+        mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
         missionClaim: mission,
         cnfJkt: cnf.jkt,
         jti: payload.jti,
@@ -525,7 +539,7 @@ export class McpPaymentsServer {
     return {
       sub: (leafPayload.sub ?? rootPayload.sub) as string,
       clientId: rootPayload.client_id as string,
-      mission: { id: rootMission.id, authority_hash: rootMission.authority_hash },
+      mission: { id: rootMission.id, issuer: rootMission.issuer, authority_hash: rootMission.authority_hash },
       ...(readTxnMissionClaim(rootPayload.mission) ? { missionClaim: readTxnMissionClaim(rootPayload.mission) as never } : {}),
       cnfJkt: leafCnf,
       leafAuthority,
@@ -559,6 +573,7 @@ export class McpPaymentsServer {
     args: Record<string, unknown>,
     token: TokenFacts,
     beforeReverify?: () => void,
+    signals?: RequestSignals,
   ): Promise<{
     ok: boolean;
     result?: unknown;
@@ -567,7 +582,7 @@ export class McpPaymentsServer {
     insufficient_authorization?: InsufficientAuthorization;
   }> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
-    const res = await this.deps.pep.enforce(tool, args, token);
+    const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted) {
       return {
         ok: false,
@@ -599,6 +614,7 @@ export class McpPaymentsServer {
     args: Record<string, unknown>,
     token: TokenFacts,
     beforeReverify?: () => void,
+    signals?: RequestSignals,
   ): Promise<{
     ok: boolean;
     result?: unknown;
@@ -607,7 +623,7 @@ export class McpPaymentsServer {
     insufficient_authorization?: InsufficientAuthorization;
   }> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
-    const res = await this.deps.pep.enforce(tool, args, token);
+    const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
         ok: false,

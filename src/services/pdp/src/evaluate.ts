@@ -81,7 +81,7 @@ export interface EvaluationRequest {
   action: { name: string };
   context: {
     audience: string; // matched against the approved entry's resource
-    mission: { id: string; authority_hash: string; policy_view_id?: string };
+    mission: { id: string; issuer: string; authority_hash: string; policy_view_id?: string };
     actor?: ContextActor;
     freshness?: Freshness;
     parameter_digest?: string;
@@ -201,6 +201,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // 1. View consistency (@spec: view_inconsistent).
   if (
     req.context.mission.id !== view.id ||
+    req.context.mission.issuer !== view.issuer ||
     req.context.mission.authority_hash !== view.authority_hash ||
     (req.context.mission.policy_view_id !== undefined && req.context.mission.policy_view_id !== pvid)
   ) {
