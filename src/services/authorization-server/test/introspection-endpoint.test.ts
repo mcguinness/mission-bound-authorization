@@ -739,21 +739,30 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
   });
 
   it("the inactive response is member-scoped too: a privilege-less principal sees no budget or provenance metadata", async () => {
-    // flow1 is revoked (above) and carries max_derivations and a
-    // proposal_hash; rs-payments-basic holds no disclosure privileges, so
-    // the non-active composite carries the enforcement projection alone.
-    const res = await introspect(flow1.at, { principal: RS_PAYMENTS_BASIC });
+    // Self-contained setup (order-independent): a fresh Mission with a
+    // derivation cap and an authority proposal, revoked here, introspected
+    // by the privilege-less principal: the non-active composite carries the
+    // enforcement projection alone.
+    const flowX = await runFlow({
+      intent: {
+        goal: "Pay Acme invoices for Q3 (inactive-disclosure fixture)",
+        resources: [PAYMENTS],
+        expires_at: "2027-01-01T00:00:00Z",
+        controls: { max_derivations: 5 },
+      },
+      proposal: PAYMENTS_PROPOSAL,
+      resource: PAYMENTS,
+    });
+    as.kernel.transition(flowX.missionId, "revoke");
+    const res = await introspect(flowX.at, { principal: RS_PAYMENTS_BASIC });
     expect(res.body.active).toBe(false);
     const mission = res.body.mission as Record<string, unknown>;
     expect("derivations_remaining" in mission).toBe(false);
     expect("proposal_hash" in mission).toBe(false);
     expect(mission.state).toBe("revoked");
-    // containment_version rides ungated: it is enforcement-relevant state
-    // (an earlier test contained flow1), not a privileged disclosure member.
     expect(Object.keys(mission).sort()).toEqual([
       "approval_basis",
       "authority_hash",
-      "containment_version",
       "expires_at",
       "id",
       "issuer",

@@ -717,6 +717,11 @@ export async function buildAuthorizationServer(opts: {
   // @spec expansion — the DTR deferred-completion store for Mission EXPANSION
   // (widening; distinct from AROP, which never widens).
   const expansionDeferrals = new ExpansionDeferralStore(kernel);
+  // Round-5 (#640 review): startup drain of committed-but-unfinalized
+  // expansion work (meaningful for the file-backed store escape hatch; a
+  // no-op on the D27 :memory: baseline). A recurring dispatcher with
+  // multi-process claiming is issue #641.
+  kernel.drainExpansionOutbox();
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).

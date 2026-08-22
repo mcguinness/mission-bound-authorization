@@ -561,6 +561,14 @@ export interface LifecycleCommit {
   expires_at: string;
   successor?: string;
   /**
+   * @spec signals#delivery — stable event identity for replayable emission:
+   * set when the commit is delivered from the durable finalization outbox,
+   * so a replay is a redelivery of the SAME event (the Signals SET reuses
+   * it as `jti`, per the same-`jti` redelivery rule), never a newly
+   * asserted one. Absent on ordinary direct commits.
+   */
+  event_id?: string;
+  /**
    * @spec signals#lifecycle-event — the generic effective-authority-narrowing
    * discriminator: true when this commit narrowed effective authority; absent
    * (never `false`) otherwise, mirroring `containment_version`'s

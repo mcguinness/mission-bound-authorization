@@ -111,6 +111,16 @@ CREATE TABLE IF NOT EXISTS missions (
   discharged_json TEXT,
   submission_evidence_json TEXT
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS lifecycle_outbox (
+  job_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  successor_id TEXT,
+  activation_json TEXT NOT NULL,
+  supersession_json TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0
+) STRICT;
 `;
 
 export class LifecycleConflictError extends Error {}
@@ -531,7 +541,14 @@ export class MissionKernel {
     const successor = this.get(successorId);
     if (!successor?.predecessor) return undefined;
     const pred = this.get(successor.predecessor);
-    if (!pred || this.applyExpiry(pred).state !== "active") return undefined;
+    // Read-only effective-active check (@spec mission#lifecycle): the caller
+    // may be suppressing emission inside its transaction, so the expired
+    // transition is never materialized here; lazy materialization stays with
+    // the ordinary gates, and an effectively expired predecessor simply
+    // refuses supersession.
+    if (!pred || pred.state !== "active" || Date.parse(pred.expires_at) <= this.now().getTime()) {
+      return undefined;
+    }
     // This raw UPDATE bypasses setState (the only funnel that skips it); the
     // CAS on state='active' is the belt under the check above.
     const res = this.db
@@ -551,6 +568,20 @@ export class MissionKernel {
       // outside the withTransaction block above (cascadeChildren -> setState uses
       // a bare UPDATE, so there is no nested transaction).
     this.cascadeChildren(predecessorId);
+  }
+
+  /**
+   * Round-4 (#639 review) recovery lookup: the committed successor created
+   * for a predecessor under a specific approval event, if any. Used by
+   * expansion redemption to recognize an operation whose activation
+   * transaction committed but whose deferral was never marked redeemed, so
+   * a committed operation is returned, never converted to access_denied.
+   */
+  successorByApprovalEvent(predecessorId: string, approvalEventId: string): MissionRecord | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM missions WHERE predecessor = ? AND approval_event_id = ?")
+      .get(predecessorId, approvalEventId) as Record<string, unknown> | undefined;
+    return row ? rowToRecord(row) : undefined;
   }
 
   get(id: string): MissionRecord | undefined {
@@ -1681,6 +1712,102 @@ export class MissionKernel {
    * effective set strictly narrowed. Rides the wire absent-means-false,
    * mirroring `containment_version`'s absent-means-none convention.
    */
+  /**
+   * Round-4 (#639 review): while a caller-owned activation transaction is
+   * open, direct emission is suppressed; the transaction instead writes a
+   * durable outbox job, and {@link drainExpansionOutbox} emits from
+   * persisted rows after the commit (at-least-once; consumers dedupe on the
+   * event tuple). A rolled-back transaction therefore never leaks an event
+   * for state that does not exist.
+   */
+  private emitSuppressed = false;
+
+  suppressEmits<T>(fn: () => T): T {
+    const prior = this.emitSuppressed;
+    this.emitSuppressed = true;
+    try {
+      return fn();
+    } finally {
+      this.emitSuppressed = prior;
+    }
+  }
+
+  /**
+   * Enqueue the expansion finalization job inside the caller's transaction.
+   * The IMMUTABLE commit payloads are built and persisted here, at the
+   * transaction's own time and with stable event identities, so every later
+   * drain redelivers the SAME events with the ORIGINAL `committed_at`,
+   * never newly asserted ones (round 5, #640 review). Call order matters:
+   * the caller runs the supersession CAS first, so the predecessor row read
+   * here already carries its superseded state and incremented version.
+   */
+  enqueueExpansionFinalize(predecessorId: string, successorId: string): void {
+    const successor = this.mustGet(successorId);
+    const pred = this.mustGet(predecessorId);
+    const committedAt = this.now().toISOString();
+    const activation: LifecycleCommit = {
+      id: successor.id,
+      issuer: successor.issuer,
+      state: successor.state,
+      version: successor.version,
+      committed_at: committedAt,
+      expires_at: successor.expires_at,
+      event_id: `set_${randomBytes(15).toString("base64url")}`,
+    };
+    const supersession: LifecycleCommit = {
+      id: pred.id,
+      issuer: pred.issuer,
+      prior_state: "active",
+      state: pred.state,
+      version: pred.version,
+      committed_at: committedAt,
+      expires_at: pred.expires_at,
+      successor: successorId,
+      event_id: `set_${randomBytes(15).toString("base64url")}`,
+    };
+    this.db
+      .prepare(
+        "INSERT INTO lifecycle_outbox (kind, mission_id, successor_id, activation_json, supersession_json) VALUES ('expansion-finalize', ?, ?, ?, ?)",
+      )
+      .run(predecessorId, successorId, JSON.stringify(activation), JSON.stringify(supersession));
+  }
+
+  /**
+   * Drain committed-but-unfinalized expansion work. SCOPE (round 5, #640
+   * review): this is durable LOCAL finalization, not event-plane
+   * durability. Each replay delivers the PERSISTED, immutable commit
+   * payloads (same `event_id`, same `committed_at`) to the lifecycle hook,
+   * at-least-once, and re-runs the state-guarded mandatory child cascade;
+   * jobs are marked done only after both. Durability PAST the hook,
+   * per-consumer signed-SET delivery acknowledged at the Signals profile's
+   * durable boundary, plus a recurring dispatcher and multi-process
+   * claiming, is tracked as issue #641 and deliberately not claimed here.
+   * Drains run at startup (buildAuthorizationServer) and on every
+   * redemption or recovery poll.
+   */
+  drainExpansionOutbox(): void {
+    const jobs = this.db
+      .prepare(
+        "SELECT job_id, mission_id, successor_id, activation_json, supersession_json FROM lifecycle_outbox WHERE done = 0 AND kind = 'expansion-finalize' ORDER BY job_id",
+      )
+      .all() as Array<{
+      job_id: number;
+      mission_id: string;
+      successor_id: string;
+      activation_json: string;
+      supersession_json: string;
+    }>;
+    for (const job of jobs) {
+      const onCommit = this.opts.onLifecycleCommit;
+      if (onCommit) {
+        onCommit(JSON.parse(job.activation_json) as LifecycleCommit);
+        onCommit(JSON.parse(job.supersession_json) as LifecycleCommit);
+      }
+      this.cascadeChildren(job.mission_id);
+      this.db.prepare("UPDATE lifecycle_outbox SET done = 1 WHERE job_id = ?").run(job.job_id);
+    }
+  }
+
   private emitCommit(
     record: MissionRecord,
     prior?: MissionState,
@@ -1688,6 +1815,7 @@ export class MissionKernel {
     authorityChanged = false,
     containmentAdvanced = false,
   ): void {
+    if (this.emitSuppressed) return;
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
     onCommit({

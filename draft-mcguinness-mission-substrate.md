@@ -31,8 +31,6 @@ normative:
   RFC6920:
   RFC7493:
   RFC8785:
-
-informative:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -41,6 +39,8 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -1193,9 +1193,13 @@ source ceiling is that role's assertion staying within the named
 source's authority.
 
 Precedence is scoped, not global.  For the OAuth-native binding, the
-OAuth binding's definitions govern that mapping; this document governs the
-kernel and capability vocabulary.  Neither document depends
-normatively on the other.
+OAuth binding's definitions govern that mapping; this document governs
+the kernel and capability vocabulary.  The dependency is one-way and
+creates no cycle: this appendix takes a normative reference to the
+OAuth binding, the specification its Mapping Assessment is asserted
+against, while the OAuth binding takes no normative dependency on
+this document (its pointer back is informative, and the family
+manifest's typed edges record it as such).
 
 Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
@@ -1214,7 +1218,14 @@ the OAuth binding makes no substrate-conformance claim and takes no
 requirement from this document; its pointer to this section is
 informative on its side, and the two documents' no-mutual-dependency
 rule stands.
-It applies to the OAuth binding's editor's-draft lineage and to the kernel and
+It applies to the OAuth binding edition published from the same
+repository revision as this document (the two editions revise and
+publish in lockstep, so the assessed revision is exact; for a copy
+obtained independently of the repository, the family's conformance
+manifest publishes the assessed binding's content digest in its
+`source.specs` entry, identifying the exact assessed bytes), in the
+binding's base single-domain mode with the OPTIONAL capabilities as
+the activation conditions below state, and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this assessment claims no property the
 OAuth binding does not define.

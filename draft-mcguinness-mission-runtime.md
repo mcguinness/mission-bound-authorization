@@ -1970,9 +1970,10 @@ implementers of the same operation bind the same bytes:
   and point-of-use satisfaction semantics; an Operation Profile
   MUST NOT override them, and unit or currency conversion is never
   part of the mapping (a deployment wanting converted evaluation
-  composes a distinct registered constraint or profile that fixes
-  the rate source, observation time, rounding, freshness bound, and
-  evidence rules).  The profile also fixes the fail-closed behavior
+  composes a distinct registered constraint type, whose defining
+  specification or profile fixes the rate source, observation time,
+  rounding, freshness bound, and evidence rules as that new
+  constraint's own semantics).  The profile also fixes the fail-closed behavior
   for a missing or malformed input, together with
   constraint-evaluation fixtures separate from the digest vectors:
   at least one permitting value, one value beyond the bound, a

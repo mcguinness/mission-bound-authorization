@@ -449,6 +449,37 @@ export class ExpansionDeferralStore {
       .prepare("SELECT * FROM expansion_deferrals WHERE deferral_code = ?")
       .get(deferralCode) as Record<string, unknown> | undefined;
     if (!row) return { error: "invalid_grant" };
+
+    // Round-5 (#640 review): a COMMITTED operation is recognized BEFORE the
+    // deferral-code lifetime check: a sufficiently delayed restart must
+    // recover the committed successor, never report expired_token, and
+    // never convert the operation to access_denied. Guarded on
+    // redeemed !== 1 so the handle stays single-use.
+    if (
+      row.redeemed !== 1 &&
+      typeof row.approval_event_id === "string" &&
+      row.approval_event_id
+    ) {
+      const linked = this.kernel.successorByApprovalEvent(
+        row.predecessor_id as string,
+        row.approval_event_id,
+      );
+      if (linked) {
+        this.kernel.drainExpansionOutbox();
+        this.db
+          .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
+          .run(deferralCode);
+        const recoveredCreationRequestId =
+          typeof row.creation_request_id === "string" && row.creation_request_id
+            ? row.creation_request_id
+            : undefined;
+        return {
+          successor: linked,
+          approvedUntil: row.approved_until as string,
+          ...(recoveredCreationRequestId ? { creationRequestId: recoveredCreationRequestId } : {}),
+        };
+      }
+    }
     const now = this.now().getTime();
     if (now > (row.created_at as number) + DEFERRAL_EXPIRES_IN * 1000) {
       return { error: "expired_token" };
@@ -524,9 +555,18 @@ export class ExpansionDeferralStore {
     // INSIDE it, so successor authority is never issued past a predecessor
     // that stopped being effectively active between check and commit. The
     // handler mints only after this commit succeeds.
-    const txOut = withTransaction(this.kernel.db, () => {
+    const txOut = this.kernel.suppressEmits(() => withTransaction(this.kernel.db, () => {
+      // Read-only effective-active re-check inside the transaction (emission
+      // is suppressed here, so nothing is materialized; lazy expiry stays
+      // with the ordinary gates).
       const predNow = this.kernel.get(row.predecessor_id as string);
-      if (!predNow || this.kernel.applyExpiry(predNow).state !== "active") return undefined;
+      if (
+        !predNow ||
+        predNow.state !== "active" ||
+        Date.parse(predNow.expires_at) <= this.kernel.nowDate().getTime()
+      ) {
+        return undefined;
+      }
       const res = createExpansion(this.kernel, {
         predecessorId: row.predecessor_id as string,
         intent,
@@ -548,15 +588,20 @@ export class ExpansionDeferralStore {
       // check; the throw is the invariant's tripwire, and it rolls the
       // successor back rather than ever leaving both lineages live.
       if (!cas) throw new Error("expansion predecessor supersession failed inside the redemption transaction");
+      // Durable finalization: the successor's activation event and the
+      // predecessor's supersession finalize are an outbox job committed WITH
+      // this transaction, emitted only after it (and replayable after a
+      // crash), so no event ever describes state that was rolled back.
+      this.kernel.enqueueExpansionFinalize(cas.predecessorId, res.successor.id);
       return { successor: res.successor, predecessorId: cas.predecessorId };
-    });
+    }));
     if (!txOut) {
       this.db
         .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
         .run(deferralCode);
       return { error: "access_denied" };
     }
-    this.kernel.finalizeSupersession(txOut.predecessorId, txOut.successor.id);
+    this.kernel.drainExpansionOutbox();
     this.db
       .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
       .run(deferralCode);

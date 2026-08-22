@@ -15,12 +15,12 @@
     "content_sha256": "dc7a13b018c0e0fdb5c1a637261e62c05851a68f0651c061da6c6154fdb32fa7"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "4817122c7255945919c869db1f82e9359eb56421",
-    "content_sha256": "ba42d694fdaff30db049b62048b62ce4660bec2478703adb3c68a0086a0872ea"
+    "revision": "f9aaec999db143f64faf6367acbadd033d605ee8",
+    "content_sha256": "792ad60da2a085e3b1842848f932fa5a80934d3d6eedae105d5367731942a1dd"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "4817122c7255945919c869db1f82e9359eb56421",
-    "content_sha256": "ba02ebd39f7b5cb354ffca63d694ae3bf6aa4527633d8b2915f302b0d2d5ba16"
+    "revision": "af1782ed3f1a7988eca541d1dd9ccac23bef3657",
+    "content_sha256": "ff7695e3feae7040f99735e2ef0a956f0caf24f64e4b2544fbdd26cfb408c3a3"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "942d2b0f577d71e8d3d0c1043506ebde04639271",
@@ -539,7 +539,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The implementation calls applyExpiry() before every ordinary gate, and expansion redemption now commits its expiry-aware predecessor re-check, successor creation, idempotency completion, and predecessor supersession as ONE transaction (tri-doc round 3), closing the activation TOCTOU. The row stays todo until every state-dependent path is inventoried and boundary-tested, per review."
+   "notes": "The implementation calls applyExpiry() before every ordinary gate; expansion redemption commits its expiry-aware predecessor re-check, successor creation, idempotency completion, supersession CAS, and a durable finalization outbox job as ONE transaction, with emission suppressed in-tx and the drain idempotently replayable post-commit (a committed operation is recovered on re-poll, never access_denied; crash-window test in expansion-endpoint). The row stays todo until every state-dependent path is inventoried and boundary-tested, per review."
   },
   {
    "id": "core.lifecycle.failed-derivations-not-counted",
