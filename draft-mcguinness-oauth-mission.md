@@ -49,7 +49,6 @@ normative:
   RFC9126:
   RFC9207:
   RFC9396:
-  I-D.draft-zehavi-oauth-rar-metadata:
   RFC9449:
   RFC9700:
   RFC7662:
@@ -65,6 +64,7 @@ normative:
       ISO: "4217:2015"
 
 informative:
+  I-D.draft-zehavi-oauth-rar-metadata:
   I-D.draft-ietf-wimse-arch:
   I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
@@ -4196,7 +4196,7 @@ a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
-The smallest useful conforming deployment,
+The smallest useful conforming deployment
 is a Mission Issuer that derives in narrowing mode from the client's
 authority proposal ({{authorization-derivation}}), emits only the
 Common Constraints of {{common-constraints}}, and implements none of

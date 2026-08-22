@@ -750,8 +750,52 @@ function main() {
     }
   }
 
+  // (q) External-normative inventory (fix-batch, Aug 2026): DEPENDENCIES.md
+  // is hand-maintained prose, and its dependency-stability claims drifted
+  // when a reference was reclassified. The generated marker block pins the
+  // machine truth: the set of NON-family I-Ds any draft cites normatively,
+  // extracted from front matter, must match the block exactly, so a
+  // reclassification forces a DEPENDENCIES.md touch (and a human re-reads
+  // the prose beside it).
+  {
+    const extIds = new Map();
+    for (const f of fs.readdirSync(ROOT)) {
+      if (!f.startsWith("draft-mcguinness-") || !f.endsWith(".md")) continue;
+      const text = readFile(path.join(ROOT, f), f);
+      const fmEnd = text.indexOf("\n--- abstract");
+      const head = fmEnd > 0 ? text.slice(0, fmEnd) : text.slice(0, 8000);
+      const m = head.match(/^normative:[ \t]*\r?\n([\s\S]*?)^(?:informative:|--- )/m);
+      if (!m) continue;
+      const re = /^  I-D\.((?!draft-mcguinness)[a-zA-Z0-9.-]+):/gm;
+      let mm;
+      while ((mm = re.exec(m[1]))) {
+        const short = f.slice("draft-mcguinness-".length, -3);
+        if (!extIds.has(mm[1])) extIds.set(mm[1], []);
+        extIds.get(mm[1]).push(short);
+      }
+    }
+    const expected = [
+      "<!-- external-normative-ids: BEGIN (generated; validated by scripts/check-family-manifest.mjs) -->",
+      ...[...extIds.keys()].sort().map(
+        (name) => `- I-D.${name} (cited normatively by: ${extIds.get(name).sort().join(", ")})`,
+      ),
+      "<!-- external-normative-ids: END -->",
+    ].join("\n");
+    const dep = readFile(path.join(ROOT, "DEPENDENCIES.md"), "DEPENDENCIES.md");
+    const bm = dep.match(/<!-- external-normative-ids: BEGIN[\s\S]*?END -->/);
+    if (!bm) {
+      fail("external-normative", "DEPENDENCIES.md: the generated external-normative-ids block is missing");
+    } else if (bm[0] !== expected) {
+      fail(
+        "external-normative",
+        `DEPENDENCIES.md: the external-normative-ids block is stale; regenerate it to:\n${expected}`,
+      );
+    }
+  }
+
   if (errors.length > 0) {
-    console.error(`family-manifest check FAILED with ${errors.length} finding(s):\n`);
+    console.error(`family-manifest check FAILED with ${errors.length} finding(s):
+`);
     for (const e of errors) console.error(`  - ${e}`);
     console.error("");
     process.exit(1);

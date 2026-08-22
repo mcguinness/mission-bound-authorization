@@ -590,7 +590,10 @@ exactly that. The lifecycle control gates new derivation from the
 envelope; a credential already materialized under it keeps running
 to its own bound. The two halves compose but do not substitute: an
 envelope real at approval time can still admit, at decision time, an
-effect the Approver never saw rendered in that form.
+effect the Approver never saw rendered in that form. Attribution
+shares the grain limit: proving which concurrent task item produced
+a permitted action needs a verified cross-link no family carrier
+supplies today ({{binding-properties}}).
 
 The levers share one strategy: they convert semantic risk into
 structural signals. A policy decision point is never asked to judge
@@ -1097,7 +1100,15 @@ Access Server, with contextual PS governance when the PS is on path.
   approved successor: a fresh approval
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy
   drawdown within a ceiling a human pre-consented
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}). The relation
+  is typed: it is defined where a structured-authority vocabulary
+  defines it (in the OAuth binding, `mission_resource_access` and
+  the Common Constraints), and authority carried in a type with no
+  defined subset relation is carried as approved, neither narrowed,
+  delegated, nor projected; moving authority into expressive
+  policy-language entries weakens this guarantee exactly there, a
+  trade to make knowingly ({{ontology-contract}};
+  {{I-D.draft-mcguinness-mission-security-model}}).
 
 **Revocation is possession-independent**:
 : A Mission ends by a state change at its issuer, not by finding and
@@ -2807,7 +2818,10 @@ profile's per-condition evidence bindings (EAT profile and claim
 identifiers, measurements, appraisal policy, attester identity,
 freshness, signed approval configuration, rendering evidence, and a
 path-completeness audit), and this shape's generic attestation
-reference is declaration input, not that proof:
+reference is declaration input, not that proof. The `key_custody`
+entries below are declarations under the same rule: a custody
+statement made legible, not a checked assurance grade (the member's
+definition below states the open verifier gap):
 
 ~~~ json
 {
@@ -2993,7 +3007,7 @@ needs the whole matrix:
 
 | Control | Stops | Home |
 |---|---|---|
-| Capability kill | one capability within one Mission, with the body of work still running | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
+| Capability kill | one capability's new derivation within one Mission, at once at commit; credentials already materialized under it run to their own bound ({{kill-switch-composition}}), and the body of work still runs | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
 | Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
