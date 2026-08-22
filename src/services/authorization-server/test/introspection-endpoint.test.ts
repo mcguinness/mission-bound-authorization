@@ -738,6 +738,30 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect((rt.body.mission as { state: string }).state).toBe("revoked");
   });
 
+  it("the inactive response is member-scoped too: a privilege-less principal sees no budget or provenance metadata", async () => {
+    // flow1 is revoked (above) and carries max_derivations and a
+    // proposal_hash; rs-payments-basic holds no disclosure privileges, so
+    // the non-active composite carries the enforcement projection alone.
+    const res = await introspect(flow1.at, { principal: RS_PAYMENTS_BASIC });
+    expect(res.body.active).toBe(false);
+    const mission = res.body.mission as Record<string, unknown>;
+    expect("derivations_remaining" in mission).toBe(false);
+    expect("proposal_hash" in mission).toBe(false);
+    expect(mission.state).toBe("revoked");
+    // containment_version rides ungated: it is enforcement-relevant state
+    // (an earlier test contained flow1), not a privileged disclosure member.
+    expect(Object.keys(mission).sort()).toEqual([
+      "approval_basis",
+      "authority_hash",
+      "containment_version",
+      "expires_at",
+      "id",
+      "issuer",
+      "state",
+      "version",
+    ]);
+  });
+
   it("Mission-expired composite: active:false with state expired", async () => {
     as.kernel.db
       .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")

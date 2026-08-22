@@ -518,7 +518,15 @@ export class ExpansionDeferralStore {
     const submissionEvidence = row.submission_evidence_json
       ? (JSON.parse(row.submission_evidence_json as string) as IntentSubmissionEvidenceFact[])
       : undefined;
-    const { successor } = withTransaction(this.kernel.db, () => {
+    // @spec expansion#superseded-state + mission#lifecycle (effective-active):
+    // successor creation, idempotency completion, and predecessor supersession
+    // commit as ONE transaction, with the predecessor re-checked expiry-aware
+    // INSIDE it, so successor authority is never issued past a predecessor
+    // that stopped being effectively active between check and commit. The
+    // handler mints only after this commit succeeds.
+    const txOut = withTransaction(this.kernel.db, () => {
+      const predNow = this.kernel.get(row.predecessor_id as string);
+      if (!predNow || this.kernel.applyExpiry(predNow).state !== "active") return undefined;
       const res = createExpansion(this.kernel, {
         predecessorId: row.predecessor_id as string,
         intent,
@@ -535,13 +543,25 @@ export class ExpansionDeferralStore {
           res.successor.id,
         );
       }
-      return res;
+      const cas = this.kernel.supersedeInCallerTx(res.successor.id);
+      // Single-writer SQLite makes a lost CAS unreachable after the in-tx
+      // check; the throw is the invariant's tripwire, and it rolls the
+      // successor back rather than ever leaving both lineages live.
+      if (!cas) throw new Error("expansion predecessor supersession failed inside the redemption transaction");
+      return { successor: res.successor, predecessorId: cas.predecessorId };
     });
+    if (!txOut) {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
+        .run(deferralCode);
+      return { error: "access_denied" };
+    }
+    this.kernel.finalizeSupersession(txOut.predecessorId, txOut.successor.id);
     this.db
       .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
       .run(deferralCode);
     return {
-      successor,
+      successor: txOut.successor,
       approvedUntil: row.approved_until as string,
       ...(creationRequestId ? { creationRequestId } : {}),
     };

@@ -899,13 +899,16 @@ scope in the Mission Substrate Statement are the conformance result.
 A specification that itself claims conformance to this document
 MUST contain a section titled "Mission Substrate Statement".  For a
 specification that makes no such claim, this document MAY instead
-publish a hosted Statement describing that specification's mapping
-({{family}} does so for the OAuth binding): the hosted Statement is
-normative as this document's own content, the conformance claim it
-embodies is this document's claim about the described
-specification, and the described specification neither makes the
-claim nor takes any requirement from it.  Either form MUST identify
-the specification version and mode to which the Statement applies.
+publish a **Mapping Assessment**: this document's own normative
+assessment of how that specification realizes the kernel and
+capabilities, in the Statement's form ({{family}} carries one for
+the OAuth binding).  A Mapping Assessment is not the described
+specification's conformance result, and no such result exists
+unless a specification claims conformance itself; the assessment
+binds this document's readers (family documents use it as the
+mapping), and the described specification neither claims nor takes
+any requirement from it.  Either form MUST identify the
+specification version and mode to which it applies.
 
 For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -1090,7 +1093,7 @@ This document has no IANA actions.
 
 This appendix is informative.  Four bindings publish their own
 normative Mission Substrate Statements, and this document publishes
-the hosted Statement describing the OAuth binding
+its Mapping Assessment of the OAuth binding
 ({{oauth-statement}}): the standalone MAS
 ({{I-D.draft-mcguinness-mission-authority-server}}), AAuth
 ({{I-D.draft-mcguinness-mission-aauth}}), UMA
@@ -1199,21 +1202,21 @@ binding-neutral definition next changes substantively, the change
 MUST land in this document, and the owning family section becomes a
 reference to it; no change is ever made solely to move words.
 
-## OAuth Mission Binding Statement {#oauth-statement}
+## OAuth Binding Mapping Assessment {#oauth-statement}
 
-This section is the hosted Mission Substrate Statement describing
-the OAuth Mission binding
-({{I-D.draft-mcguinness-oauth-mission}}), published under the
-hosted form of {{statement}}.  The conformance claim it embodies is
-this document's own: this document asserts, and maintains against
-the OAuth binding's text, that the binding satisfies the kernel and
-supplies the capabilities below.  The OAuth binding itself makes no
-substrate-conformance claim and takes no requirement from this
-document; its pointer to this section is informative on its side,
-and the two documents' no-mutual-dependency rule stands.
+This section is this document's Mapping Assessment of the OAuth
+Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published
+under {{statement}}.  The assessment is normative as this
+document's own content: this document asserts, and maintains
+against the OAuth binding's text, the kernel mapping and capability
+claims below.  It is not the OAuth binding's conformance result:
+the OAuth binding makes no substrate-conformance claim and takes no
+requirement from this document; its pointer to this section is
+informative on its side, and the two documents' no-mutual-dependency
+rule stands.
 It applies to the OAuth binding's editor's-draft lineage and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
-govern every mapped construct; this Statement claims no property the
+govern every mapped construct; this assessment claims no property the
 OAuth binding does not define.
 
 For the kernel:

@@ -4024,10 +4024,11 @@ authorization server metadata {{RFC8414}}:
   capabilities (delegation, introspection, cross-domain projection),
   which are discovered out of band or by attempt ({{conformance}}).
 
-An AS that advertises this profile SHOULD also include
+An AS that advertises this profile MUST include
 `mission_resource_access` in its `authorization_details_types_supported`
-metadata ({{RFC9396}}), so that RFC 9396-aware clients
-discover the authorization details type through the standard mechanism.
+metadata ({{RFC9396}}): the standard type signal is the stable
+baseline a Mission-aware client relies on, and this specification,
+not out-of-band documentation, is the type's normative definition.
 A client MAY use the RFC 9396 client metadata `authorization_details_types`
 at registration to declare the types it understands.
 
@@ -4066,9 +4067,8 @@ endpoint; the endpoint is defined by an individual draft without
 formal standing, and conformance to this document does not depend on
 it. The stable baseline is {{RFC9396}}:
 `authorization_details_types_supported` listing
-`mission_resource_access`, with {{type-registration}} the normative
-definition of the type and its documentation established out of
-band. Where the endpoint IS advertised: its response is a JSON
+`mission_resource_access` (a MUST for an advertising AS, above),
+with {{type-registration}} the normative definition of the type. Where the endpoint IS advertised: its response is a JSON
 object keyed by `authorization_details` type identifier, each value
 carrying, per {{I-D.draft-zehavi-oauth-rar-metadata}}, a JSON Schema
 for exactly one `authorization_details` object of that type
@@ -4207,13 +4207,13 @@ starting point and creates no new conformance class.
 This binding's Mission Substrate Statement, the kernel mapping and
 capability table these surfaces supply to the family's substrate
 contract, is published in the substrate companion's family appendix
-({{I-D.draft-mcguinness-mission-substrate}}, Section "OAuth Mission
-Binding Statement"), the hosted form the substrate contract
-defines. The claim that Statement embodies is the substrate
-document's own assertion about this binding, made and maintained
-there; this document makes no substrate-conformance claim, takes no
-requirement from the substrate, and remains self-contained, and
-this pointer is informative.
+({{I-D.draft-mcguinness-mission-substrate}}, Section "OAuth Binding
+Mapping Assessment"), the substrate contract's own normative
+assessment of this binding's mapping, made and maintained there. It
+is not this document's conformance result: this document makes no
+substrate-conformance claim, takes no requirement from the
+substrate, and remains self-contained, and this pointer is
+informative.
 
 # Security Considerations {#security-considerations}
 

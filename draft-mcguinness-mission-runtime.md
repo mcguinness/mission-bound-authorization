@@ -1963,19 +1963,24 @@ implementers of the same operation bind the same bytes:
 - for each Common Constraint or other registered constraint the
   operation's authority entries can carry
   ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative
-  operation input or derived attribute that satisfies it, the
-  extraction and normalization rule producing the compared value,
-  its unit or currency interpretation (conversion prohibited unless
-  the profile defines one), the comparison procedure in the
-  constraint's value space, and the fail-closed behavior for a
-  missing or malformed input, together with constraint-evaluation
-  fixtures separate from the digest vectors: at least one permitting
-  value, one value beyond the bound, a missing and a malformed
-  input, and, where the constraint admits incomparability, an
-  incomparable pair (for `max_amount`: the mapping to
-  `{amount, currency}`, the exact-bound permit, the over-bound
-  refusal, an absent amount, a malformed decimal, and a mismatched
-  currency);
+  operation input or derived attribute that satisfies it, and the
+  extraction and normalization rule mapping that input into the
+  constraint's own value domain.  The constraint's defining
+  specification owns its syntax, subset, intersection, comparison,
+  and point-of-use satisfaction semantics; an Operation Profile
+  MUST NOT override them, and unit or currency conversion is never
+  part of the mapping (a deployment wanting converted evaluation
+  composes a distinct registered constraint or profile that fixes
+  the rate source, observation time, rounding, freshness bound, and
+  evidence rules).  The profile also fixes the fail-closed behavior
+  for a missing or malformed input, together with
+  constraint-evaluation fixtures separate from the digest vectors:
+  at least one permitting value, one value beyond the bound, a
+  missing and a malformed input, and, where the constraint admits
+  incomparability, an incomparable pair (for `max_amount`: the
+  mapping to `{amount, currency}`, the exact-bound permit, the
+  over-bound refusal, an absent amount, a malformed decimal, and a
+  mismatched currency);
 - digest test vectors for the operation, each carrying the operation
   input before normalization, the exact normalized parameter value,
   the exact JCS UTF-8 serialization (or an unambiguous byte
@@ -3099,7 +3104,13 @@ Operation Profile fixes the parameter set and normalization: the
 members are `amount_usd` and `source_invoice_id`; `amount_usd` is a
 decimal string with exactly two fractional digits; no defaults are
 inserted and no optional members are omitted; there are no set-like
-arrays to order. For a 423.50 USD journal entry, within the ceiling,
+arrays to order.  For the entry's `max_amount` ceiling the profile
+declares the constraint binding {{parameter-binding}} requires: the
+authoritative input is `amount_usd`, mapped into the constraint's
+value domain as `{ "amount": <amount_usd>, "currency": "USD" }`
+with no conversion; the Common Constraint's own decimal
+value-space comparison applies unchanged; a missing or malformed
+`amount_usd` fails closed. For a 423.50 USD journal entry, within the ceiling,
 the normalized parameter object is:
 
 ~~~ json
@@ -3128,6 +3139,13 @@ The PDP binds its permit to this value, and the executing PEP recomputes
 it over the parameters it is about to use immediately before acting
 ({{parameter-binding}}); any change to a normalized parameter yields a
 different digest and the permit is refused.
+
+The profile's constraint-evaluation fixtures, separate from the
+digest vector above: `"500.00"` permits (the exact bound);
+`"500.01"` refuses (over the bound); an absent `amount_usd` refuses
+(missing input); `"4,235.0"` refuses (malformed decimal); and a
+ceiling denominated in EUR against this USD mapping refuses as
+incomparable, with no conversion.
 
 # Policy View Worked Example {#policy-view-example}
 

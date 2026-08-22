@@ -1898,8 +1898,10 @@ async function pollDeferredExpansion(
         throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
     }
   }
-  // The successor exists (check (a) passed in redeem). Mint its first token (bound
-  // to the possession key) and supersede the predecessor on this first redemption.
+  // redeem() committed successor creation AND predecessor supersession as one
+  // expiry-aware transaction (@spec expansion#superseded-state); the token is
+  // delivered only because that commit succeeded. Mint the successor's first
+  // token, bound to the possession key.
   const minted = await mintMissionAccessToken(
     opts,
     provider,
@@ -1909,7 +1911,6 @@ async function pollDeferredExpansion(
     jkt,
   );
   if (minted) {
-    opts.kernel.supersedeOnRedemption(r.successor.id);
     // @spec expansion#creation-request-id — attach the delivery artifact to the
     // completed operation (redeem() already marked it completed atomically with
     // successor creation): an initiation retry returns this token while it is
