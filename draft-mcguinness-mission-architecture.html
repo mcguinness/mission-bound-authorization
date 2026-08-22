@@ -1635,7 +1635,10 @@ exactly that. The lifecycle control gates new derivation from the
 envelope; a credential already materialized under it keeps running
 to its own bound. The two halves compose but do not substitute: an
 envelope real at approval time can still admit, at decision time, an
-effect the Approver never saw rendered in that form.<a href="#section-4.1-6" class="pilcrow">¶</a></p>
+effect the Approver never saw rendered in that form. Attribution
+shares the grain limit: proving which concurrent task item produced
+a permitted action needs a verified cross-link no family carrier
+supplies today (<a href="#binding-properties" class="auto internal xref">Section 13.3</a>).<a href="#section-4.1-6" class="pilcrow">¶</a></p>
 <p id="section-4.1-7">The levers share one strategy: they convert semantic risk into
 structural signals. A policy decision point is never asked to judge
 whether content is harmful; provenance (the harness taint context),
@@ -2264,7 +2267,15 @@ cross-domain projections carry subsets; widening exists only as an
 approved successor: a fresh approval
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), or policy
 drawdown within a ceiling a human pre-consented
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-8-3.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). The relation
+is typed: it is defined where a structured-authority vocabulary
+defines it (in the OAuth binding, <code>mission_resource_access</code> and
+the Common Constraints), and authority carried in a type with no
+defined subset relation is carried as approved, neither narrowed,
+delegated, nor projected; moving authority into expressive
+policy-language entries weakens this guarantee exactly there, a
+trade to make knowingly (<a href="#ontology-contract" class="auto internal xref">Section 8.1</a>;
+<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-8-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.7">
@@ -4559,7 +4570,10 @@ profile's per-condition evidence bindings (EAT profile and claim
 identifiers, measurements, appraisal policy, attester identity,
 freshness, signed approval configuration, rendering evidence, and a
 path-completeness audit), and this shape's generic attestation
-reference is declaration input, not that proof:<a href="#section-14-2" class="pilcrow">¶</a></p>
+reference is declaration input, not that proof. The <code>key_custody</code>
+entries below are declarations under the same rule: a custody
+statement made legible, not a checked assurance grade (the member's
+definition below states the open verifier gap):<a href="#section-14-2" class="pilcrow">¶</a></p>
 <div class="breakable lang-json sourcecode" id="section-14-3">
 <pre>
 {
@@ -4792,7 +4806,7 @@ needs the whole matrix:<a href="#section-15.1-1" class="pilcrow">¶</a></p>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Capability kill</td>
-              <td class="text-left" rowspan="1" colspan="1">one capability within one Mission, with the body of work still running</td>
+              <td class="text-left" rowspan="1" colspan="1">one capability's new derivation within one Mission, at once at commit; credentials already materialized under it run to their own bound (<a href="#kill-switch-composition" class="auto internal xref">Section 13.1</a>), and the body of work still runs</td>
               <td class="text-left" rowspan="1" colspan="1">the issuer-held containment overlay (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>)</td>
             </tr>
             <tr>

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-22T19:59:49Z
-Source repository commit: 191e69672d95e236090554676029607d351b53c4
+Generated: 2026-08-22T20:46:57Z
+Source repository commit: eed0ae6f2c3da3b5e3fbccf557f50e2cf6c003e9
 Member count: 7
 
 Reading order:
@@ -396,7 +396,10 @@ Table of Contents
    envelope; a credential already materialized under it keeps running to
    its own bound.  The two halves compose but do not substitute: an
    envelope real at approval time can still admit, at decision time, an
-   effect the Approver never saw rendered in that form.
+   effect the Approver never saw rendered in that form.  Attribution
+   shares the grain limit: proving which concurrent task item produced a
+   permitted action needs a verified cross-link no family carrier
+   supplies today (Section 13.3).
 
    The levers share one strategy: they convert semantic risk into
    structural signals.  A policy decision point is never asked to judge
@@ -909,7 +912,15 @@ Table of Contents
       widening exists only as an approved successor: a fresh approval
       ([I-D.draft-mcguinness-oauth-mission-expansion]), or policy
       drawdown within a ceiling a human pre-consented
-      ([I-D.draft-mcguinness-oauth-mission-progressive]).
+      ([I-D.draft-mcguinness-oauth-mission-progressive]).  The relation
+      is typed: it is defined where a structured-authority vocabulary
+      defines it (in the OAuth binding, mission_resource_access and the
+      Common Constraints), and authority carried in a type with no
+      defined subset relation is carried as approved, neither narrowed,
+      delegated, nor projected; moving authority into expressive policy-
+      language entries weakens this guarantee exactly there, a trade to
+      make knowingly (Section 8.1;
+      [I-D.draft-mcguinness-mission-security-model]).
 
    *Revocation is possession-independent*:  A Mission ends by a state
       change at its issuer, not by finding and destroying credentials;
@@ -2994,7 +3005,10 @@ Table of Contents
    measurements, appraisal policy, attester identity, freshness, signed
    approval configuration, rendering evidence, and a path-completeness
    audit), and this shape's generic attestation reference is declaration
-   input, not that proof:
+   input, not that proof.  The key_custody entries below are
+   declarations under the same rule: a custody statement made legible,
+   not a checked assurance grade (the member's definition below states
+   the open verifier gap):
 
    {
      "profile": "mission-governed-agent-runtime",
@@ -3204,12 +3218,24 @@ Table of Contents
    |Control   |Stops        |Home                                                   |
    +==========+=============+=======================================================+
    |Capability|one          |the issuer-held containment overlay                    |
-   |kill      |capability   |([I-D.draft-mcguinness-oauth-mission-containment])     |
+   |kill      |capability's |([I-D.draft-mcguinness-oauth-mission-containment])     |
+   |          |new          |                                                       |
+   |          |derivation   |                                                       |
    |          |within one   |                                                       |
-   |          |Mission, with|                                                       |
+   |          |Mission, at  |                                                       |
+   |          |once at      |                                                       |
+   |          |commit;      |                                                       |
+   |          |credentials  |                                                       |
+   |          |already      |                                                       |
+   |          |materialized |                                                       |
+   |          |under it run |                                                       |
+   |          |to their own |                                                       |
+   |          |bound        |                                                       |
+   |          |(Section     |                                                       |
+   |          |13.1), and   |                                                       |
    |          |the body of  |                                                       |
    |          |work still   |                                                       |
-   |          |running      |                                                       |
+   |          |runs         |                                                       |
    +----------+-------------+-------------------------------------------------------+
    |Mission   |one body of  |the OAuth binding's revocation; cascades to Child      |
    |kill      |work: new    |Missions                                               |
@@ -9984,7 +10010,7 @@ Table of Contents
    Exchange, a cross-domain grant issuance, or an introspection request
    fails if the issuer does not support it.
 
-   The smallest useful conforming deployment, is a Mission Issuer that
+   The smallest useful conforming deployment is a Mission Issuer that
    derives in narrowing mode from the client's authority proposal
    (Section 5), emits only the Common Constraints of Section 5.2, and
    implements none of the OPTIONAL capabilities; a scope-only Resource
@@ -11028,13 +11054,6 @@ Table of Contents
 
 21.1.  Normative References
 
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
-
    [ISO4217]  International Organization for Standardization, "ISO
               4217:2015, Codes for the representation of currencies and
               funds", ISO 4217:2015, August 2015.
@@ -11354,6 +11373,13 @@ Table of Contents
               draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
               2026, <https://datatracker.ietf.org/doc/html/draft-
               niyikiza-oauth-attenuating-agent-tokens-01>.
+
+   [I-D.draft-zehavi-oauth-rar-metadata]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              zehavi-oauth-rar-metadata-06, 9 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
+              rar-metadata-06>.
 
    [MCP]      Model Context Protocol Project, "Model Context Protocol:
               Authorization", 2026, <https://modelcontextprotocol.io/

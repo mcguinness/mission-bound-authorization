@@ -2705,8 +2705,8 @@ where the two could be read to differ, the adversary model governs.<a href="#app
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">T2 Tool Misuse</td>
-            <td class="text-left" rowspan="1" colspan="1">Per-action PEP/PDP enforcement with the parameters bound into the permit, applied at the tool boundary (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+            <td class="text-left" rowspan="1" colspan="1">Per-action PEP/PDP enforcement with the parameters bound into the permit, applied at the tool boundary (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); contained exactly where the Enforcement Scope Statement's PEP placement covers the class, a self-declared scope unless attestation-bound</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained (within declared PEP scope)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">T3 Privilege Compromise</td>
@@ -2741,8 +2741,8 @@ where the two could be read to differ, the adversary model governs.<a href="#app
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">T9 Identity Spoofing and Impersonation</td>
-            <td class="text-left" rowspan="1" colspan="1">Attested instance identity, sender-constrained tokens, and mediated custody keeping the credential out of the agent entirely for mediated classes</td>
-            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+            <td class="text-left" rowspan="1" colspan="1">Attested instance identity, sender-constrained tokens, and mediated custody keeping the credential out of the agent entirely for mediated classes; mediated custody is a named High-Assurance claim (SHOULD at base conformance), so the verdict holds where that claim is made</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained (under the custody claim)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">T10 Overwhelming the Human in the Loop</td>
@@ -2761,8 +2761,8 @@ where the two could be read to differ, the adversary model governs.<a href="#app
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">T13 Rogue Agents</td>
-            <td class="text-left" rowspan="1" colspan="1">A rogue instance holds only mission-bound, instance-bound, revocable authority, and termination cascades through the delegation tree to issuance, permits, and the harness</td>
-            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+            <td class="text-left" rowspan="1" colspan="1">A rogue instance holds only mission-bound, instance-bound, revocable authority, and termination cascades through the delegation tree to issuance, permits, and the harness; instance-grain kill exists where the instance substrate is deployed, and the cascade's reach is the containment surface's, never instantaneous</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained (with the instance substrate)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">T14 Human Attacks on Multi-Agent Systems</td>

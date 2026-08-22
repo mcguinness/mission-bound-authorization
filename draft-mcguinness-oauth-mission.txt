@@ -4098,7 +4098,7 @@ Table of Contents
    Exchange, a cross-domain grant issuance, or an introspection request
    fails if the issuer does not support it.
 
-   The smallest useful conforming deployment, is a Mission Issuer that
+   The smallest useful conforming deployment is a Mission Issuer that
    derives in narrowing mode from the client's authority proposal
    (Section 5), emits only the Common Constraints of Section 5.2, and
    implements none of the OPTIONAL capabilities; a scope-only Resource
@@ -5142,13 +5142,6 @@ Table of Contents
 
 21.1.  Normative References
 
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
-
    [ISO4217]  International Organization for Standardization, "ISO
               4217:2015, Codes for the representation of currencies and
               funds", ISO 4217:2015, August 2015.
@@ -5468,6 +5461,13 @@ Table of Contents
               draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
               2026, <https://datatracker.ietf.org/doc/html/draft-
               niyikiza-oauth-attenuating-agent-tokens-01>.
+
+   [I-D.draft-zehavi-oauth-rar-metadata]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              zehavi-oauth-rar-metadata-06, 9 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
+              rar-metadata-06>.
 
    [MCP]      Model Context Protocol Project, "Model Context Protocol:
               Authorization", 2026, <https://modelcontextprotocol.io/
