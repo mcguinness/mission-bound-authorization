@@ -3087,8 +3087,9 @@ every one.
 - **R2**: The task and its derived authority are integrity-committed
   at approval, reproducible from the record alone (oauth-mission).
 - **R3**: Task proposals are untrusted input: fields the agent can
-  influence never derive, widen, or gate authority (oauth-mission;
-  mission-shaping).
+  influence select and narrow what derivation considers, and can
+  request gates the issuer enforces, but never grant or widen
+  authority by their own assertion (oauth-mission; mission-shaping).
 
 ## Consent and Approval {#req-consent}
 

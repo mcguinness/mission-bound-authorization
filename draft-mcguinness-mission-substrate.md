@@ -896,9 +896,16 @@ scope in the Mission Substrate Statement are the conformance result.
 
 ## Mission Substrate Statement {#statement}
 
-A Mission Substrate Binding MUST contain a section titled "Mission
-Substrate Statement".  It MUST identify the specification version and
-mode to which the statement applies.
+A specification that itself claims conformance to this document
+MUST contain a section titled "Mission Substrate Statement".  For a
+specification that makes no such claim, this document MAY instead
+publish a hosted Statement describing that specification's mapping
+({{family}} does so for the OAuth binding): the hosted Statement is
+normative as this document's own content, the conformance claim it
+embodies is this document's claim about the described
+specification, and the described specification neither makes the
+claim nor takes any requirement from it.  Either form MUST identify
+the specification version and mode to which the Statement applies.
 
 For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -1081,10 +1088,10 @@ This document has no IANA actions.
 
 # Binding Mapping Guidance {#crosswalk}
 
-This appendix is informative.  Each of the five bindings publishes
-the normative Mission Substrate Statement for its substrate: the
-OAuth binding's Statement is {{oauth-statement}} of this document,
-and the standalone MAS
+This appendix is informative.  Four bindings publish their own
+normative Mission Substrate Statements, and this document publishes
+the hosted Statement describing the OAuth binding
+({{oauth-statement}}): the standalone MAS
 ({{I-D.draft-mcguinness-mission-authority-server}}), AAuth
 ({{I-D.draft-mcguinness-mission-aauth}}), UMA
 ({{I-D.draft-mcguinness-mission-uma}}), and GNAP
@@ -1194,9 +1201,16 @@ reference to it; no change is ever made solely to move words.
 
 ## OAuth Mission Binding Statement {#oauth-statement}
 
-This section is the Mission Substrate Statement of the OAuth Mission
-binding ({{I-D.draft-mcguinness-oauth-mission}}), hosted here so the
-OAuth binding remains self-contained with no companion normative dependency.
+This section is the hosted Mission Substrate Statement describing
+the OAuth Mission binding
+({{I-D.draft-mcguinness-oauth-mission}}), published under the
+hosted form of {{statement}}.  The conformance claim it embodies is
+this document's own: this document asserts, and maintains against
+the OAuth binding's text, that the binding satisfies the kernel and
+supplies the capabilities below.  The OAuth binding itself makes no
+substrate-conformance claim and takes no requirement from this
+document; its pointer to this section is informative on its side,
+and the two documents' no-mutual-dependency rule stands.
 It applies to the OAuth binding's editor's-draft lineage and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
 govern every mapped construct; this Statement claims no property the
@@ -1229,10 +1243,13 @@ For the kernel:
    rendering of the derived Authority Set and the effective expiry,
    and atomic record commit, with deferred, interactive, and dispatch
    realizations.
-6. The active predicate is `state` equal to `active`, exactly; any
-   other value, recognized or not, is non-active; transitions are
-   authenticated lifecycle operations; a non-active Mission refuses
-   issuance and derivation.
+6. The active predicate is stored `state` equal to `active` with
+   the decision time strictly before the record's effective
+   `expires_at`, the issuer materializing the resulting `expired`
+   transition lazily where it chooses; any other stored value,
+   recognized or not, is non-active; transitions are authenticated
+   lifecycle operations; a non-active Mission refuses issuance and
+   derivation.
 7. The reliance bound is the record's effective `expires_at` (never
    later than the requested ceiling), which caps every derived
    credential's `exp`; the maximum residual after a Mission becomes

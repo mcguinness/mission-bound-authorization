@@ -1960,6 +1960,22 @@ implementers of the same operation bind the same bytes:
 - set-like array handling and any other canonicalization beyond the
   issuance profile's rules;
 - exactly which fields enter the `parameter_digest`;
+- for each Common Constraint or other registered constraint the
+  operation's authority entries can carry
+  ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative
+  operation input or derived attribute that satisfies it, the
+  extraction and normalization rule producing the compared value,
+  its unit or currency interpretation (conversion prohibited unless
+  the profile defines one), the comparison procedure in the
+  constraint's value space, and the fail-closed behavior for a
+  missing or malformed input, together with constraint-evaluation
+  fixtures separate from the digest vectors: at least one permitting
+  value, one value beyond the bound, a missing and a malformed
+  input, and, where the constraint admits incomparability, an
+  incomparable pair (for `max_amount`: the mapping to
+  `{amount, currency}`, the exact-bound permit, the over-bound
+  refusal, an absent amount, a malformed decimal, and a mismatched
+  currency);
 - digest test vectors for the operation, each carrying the operation
   input before normalization, the exact normalized parameter value,
   the exact JCS UTF-8 serialization (or an unambiguous byte

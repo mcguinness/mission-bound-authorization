@@ -3,7 +3,14 @@
     "principal_id": "rs-payments",
     "secret": "dev-introspection-rs-payments",
     "audiences": ["http://localhost:4403/mcp"],
-    "disclose": ["provenance", "status_list"],
+    "disclose": ["provenance", "status_list", "budget"],
+    "audience_resources": { "http://localhost:4403/mcp": ["http://localhost:4403/mcp"] }
+  },
+  {
+    "principal_id": "rs-payments-basic",
+    "secret": "dev-introspection-rs-payments-basic",
+    "audiences": ["http://localhost:4403/mcp"],
+    "disclose": [],
     "audience_resources": { "http://localhost:4403/mcp": ["http://localhost:4403/mcp"] }
   },
   {

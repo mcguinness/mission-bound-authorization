@@ -1519,7 +1519,7 @@ export class MissionKernel {
       ...this.missionClaim(fresh),
       state: fresh.state,
       version: fresh.version,
-      ...(fresh.max_derivations !== null
+      ...(caller.disclose.has("budget") && fresh.max_derivations !== null
         ? { derivations_remaining: Math.max(0, fresh.max_derivations - fresh.derivation_count) }
         : {}),
       ...(caller.disclose.has("provenance") && fresh.proposal_hash

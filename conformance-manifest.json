@@ -15,12 +15,12 @@
     "content_sha256": "dc7a13b018c0e0fdb5c1a637261e62c05851a68f0651c061da6c6154fdb32fa7"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "b5e35e2cb5bb8d3cb27394764dfe49a312bc75ff",
-    "content_sha256": "31bc6a2ed17fb1ee1632dce7f62588ae53879d14c8cd5926a0ebb4934a64b652"
+    "revision": "adfe7c1baa5013029f95dc7f950cb2ea0362883f",
+    "content_sha256": "c83adcc93fbcd970293137bd8627646b6aaa6124287fa5f8b44cf6f659e2a900"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "a6b06042ccb22076641fa7d8b645c99230bb6186",
-    "content_sha256": "fcdccb7f53b4730303113ba10d361e8af3d1789ef8f3ec7280febb899ce1a885"
+    "revision": "adfe7c1baa5013029f95dc7f950cb2ea0362883f",
+    "content_sha256": "91223c26cdb3e5f04808ad8059191ae5d8b2cfa087059735270fb4a87af1d768"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "942d2b0f577d71e8d3d0c1043506ebde04639271",
@@ -39,8 +39,8 @@
     "content_sha256": "8a769d44b6dc559847d60e34b6e966eab0d75c2db921ab93f431f8c880aebefb"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ab2378cfc3a9783f1a2b078175e431d7b43a5351",
-    "content_sha256": "7482ee2dcfb0bffd6e972fb3cfb70b83d34f223345216750b79adedbba7a8318"
+    "revision": "adfe7c1baa5013029f95dc7f950cb2ea0362883f",
+    "content_sha256": "0ed6209788e63701d17248308136f108cbd9f795b5bb33cef4435cc6187a3cd7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4299cce75d0477ccd07cd9478b962f31472910bf",
@@ -518,6 +518,30 @@
    ]
   },
   {
+   "id": "core.lifecycle.effective-active-before-reliance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lifecycle",
+   "text": "the AS MUST evaluate `expires_at` before relying on stored state, and a Mission is effectively `active` only when its stored state is `active` and the decision time is strictly before `expires_at`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the clock boundary is authoritative ahead of stored state on every state-dependent decision; lazy persistence of the expired transition never yields a positive decision past the boundary"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The implementation calls applyExpiry() before every gate; a boundary-crossing endpoint test flips this row (tri-doc review round 2)."
+  },
+  {
    "id": "core.lifecycle.failed-derivations-not-counted",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
@@ -897,6 +921,44 @@
      "surface": "introspection"
     }
    ]
+  },
+  {
+   "id": "core.introspection.member-scoped-disclosure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "caller-authorization-and-minimization",
+   "text": "the AS MUST disclose each only to a caller the deployment has granted that member's disclosure privilege",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "derivations_remaining and proposal_hash are member-gated (budget and provenance privileges); an audience-authorized RS without them receives the enforcement projection alone"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "active composite + projection matrix (@spec mission#composite-active) > budget disclosure is privilege-gated: an authorized RS without the budget privilege never sees derivations_remaining",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "active composite + projection matrix (@spec mission#composite-active) > issuer-only members are disclosure-gated: a privilege-less principal never sees them",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "Draft rule and budget-privilege gating landed together (tri-doc review round 2)."
   },
   {
    "id": "core.introspection.caller-authorization",
@@ -5715,7 +5777,7 @@
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "parameter-binding",
    "text": "that MUST fix all of the following, so two implementers of the same operation bind the same bytes:",
-   "role": "AS",
+   "role": "RS",
    "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
@@ -5733,11 +5795,34 @@
    "tests": []
   },
   {
+   "id": "runtime.parameter-binding.constraint-input-binding",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "parameter-binding",
+   "text": "for each Common Constraint or other registered constraint the operation's authority entries can carry ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative operation input or derived attribute that satisfies it, the extraction and normalization rule producing the compared value",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Operation Profile names, per constraint, which normalized input satisfies it and how; the max_amount-to-amount mapping stops being implicit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Closes the adapter-contract hole between the issuance profile's constraint algebra and runtime parameter binding (tri-doc review, Aug 2026). The implementation's amount mapping predates this duty; rows flip when an Operation Profile artifact carries the declaration."
+  },
+  {
    "id": "runtime.parameter-binding.digest-test-vectors-required",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "parameter-binding",
    "text": "at least one vector MUST exercise a normalization rule that materially changes the input (default insertion, an omitted optional field, set-like array treatment, or another operation-specific rule), and at least one conformance case MUST present changed parameters that fail the digest match",
-   "role": "AS",
+   "role": "RS",
    "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
@@ -10743,7 +10828,7 @@
    "id": "substrate.statement.section-required-with-version-and-mode",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "A Mission Substrate Binding MUST contain a section titled \"Mission Substrate Statement\".  It MUST identify the specification version and mode to which the statement applies.",
+   "text": "A specification that itself claims conformance to this document MUST contain a section titled \"Mission Substrate Statement\"",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
