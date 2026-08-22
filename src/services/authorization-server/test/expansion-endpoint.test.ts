@@ -535,6 +535,77 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(undone.n).toBe(0);
   });
 
+  it("round 5 (#640 review): a crash BEFORE the drain (failpoint after commit) recovers with the persisted event identity", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    approveDeferral(ob.deferral_code as string);
+
+    // FAILPOINT: the drain throws immediately after the activation
+    // transaction commits, before any finalization work runs.
+    const kernelAny = as.kernel as unknown as {
+      drainExpansionOutbox: () => void;
+      opts: { onLifecycleCommit?: (c: { id: string; event_id?: string; committed_at: string }) => void };
+    };
+    const realDrain = kernelAny.drainExpansionOutbox.bind(as.kernel);
+    kernelAny.drainExpansionOutbox = () => {
+      throw new Error("failpoint: crash before drain");
+    };
+    let firstStatus = 0;
+    try {
+      const first = await pollExpansion(ob.deferral_code as string);
+      firstStatus = first.status;
+    } finally {
+      kernelAny.drainExpansionOutbox = realDrain;
+    }
+    expect(firstStatus).not.toBe(200);
+
+    // The crash window: the activation transaction committed (predecessor
+    // superseded), the deferral was never marked redeemed, and the durable
+    // job is pending with its immutable payloads persisted.
+    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    const pending = as.kernel.db
+      .prepare("SELECT activation_json FROM lifecycle_outbox WHERE done = 0")
+      .get() as { activation_json: string } | undefined;
+    expect(pending).toBeDefined();
+    const persisted = JSON.parse((pending as { activation_json: string }).activation_json) as {
+      id: string;
+      event_id?: string;
+      committed_at: string;
+    };
+    expect(persisted.event_id).toBeTruthy();
+
+    // Recovery on the next poll, with the lifecycle hook recorded: the
+    // SAME successor is returned, and the replay delivers the PERSISTED
+    // event (same event_id, same committed_at), not a newly asserted one.
+    const recorded: Array<{ id: string; event_id?: string; committed_at: string }> = [];
+    const origHook = kernelAny.opts.onLifecycleCommit;
+    kernelAny.opts.onLifecycleCommit = (commitEvt) => {
+      recorded.push(commitEvt);
+      origHook?.(commitEvt);
+    };
+    try {
+      const second = await pollExpansion(ob.deferral_code as string);
+      const sb = (await second.json()) as { access_token?: string; error?: string };
+      expect(second.status, JSON.stringify(sb)).toBe(200);
+      const recoveredId = (decodeJwt(sb.access_token as string) as { mission: { id: string } })
+        .mission.id;
+      expect(recoveredId).toBe(persisted.id);
+    } finally {
+      kernelAny.opts.onLifecycleCommit = origHook;
+    }
+    const replayed = recorded.find((commitEvt) => commitEvt.id === persisted.id);
+    expect(replayed?.event_id).toBe(persisted.event_id);
+    expect(replayed?.committed_at).toBe(persisted.committed_at);
+    const undoneAfter = as.kernel.db
+      .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
+      .get() as { n: number };
+    expect(undoneAfter.n).toBe(0);
+  });
+
   it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [

@@ -449,6 +449,37 @@ export class ExpansionDeferralStore {
       .prepare("SELECT * FROM expansion_deferrals WHERE deferral_code = ?")
       .get(deferralCode) as Record<string, unknown> | undefined;
     if (!row) return { error: "invalid_grant" };
+
+    // Round-5 (#640 review): a COMMITTED operation is recognized BEFORE the
+    // deferral-code lifetime check: a sufficiently delayed restart must
+    // recover the committed successor, never report expired_token, and
+    // never convert the operation to access_denied. Guarded on
+    // redeemed !== 1 so the handle stays single-use.
+    if (
+      row.redeemed !== 1 &&
+      typeof row.approval_event_id === "string" &&
+      row.approval_event_id
+    ) {
+      const linked = this.kernel.successorByApprovalEvent(
+        row.predecessor_id as string,
+        row.approval_event_id,
+      );
+      if (linked) {
+        this.kernel.drainExpansionOutbox();
+        this.db
+          .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
+          .run(deferralCode);
+        const recoveredCreationRequestId =
+          typeof row.creation_request_id === "string" && row.creation_request_id
+            ? row.creation_request_id
+            : undefined;
+        return {
+          successor: linked,
+          approvedUntil: row.approved_until as string,
+          ...(recoveredCreationRequestId ? { creationRequestId: recoveredCreationRequestId } : {}),
+        };
+      }
+    }
     const now = this.now().getTime();
     if (now > (row.created_at as number) + DEFERRAL_EXPIRES_IN * 1000) {
       return { error: "expired_token" };
@@ -475,32 +506,6 @@ export class ExpansionDeferralStore {
     }
     if (row.state === "access_denied") return { error: "access_denied" };
     if (row.redeemed === 1) return { error: "invalid_grant" };
-
-    // Round-4 (#639 review): a COMMITTED operation must never become
-    // access_denied. A crash after the activation transaction committed but
-    // before this row was marked redeemed leaves the predecessor superseded
-    // with a successor carrying THIS deferral's approval_event_id; recover by
-    // draining the durable finalization outbox and returning the committed
-    // result.
-    const linked = this.kernel.successorByApprovalEvent(
-      row.predecessor_id as string,
-      row.approval_event_id as string,
-    );
-    if (linked) {
-      this.kernel.drainExpansionOutbox();
-      this.db
-        .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
-        .run(deferralCode);
-      const recoveredCreationRequestId =
-        typeof row.creation_request_id === "string" && row.creation_request_id
-          ? row.creation_request_id
-          : undefined;
-      return {
-        successor: linked,
-        approvedUntil: row.approved_until as string,
-        ...(recoveredCreationRequestId ? { creationRequestId: recoveredCreationRequestId } : {}),
-      };
-    }
 
     // @spec expansion#deferred-window check (a): re-verify predecessor STATE at
     // completion. A predecessor terminated/superseded during the window fails.

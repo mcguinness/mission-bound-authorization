@@ -109,7 +109,10 @@ export async function signLifecycleEvent(
     .setIssuer(commit.issuer)
     .setAudience(opts.audience)
     .setIssuedAt()
-    .setJti(`set_${randomBytes(15).toString("base64url")}`)
+    // A replay from the kernel's durable finalization outbox carries a
+    // stable event identity; reusing it as `jti` makes redelivery the SAME
+    // event (@spec signals same-`jti` redelivery), never a new assertion.
+    .setJti(commit.event_id ?? `set_${randomBytes(15).toString("base64url")}`)
     .sign(opts.key);
 }
 

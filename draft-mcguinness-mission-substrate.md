@@ -1197,8 +1197,9 @@ OAuth binding's definitions govern that mapping; this document governs
 the kernel and capability vocabulary.  The dependency is one-way and
 creates no cycle: this appendix takes a normative reference to the
 OAuth binding, the specification its Mapping Assessment is asserted
-against, while the OAuth binding takes no dependency of any kind on
-this document.
+against, while the OAuth binding takes no normative dependency on
+this document (its pointer back is informative, and the family
+manifest's typed edges record it as such).
 
 Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
@@ -1219,7 +1220,10 @@ informative on its side, and the two documents' no-mutual-dependency
 rule stands.
 It applies to the OAuth binding edition published from the same
 repository revision as this document (the two editions revise and
-publish in lockstep, so the assessed revision is exact), in the
+publish in lockstep, so the assessed revision is exact; for a copy
+obtained independently of the repository, the family's conformance
+manifest publishes the assessed binding's content digest in its
+`source.specs` entry, identifying the exact assessed bytes), in the
 binding's base single-domain mode with the OPTIONAL capabilities as
 the activation conditions below state, and to the kernel and
 capability vocabulary of this document.  The OAuth binding's own definitions
