@@ -315,6 +315,47 @@ d("MCP _meta Mission reference propagation", () => {
     pubJwk = { ...(await exportJWK(kp.publicKey)), kid: "mission-key", alg: "ES256" };
   });
 
+  it("a credential naming a different Mission issuer than the loaded view is refused with mission_reference_conflict", async () => {
+    const { client } = await build();
+    const jwt = await new SignJWT({
+      client_id: "ap-agent",
+      client_instance_id: "inst-1",
+      mission: { id: VIEW.id, issuer: "https://other.example", authority_hash: AUTHORITY_HASH },
+      cnf: { jkt: CNF_JKT },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+      .setIssuer(ISSUER)
+      .setAudience(CANONICAL_RESOURCE)
+      .setSubject("alice")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(signKey);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" }, jwt);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("a mission claim with a non-string issuer fails closed at validation", async () => {
+    const { client } = await build();
+    const jwt = await new SignJWT({
+      client_id: "ap-agent",
+      client_instance_id: "inst-1",
+      mission: { id: VIEW.id, issuer: { evil: true }, authority_hash: AUTHORITY_HASH },
+      cnf: { jkt: CNF_JKT },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+      .setIssuer(ISSUER)
+      .setAudience(CANONICAL_RESOURCE)
+      .setSubject("alice")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(signKey);
+    // Least exposure: an unvalidatable credential sees no tools at all.
+    expect(await client.listTools(jwt)).toEqual([]);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" }, jwt);
+    expect(res.ok).toBe(false);
+  });
+
   it("a matching _meta reference permits the call", async () => {
     const { client } = await build();
     const jwt = await signMissionToken({});

@@ -247,8 +247,15 @@ export class McpPaymentsServer {
     // itself (`ath`), under the same verifier the transaction path uses.
     await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
 
-    const mission = payload.mission as { id: string; issuer: string; authority_hash: string } | undefined;
-    if (!mission?.id || !mission.issuer) throw new Error("token missing mission claim");
+    const mission = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
+    if (
+      !mission ||
+      typeof mission.id !== "string" ||
+      typeof mission.issuer !== "string" ||
+      typeof mission.authority_hash !== "string"
+    ) {
+      throw new Error("token missing mission claim");
+    }
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
@@ -282,8 +289,15 @@ export class McpPaymentsServer {
     });
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
-    const mission = payload.mission as { id: string; issuer: string; authority_hash: string } | undefined;
-    if (!mission?.id || !mission.issuer) throw new Error("token missing mission claim");
+    const mission = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
+    if (
+      !mission ||
+      typeof mission.id !== "string" ||
+      typeof mission.issuer !== "string" ||
+      typeof mission.authority_hash !== "string"
+    ) {
+      throw new Error("token missing mission claim");
+    }
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,

@@ -108,11 +108,13 @@ export function parseMissionReferenceField(
 
 /**
  * @spec authority-server#mcp-reference — the `_meta` carriage names the same
- * tuple with different member names (`mission_id`, `issuer`), under the same
- * closure rules: exactly the two members, both strings, nothing else.
- * JSON parsing has already collapsed duplicate keys upstream (the MCP SDK
- * owns the parse), so pre-collapse duplicate detection is not reachable on
- * this carriage; membership closure and type checks are.
+ * tuple with different member names (`mission_id`, `issuer`). This parser
+ * enforces the closure reachable after parsing: exactly the two members,
+ * both strings, nothing else. The spec's duplicate-member-rejection arm is
+ * NOT implemented here: the MCP SDK owns the JSON parse and collapses
+ * duplicate keys before this object exists, so that arm is unenforced at
+ * this boundary and recorded as such in the conformance manifest, not
+ * silently treated as satisfied.
  */
 export function parseMcpReferenceMeta(value: unknown): PropagatedMissionReference | undefined {
   if (value === undefined) return undefined;

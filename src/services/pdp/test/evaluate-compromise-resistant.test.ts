@@ -44,7 +44,7 @@ const reqFor = (actionClass: string, approval?: ActionApproval): EvaluationReque
   action: { name: "payments:invoice.read" },
   context: {
     audience: RESOURCE,
-    mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+    mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     action_class: actionClass,
     parameter_digest: "sha-256:pd",
     // Fresh state so a high-consequence class clears step 3 and this test

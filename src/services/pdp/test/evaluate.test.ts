@@ -58,7 +58,7 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   action: { name: "payments:invoice.read" },
   context: {
     audience: RESOURCE,
-    mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+    mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   },
   ...over,
 });
@@ -107,7 +107,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
@@ -129,7 +129,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:invoice.read" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: "external_commitment",
           parameter_digest: "sha-256:pd2",
           freshness: { observed_at: NOW.toISOString(), source: "status" },
@@ -167,7 +167,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
         },
       }),
@@ -216,7 +216,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash", policy_view_id: stalePvid },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash", policy_view_id: stalePvid },
         },
       }),
       opts(after),
@@ -240,7 +240,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "900.00", currency: "USD" },
         },
       }),
@@ -262,7 +262,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "100.00", currency: "USD" },
           action_class: "irreversible_action",
           freshness: { observed_at: "2026-07-22T11:58:00Z", source: "status" }, // 120s > 30s bound
@@ -276,7 +276,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
   it("view inconsistency (authority_hash mismatch) -> deny view_inconsistent", async () => {
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:WRONG" } } }),
+      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:WRONG" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -285,7 +285,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
   it("wrong audience -> deny out_of_authority (entry matched on context.audience)", async () => {
     const dec = await evaluate(
-      req({ context: { audience: "http://other/mcp", mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" } } }),
+      req({ context: { audience: "http://other/mcp", mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -301,7 +301,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
@@ -331,7 +331,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
@@ -356,7 +356,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         action: { name: "payments:payment.execute" },
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
@@ -409,7 +409,7 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
       req({
         context: {
           audience: RESOURCE,
-          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:gated-op",
           action_approval: {
             id: "apr_1",
@@ -475,7 +475,7 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
   // boundary, so this stays a partial mapping for the propagation surface.
   it("a supplied mission reference that mismatches the loaded view is refused, never silently accepted", async () => {
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:WRONG" } } }),
+      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:WRONG" } } }),
       gateOpts(view()),
     );
     expect(dec.decision).toBe(false);

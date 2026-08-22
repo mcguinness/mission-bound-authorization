@@ -44,7 +44,7 @@ const reqFor = (actionClass: string): EvaluationRequest => ({
   action: { name: "payments:payment.execute" },
   context: {
     audience: RESOURCE,
-    mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+    mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     action_class: actionClass,
     // Fresh state so a high-consequence class clears step 3 and this test
     // keeps exercising the gate it names (step 5's entry match), never the

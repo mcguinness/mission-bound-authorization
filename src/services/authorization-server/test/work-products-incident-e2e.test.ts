@@ -118,7 +118,7 @@ const evalAction = async (missionId: string, action: string) => {
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
       action: { name: action },
-      context: { audience: RESOURCE, mission: { id: view.id, authority_hash: view.authority_hash } },
+      context: { audience: RESOURCE, mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } },
     },
     { view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction },
   );

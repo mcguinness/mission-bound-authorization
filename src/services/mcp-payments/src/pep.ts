@@ -437,6 +437,15 @@ export class Pep {
     if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
     const { view, freshness } = loaded;
 
+    // @spec authority-server#reference-verification — the locally loaded
+    // Mission view is the PEP's own binding source; a credential whose
+    // mission claim names a different issuer than the view it selects is
+    // reference sources disagreeing on the canonical (issuer, id) pair,
+    // refused as mission_reference_conflict, never resolved by picking one.
+    if (view.issuer !== token.mission.issuer) {
+      return this.refuse(token, "mission_reference_conflict", mapping.action, view);
+    }
+
     // @spec attenuation#mission-binding-check: when the credential is an
     // Attenuating Agent Token chain, the effective authority is the leaf's
     // narrowed tools. An action within the Mission but OUTSIDE the leaf is
@@ -547,7 +556,7 @@ export class Pep {
       action: { name: mapping.action },
       context: {
         audience: CANONICAL_RESOURCE,
-        mission: { id: view.id, authority_hash: token.mission.authority_hash },
+        mission: { id: view.id, issuer: token.mission.issuer, authority_hash: token.mission.authority_hash },
         // @spec runtime#state-freshness: `freshness` is the loader's OWN
         // assertion of when it read authoritative state, propagated exactly
         // as `loadView` returned it. The PEP never stamps its own clock here

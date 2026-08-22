@@ -56,7 +56,7 @@ const VIEW: MissionView = {
 const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
-  mission: { id: "msn_m6", authority_hash: "sha-256:m6hash" },
+  mission: { id: "msn_m6", issuer: "https://as.test", authority_hash: "sha-256:m6hash" },
   cnfJkt: "jkt-1",
 };
 

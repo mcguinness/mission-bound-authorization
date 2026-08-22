@@ -7,7 +7,7 @@
 
 import { CANONICAL_RESOURCE, type TokenFacts } from "@mission/mcp-payments";
 
-const ISSUER_EVAL = "https://as.eval";
+const ISSUER_EVAL = "https://as.test";
 const MISSION = { id: "msn_eval", issuer: ISSUER_EVAL, authority_hash: "sha-256:evalhash" };
 /** In-bounds token factory for the eval mission. Exported so the red-team
  * harness (O-31) can reuse the exact same token facts as the D24 suites. */
