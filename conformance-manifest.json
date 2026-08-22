@@ -3,16 +3,16 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "73ee0ae0be4edea4ab2f44a54966409a64b99df8",
-    "content_sha256": "49264ae72433bf4992fe213a112f0b40e03af6c46ed0fdd6c65b48e1cb0712d4"
+    "revision": "0616a3cdc6ab94bed335157304004affd8e3dec7",
+    "content_sha256": "49860b27a321484fd117d065ed8b508a0ed3d6e0fce9d319eb54ce43b895750f"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
     "content_sha256": "9164ff69782d34eb589824489ee4e0b212ace8a4f656721fba27577bcf9013d8"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "3694449a787e0be021803eb82c5ee6eaae3f7ddd",
-    "content_sha256": "35cf20baa7361da6740c48d0645f47eb7493bac2a6f3ef7b9916af3e43a54cc7"
+    "revision": "0616a3cdc6ab94bed335157304004affd8e3dec7",
+    "content_sha256": "55055c93044a2533540ead750987b42e3c069819f3ab7ad7f4922b088ed9ff73"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "b5e35e2cb5bb8d3cb27394764dfe49a312bc75ff",
@@ -2362,7 +2362,7 @@
     "normative": "governed work with no establishable Mission reference is refused before evaluation"
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
@@ -2377,7 +2377,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
+   "notes": "Malformed carriage is exercised end-to-end (#557 part 1). The missing/stripped arm, where no Mission reference is establishable from any source, requires the MAS Join consumption path, which keeps #557 open; on the credential-carried path an absent header correctly leaves the credential-established reference in force."
   },
   {
    "id": "mas.reference.reject-extra-data",
@@ -2455,9 +2455,36 @@
      "name": "MCP _meta Mission reference propagation > a conflicting _meta reference is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a credential naming a different Mission issuer than the loaded view is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1."
+  },
+  {
+   "id": "mas.reference.mcp-duplicate-keys",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mcp-reference",
+   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member other than `mission_id` and `issuer`, a non-string member value, and the propagation key appearing more than once in `_meta`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the _meta carriage's parse-time closure: duplicate members and a repeated propagation key are rejected before the parsed object exists"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Extra-member and non-string arms are enforced post-parse and tested (see reject-extra-data). The duplicate-member and repeated-key arms are UNENFORCED at this boundary: the MCP SDK owns the JSON parse and collapses duplicates before the server sees the object; implementing them requires access to the raw parse boundary (recorded honestly rather than claimed)."
   },
   {
    "id": "mas.reference.mcp-unsupported-refusal",
@@ -11443,7 +11470,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
