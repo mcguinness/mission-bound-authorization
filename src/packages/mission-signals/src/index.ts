@@ -101,19 +101,21 @@ export async function signLifecycleEvent(
       : {}),
     ...(commit.authority_changed ? { authority_changed: true } : {}),
   };
-  return new SignJWT({
-    sub_id: { format: "opaque", id: commit.id },
-    events: { [LIFECYCLE_CHANGE_EVENT_URI]: event },
-  })
-    .setProtectedHeader({ alg: "ES256", kid: opts.kid, typ: SET_TYP })
-    .setIssuer(commit.issuer)
-    .setAudience(opts.audience)
-    .setIssuedAt()
-    // A replay from the kernel's durable finalization outbox carries a
-    // stable event identity; reusing it as `jti` makes redelivery the SAME
-    // event (@spec signals same-`jti` redelivery), never a new assertion.
-    .setJti(commit.event_id ?? `set_${randomBytes(15).toString("base64url")}`)
-    .sign(opts.key);
+  return (
+    new SignJWT({
+      sub_id: { format: "opaque", id: commit.id },
+      events: { [LIFECYCLE_CHANGE_EVENT_URI]: event },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: opts.kid, typ: SET_TYP })
+      .setIssuer(commit.issuer)
+      .setAudience(opts.audience)
+      .setIssuedAt()
+      // A replay from the kernel's durable finalization outbox carries a
+      // stable event identity; reusing it as `jti` makes redelivery the SAME
+      // event (@spec signals same-`jti` redelivery), never a new assertion.
+      .setJti(commit.event_id ?? `set_${randomBytes(15).toString("base64url")}`)
+      .sign(opts.key)
+  );
 }
 
 /** The last Mission state a receiver established over the stream, per Mission. */
