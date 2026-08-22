@@ -651,7 +651,8 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
 `evidence_envelope`:
 : REQUIRED. An object. Integrity protection in the form of
   {{decision-evidence-integrity}}, emitted by the refusing component,
-  whose JWS protected `typ` is `application/mission-refusal-record+json`
+  whose JWS protected `cty` is `application/mission-refusal-record+json`
+  under the protected `typ` of {{decision-evidence-integrity}}
   ({{iana}}).
 
 A Refusal Record is closed to uncoordinated extension under the same
@@ -787,22 +788,29 @@ The JWS protected header MUST carry:
 - `alg`: `ES256` {{RFC7518}} is mandatory to implement; an
   implementation MAY offer other JOSE algorithms but MUST implement
   `ES256`.
-- `typ`: the registered media type of the evidence object being signed
-  (`application/mission-decision-evidence+json` for Decision Evidence,
-  `application/mission-execution-evidence+json` for Execution Evidence,
-  `application/mission-refusal-record+json` for Refusal Records,
-  `application/mission-receipt+json` for Mission Receipts,
-  {{iana}}). A verifier MUST reject a JWS whose protected `typ` is not
-  the media type of the object it is verifying, so signatures over one
-  record kind cannot be cross-used for another.
+- `typ`: `application/mission-runtime-evidence+jws`, the secured
+  runtime-evidence representation this document registers
+  ({{iana}}): one value for every record kind this envelope secures,
+  identifying the complete JWS ({{RFC7515}}, Section 4.1.9).
+- `cty`: the registered media type of the evidence object being
+  signed ({{RFC7515}}, Section 4.1.10):
+  `application/mission-decision-evidence+json` for Decision Evidence,
+  `application/mission-execution-evidence+json` for Execution
+  Evidence, `application/mission-refusal-record+json` for Refusal
+  Records, and `application/mission-receipt+json` for Mission
+  Receipts ({{iana}}). A verifier MUST reject a JWS whose protected
+  `typ` is not `application/mission-runtime-evidence+jws` or whose
+  protected `cty` is not the media type of the object it is
+  verifying, so signatures over one record kind cannot be cross-used
+  for another.
 
 This rule is unaffected by the members Decision Evidence, Execution
 Evidence, and Refusal Records share with each other and with other
 evidence types, named once as a base shape
 ({{I-D.draft-mcguinness-mission-audit}}). Shared member names describe
-a common shape for readability; they carry no exemption, and the `typ`
-check above remains the sole authority for which kind a signature
-covers.
+a common shape for readability; they carry no exemption, and the
+`cty` check above remains the sole authority for which kind a
+signature covers.
 
 ~~~ json
 {
@@ -1246,7 +1254,8 @@ A Mission Receipt is a JSON object. REQUIRED members:
 : REQUIRED. An object. Integrity protection in the same form as
   Decision Evidence ({{decision-evidence-integrity}}), carrying a
   `format` (string, required) and a `value` (string, required). The
-  default `format` is `jws-compact`; the JWS protected `typ` is
+  default `format` is `jws-compact`; the JWS protected `typ` is that
+  of {{decision-evidence-integrity}} with a `cty` of
   `application/mission-receipt+json` ({{iana}}).
 
 `kind`:
@@ -1429,7 +1438,9 @@ additionally governed by the compromise-boundary rule of
    compute the JCS canonical bytes of the receipt with
    `evidence_envelope` removed, and require byte-for-byte equality,
    rejecting on any difference ({{decision-evidence-integrity}}).
-   Confirm the JWS protected `typ` is `application/mission-receipt+json`
+   Confirm the JWS protected `typ` is
+   `application/mission-runtime-evidence+jws`, the protected `cty` is
+   `application/mission-receipt+json`,
    and verify the signature against the published key resolved by the
    JWS `kid` for the party named in `emitter`, through the
    enforcement scope statement's published key sets
@@ -1963,7 +1974,39 @@ This document requests the following IANA actions.
 
 ## Media Type Registry
 
-This document registers four media types per {{RFC6838}}.
+This document registers five media types per {{RFC6838}}: the four
+evidence-object payload types below, and the JWS-secured runtime
+evidence representation their shared envelope carries (using the
+`+jws` structured syntax suffix already registered with IANA).
+
+### Secured Runtime Evidence Media Type
+
+- Type name: application
+- Subtype name: mission-runtime-evidence+jws
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; a JWS Compact Serialization:
+  base64url-encoded values separated by period characters. The
+  secured payload's own media type travels in the JWS protected
+  `cty` ({{decision-evidence-integrity}}).
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+  ({{decision-evidence-integrity}})
+- Published specification: this document
+- Applications that use this media type: Mission-bound runtime
+  enforcement deployments
+- Fragment identifier considerations: N/A
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): none
+  - Macintosh file type code(s): N/A
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 ### Decision Evidence Media Type
 

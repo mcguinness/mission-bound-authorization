@@ -1307,8 +1307,8 @@ the JWS-secured Consent Evidence representation that the
 `evidence_envelope`'s protected `typ` names ({{integrity}}). The
 Mission audit profile ({{I-D.draft-mcguinness-mission-audit}})
 references the Consent Evidence media type. The third registration
-uses the `+jws` structured syntax suffix, whose registration this
-document also requests below.
+uses the `+jws` structured syntax suffix already registered with
+IANA.
 
 ### application/mission-consent-evidence+json
 
@@ -1355,7 +1355,7 @@ document also requests below.
   - Deprecated alias names for this type: none
   - Magic number(s): none
   - File extension(s): none
-  - Macintosh file type code(s): TEXT
+  - Macintosh file type code(s): N/A
 - Person & email address to contact for further information:
   Karl McGuinness <public@karlmcguinness.com>
 - Intended usage: COMMON
@@ -1387,29 +1387,6 @@ document also requests below.
 - Restrictions on usage: none
 - Author: IETF
 - Change controller: IETF
-
-## Structured Syntax Suffix Registry
-
-IANA is requested to register the following structured syntax suffix
-per {{RFC6838}}, Section 6.
-
-- Name: JSON Web Signature (JWS)
-- +suffix: +jws
-- References: {{RFC7515}}
-- Encoding considerations: binary; a JWS Compact Serialization is a
-  sequence of base64url-encoded values separated by period
-  characters
-- Interoperability considerations: the JWS Compact Serialization is
-  defined in {{RFC7515}}, Section 3.1. A receiver expecting a
-  specific secured object type verifies the JOSE protected `typ`
-  exactly; the suffix conveys the serialization, not the payload
-  semantics, which the subtype preceding the suffix names.
-- Fragment identifier considerations: the syntax and semantics of
-  fragment identifiers specified for +jws SHOULD be as specified for
-  `application/jose` ({{RFC7515}})
-- Security considerations: see {{RFC7515}}, Section 10
-- Contact: Karl McGuinness <public@karlmcguinness.com>
-- Author/Change controller: IETF
 
 --- back
 
