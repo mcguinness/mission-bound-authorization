@@ -247,21 +247,26 @@ export class McpPaymentsServer {
     // itself (`ath`), under the same verifier the transaction path uses.
     await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
 
-    const mission = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
-    if (
-      !mission ||
-      typeof mission.id !== "string" ||
-      typeof mission.issuer !== "string" ||
-      typeof mission.authority_hash !== "string"
-    ) {
-      throw new Error("token missing mission claim");
-    }
+    // @spec cross-domain#mission-subject — readTxnMissionClaim validates the
+    // REQUIRED invariants and, when present, the closed {iss, sub} shape of
+    // the origin principal; a present-but-malformed `subject` is a refusal
+    // here, not a silently dropped member.
+    const mission = readTxnMissionClaim(payload.mission);
+    if (!mission) throw new Error("token missing mission claim");
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
+      // @spec authzen#pdp-request rule 10 — this resource's own verified
+      // issuer, never the mission's origin issuer.
+      iss: this.deps.issuer,
       ...(payload.act ? { act: payload.act as ActObject } : {}),
-      mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
-      ...(readTxnMissionClaim(payload.mission) ? { missionClaim: readTxnMissionClaim(payload.mission) as never } : {}),
+      mission: {
+        id: mission.id,
+        issuer: mission.issuer,
+        authority_hash: mission.authority_hash,
+        ...(mission.subject ? { subject: mission.subject } : {}),
+      },
+      missionClaim: mission,
       cnfJkt: cnf.jkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
       ...(payload.identity_continuation_handle
@@ -289,22 +294,21 @@ export class McpPaymentsServer {
     });
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
-    const mission = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
-    if (
-      !mission ||
-      typeof mission.id !== "string" ||
-      typeof mission.issuer !== "string" ||
-      typeof mission.authority_hash !== "string"
-    ) {
-      throw new Error("token missing mission claim");
-    }
+    const mission = readTxnMissionClaim(payload.mission);
+    if (!mission) throw new Error("token missing mission claim");
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
+      iss: this.deps.issuer,
       ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
       ...(payload.act ? { act: payload.act as ActObject } : {}),
-      mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
-      ...(readTxnMissionClaim(payload.mission) ? { missionClaim: readTxnMissionClaim(payload.mission) as never } : {}),
+      mission: {
+        id: mission.id,
+        issuer: mission.issuer,
+        authority_hash: mission.authority_hash,
+        ...(mission.subject ? { subject: mission.subject } : {}),
+      },
+      missionClaim: mission,
       cnfJkt: cnf.jkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
       ...(payload.identity_continuation_handle
@@ -445,8 +449,17 @@ export class McpPaymentsServer {
       facts: {
         sub: payload.sub,
         clientId: payload.client_id,
+        // @spec authzen#pdp-request rule 10 — this resource's own verified
+        // issuer: the subject the challenge was opened for is a principal in
+        // ITS namespace regardless of which credential class retrieved it.
+        iss: this.deps.issuer,
         ...(payload.act ? { act: payload.act as ActObject } : {}),
-        mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
+        mission: {
+          id: mission.id,
+          issuer: mission.issuer,
+          authority_hash: mission.authority_hash,
+          ...(mission.subject ? { subject: mission.subject } : {}),
+        },
         missionClaim: mission,
         cnfJkt: cnf.jkt,
         jti: payload.jti,
@@ -536,11 +549,21 @@ export class McpPaymentsServer {
     }
     const leafAuthority = [...byResource].map(([resource, actions]) => ({ resource, actions: [...actions] }));
 
+    // @spec cross-domain#mission-subject — the root's origin principal,
+    // where the profile applies, carried unchanged into TokenFacts the same
+    // way as the other credential classes.
+    const missionClaim = readTxnMissionClaim(rootPayload.mission);
     return {
       sub: (leafPayload.sub ?? rootPayload.sub) as string,
       clientId: rootPayload.client_id as string,
-      mission: { id: rootMission.id, issuer: rootMission.issuer, authority_hash: rootMission.authority_hash },
-      ...(readTxnMissionClaim(rootPayload.mission) ? { missionClaim: readTxnMissionClaim(rootPayload.mission) as never } : {}),
+      iss: this.deps.issuer,
+      mission: {
+        id: rootMission.id,
+        issuer: rootMission.issuer,
+        authority_hash: rootMission.authority_hash,
+        ...(missionClaim?.subject ? { subject: missionClaim.subject } : {}),
+      },
+      ...(missionClaim ? { missionClaim } : {}),
       cnfJkt: leafCnf,
       leafAuthority,
     };

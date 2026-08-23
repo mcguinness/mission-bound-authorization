@@ -15,11 +15,14 @@ import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
   type Decision,
+  type EntitlementResolver,
   evaluate,
   type EvaluationRequest,
   type Fga,
   type Freshness,
   type MissionView,
+  type OriginPrincipal,
+  type PrincipalMappingResolver,
   relationForAction,
   stalenessBoundSeconds,
 } from "@mission/pdp";
@@ -63,7 +66,27 @@ export interface TokenFacts {
   clientId: string;
   clientInstanceId?: string;
   act?: ActObject;
-  mission: { id: string; issuer: string; authority_hash: string };
+  mission: {
+    id: string;
+    issuer: string;
+    authority_hash: string;
+    /**
+     * @spec cross-domain#mission-subject — the verified token's immutable
+     * origin principal, present only where the Origin Principal profile
+     * applies. Carried unchanged from the validated claim into the AuthZEN
+     * envelope's `context.mission.subject`, never from an unverified request
+     * value.
+     */
+    subject?: OriginPrincipal;
+  };
+  /**
+   * @spec authzen#pdp-request rule 10 — this resource's own issuer identity
+   * (the `iss` every ordinary token here verifies against), carried so the
+   * envelope can populate `subject.properties.iss`: the authenticated
+   * destination-local token subject's home issuer. A resource-wide constant,
+   * not read from the presented token.
+   */
+  iss?: string;
   /**
    * @spec txn-authorization#resource-challenge — the VERIFIED token's whole
    * `mission` claim. A challenge copies it unchanged (including the invariant
@@ -223,6 +246,26 @@ export interface PepDeps {
    * to the PDP's `allowedFreshnessSources` unchanged.
    */
   allowedFreshnessSources?: ReadonlySet<string>;
+  /**
+   * @spec cross-domain#origin-principal-mapping — resolves
+   * `context.mission.subject` to a destination-local mapping; forwarded to
+   * the PDP's `principalMapping` unchanged. Absent, the PDP denies every
+   * request claiming the cross-domain Origin Principal profile
+   * `principal_mapping_failed`; a request not claiming the profile never
+   * carries `mission.subject`, so this deployment is unaffected either way.
+   */
+  principalMapping?: PrincipalMappingResolver;
+  /**
+   * @spec cross-domain#dual-axis — resolves current entitlement for the
+   * mapped local principal; forwarded to the PDP's `entitlement` unchanged.
+   */
+  entitlement?: EntitlementResolver;
+  /**
+   * @spec cross-domain#dual-axis — the declared maximum staleness (seconds)
+   * of a principal-entitlement resolution; forwarded to the PDP's
+   * `entitlementStalenessBoundSeconds` unchanged.
+   */
+  entitlementStalenessBoundSeconds?: number;
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
@@ -551,12 +594,24 @@ export class Pep {
     }
 
     const req: EvaluationRequest = {
-      subject: { id: token.sub },
+      // @spec authzen#pdp-request rule 10 — `subject.properties.iss` is this
+      // resource's own verified issuer identity, carried on TokenFacts by
+      // the token validator that authenticated this request, never anything
+      // client-supplied.
+      subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
       resource: resourceObj,
       action: { name: mapping.action },
       context: {
         audience: CANONICAL_RESOURCE,
-        mission: { id: view.id, issuer: token.mission.issuer, authority_hash: token.mission.authority_hash },
+        mission: {
+          id: view.id,
+          issuer: token.mission.issuer,
+          authority_hash: token.mission.authority_hash,
+          // @spec cross-domain#mission-subject, authzen#context-mission — the
+          // verified token's immutable origin principal, carried unchanged;
+          // never populated from `args` or any other unverified request value.
+          ...(token.mission.subject !== undefined ? { subject: token.mission.subject } : {}),
+        },
         // @spec runtime#state-freshness: `freshness` is the loader's OWN
         // assertion of when it read authoritative state, propagated exactly
         // as `loadView` returned it. The PEP never stamps its own clock here
@@ -597,6 +652,11 @@ export class Pep {
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
       ...(this.deps.allowedFreshnessSources ? { allowedFreshnessSources: this.deps.allowedFreshnessSources } : {}),
+      ...(this.deps.principalMapping ? { principalMapping: this.deps.principalMapping } : {}),
+      ...(this.deps.entitlement ? { entitlement: this.deps.entitlement } : {}),
+      ...(this.deps.entitlementStalenessBoundSeconds !== undefined
+        ? { entitlementStalenessBoundSeconds: this.deps.entitlementStalenessBoundSeconds }
+        : {}),
     });
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
