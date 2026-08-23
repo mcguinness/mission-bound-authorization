@@ -103,6 +103,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -895,6 +903,13 @@ failure signal:
 - **Conflicting settlement**: fail closed per
   {{settlement-contract}}. The applied settlement is unchanged; the
   conflict is audited, never adjudicated by the intake.
+
+A containment overlay's contain transition
+({{I-D.draft-mcguinness-oauth-mission-containment}}) is not settlement
+evidence: an open reservation or duration lease still settles under
+the evidence states above, unaffected by contain, and contain narrows
+only forward draw, a new reservation or a lease renewal, through the
+ordinary permit check against the narrowed Effective Authority Set.
 
 The operational consequence: a lossy evidence channel accumulates
 reservations against `max_budget` and `max_calls` until the Mission
