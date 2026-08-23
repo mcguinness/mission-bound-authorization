@@ -104,6 +104,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -174,6 +190,7 @@ Nothing here places a new requirement back on the issuance profile.
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
 Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0.
+Also requires, conditionally: Mission Approval Governance (when a deployment records an Approval Governance Record for a dispatched instance carrying a consumption bound).
 <!-- family-status: END -->
 
 # Relationship to Other Profiles {#relationship}
@@ -655,13 +672,50 @@ class is within the Template Ceiling:
   ({{I-D.draft-mcguinness-mission-runtime}}); or
 - cross-domain authority.
 
-This is the prohibited set the progressive profile holds back from
-policy adjudication ({{I-D.draft-mcguinness-oauth-mission-progressive}}),
-applied here to dispatch. To make the rule testable, a deployment MUST
-publish in the Mission Deployment Profile a mapping from its action
-identifiers to the runtime profile's action classes
+Progressive holds back this same set from its own policy adjudication
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), applied here to
+dispatch. To make the rule testable, a deployment MUST publish in the
+Mission Deployment Profile a mapping from its action identifiers to
+the runtime profile's action classes
 ({{I-D.draft-mcguinness-mission-runtime}}), or an equivalent declared
 classification.
+
+The issuance profile's fourth high-risk class, a consumption bound
+({{I-D.draft-mcguinness-oauth-mission}}), is not on this list: it is
+the containment mechanism a dispatched instance draws down under, not
+a hazard dispatch amplifies. The template's `approval_basis` already
+carries the trace the issuance profile's approval-authentication floor
+requires for that class, through `consent_principal` and
+`approved_at` ({{dispatch}}); a deployment recording Consent Evidence
+renders the bound at the same surface under the metering profile's
+consent-integrity rule ({{I-D.draft-mcguinness-mission-metering}}).
+
+A deployment that adopts Approval Governance
+({{I-D.draft-mcguinness-mission-approval-governance}}) and records a
+Governance Record for a dispatched instance carrying a consumption
+bound MUST declare that profile's class-named exception admitting
+`kind: policy` for the class. Absent the exception, the class-named
+default requires `kind: human` for the accountable-approver assertion,
+which no dispatched instance can supply, and the Mission fails to
+activate under that profile's atomic-commitment rule. The
+accountable-approver assertion, required by the issuance profile's
+`approver`/`approval_basis.consent_principal` equivalence and by
+Approval Governance's consent-evidence-relationship rule to carry that
+same `principal`, maps onto the template's standing consent as:
+
+- `principal`: `approval_basis.consent_principal`, the template's
+  human approver, equal to the Mission's `approver`;
+- `kind`: `policy`;
+- `authority.policy_id` and `authority.version`:
+  `approval_basis.activation`'s `template_id` and `template_version`;
+- `authority.approved_at`: `approval_basis.approved_at`, the same
+  consent instant, never the Dispatch instant; and
+- authentication: the Mission Issuer's own retained template record,
+  the same source `approved_at` is read from ({{dispatch}}).
+
+The Dispatcher, `approval_basis.activation_actor`, is not an assertion
+principal: it triggers the Dispatch and asserts nothing, so the record
+never claims a fresh human decision that did not occur.
 
 The deployment's configured dispatch-prohibited action set MUST cover
 every action the published mapping classifies as irreversible,

@@ -118,6 +118,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -190,7 +198,7 @@ profile.
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning.
 Requires: Mission-Bound Authorization for OAuth 2.0; Mission Expansion for OAuth 2.0.
-Also requires, conditionally: Mission-Bound Runtime Enforcement (when drawdown maps to the runtime profile's action classes).
+Also requires, conditionally: Mission-Bound Runtime Enforcement (when drawdown maps to the runtime profile's action classes); Mission Approval Governance (when a deployment records an Approval Governance Record for a policy-adjudicated drawdown carrying a consumption bound).
 <!-- family-status: END -->
 
 # Relationship to the Expansion Profile {#relationship}
@@ -322,6 +330,44 @@ profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
 reused: that value names policy-approved child creation, not a
 ceiling drawdown.
+
+The issuance profile's fourth high-risk class, a consumption bound
+({{I-D.draft-mcguinness-oauth-mission}}), is not held back here: it is
+the containment an in-ceiling expansion draws down under, not a
+hazard drawdown amplifies. The `ceiling_drawdown` `approval_basis`
+already carries the trace the issuance profile's approval-authentication
+floor requires for that class, through the `consent_principal` and
+`approved_at` fields this section defines; a deployment recording
+Consent Evidence renders the bound at the same surface under the
+metering profile's consent-integrity rule
+({{I-D.draft-mcguinness-mission-metering}}).
+
+A deployment that adopts Approval Governance
+({{I-D.draft-mcguinness-mission-approval-governance}}) and records a
+Governance Record for a policy-adjudicated drawdown carrying a
+consumption bound MUST declare that profile's class-named exception
+admitting `kind: policy` for the class. Absent the exception, the
+class-named default requires `kind: human` for the accountable-approver
+assertion, which no policy-adjudicated drawdown can supply, and the
+Mission fails to activate under that profile's atomic-commitment rule.
+The accountable-approver assertion, required by the issuance profile's
+`approver`/`approval_basis.consent_principal` equivalence and by
+Approval Governance's consent-evidence-relationship rule to carry that
+same `principal`, maps onto this standing consent as:
+
+- `principal`: `approval_basis.consent_principal`, the Approver who
+  consented the ceiling, equal to the Mission's `approver`;
+- `kind`: `policy`;
+- `authority.policy_id` and `authority.version`:
+  `approval_basis.activation`'s `policy_id` and `policy_version`;
+- `authority.approved_at`: `approval_basis.approved_at`, the instant
+  that Approver consented the ceiling, never the drawdown instant; and
+- authentication: the Mission Issuer's own retained record of that
+  ceiling consent, the same source `approved_at` is read from.
+
+The requesting client, `approval_basis.activation_actor`, is not an
+assertion principal: it triggers the drawdown and asserts nothing, so
+the record never claims a fresh human decision that did not occur.
 
 When the adjudication is by the pre-consented drawdown policy, the
 Mission Issuer MAY complete the authorization request without prompting

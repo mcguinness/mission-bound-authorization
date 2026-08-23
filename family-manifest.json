@@ -216,7 +216,9 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -1774,10 +1776,17 @@
      "requires": [
       "draft-mcguinness-mission-runtime"
      ]
+    },
+    {
+     "when": "a deployment records an Approval Governance Record for a policy-adjudicated drawdown carrying a consumption bound",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
+     ]
     }
    ],
    "references": [
     "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-metering",
@@ -1888,7 +1897,9 @@
     "draft-mcguinness-oauth-mission-consent-evidence"
    ],
    "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
+    "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
@@ -1897,6 +1908,14 @@
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive"
+   ],
+   "requires_when": [
+    {
+     "when": "a deployment records an Approval Governance Record for a dispatched instance carrying a consumption bound",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
+     ]
+    }
    ]
   },
   {

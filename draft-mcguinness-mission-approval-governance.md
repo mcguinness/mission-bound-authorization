@@ -107,6 +107,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -623,12 +639,27 @@ stays off protocol messages and out of enforcement projections,
 matching the issuance profile's control-plane discipline.
 
 {{policy-approval-recency}} bounds only the AGR `policy` assertion
-path. The issuance profile's standing-consent authority bases and
-their related provenance carry no equivalent human-approval instant
-and trace only through a consent principal and a commitment; that
-gap is a distinct, tracked concern outside this document's
-assertions, for the issuance profile or whichever companion defines
-those standing-consent types to close.
+path. The issuance profile's standing-consent authority bases carry
+their own human-approval instant, in `approval_basis.approved_at`,
+traced through `consent_principal` and a commitment
+({{I-D.draft-mcguinness-oauth-mission}}); the template profile's
+`template` basis and the progressive profile's `ceiling_drawdown`
+basis both populate it, and each profile declares its own maximum age
+against it: `review_cadence` for template, the ceiling review cadence
+for progressive
+({{I-D.draft-mcguinness-oauth-mission-template}},
+{{I-D.draft-mcguinness-oauth-mission-progressive}}). The two recency
+paths are therefore analogous, each bounding staleness against a
+retained human-approval instant, but distinct in what they gate: this
+section's ceiling governs whether the issuer may count a `policy`
+assertion at evaluation, with its own clock-skew allowance and
+`decided_at`/`evaluation.evaluated_at` ordering; a profile's own
+maximum age governs whether the dispatch or drawdown may happen at
+all, independent of whether an AGR is ever recorded. Where a
+deployment maps a standing-consent basis onto an AGR assertion, as
+those two profiles specify, the assertion's `authority.approved_at`
+is sourced from `approval_basis.approved_at`, and this section's
+rules then apply to it like any other `policy` assertion.
 
 # Mission Evidence {#audit-evidence}
 
