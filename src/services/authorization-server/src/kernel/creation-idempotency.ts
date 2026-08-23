@@ -1,5 +1,5 @@
 /**
- * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id,
+ * @spec expansion#creation-idempotency (owner), child-delegation#creation-request-id,
  * continuation#transport-async
  *
  * The durable creation-idempotency store: `creation_request_id` identifies ONE
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS creation_idempotency (
  */
 export const DEFAULT_CREATION_TOMBSTONE_TTL_S = 86400;
 
-/** @spec expansion#creation-request-id — bounded ASCII string, max 255 octets. */
+/** @spec expansion#creation-idempotency — bounded ASCII string, max 255 octets. */
 export const CREATION_REQUEST_ID_MAX_OCTETS = 255;
 const CREATION_REQUEST_ID_RE = /^[\x21-\x7e]{1,255}$/;
 

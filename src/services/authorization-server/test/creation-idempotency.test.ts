@@ -1,5 +1,5 @@
 /**
- * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id,
+ * @spec expansion#creation-idempotency (owner), child-delegation#creation-request-id,
  * mission-template#dispatch, RFC 9449 §11.1 — issue #467.
  *
  * `creation_request_id` is the REQUIRED idempotency handle of every
@@ -242,7 +242,7 @@ afterAll(() => {
   asServer?.close();
 });
 
-describe("child-creation idempotency (@spec child-delegation#creation-request-id)", () => {
+describe("child-creation idempotency (@spec child-delegation#creation-idempotency)", () => {
   it("lost-response retry returns the SAME child: mission id equal, fan-out counted ONCE, one activating lifecycle commit (no second Child Evidence)", async () => {
     const parent = await issueMission(["payments:invoice.read", "payments:remittance.send"]);
     const derivBefore = as.kernel.get(parent.missionId)?.derivation_count;
@@ -423,7 +423,7 @@ describe("evidence vs recovery ordering (@spec mission#intent-submission-evidenc
   });
 });
 
-describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
+describe("expansion idempotency (@spec expansion#creation-idempotency)", () => {
   it("missing creation_request_id -> invalid_request (expansion initiation)", async () => {
     const pred = await issueMission(["payments:invoice.read"]);
     const params = expansionParams(pred.accessToken, "unused", [

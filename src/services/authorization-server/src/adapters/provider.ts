@@ -325,7 +325,7 @@ export interface AdapterOptions {
    */
   issuerEvidence?: IssuerEvidenceStore;
   /**
-   * @spec expansion#creation-request-id — the durable creation-idempotency
+   * @spec expansion#creation-idempotency — the durable creation-idempotency
    * store (child creation + expansion + async-delegation). Lives over the KERNEL database so the
    * reservation commits atomically with Mission creation. Defaulted by
    * buildProvider when unset (instances over the same kernel share the table).
@@ -420,7 +420,7 @@ export function sourceUnavailableError(description: string): errors.OIDCProvider
 
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
-  // @spec expansion#creation-request-id — idempotency is NOT optional wiring:
+  // @spec expansion#creation-idempotency — idempotency is NOT optional wiring:
   // default the store over the kernel database (any instance over the same
   // kernel sees the same table, so a caller-supplied store is equivalent).
   opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
@@ -964,7 +964,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       "mission_intent",
       "child_actor",
       "parent",
-      // @spec expansion#creation-request-id — the non-authoritative
+      // @spec expansion#creation-idempotency — the non-authoritative
       // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
       // `creation_request_id`; each MUST be declared here or
       // stripGrantIrrelevantParams removes it.
