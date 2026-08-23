@@ -141,6 +141,10 @@ Table of Contents
    Mission Authority Server's native asynchronous approval alike, and
    depends on no deferral substrate.
 
+   Maturity: stable.  Maintenance: active.  Adopt when: Approval
+   authority itself needs authenticated, policy-backed provenance.
+   Requires: Mission Substrate Requirements.
+
 3.  Conventions and Definitions
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",

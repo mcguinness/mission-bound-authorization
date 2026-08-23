@@ -180,6 +180,11 @@ Table of Contents
    substrate dependency is acceptable and treats the interface as
    tracking the substrate.
 
+   Maturity: experimental.  Maintenance: active.  Adopt when: Deep fan-
+   out makes an AS round-trip per narrowing too costly; mint offline.
+   Requires: Mission-Bound Runtime Enforcement; Mission-Bound
+   Authorization for OAuth 2.0.
+
 3.  Relationship to the Issuance Profile
 
    This document depends normatively on the issuance profile and the

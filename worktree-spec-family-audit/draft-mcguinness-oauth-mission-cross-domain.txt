@@ -176,6 +176,11 @@ Table of Contents
    where a Mission is honored, not the strength at which either domain
    enforces it.  Each trust domain runs at its own level.
 
+   Maturity: stable.  Maintenance: active.  Adopt when: A Mission from
+   one trust domain must be honored by an AS in another (also the
+   floor's conditional dependency).  Requires: Mission-Bound
+   Authorization for OAuth 2.0.
+
 3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",

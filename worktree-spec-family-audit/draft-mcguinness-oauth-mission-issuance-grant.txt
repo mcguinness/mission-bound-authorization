@@ -77,31 +77,32 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Terminology
-   3.  The Issuance Join
-   4.  The Mission Issuance Grant
-     4.1.  The expires_at Claim Member
-   5.  Obtaining a Grant
-     5.1.  Grant Request
-     5.2.  Grant Errors
-   6.  Redemption
-     6.1.  Effective Authority Set Projection
-     6.2.  Redemption Errors
-     6.3.  Authorization Code Flow Carriage
-   7.  Relationship to Other Artifacts
-   8.  Composite Provision
-   9.  Conformance
-   10. Security Considerations
-   11. Privacy Considerations
-   12. IANA Considerations
-     12.1.  Media Type Registration
-       12.1.1.  application/mission-issuance-grant+jwt
-     12.2.  Mission Authority Server Metadata Registration
-     12.3.  OAuth Authorization Request Parameter Registration
-     12.4.  OAuth Authorization Server Metadata Registration
-   13. References
-     13.1.  Normative References
-     13.2.  Informative References
+   2.  Status: An Optional Profile
+   3.  Conventions and Terminology
+   4.  The Issuance Join
+   5.  The Mission Issuance Grant
+     5.1.  The expires_at Claim Member
+   6.  Obtaining a Grant
+     6.1.  Grant Request
+     6.2.  Grant Errors
+   7.  Redemption
+     7.1.  Effective Authority Set Projection
+     7.2.  Redemption Errors
+     7.3.  Authorization Code Flow Carriage
+   8.  Relationship to Other Artifacts
+   9.  Composite Provision
+   10. Conformance
+   11. Security Considerations
+   12. Privacy Considerations
+   13. IANA Considerations
+     13.1.  Media Type Registration
+       13.1.1.  application/mission-issuance-grant+jwt
+     13.2.  Mission Authority Server Metadata Registration
+     13.3.  OAuth Authorization Request Parameter Registration
+     13.4.  OAuth Authorization Server Metadata Registration
+   14. References
+     14.1.  Normative References
+     14.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -141,7 +142,16 @@ Table of Contents
    its cost is warranted
    ([I-D.draft-mcguinness-mission-authority-server]).
 
-2.  Conventions and Terminology
+2.  Status: An Optional Profile
+
+   Maturity: stable.  Maintenance: active.  Adopt when: A MAS-governed
+   estate wants Mission-bound gated tokens without full intake at each
+   AS.  Requires: Mission Authority Server; Mission-Bound Authorization
+   for OAuth 2.0.  Also requires, conditionally: Mission Status and
+   Lifecycle for OAuth 2.0 (when Status supplies state and the Effective
+   Authority Set).
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -161,18 +171,18 @@ Table of Contents
    Issuance join:  The integration this document defines: a MAS-approved
       Mission consumed at an Authorization Server's token endpoint.
 
-   Mission Issuance Grant (grant):  The signed assertion of Section 4,
+   Mission Issuance Grant (grant):  The signed assertion of Section 5,
       minted by the Mission Issuer and redeemed for Mission-bound
       tokens.
 
    Grant Minter:  The standalone Mission Issuer minting grants;
-      conformance role of Section 9.
+      conformance role of Section 10.
 
    Consuming Authorization Server (consuming AS):  An OAuth
       Authorization Server [RFC6749] that redeems Mission Issuance
-      Grants at its token endpoint; conformance role of Section 9.
+      Grants at its token endpoint; conformance role of Section 10.
 
-3.  The Issuance Join
+4.  The Issuance Join
 
    Trust is pre-established and bilateral.  A consuming AS accepts
    grants only from Mission Issuers its local policy names, resolving
@@ -203,11 +213,11 @@ Table of Contents
    estate issues outside this profile are unchanged and continue to
    compose through the Mission Join.
 
-4.  The Mission Issuance Grant
+5.  The Mission Issuance Grant
 
    A Mission Issuance Grant is a JWT [RFC7519] signed as a JWS [RFC7515]
    by the Mission Issuer.  Its JOSE header MUST carry typ mission-
-   issuance-grant+jwt (Section 12), alg, and a kid that resolves in the
+   issuance-grant+jwt (Section 13), alg, and a kid that resolves in the
    Mission Issuer's published key material.  A consumer MUST reject as a
    Mission Issuance Grant any JWT whose typ differs; in particular a
    Mission Mandate ([I-D.draft-mcguinness-mission-mandate]) is evidence,
@@ -219,7 +229,7 @@ Table of Contents
 
    sub:  REQUIRED.  The Mission's recorded Subject identifier
       (subject.sub), interpreted at the consuming AS under the
-      deployment's mapping policy (Section 3).
+      deployment's mapping policy (Section 4).
 
    aud:  REQUIRED.  The consuming AS's issuer identifier.  A consuming
       AS MUST reject a grant whose aud does not name it.
@@ -227,7 +237,7 @@ Table of Contents
    iat, exp:  REQUIRED.  The grant MUST NOT be valid longer than 300
       seconds.
 
-   jti:  REQUIRED.  Unique per grant; single use (Section 6).
+   jti:  REQUIRED.  Unique per grant; single use (Section 7).
 
    client_id:  REQUIRED.  The Mission's recorded agent client identifier
       at the consuming AS.  Only this authenticated client redeems the
@@ -235,7 +245,7 @@ Table of Contents
 
    mission:  REQUIRED.  The issuance profile's mission claim object (id,
       issuer, authority_hash), exactly as recorded, extended with the
-      expires_at member of Section 4.1.
+      expires_at member of Section 5.1.
 
    authorization_details:  REQUIRED.  The mission_resource_access
       entries [RFC9396] the consuming AS may mint against: a subset of
@@ -275,7 +285,7 @@ Table of Contents
      ]
    }
 
-4.1.  The expires_at Claim Member
+5.1.  The expires_at Claim Member
 
    This profile adds one member to the mission claim object on the
    credentials it governs, ahead of the issuance profile's revision:
@@ -290,15 +300,15 @@ Table of Contents
    the Mission's remaining horizon for planning, a deterministic ceiling
    enforceable on offline validation paths (the value is immutable, so a
    credential-carried copy is always safe), and a check that issuance
-   respected the lifetime cap (Section 6).  A consumer that does not
+   respected the lifetime cap (Section 7).  A consumer that does not
    recognize the member ignores it.  A Mission Issuer under any binding
    MAY include the member with these semantics.
 
-5.  Obtaining a Grant
+6.  Obtaining a Grant
 
    A MAS implementing this profile serves a Mission Issuance Grant
    endpoint, published as mission_issuance_grant_endpoint in its
-   discovery metadata (Section 12).  The Grant Minter MUST observe:
+   discovery metadata (Section 13).  The Grant Minter MUST observe:
 
    1.  *Requester.* The endpoint requires authentication.  The requester
        MUST be the Mission's recorded client; any other caller receives
@@ -325,29 +335,29 @@ Table of Contents
    5.  *Evidence.* Each minting is recorded with the Mission record: the
        jti, audience, requested and granted entries, and time.
 
-5.1.  Grant Request
+6.1.  Grant Request
 
    The requester POSTs an application/json object to the endpoint over
-   TLS, authenticated as Section 5 requires:
+   TLS, authenticated as Section 6 requires:
 
    mission_id:  REQUIRED.  A string.  The Mission the grant is minted
       for; its issuer is this MAS.
 
    audience:  REQUIRED.  A string.  The consuming AS the grant is for,
       becoming the grant's aud.  The MAS mints only for audiences its
-      configuration names (Section 3).
+      configuration names (Section 4).
 
    authorization_details:  OPTIONAL.  An array.  A narrower subset the
       requester asks the grant to carry, under the issuance profile's
       subset rule.  Omitted, the MAS scopes the grant to the entries the
-      named audience serves (Section 5); present, it MUST NOT widen
+      named audience serves (Section 6); present, it MUST NOT widen
       beyond that scope.
 
    On success the endpoint returns HTTP 200 with an application/json
    object:
 
    grant:  REQUIRED.  A string.  The Mission Issuance Grant JWT of
-      Section 4.  Its exp bounds redemption (Section 4); the requester
+      Section 5.  Its exp bounds redemption (Section 5); the requester
       reads the deadline from the decoded grant.
 
    POST /mas/mission/issuance-grant HTTP/1.1
@@ -376,7 +386,7 @@ Table of Contents
      "grant": "eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs..."
    }
 
-5.2.  Grant Errors
+6.2.  Grant Errors
 
    A failure returns the MAS error object
    ([I-D.draft-mcguinness-mission-authority-server]): a JSON body with a
@@ -402,7 +412,7 @@ Table of Contents
    |                               |      | MAS mints for.            |
    +-------------------------------+------+---------------------------+
    | mission_not_active            | 409  | The Mission is not active |
-   |                               |      | (Section 5).              |
+   |                               |      | (Section 6).              |
    +-------------------------------+------+---------------------------+
    | invalid_authorization_details | 400  | The requested subset is   |
    |                               |      | not a subset of the       |
@@ -412,7 +422,7 @@ Table of Contents
    +-------------------------------+------+---------------------------+
    | max_derivations_exhausted     | 409  | A consented               |
    |                               |      | controls.max_derivations  |
-   |                               |      | is reached (Section 5).   |
+   |                               |      | is reached (Section 6).   |
    +-------------------------------+------+---------------------------+
 
                                  Table 1
@@ -422,7 +432,7 @@ Table of Contents
    the other codes are returned only to the authenticated recorded
    client, to which Mission state is already visible.
 
-6.  Redemption
+7.  Redemption
 
    The client presents the grant to the consuming AS's token endpoint as
    a JWT authorization grant [RFC7523]:
@@ -443,7 +453,7 @@ Table of Contents
    validate, in an order that fails closed:
 
    1.  the JOSE typ is mission-issuance-grant+jwt; any other type is not
-       this profile (Section 7): exact validation of the typ, with
+       this profile (Section 8): exact validation of the typ, with
        mutually exclusive validation rules for the artifact profiles,
        implements the substitution defense of [RFC8725], Sections 3.11
        and 3.12;
@@ -454,7 +464,7 @@ Table of Contents
    3.  aud names this AS; exp and iat are within the 300-second bound;
        the jti has not been seen.  The record of a seen jti is written
        atomically with successful issuance and retained until exp passes
-       (single use, Section 6.1);
+       (single use, Section 7.1);
 
    4.  the requester is the grant's client_id: the authenticated client
        equals it, or, where cnf is present, the proof of possession of
@@ -467,7 +477,7 @@ Table of Contents
 
    *  *The claim rides unchanged.* Issued tokens carry the grant's
       mission object verbatim as the issuance profile's mission claim,
-      including the expires_at member (Section 4.1).
+      including the expires_at member (Section 5.1).
 
    *  *Subset.* Issued authorization_details MUST be a subset of the
       grant's.  The consuming AS MUST NOT widen, remap, or supplement
@@ -496,7 +506,7 @@ Table of Contents
 
    *  *Effective Authority Set projection.* Redemption and every refresh
       are gated on current Mission state and projected through the
-      Mission's current Effective Authority Set, per Section 6.1.
+      Mission's current Effective Authority Set, per Section 7.1.
 
    *  *No re-approval.* The approval event already occurred at the
       Mission Issuer.  The consuming AS MUST NOT prompt the Subject or
@@ -504,13 +514,13 @@ Table of Contents
 
    A grant redeems exactly once, meaning exactly one successful
    issuance: a redemption that fails before issuance leaves the grant
-   unconsumed (Section 6.1).  Subsequent token needs are met by the
+   unconsumed (Section 7.1).  Subsequent token needs are met by the
    issued refresh token (state-gated) or a fresh grant (state-gated at
    minting); either way, every path to new authority re-enters a
    Mission-state gate, which is the issuance-gate kill switch this
    profile restores.
 
-6.1.  Effective Authority Set Projection
+7.1.  Effective Authority Set Projection
 
    A consuming AS with a Mission-state integration MUST, at redemption
    and at every refresh, resolve the Mission's current state and
@@ -520,22 +530,23 @@ Table of Contents
    active.  An equivalent source MUST be authenticated, MUST be
    audience-scoped to this AS, MUST carry the Mission's current
    authorization_details and a monotonic state version, and MUST answer
-   within a staleness bound the deployment publishes (Section 9).  Where
-   the Mission is active, the consuming AS projects issued authority
-   through the current Effective Authority Set: the intersection of the
-   grant's authorization_details (on refresh, the refresh family's own
-   ceiling), any narrower authority the client requests at the token
-   endpoint, that Effective Authority Set, and the consuming AS's own
-   policy, which narrows only, per the subset rule above.  A partial
-   intersection issues only the remainder.  This projection precedes
-   scope projection above: an AS that models authority as scope maps the
-   narrowed remainder, never the grant's original set.
+   within a staleness bound the deployment publishes (Section 10).
+   Where the Mission is active, the consuming AS projects issued
+   authority through the current Effective Authority Set: the
+   intersection of the grant's authorization_details (on refresh, the
+   refresh family's own ceiling), any narrower authority the client
+   requests at the token endpoint, that Effective Authority Set, and the
+   consuming AS's own policy, which narrows only, per the subset rule
+   above.  A partial intersection issues only the remainder.  This
+   projection precedes scope projection above: an AS that models
+   authority as scope maps the narrowed remainder, never the grant's
+   original set.
 
    An empty intersection is refused by its cause.  Where the underlying
    authorization is exhausted, that is, where the grant's own authority
    intersected with the Effective Authority Set and the AS's policy is
    already empty before the request's own narrowing term, the refusal is
-   invalid_grant (Section 6.2); it MAY carry Containment's
+   invalid_grant (Section 7.2); it MAY carry Containment's
    authority_contained denial reason where Containment causally removed
    the authority, and a collapse from any other cause MUST NOT be
    reported as containment merely because Containment is composed
@@ -562,14 +573,14 @@ Table of Contents
    machine-readable shape: this profile defines a token-endpoint use of
    the OAuth temporarily_unavailable error code [RFC6749], carried with
    HTTP status 503, and the response MAY carry Retry-After per the
-   deployment's declared state-recovery policy (Section 6.2).  The
+   deployment's declared state-recovery policy (Section 7.2).  The
    consuming AS leaves its stored ceiling unchanged. invalid_grant stays
    for the permanent classes: an invalid, expired, or replayed grant, a
    Mission that is not established active, and a genuinely empty current
    intersection.
 
    Consumption is atomic with issuance.  The single-use jti check of
-   Section 6 refuses a grant already recorded; the record itself is
+   Section 7 refuses a grant already recorded; the record itself is
    written atomically with successful issuance, after the state gate and
    this projection.  A redemption that fails before issuance, a
    transient source failure in particular, therefore leaves the grant
@@ -594,7 +605,7 @@ Table of Contents
    that cannot perform this projection MUST NOT claim containment- or
    discharge-aware issuance.
 
-6.2.  Redemption Errors
+7.2.  Redemption Errors
 
    The consuming AS reports redemption failures with the token
    endpoint's OAuth error codes [RFC6749], so a client can tell a
@@ -633,22 +644,22 @@ Table of Contents
     | the surviving authorization is | invalid_grant                 |
     | exhausted: the intersection is |                               |
     | empty before the request's own |                               |
-    | narrowing (Section 6.1)        |                               |
+    | narrowing (Section 7.1)        |                               |
     +--------------------------------+-------------------------------+
     | the client's requested         | invalid_scope                 |
     | narrowing does not intersect   |                               |
     | surviving authority, scope     |                               |
-    | form (Section 6.1)             |                               |
+    | form (Section 7.1)             |                               |
     +--------------------------------+-------------------------------+
     | the same,                      | invalid_authorization_details |
     | authorization_details form     |                               |
-    | (Section 6.1)                  |                               |
+    | (Section 7.1)                  |                               |
     +--------------------------------+-------------------------------+
     | the Effective Authority Set    | temporarily_unavailable, HTTP |
     | source is unavailable,         | 503                           |
     | unverifiable, or reports a     |                               |
     | rolled-back state version      |                               |
-    | (Section 6.1)                  |                               |
+    | (Section 7.1)                  |                               |
     +--------------------------------+-------------------------------+
 
                                  Table 2
@@ -658,22 +669,22 @@ Table of Contents
    temporarily_unavailable with HTTP 503 says the authorization is
    intact and the same credential may be presented again, without
    parsing error_description.  Most invalid_grant cases are the second:
-   the client mints a fresh grant (Section 5) and retries.  The dead-
+   the client mints a fresh grant (Section 6) and retries.  The dead-
    Mission case is a refresh refused on a non-active Mission; there the
    AS SHOULD make the response distinguishable with an error_description
    stating the Mission is not active, and a client that re-mints will in
    any case be refused at the MAS active gate with mission_not_active
-   (Section 5.2), which is the authoritative signal to stop rather than
+   (Section 6.2), which is the authoritative signal to stop rather than
    retry. invalid_scope and invalid_authorization_details name a request
    the client can narrow and re-send under the same grant.
 
-6.3.  Authorization Code Flow Carriage
+7.3.  Authorization Code Flow Carriage
 
    Deployments whose clients must traverse the authorization code flow
    MAY carry the grant in a Pushed Authorization Request [RFC9126] as
-   the request parameter mission_issuance_grant (Section 12).
+   the request parameter mission_issuance_grant (Section 13).
 
-   The AS applies the grant validation of Section 6 at the PAR endpoint
+   The AS applies the grant validation of Section 7 at the PAR endpoint
    and treats the grant as the authorization already obtained.  It MUST
    NOT re-prompt for consent; at most it renders the Mission reference.
 
@@ -681,14 +692,14 @@ Table of Contents
    and aud checks and the single-use jti check are evaluated there, and
    the jti is recorded as seen at that point, so the grant cannot be
    replayed into a second authorization request.  Recording there is the
-   atomic issuance step of Section 6.1 under this carriage, because the
+   atomic issuance step of Section 7.1 under this carriage, because the
    issued authorization code becomes the grant's carrier from that point
    on.
 
    The grant's window is not re-evaluated at code exchange; the issued
    authorization code carries its own lifetime from there.  All
    remaining redemption rules (subset, lifetime, Effective Authority Set
-   projection, no re-approval, and the error mapping of Section 6.2)
+   projection, no re-approval, and the error mapping of Section 7.2)
    apply at the token request unchanged.  A transient source failure at
    code exchange refuses temporarily_unavailable and MUST NOT consume
    the authorization code, so the exchange stays retryable within the
@@ -699,15 +710,15 @@ Table of Contents
    resource owner exists to bind.  The AS MUST bind the resource owner
    authenticated at the authorization endpoint to the grant's sub: it
    proceeds only where the authenticated user is the grant's Subject
-   under the deployment's mapping policy (Section 3).  The AS MUST
+   under the deployment's mapping policy (Section 4).  The AS MUST
    refuse when a different user authenticates, so the grant cannot mint
    tokens for the wrong resource owner.  For a service-owned or
    organizational Mission there is no delegating user to authenticate;
-   such a grant is redeemed directly (Section 6), not carried through
+   such a grant is redeemed directly (Section 7), not carried through
    the authorization code flow.  The authenticated client MUST still be
-   the grant's client_id (Section 6).
+   the grant's client_id (Section 7).
 
-7.  Relationship to Other Artifacts
+8.  Relationship to Other Artifacts
 
    *The Mandate is evidence; this grant authorizes.* Both are issuer-
    signed statements about a Mission; the typ values keep them apart
@@ -738,7 +749,7 @@ Table of Contents
    continue to compose through the Mission Join.  The two joins coexist
    per resource and per AS.
 
-8.  Composite Provision
+9.  Composite Provision
 
    In the substrate's terms ([I-D.draft-mcguinness-mission-substrate])
    the MAS alone claims neither Credential-Bound nor Lifecycle-Gated
@@ -751,9 +762,9 @@ Table of Contents
    binding through this profile, and the state-aware half-step arrives
    with the consuming AS's refresh gating.
 
-9.  Conformance
+10.  Conformance
 
-   *Grant Minter* (the MAS) implements Section 5 in full:
+   *Grant Minter* (the MAS) implements Section 6 in full:
 
    *  the authenticated, visibility-guarded endpoint;
 
@@ -765,9 +776,9 @@ Table of Contents
 
    *  minting evidence; and
 
-   *  grants shaped exactly as Section 4 requires.
+   *  grants shaped exactly as Section 5 requires.
 
-   *Consuming Authorization Server* implements Section 6 in full:
+   *Consuming Authorization Server* implements Section 7 in full:
 
    *  typ, signature, audience, lifetime, single-use, and client binding
       validation;
@@ -779,28 +790,28 @@ Table of Contents
    *  expires_at capping;
 
    *  Effective Authority Set projection at redemption, which binds
-      every state-integrated consuming AS unconditionally (Section 6.1);
+      every state-integrated consuming AS unconditionally (Section 7.1);
 
    *  Effective Authority Set projection at every refresh, which binds a
       consuming AS that issues refresh tokens; a no-refresh deployment
-      discharges this duty by absence (Section 6.1);
+      discharges this duty by absence (Section 7.1);
 
    *  no re-approval; and
 
-   *  the redemption error mapping of Section 6.2.
+   *  the redemption error mapping of Section 7.2.
 
-   The PAR carriage of Section 6.3 is OPTIONAL.
+   The PAR carriage of Section 7.3 is OPTIONAL.
 
    A deployment claiming this profile states, alongside its Enforcement
    Scope Statement, which Authorization Servers consume grants, the
    staleness bound of each one's state gating, and its reconciliation
-   posture (Section 10): the window within which minting and redemption
+   posture (Section 11): the window within which minting and redemption
    logs are reconciled, or that they are not.  A consuming AS advertises
    its support with the mission_issuance_grant_supported metadata
    member, and its PAR carriage with
-   mission_issuance_grant_par_supported (Section 12).
+   mission_issuance_grant_par_supported (Section 13).
 
-10.  Security Considerations
+11.  Security Considerations
 
    *Grant theft.* The grant authorizes issuance, so it is defended in
    depth: 300-second lifetime, single-use jti, audience binding to one
@@ -820,7 +831,7 @@ Table of Contents
    A deployment SHOULD reconcile MAS minting evidence against consuming-
    AS redemption logs.  A deployment SHOULD treat a redemption with no
    matching minting record as a security event.  A deployment states its
-   reconciliation posture in its conformance statement (Section 9).  A
+   reconciliation posture in its conformance statement (Section 10).  A
    deployment operating under the Enterprise Mission Authority Profile
    ([I-D.draft-mcguinness-mission-authority-server]) MUST reconcile
    within the window its statement declares; at estate scale,
@@ -844,37 +855,37 @@ Table of Contents
    their own expiry and the consuming AS's next state-gated refresh;
    where the runtime layer is deployed, the PDP's re-check bounds
    outstanding-token use independently.  A refresh re-projects through
-   the Effective Authority Set (Section 6.1), so a Mission contained or
+   the Effective Authority Set (Section 7.1), so a Mission contained or
    discharged between issuance and refresh does not renew its original,
    now-narrowed authority.  A deployment states the refresh staleness
-   bound it publishes (Section 9).
+   bound it publishes (Section 10).
 
    *Consent integrity.* The approval the grant rests on was rendered and
    committed at the Mission Issuer under the issuance profile's rules
    and, where deployed, Consent Evidence.  The consuming AS relies on
    that event; it MUST NOT substitute a weaker consent of its own, and
-   its non-prompting duty (Section 6) prevents consent-surface confusion
+   its non-prompting duty (Section 7) prevents consent-surface confusion
    where the Subject holds accounts at both.
 
-11.  Privacy Considerations
+12.  Privacy Considerations
 
    The grant carries the Mission reference and an authority subset to
    the consuming AS, which may be operated by a different organizational
    unit than the MAS.  Minimization is structural: the MAS scopes
-   authorization_details to what the audience serves (Section 5), and
+   authorization_details to what the audience serves (Section 6), and
    nothing else of the record (no purpose text, no Intent, no full
    Authority Set) travels.  The Mission identifier is a correlator
    across MAS and AS logs by design; that correlation is the audit
    trail, and deployments that need to limit broader correlation apply
    the issuance profile's identifier guidance.
 
-12.  IANA Considerations
+13.  IANA Considerations
 
-12.1.  Media Type Registration
+13.1.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838].
 
-12.1.1.  application/mission-issuance-grant+jwt
+13.1.1.  application/mission-issuance-grant+jwt
 
    *  Type name: application
 
@@ -886,7 +897,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -910,20 +921,20 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.2.  Mission Authority Server Metadata Registration
+13.2.  Mission Authority Server Metadata Registration
 
    IANA is requested to register the following in the "Mission Authority
    Server Metadata" registry established by
    [I-D.draft-mcguinness-mission-authority-server].  Change Controller
-   IETF; Reference this document, Section 5.
+   IETF; Reference this document, Section 6.
 
    *  mission_issuance_grant_endpoint
 
-12.3.  OAuth Authorization Request Parameter Registration
+13.3.  OAuth Authorization Request Parameter Registration
 
    IANA is requested to register the following in the "OAuth Parameters"
    registry [RFC6749], for the parameter carried in Pushed Authorization
-   Requests (Section 6.3):
+   Requests (Section 7.3):
 
    *  Parameter name: mission_issuance_grant
 
@@ -931,14 +942,14 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 6.3
+   *  Reference: this document, Section 7.3
 
-12.4.  OAuth Authorization Server Metadata Registration
+13.4.  OAuth Authorization Server Metadata Registration
 
    IANA is requested to register the following in the "OAuth
    Authorization Server Metadata" registry [RFC8414], so a consuming AS
    can signal its support.  Change Controller IETF; Reference this
-   document, Section 6 for the first and Section 6.3 for the second:
+   document, Section 7 for the first and Section 7.3 for the second:
 
    *  mission_issuance_grant_supported: a JSON boolean; true when the AS
       redeems Mission Issuance Grants at its token endpoint.
@@ -947,9 +958,9 @@ Table of Contents
       the AS accepts the mission_issuance_grant parameter in Pushed
       Authorization Requests.
 
-13.  References
+14.  References
 
-13.1.  Normative References
+14.1.  Normative References
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,
@@ -1032,7 +1043,7 @@ Table of Contents
               Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
               September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
-13.2.  Informative References
+14.2.  Informative References
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

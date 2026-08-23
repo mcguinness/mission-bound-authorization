@@ -148,6 +148,12 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]).  Nothing here places a new
    requirement back on the issuance profile.
 
+   Maturity: experimental.  Maintenance: lab-best-effort.  Adopt when:
+   Machine-speed dispatch makes per-run approval infeasible; consent
+   once to a ceiling.  Requires: Mission-Bound Runtime Enforcement;
+   Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence
+   for OAuth 2.0.
+
 3.  Relationship to Other Profiles
 
    This document depends normatively on the issuance profile

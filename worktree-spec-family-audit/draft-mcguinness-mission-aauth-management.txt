@@ -474,6 +474,10 @@ Table of Contents
    receives terminated.  Polling is a freshness mechanism, not the
    safety floor: every PS endpoint still enforces mission state itself.
 
+   Maturity: stable.  Maintenance: frozen-until-upstream-release.  Adopt
+   when: Alongside the AAuth binding: status, termination, delegation-
+   tree queries.  Requires: nothing beyond its listed references.
+
 7.  Terminate Operation
 
 7.1.  Request

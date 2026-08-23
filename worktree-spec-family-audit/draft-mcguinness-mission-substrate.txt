@@ -83,42 +83,43 @@ Table of Contents
 
    1.  Introduction
      1.1.  Scope and Non-Goals
-   2.  Conventions and Terminology
-   3.  Contextual-Governance Kernel
-     3.1.  Native Reference and Controller
-     3.2.  Authority Roles
-     3.3.  Actor Binding
-     3.4.  Approved Context and Immutability
-     3.5.  Approval Event
-     3.6.  Basic Governance Gate
-     3.7.  Bounded Reliance
-     3.8.  Context Propagation
-     3.9.  Ordered Governance Record
-   4.  Default Commitment Construction
-   5.  Optional Capabilities
-     5.1.  Lifecycle-Gated Authorization
-     5.2.  State-Observable
-     5.3.  Structured Authority
-     5.4.  Monotonic Derivation
-     5.5.  Credential-Bound
-     5.6.  Authorized Context Correlation
-     5.7.  Independently Verifiable
-     5.8.  Portable Evidence
-   6.  Composition by Capability
-   7.  Mission Substrate Conformance
-     7.1.  Mission Substrate Statement
-   8.  Security Considerations
-     8.1.  Capability Confusion
-     8.2.  Reference and Context Substitution
-     8.3.  Context Splicing
-     8.4.  Controller Compromise
-     8.5.  State and Residual Authority
-     8.6.  Governance Record Integrity
-   9.  Privacy Considerations
-   10. IANA Considerations
-   11. References
-     11.1.  Normative References
-     11.2.  Informative References
+   2.  Status: A Normative Contract for Bindings
+   3.  Conventions and Terminology
+   4.  Contextual-Governance Kernel
+     4.1.  Native Reference and Controller
+     4.2.  Authority Roles
+     4.3.  Actor Binding
+     4.4.  Approved Context and Immutability
+     4.5.  Approval Event
+     4.6.  Basic Governance Gate
+     4.7.  Bounded Reliance
+     4.8.  Context Propagation
+     4.9.  Ordered Governance Record
+   5.  Default Commitment Construction
+   6.  Optional Capabilities
+     6.1.  Lifecycle-Gated Authorization
+     6.2.  State-Observable
+     6.3.  Structured Authority
+     6.4.  Monotonic Derivation
+     6.5.  Credential-Bound
+     6.6.  Authorized Context Correlation
+     6.7.  Independently Verifiable
+     6.8.  Portable Evidence
+   7.  Composition by Capability
+   8.  Mission Substrate Conformance
+     8.1.  Mission Substrate Statement
+   9.  Security Considerations
+     9.1.  Capability Confusion
+     9.2.  Reference and Context Substitution
+     9.3.  Context Splicing
+     9.4.  Controller Compromise
+     9.5.  State and Residual Authority
+     9.6.  Governance Record Integrity
+   10. Privacy Considerations
+   11. IANA Considerations
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
    Appendix A.  Binding Mapping Guidance
      A.1.  OAuth-Native Mapping: The Broad-Claims Pole
      A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
@@ -155,15 +156,15 @@ Table of Contents
    This document therefore defines:
 
    *  a contextual-governance kernel that every conforming Mission
-      Substrate Binding provides (Section 3);
+      Substrate Binding provides (Section 4);
 
-   *  optional, independently declared capabilities (Section 5);
+   *  optional, independently declared capabilities (Section 6);
 
    *  rules for profiles that consume only the capabilities they need
-      (Section 6); and
+      (Section 7); and
 
    *  a Mission Substrate Statement that makes each binding's guarantees
-      and limits checkable (Section 7.1).
+      and limits checkable (Section 8.1).
 
    The architectural relationship among Mission specifications is
    described informationally in
@@ -208,7 +209,14 @@ Table of Contents
    the change-ownership rule are collected in Appendix B and are not
    needed by an adopter outside that family.
 
-2.  Conventions and Terminology
+2.  Status: A Normative Contract for Bindings
+
+   Maturity: stable.  Maintenance: active.  Adopt when: Runtime
+   implementers consume its commitment construction and kernel contract;
+   binding authors profile it.  Requires: nothing beyond its listed
+   references.
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -253,7 +261,7 @@ Table of Contents
 
    Mission Substrate Statement:  The section of a Mission Substrate
       Binding that declares the binding's kernel mapping and optional
-      capabilities (Section 7.1).
+      capabilities (Section 8.1).
 
    Positive governance decision:  A Controller decision that approves,
       permits, or continues an operation specifically by relying on the
@@ -263,14 +271,14 @@ Table of Contents
    Appendix B maps these terms to the vocabulary of the Mission-Bound
    Authorization family.
 
-3.  Contextual-Governance Kernel
+4.  Contextual-Governance Kernel
 
    Every Mission Substrate Binding MUST provide all requirements in this
    section.  Meeting the kernel means only that a substrate carries
    Mission contextual governance.  It does not by itself mean that
    authority is portable, machine-evaluable, monotonically derived,
    credential-bound, or independently verifiable.  It does mean that no
-   reliance derived from a Mission is unbounded (Section 3.7).
+   reliance derived from a Mission is unbounded (Section 4.7).
 
       +===============+=============================================+
       | Kernel duty   | The binding defines                         |
@@ -278,48 +286,48 @@ Table of Contents
       | Native        | A stable, non-reassigned Mission Reference, |
       | reference and | its uniqueness namespace, how               |
       | Controller    | unguessability is met where the reference   |
-      | (Section 3.1) | is disclosed beyond the Controller, and how |
+      | (Section 4.1) | is disclosed beyond the Controller, and how |
       |               | relying components identify the Controller  |
       +---------------+---------------------------------------------+
       | Authority     | The authorities responsible for the         |
       | roles         | functions it uses; roles never collapse     |
-      | (Section 3.2) | silently                                    |
+      | (Section 4.2) | silently                                    |
       +---------------+---------------------------------------------+
       | Actor binding | The Actor handle, its authenticated         |
-      | (Section 3.3) | establishment at approval, and how later    |
+      | (Section 4.3) | establishment at approval, and how later    |
       |               | decisions establish the acting party        |
       +---------------+---------------------------------------------+
       | Approved      | The immutable approved value or a           |
       | context and   | verifiable commitment to it, distinct from  |
       | immutability  | mutable operational fields                  |
-      | (Section 3.4) |                                             |
+      | (Section 4.4) |                                             |
       +---------------+---------------------------------------------+
       | Approval      | A native ceremony that atomically creates   |
       | event         | an active Mission from an authenticated     |
-      | (Section 3.5) | approval                                    |
+      | (Section 4.5) | approval                                    |
       +---------------+---------------------------------------------+
       | Basic         | An active predicate; positive decisions     |
       | governance    | only while active, and every unrecognized   |
       | gate          | condition fails closed                      |
-      | (Section 3.6) |                                             |
+      | (Section 4.6) |                                             |
       +---------------+---------------------------------------------+
       | Bounded       | A stated reliance bound on every positive   |
       | reliance      | decision and every Mission-governed         |
-      | (Section 3.7) | artifact                                    |
+      | (Section 4.7) | artifact                                    |
       +---------------+---------------------------------------------+
       | Context       | The join between decisions or artifacts and |
       | propagation   | the Mission Reference, and exactly what     |
-      | (Section 3.8) | that join proves                            |
+      | (Section 4.8) | that join proves                            |
       +---------------+---------------------------------------------+
       | Ordered       | An integrity-protected, ordered,            |
       | governance    | attributable record of governance events    |
       | record        |                                             |
-      | (Section 3.9) |                                             |
+      | (Section 4.9) |                                             |
       +---------------+---------------------------------------------+
 
                      Table 1: Kernel duties at a glance
 
-3.1.  Native Reference and Controller
+4.1.  Native Reference and Controller
 
    A binding MUST define a Mission Reference that is:
 
@@ -351,7 +359,7 @@ Table of Contents
    as globally identifying a Mission when its uniqueness actually
    depends on unstated local context.
 
-3.2.  Authority Roles
+4.2.  Authority Roles
 
    A binding identifies the authorities responsible for the functions it
    uses.  Roles MAY be co-located in one implementation, but their
@@ -386,9 +394,9 @@ Table of Contents
    other roles appear when the corresponding capability is claimed.
    Higher-assurance profiles can require preventive or evidentiary
    independence between roles; the kernel requires only that they never
-   collapse silently (Section 8.1).
+   collapse silently (Section 9.1).
 
-3.3.  Actor Binding
+4.3.  Actor Binding
 
    At approval, the Controller MUST bind the Mission Context to the
    Actor identity, key, workload identity, authenticated session, or
@@ -409,7 +417,7 @@ Table of Contents
    A binding that maps between identifiers MUST define which component
    performs the mapping and the assurance and ambiguity of that mapping.
 
-3.4.  Approved Context and Immutability
+4.4.  Approved Context and Immutability
 
    The binding MUST maintain either the Approved Context itself or a
    verifiable commitment to it.  After approval, the approved value MUST
@@ -442,9 +450,9 @@ Table of Contents
    value; a native content address it also uses as the Mission Reference
    is then verification material for parties holding the value, not a
    commitment in place of it.  A default construction a binding MAY
-   adopt for these duties is defined in Section 4.
+   adopt for these duties is defined in Section 5.
 
-3.5.  Approval Event
+4.5.  Approval Event
 
    A binding MUST define a native approval ceremony that atomically
    creates an active Mission Context or has equivalent transactional
@@ -453,7 +461,7 @@ Table of Contents
    1.  authenticate the Approver at the assurance level required by the
        deployment;
 
-   2.  establish the Actor as specified in Section 3.3;
+   2.  establish the Actor as specified in Section 4.3;
 
    3.  present or otherwise make available to the Approver a faithful
        representation of the context being approved;
@@ -477,9 +485,9 @@ Table of Contents
    The kernel does not require the Approved Context to enumerate every
    resource operation.  If the ceremony approves structured authority,
    the binding claims and follows the Structured Authority capability
-   (Section 5.3).
+   (Section 6.3).
 
-3.6.  Basic Governance Gate
+4.6.  Basic Governance Gate
 
    Every binding MUST define an active predicate and a non-active
    outcome.  The underlying state vocabulary can be as small as active
@@ -504,10 +512,10 @@ Table of Contents
    revocation, expiry, or supersession as reasons without making each a
    distinct protocol state.
 
-3.7.  Bounded Reliance
+4.7.  Bounded Reliance
 
    Authority derived from a Mission MUST NOT be usable indefinitely.
-   For every positive decision under Section 3.6, and for every
+   For every positive decision under Section 4.6, and for every
    credential or other artifact the binding describes as governed by the
    Mission, the binding MUST state a reliance bound in at least one of
    two forms:
@@ -525,11 +533,11 @@ Table of Contents
    requires.  This floor requires no consumer-facing freshness source: a
    binding whose credential lifetimes sit inside the Mission's own bound
    satisfies it unmodified, as the OAuth binding's stateless baseline
-   does.  The bound gives the non-active transition of Section 3.6 its
+   does.  The bound gives the non-active transition of Section 4.6 its
    force: a party who causes a Mission to become non-active is assured
    that reliance under the Mission ends within the stated interval.
 
-3.8.  Context Propagation
+4.8.  Context Propagation
 
    Each positive governance decision and each artifact that a binding
    claims is Mission-governed MUST carry, or be unambiguously joinable
@@ -558,7 +566,7 @@ Table of Contents
    properties require binding-specific mechanisms and, where applicable,
    optional capabilities.
 
-3.9.  Ordered Governance Record
+4.9.  Ordered Governance Record
 
    The Controller MUST maintain an integrity-protected, ordered record
    of governance events for the Mission.  At minimum, the record MUST
@@ -576,13 +584,13 @@ Table of Contents
 
    This record need not be portable or independently verifiable.  A
    binding that makes either claim also supplies the corresponding
-   capability in Section 5.
+   capability in Section 6.
 
-4.  Default Commitment Construction
+5.  Default Commitment Construction
 
    Any specification that defines a commitment, a Mission Substrate
    Binding or an importing profile alike, MAY satisfy the commitment
-   duties of Section 3.4, for the Approved Context and for any other
+   duties of Section 4.4, for the Approved Context and for any other
    artifact it commits, with the following default construction.  The
    OAuth issuance profile ([I-D.draft-mcguinness-oauth-mission])
    instantiates it, and family profiles import it from this section; a
@@ -590,7 +598,7 @@ Table of Contents
    address, a signed object, a digest whose member name fixes the
    algorithm) remains free to use that instead, stating its own
    algorithm identification and agility behavior under the duties of
-   Section 3.4.
+   Section 4.4.
 
    The default commits to bytes in one of three species, and a
    specification defining a commitment classifies it:
@@ -655,7 +663,7 @@ Table of Contents
    domain, and the reject-unknown-prefix and no-downgrade agility rules
    remain prose-only: no vector pins them.
 
-5.  Optional Capabilities
+6.  Optional Capabilities
 
    Capabilities are additive claims.  A binding MUST NOT claim a
    capability unless it meets every requirement in that capability's
@@ -672,40 +680,40 @@ Table of Contents
       +====================+=======================================+
       | Lifecycle-Gated    | Named authorization operations are    |
       | Authorization      | gated on currently active state       |
-      | (Section 5.1)      |                                       |
+      | (Section 6.1)      |                                       |
       +--------------------+---------------------------------------+
       | State-Observable   | An authenticated source lets a named  |
-      | (Section 5.2)      | consumer determine whether a Mission  |
+      | (Section 6.2)      | consumer determine whether a Mission  |
       |                    | is active                             |
       +--------------------+---------------------------------------+
       | Structured         | A machine-evaluable authority         |
       | Authority          | representation with an identified     |
-      | (Section 5.3)      | semantics owner                       |
+      | (Section 6.3)      | semantics owner                       |
       +--------------------+---------------------------------------+
       | Monotonic          | Covered derivations verify a no-      |
       | Derivation         | broader-than relation within a        |
-      | (Section 5.4)      | declared boundary                     |
+      | (Section 6.4)      | declared boundary                     |
       +--------------------+---------------------------------------+
       | Credential-Bound   | An integrity-protected association    |
-      | (Section 5.5)      | between an artifact and exactly one   |
+      | (Section 6.5)      | between an artifact and exactly one   |
       |                    | Mission, with selected fact semantics |
       +--------------------+---------------------------------------+
       | Authorized Context | An authorized association among       |
       | Correlation        | independently established facts, made |
-      | (Section 5.6)      | by an identified joining authority    |
+      | (Section 6.6)      | by an identified joining authority    |
       +--------------------+---------------------------------------+
       | Independently      | A named consumer verifies a specified |
       | Verifiable         | property without an online query to   |
-      | (Section 5.7)      | the Controller                        |
+      | (Section 6.7)      | the Controller                        |
       +--------------------+---------------------------------------+
       | Portable Evidence  | Evidence crosses a stated             |
-      | (Section 5.8)      | administrative boundary and verifies  |
+      | (Section 6.8)      | administrative boundary and verifies  |
       |                    | there                                 |
       +--------------------+---------------------------------------+
 
                 Table 2: Optional capabilities at a glance
 
-5.1.  Lifecycle-Gated Authorization
+6.1.  Lifecycle-Gated Authorization
 
    A binding claiming *Lifecycle-Gated Authorization* extends the basic
    governance gate to named authorization operations.  Its Statement
@@ -725,7 +733,7 @@ Table of Contents
    resource tokens.  It MUST NOT generalize the narrower claim to the
    uncovered path.
 
-5.2.  State-Observable
+6.2.  State-Observable
 
    A binding claiming *State-Observable* MUST expose at least one
    authenticated, integrity-protected source from which a named consumer
@@ -752,7 +760,7 @@ Table of Contents
    Authorization or by a consuming runtime profile such as
    [I-D.draft-mcguinness-mission-runtime].
 
-5.3.  Structured Authority
+6.3.  Structured Authority
 
    A binding claiming *Structured Authority* MUST define a machine-
    evaluable representation of authority associated with the Mission and
@@ -780,7 +788,7 @@ Table of Contents
    constraints MUST fail closed at a decision point that requires their
    semantics.
 
-5.4.  Monotonic Derivation
+6.4.  Monotonic Derivation
 
    A binding claiming *Monotonic Derivation* MUST also claim Structured
    Authority for the values covered by the derivation.  It MUST define a
@@ -815,7 +823,7 @@ Table of Contents
    the same Mission while leaving them outside this capability; in the
    classification above those decisions are decide_anew.
 
-5.5.  Credential-Bound
+6.5.  Credential-Bound
 
    A binding claiming *Credential-Bound* MUST define an integrity-
    protected association between a credential or authorization artifact
@@ -860,7 +868,7 @@ Table of Contents
    Mission-bound under any of these semantics while offering a weaker
    holder guarantee.
 
-5.6.  Authorized Context Correlation
+6.6.  Authorized Context Correlation
 
    A binding claiming *Authorized Context Correlation* MUST supply an
    authorized association among independently established facts, such as
@@ -875,7 +883,7 @@ Table of Contents
    association is an authorized fact established by the joining
    authority, not an observation that two values coincide.  This
    capability is required whenever one authority did not itself bind all
-   required facts in the applicable context (Section 8.3).
+   required facts in the applicable context (Section 9.3).
 
    Native binding does not automatically supply this capability.  It
    supplies it where it authoritatively joins independently established
@@ -888,7 +896,7 @@ Table of Contents
    supplied with that reason rather than presenting native binding as a
    join.
 
-5.7.  Independently Verifiable
+6.7.  Independently Verifiable
 
    A binding claiming *Independently Verifiable* MUST let the named
    consumer verify a specified Mission property without an online query
@@ -908,7 +916,7 @@ Table of Contents
    or turn contextual governance into a machine-evaluable policy
    language.
 
-5.8.  Portable Evidence
+6.8.  Portable Evidence
 
    A binding claiming *Portable Evidence* MUST define evidence that can
    be transferred across the administrative boundary stated in the claim
@@ -934,7 +942,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-mandate],
    [I-D.draft-mcguinness-mission-audit]).
 
-6.  Composition by Capability
+7.  Composition by Capability
 
    A substrate-neutral profile MUST declare the kernel functions and
    optional capabilities it consumes.  It MUST NOT infer an undeclared
@@ -974,7 +982,7 @@ Table of Contents
    those boundaries rather than describe the whole deployment with the
    stronger local property.
 
-7.  Mission Substrate Conformance
+8.  Mission Substrate Conformance
 
    This document defines conformance for a specification.  An
    implementation conforms to the binding specification it implements.
@@ -982,10 +990,10 @@ Table of Contents
    A conforming Mission Substrate Binding:
 
    1.  defines every element of the contextual-governance kernel in
-       Section 3;
+       Section 4;
 
    2.  publishes a Mission Substrate Statement as specified in
-       Section 7.1;
+       Section 8.1;
 
    3.  claims only optional capabilities whose complete requirements it
        satisfies in the claimed scope; and
@@ -998,7 +1006,7 @@ Table of Contents
    hide which guarantees are actually present.  The capability list and
    scope in the Mission Substrate Statement are the conformance result.
 
-7.1.  Mission Substrate Statement
+8.1.  Mission Substrate Statement
 
    A specification that itself claims conformance to this document MUST
    contain a section titled "Mission Substrate Statement".  For a
@@ -1018,7 +1026,7 @@ Table of Contents
 
    1.  the Mission Reference, its uniqueness namespace, comparison
        rules, retention, non-reassignment rule, and how the
-       unguessability requirement of Section 3.1 is met;
+       unguessability requirement of Section 4.1 is met;
 
    2.  the Controller identity and how relying components establish it;
 
@@ -1028,12 +1036,12 @@ Table of Contents
    4.  the Approved Context, its immutable boundary, and any commitment
        and verification procedure;
 
-   5.  the native approval ceremony and each step of Section 3.5;
+   5.  the native approval ceremony and each step of Section 4.5;
 
    6.  the active predicate, non-active outcome, authorized transition
        mechanisms, and effect on subsequent Controller decisions;
 
-   7.  the reliance bound of Section 3.7 for each decision and Mission-
+   7.  the reliance bound of Section 4.7 for each decision and Mission-
        governed artifact class: the stated maximum residual interval,
        the expiry rule, or both;
 
@@ -1044,7 +1052,7 @@ Table of Contents
        and retention.
 
    The Statement MUST then include a capability table with one row for
-   each capability in Section 5.  Each row MUST say supplied or not
+   each capability in Section 6.  Each row MUST say supplied or not
    supplied: a capability is supplied in a named scope when the row's
    stated activation conditions hold, or it is not supplied.  There is
    no third state.  An activation condition states separately what a
@@ -1063,7 +1071,7 @@ Table of Contents
    *  state its temporal elements: the fact's freshness at use, the
       decision or artifact lifetime, and the residual interval after the
       Mission becomes non-active, each stated directly or expressly
-      inherited from the reliance floor of Section 3.7;
+      inherited from the reliance floor of Section 4.7;
 
    *  state its failure behavior for absent, stale, unknown,
       incomparable, invalid, or unavailable input; and
@@ -1134,9 +1142,9 @@ Table of Contents
    specification MUST publish an updated Statement or a Statement
    extension that identifies the base binding and precise added scope.
 
-8.  Security Considerations
+9.  Security Considerations
 
-8.1.  Capability Confusion
+9.1.  Capability Confusion
 
    The principal risk this document addresses is capability confusion:
    treating Mission correlation as proof of authority, an approval as
@@ -1150,7 +1158,7 @@ Table of Contents
    declared scope.  It does not upgrade a kernel-only reference because
    its syntax resembles a credential claim or content digest.
 
-8.2.  Reference and Context Substitution
+9.2.  Reference and Context Substitution
 
    The Controller namespace is part of Mission identity whenever a
    reference is not globally unique.  Omitting it permits references
@@ -1165,17 +1173,17 @@ Table of Contents
    supplied reference without authentication can attribute unrelated
    authority or activity to a Mission.
 
-8.3.  Context Splicing
+9.3.  Context Splicing
 
    An attacker can combine valid identity evidence, a valid credential,
    and a valid Mission from different transactions.  Each piece verifies
    on its own; the composite is unauthorized.  Authorized Context
-   Correlation (Section 5.6) is required whenever one authority did not
+   Correlation (Section 6.6) is required whenever one authority did not
    itself bind all required facts in the applicable context, and a
    consumer MUST NOT treat co-presentation of independently valid facts
    as an authorized association.
 
-8.4.  Controller Compromise
+9.4.  Controller Compromise
 
    The Controller is trusted for the kernel properties it asserts.  A
    compromised Controller can approve false context, bind the wrong
@@ -1191,7 +1199,7 @@ Table of Contents
    decision, logging, and credential components.  Naming one logical
    Controller does not eliminate those internal trust boundaries.
 
-8.5.  State and Residual Authority
+9.5.  State and Residual Authority
 
    The kernel's non-active outcome stops new positive Controller
    governance decisions.  It does not automatically invalidate every
@@ -1199,13 +1207,13 @@ Table of Contents
    state.  Lifecycle-Gated Authorization and State-Observable claims
    must state their coverage and residual interval.  Short credential
    lifetime can bound residual authority but is not instantaneous
-   termination.  The bounded-reliance floor (Section 3.7) guarantees
+   termination.  The bounded-reliance floor (Section 4.7) guarantees
    that a stated bound exists on every conforming path; it does not make
    any bound short.  A bound long enough to be vacuous defeats the
    floor's purpose; consumers evaluate the stated interval, not only its
    presence.
 
-8.6.  Governance Record Integrity
+9.6.  Governance Record Integrity
 
    An ordered record that is not externally witnessed can still be
    truncated or rewritten by a compromised Controller.  The kernel
@@ -1214,7 +1222,7 @@ Table of Contents
    equivocation or truncation require Portable Evidence or a separate
    transparency profile.
 
-9.  Privacy Considerations
+10.  Privacy Considerations
 
    Mission References are correlation handles.  Reusing them across
    resources or administrative domains can reveal that otherwise
@@ -1238,13 +1246,13 @@ Table of Contents
    themselves become stable correlation values, and a commitment can
    enable guessing attacks when the committed context has low entropy.
 
-10.  IANA Considerations
+11.  IANA Considerations
 
    This document has no IANA actions.
 
-11.  References
+12.  References
 
-11.1.  Normative References
+12.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -1283,7 +1291,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-11.2.  Informative References
+12.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
@@ -1450,7 +1458,7 @@ Appendix B.  Mission-Bound Authorization Family Use
    A family document that maps its own vocabulary to the kernel's MUST
    use these correspondences.
 
-   The authority-role map (Section 3.2) aligns with the OAuth binding's
+   The authority-role map (Section 4.2) aligns with the OAuth binding's
    Authority Sources: the authority_source record member and its three
    sources (user-delegated, service-owned, organizational) are the OAuth
    binding's realization of the authority-source authority role, and its
@@ -1475,7 +1483,7 @@ B.1.  OAuth Binding Mapping Assessment
 
    This section is this document's Mapping Assessment of the OAuth
    Mission binding ([I-D.draft-mcguinness-oauth-mission]), published
-   under Section 7.1.  The assessment is normative as this document's
+   under Section 8.1.  The assessment is normative as this document's
    own content: this document asserts, and maintains against the OAuth
    binding's text, the kernel mapping and capability claims below.  It
    is not the OAuth binding's conformance result: the OAuth binding

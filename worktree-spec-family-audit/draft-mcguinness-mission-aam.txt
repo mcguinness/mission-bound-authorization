@@ -72,24 +72,25 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Terminology
-   3.  The Component Mapping
-     3.1.  Agent Identity Broker
-     3.2.  Task-Scoped Access Engine
-     3.3.  Mediation Layer
-     3.4.  Trust Ratchet
-     3.5.  Task Template and Capability Ceiling
-     3.6.  Agent Activity Log
-   4.  The Reference Scenario
-   5.  The Grant Review Loop Is Not Adopted
-   6.  Limitations
-   7.  Conformance
-   8.  Security Considerations
-   9.  Privacy Considerations
-   10. IANA Considerations
-   11. References
-     11.1.  Normative References
-     11.2.  Informative References
+   2.  Status: An Experimental Sketch
+   3.  Conventions and Terminology
+   4.  The Component Mapping
+     4.1.  Agent Identity Broker
+     4.2.  Task-Scoped Access Engine
+     4.3.  Mediation Layer
+     4.4.  Trust Ratchet
+     4.5.  Task Template and Capability Ceiling
+     4.6.  Agent Activity Log
+   5.  The Reference Scenario
+   6.  The Grant Review Loop Is Not Adopted
+   7.  Limitations
+   8.  Conformance
+   9.  Security Considerations
+   10. Privacy Considerations
+   11. IANA Considerations
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -126,7 +127,13 @@ Table of Contents
    surface that realizes each entry and the documents whose conformance
    targets it is thereby claiming.
 
-2.  Conventions and Terminology
+2.  Status: An Experimental Sketch
+
+   Maturity: sketch.  Maintenance: lab-best-effort.  Adopt when:
+   Adopting Cloudflare's AAM vocabulary and mapping it onto existing
+   mechanisms.  Requires: nothing beyond its listed references.
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -144,7 +151,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-containment]).  AAM component
    names are capitalized as [AAM] presents them.
 
-3.  The Component Mapping
+4.  The Component Mapping
 
    +==========+==================+=======================================================+
    |AAM       |Mission           |Governing documents                                    |
@@ -225,13 +232,13 @@ Table of Contents
    |          |run graph         |                                                       |
    +----------+------------------+-------------------------------------------------------+
    |Grant     |Not adopted       |[I-D.draft-mcguinness-oauth-mission-expansion],        |
-   |Review    |(Section 5)       |[I-D.draft-mcguinness-oauth-mission-approval-revision],|
+   |Review    |(Section 6)       |[I-D.draft-mcguinness-oauth-mission-approval-revision],|
    |Loop      |                  |[I-D.draft-mcguinness-oauth-mission-management]        |
    +----------+------------------+-------------------------------------------------------+
 
            Table 1: AAM components and their Mission realizations
 
-3.1.  Agent Identity Broker
+4.1.  Agent Identity Broker
 
    AAM's broker exchanges a service's broad identity for a task-scoped
    credential inside an established capability ceiling.  The family
@@ -250,7 +257,7 @@ Table of Contents
    the property that the machine-speed path structurally cannot mint the
    high-consequence credential.
 
-3.2.  Task-Scoped Access Engine
+4.2.  Task-Scoped Access Engine
 
    AAM's engine decides per action against the task's ceiling.  The
    realization is a stateless Policy Decision Point evaluating, on every
@@ -261,7 +268,7 @@ Table of Contents
    check, so a containment that landed between two checks is visible to
    the second with no propagation step.
 
-3.3.  Mediation Layer
+4.3.  Mediation Layer
 
    Tool calls traverse the mediated harness and the resource-server
    Policy Enforcement Point, each consequential action carrying a
@@ -269,10 +276,10 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime]).  The network path an agent
    could use around its tools is covered by an egress gate whose
    allowlist and refusals are recorded as evidence.  The gate's
-   containment claim is bounded honestly (Section 6): an in-process gate
+   containment claim is bounded honestly (Section 7): an in-process gate
    mediates the honest path and contains nothing.
 
-3.4.  Trust Ratchet
+4.4.  Trust Ratchet
 
    AAM ratchets trust downward on signal.  The realization is Mission
    Containment ([I-D.draft-mcguinness-oauth-mission-containment]): a
@@ -286,7 +293,7 @@ Table of Contents
    including low-consequence dispatched instances, are untouched unless
    named.
 
-3.5.  Task Template and Capability Ceiling
+4.5.  Task Template and Capability Ceiling
 
    AAM's template is consented once and dispatched many times.  Mission
    Templates realize this with two distinct refusals that keep the
@@ -301,7 +308,7 @@ Table of Contents
    time, while every machine-speed instance is clipped to the low-
    consequence slice.
 
-3.6.  Agent Activity Log
+4.6.  Agent Activity Log
 
    AAM's log is a supporting system off the request path.  The
    realization is a read-model join, not a new store: Policy Enforcement
@@ -312,7 +319,7 @@ Table of Contents
    document's rules, the log adds no write path and cannot become a
    second source of truth.
 
-4.  The Reference Scenario
+5.  The Reference Scenario
 
    AAM's reference scenario is a nightly reconciliation job whose one
    external communication (posting a finance remittance) is human-gated.
@@ -363,7 +370,7 @@ Table of Contents
        ingestion, Containment Evidence, and subsequent contained
        decision, with no Template lineage.
 
-5.  The Grant Review Loop Is Not Adopted
+6.  The Grant Review Loop Is Not Adopted
 
    AAM's grant review loop is a periodic human re-approval of standing
    grants.  Missions are not standing grants, so the loop has nothing to
@@ -393,7 +400,7 @@ Table of Contents
    wants a periodic review as organizational practice can run one over
    the Activity Log without any new mechanism.
 
-6.  Limitations
+7.  Limitations
 
    The mapping is only as strong as what it does not claim.
 
@@ -420,12 +427,12 @@ Table of Contents
       effective authority.  A contained capability is denied at the
       resource server no matter what the agent attempts.
 
-7.  Conformance
+8.  Conformance
 
    This document defines no conformance targets of its own.  A
    deployment claiming to realize AAM through this mapping is claiming,
    per component, the conformance targets of the governing documents in
-   Section 3: the issuance profile for approval and issuance, the
+   Section 4: the issuance profile for approval and issuance, the
    template companion for ceilings and Dispatch (including the
    prohibited-class refusal), the AuthZEN and runtime profiles for the
    decision and enforcement path, the harness document for mediation,
@@ -434,18 +441,18 @@ Table of Contents
    component MUST NOT present this mapping as realized; it names which
    components it realizes and which it omits.
 
-8.  Security Considerations
+9.  Security Considerations
 
-   The security considerations of the governing documents in Section 3
+   The security considerations of the governing documents in Section 4
    apply to their respective components.  The mapping-specific
-   considerations are the three limitations of Section 6, which bound
+   considerations are the three limitations of Section 7, which bound
    what the mediation and containment components may claim, and the
-   prohibited-class rule of Section 3.5, which is what keeps the
+   prohibited-class rule of Section 4.5, which is what keeps the
    machine-speed issuance path from becoming a high-consequence
    credential minter: a deployment that widens its Dispatch policy past
    the prohibited classes has removed the property, not tuned it.
 
-9.  Privacy Considerations
+10.  Privacy Considerations
 
    The Activity Log join correlates a Mission's decisions, refusals,
    egress attempts, and containment history into one graph, which is
@@ -456,13 +463,13 @@ Table of Contents
    instance to its Template and approver of record; that linkage is the
    model's accountability feature and is subject to the same scoping.
 
-10.  IANA Considerations
+11.  IANA Considerations
 
    This document has no IANA actions.
 
-11.  References
+12.  References
 
-11.1.  Normative References
+12.1.  Normative References
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -473,7 +480,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-11.2.  Informative References
+12.2.  Informative References
 
    [AAM]      Cloudflare, "The Agent Access Model", 2026,
               <https://blog.cloudflare.com/the-agent-access-model/>.

@@ -139,6 +139,11 @@ Table of Contents
    ([I-D.draft-gerber-oauth-deferred-token-response]) and will track it
    as it evolves.
 
+   Maturity: experimental.  Maintenance: lab-best-effort.  Adopt when:
+   Reviewers routinely narrow a proposed Mission rather than approve or
+   deny.  Requires: Mission-Bound Authorization for OAuth 2.0; Mission
+   Deferred Approval for OAuth 2.0.
+
 3.  Relationship to the Deferred Approval Profile
 
    This document depends normatively on the deferred approval profile

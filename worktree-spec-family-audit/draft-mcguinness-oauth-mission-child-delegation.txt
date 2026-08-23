@@ -164,6 +164,13 @@ Table of Contents
    issuance-profile Mission Issuer.  Nothing here places a new
    requirement back on the issuance profile.
 
+   Maturity: stable.  Maintenance: active.  Adopt when: A sub-agent
+   needs its own Mission outliving a call frame, with cascade
+   termination.  Requires: Mission-Bound Authorization for OAuth 2.0.
+   Also requires, conditionally: Mission Expansion for OAuth 2.0 and
+   Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation
+   reacts to parent lifecycle states).
+
 3.  Relationship to the Issuance Profile
 
    This document depends normatively on the issuance profile and is not

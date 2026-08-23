@@ -78,21 +78,22 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Terminology
-   3.  Capability Source Context
-   4.  Capability Source Binding
-     4.1.  Decision-Time Verification
-     4.2.  Per-Capability Extraction
-     4.3.  Capability Drift Denial Reason
-   5.  Conformance
-   6.  Security Considerations
-     6.1.  Catalog compromise and stale digests
-     6.2.  Executor identity is not a security boundary
-   7.  Privacy Considerations
-   8.  IANA Considerations
-   9.  References
-     9.1.  Normative References
-     9.2.  Informative References
+   2.  Status: An Optional Profile
+   3.  Conventions and Terminology
+   4.  Capability Source Context
+   5.  Capability Source Binding
+     5.1.  Decision-Time Verification
+     5.2.  Per-Capability Extraction
+     5.3.  Capability Drift Denial Reason
+   6.  Conformance
+   7.  Security Considerations
+     7.1.  Catalog compromise and stale digests
+     7.2.  Executor identity is not a security boundary
+   8.  Privacy Considerations
+   9.  IANA Considerations
+   10. References
+     10.1.  Normative References
+     10.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -133,7 +134,17 @@ Table of Contents
    claim this companion is unaffected: the AuthZEN binding's decision
    contract consumes an already established action identity.
 
-2.  Conventions and Terminology
+2.  Status: An Optional Profile
+
+   Maturity: stable.  Maintenance: active.  Adopt when: Actions come
+   from a discovered catalog where invoked identity can drift from
+   approval.  Requires: Mission-Bound Runtime Enforcement: AuthZEN
+   Profile; Mission-Bound Runtime Enforcement; Mission Substrate
+   Requirements.  Also requires, conditionally: Mission-Bound
+   Authorization for OAuth 2.0 (when the OAuth binding is the
+   substrate).
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -166,17 +177,17 @@ Table of Contents
 
    Validating server:  The component that, at derivation, validates the
       Mission's authority and records the derivation-time facts a PDP
-      later checks, such as a capability source_digest (Section 4).  In
+      later checks, such as a capability source_digest (Section 5).  In
       the issuance profile this is the Mission Issuer; this document
       uses the term where the recording role is what matters.
 
-3.  Capability Source Context
+4.  Capability Source Context
 
    For catalog-sourced actions, the PEP supplies the capability-source
    binding in context.capability_source using the object defined in
-   Section 4.  For non-catalog actions, this member is absent.
+   Section 5.  For non-catalog actions, this member is absent.
 
-4.  Capability Source Binding
+5.  Capability Source Binding
 
    Consequential actions an agent discovers at runtime, through a Model
    Context Protocol tool catalog, an OpenAPI document, a Protected
@@ -220,7 +231,7 @@ Table of Contents
 
    source_digest:  A string.  The integrity-anchor encoded form
       ([I-D.draft-mcguinness-oauth-mission]) over the capability's
-      extracted definition (Section 4.2), recorded at derivation time.
+      extracted definition (Section 5.2), recorded at derivation time.
       At request time it is computed over the current extracted
       definition, so the PDP's comparison detects a mutated definition.
 
@@ -258,11 +269,11 @@ Table of Contents
    *  The PEP presents tool_id on consequential requests for catalog-
       sourced actions.  The runtime profile owns the drift semantics
       ([I-D.draft-mcguinness-mission-runtime]); the PDP applies them
-      through this document's decision-time verification (Section 4.1),
-      over the per-capability comparison scope of Section 4.2.  This
+      through this document's decision-time verification (Section 5.1),
+      over the per-capability comparison scope of Section 5.2.  This
       document adds only the wire representation and per-capability
       verification: such a refusal is carried as capability_drift
-      (Section 4.3), with its boundary against out_of_authority fixed by
+      (Section 5.3), with its boundary against out_of_authority fixed by
       the AuthZEN binding's runtime denial classification
       ([I-D.draft-mcguinness-mission-authzen]).  It defines no drift
       rule of its own.
@@ -277,23 +288,23 @@ Table of Contents
       registered authorization_details types, first-party operations
       with stable identity) do not require this binding.
 
-4.1.  Decision-Time Verification
+5.1.  Decision-Time Verification
 
    For a catalog-sourced action whose approved entry recorded a
    capability source binding at derivation, the PDP MUST verify, as part
    of its decision, that context.capability_source is present and
    matches the approved binding: the presented source_digest, computed
-   over the capability's current extracted definition (Section 4.2),
+   over the capability's current extracted definition (Section 5.2),
    MUST equal the recorded value, and, where a catalog_digest was
    recorded, the presented catalog_digest MUST equal it likewise;
-   otherwise the PDP returns capability_drift (Section 4.3).  Whether an
+   otherwise the PDP returns capability_drift (Section 5.3).  Whether an
    action is catalog-sourced, and which digests were recorded, are
    determined from the materialized policy view the AuthZEN binding
    defines ([I-D.draft-mcguinness-mission-authzen]), not from the PEP's
    request; where no source binding was recorded, this check does not
    apply.
 
-4.2.  Per-Capability Extraction
+5.2.  Per-Capability Extraction
 
    source_digest is computed over the extracted per-capability
    definition, not the whole retrieved source, so a revision elsewhere
@@ -354,7 +365,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]); this document requires only
    the stable identifier plus source evidence above.
 
-4.3.  Capability Drift Denial Reason
+5.3.  Capability Drift Denial Reason
 
    This document registers capability_drift as a coordinated extension
    to the runtime denial classification, under the AuthZEN binding's
@@ -365,7 +376,7 @@ Table of Contents
    family; capability_drift is the name this document reserves.
 
    capability_drift:  for a catalog-sourced action whose approved entry
-      recorded a capability source binding (Section 4), the digest of
+      recorded a capability source binding (Section 5), the digest of
       the action's current extracted capability definition differs from
       the source_digest committed at derivation, a recorded
       catalog_digest no longer matches the retrieved source, or the
@@ -381,7 +392,7 @@ Table of Contents
    denial carrying capability_drift, under the carrier taxonomy of the
    AuthZEN binding ([I-D.draft-mcguinness-mission-authzen]).
 
-5.  Conformance
+6.  Conformance
 
    A deployment claims Mission Capability Binding only for the catalog-
    sourced actions within the runtime enforcement scope it documents
@@ -391,28 +402,28 @@ Table of Contents
    A validating server conforming to this document MUST record tool_id,
    source_uri, source_digest, operation_ref, and any catalog_digest for
    every consequential action sourced from a discovered catalog, at
-   derivation (Section 4).
+   derivation (Section 5).
 
    A PEP conforming to this document MUST present
    context.capability_source on a consequential request for a catalog-
-   sourced action (Section 3).
+   sourced action (Section 4).
 
    A PDP conforming to this document MUST verify the presented binding
    against the recorded one and return capability_drift on a mismatch
-   (Section 4.1, Section 4.3).
+   (Section 5.1, Section 5.3).
 
    A deployment that does not claim this document is unaffected: the
    AuthZEN binding's decision contract consumes an already established
    action identity ([I-D.draft-mcguinness-mission-authzen]).
 
-6.  Security Considerations
+7.  Security Considerations
 
    The runtime profile's Security Considerations
    ([I-D.draft-mcguinness-mission-runtime]) and the AuthZEN binding's
    ([I-D.draft-mcguinness-mission-authzen]) apply in full.  This section
    addresses only threats specific to capability-source binding.
 
-6.1.  Catalog compromise and stale digests
+7.1.  Catalog compromise and stale digests
 
    A validating server that records source_digest over stale or
    attacker-influenced source data commits to the wrong capability from
@@ -421,15 +432,15 @@ Table of Contents
    deployment SHOULD additionally record catalog_digest and constrain
    source_uri to a trusted, authenticated origin.
 
-6.2.  Executor identity is not a security boundary
+7.2.  Executor identity is not a security boundary
 
    The executor member is a request-time fact the PEP asserts after
    authenticating the serving component; it is never an input to
    source_digest or catalog_digest, so a spoofed executor cannot mask or
    forge a drift check.  Resource policy, not this document, bounds
-   which executors are trusted (Section 4).
+   which executors are trusted (Section 5).
 
-7.  Privacy Considerations
+8.  Privacy Considerations
 
    The runtime profile's evidence-privacy guidance
    ([I-D.draft-mcguinness-mission-runtime]) applies in full. source_uri,
@@ -438,7 +449,7 @@ Table of Contents
    internal catalog topology; this document defines no additional record
    content and no exemption from that guidance.
 
-8.  IANA Considerations
+9.  IANA Considerations
 
    This document requests no IANA actions.  The
    context.capability_source member this document adds to the AuthZEN
@@ -449,9 +460,9 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-authzen]), not an IANA-registered
    value.
 
-9.  References
+10.  References
 
-9.1.  Normative References
+10.1.  Normative References
 
    [AUTHZEN]  OpenID Foundation, "OpenID AuthZEN Authorization API 1.0",
               2026, <https://openid.net/specs/authorization-api-
@@ -506,7 +517,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-9.2.  Informative References
+10.2.  Informative References
 
    [COAZ]     OpenID Foundation, "AuthZEN Profile for Model Context
               Protocol Tool Authorization - Draft 1", 2026,

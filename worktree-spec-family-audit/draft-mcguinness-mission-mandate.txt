@@ -168,6 +168,12 @@ Table of Contents
    failure taxonomy against real cross-domain use before relying on
    them.
 
+   Maturity: stable.  Maintenance: active.  Adopt when: An outside party
+   must verify what was approved without a token-exchange hop.
+   Requires: Mission Substrate Requirements.  Also requires,
+   conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
+   OAuth binding is the substrate).
+
 3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",

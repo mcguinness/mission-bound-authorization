@@ -218,6 +218,11 @@ Table of Contents
    compromise degrades the guarantees.  Each profile's own Security
    Considerations remain normative over both.
 
+   Maturity: informational.  Maintenance: active.  Adopt when: Before
+   adopting anything: the Mission model, invariants, and assurance
+   levels the rest cite.  Requires: nothing beyond its listed
+   references.
+
 3.  Conventions and Terminology
 
    Where this document uses words like "must" or "should," they carry
