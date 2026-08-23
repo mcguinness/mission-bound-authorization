@@ -740,6 +740,34 @@ execution) is carried on derived tokens via the `act` chain
 identifier formats (for example, the formats of {{RFC9493}}) MAY be
 layered in future versions and are not required here.
 
+## Protocol Flow {#protocol-flow}
+
+~~~
+ Agent (client)                       Mission Issuer (AS)
+      |                                     |
+      | 1. PAR: intent + proposal --------->| derive authority
+      |<----------- request_uri ------------| (authz_details)
+      |                                     |
+      | 2. authorization request ---------->| Approver consents
+      |                                     |   -> authority_hash
+      |<-------------- code ----------------| -> Mission active
+      |                                     |   (bound to the grant)
+      |                                     |
+      | 3. token request ------------------>| gate: active?
+      |<----------- access token -----------| + authz_details
+      |                                     |   + mission claim
+      v
+~~~
+
+The flow then leaves the AS: (4) the agent calls the Resource Server
+with the token; the RS enforces the `authorization_details`
+statelessly and MAY check the `mission` claim, with no callback to the
+AS required. (5) A management revoke, or `expires_at` passing,
+moves the Mission to `revoked` or `expired`, after which the AS refuses further
+issuance and refresh; a deployment MAY additionally compose RFC 7009
+{{RFC7009}} refresh-token revocation ({{revocation}}). The end-to-end
+example ({{e2e-example}}) walks this flow with concrete messages.
+
 ## Authority Sources {#authority-sources}
 
 A Mission draws its authority from one of three sources: a delegating
@@ -775,34 +803,6 @@ The subject-representation discipline is the same in every source:
   beneficiary.
 - The actor model does not vary by source: `client_id` names the
   Agent, and delegates ride the `act` chain ({{delegation}}).
-
-## Protocol Flow {#protocol-flow}
-
-~~~
- Agent (client)                       Mission Issuer (AS)
-      |                                     |
-      | 1. PAR: intent + proposal --------->| derive authority
-      |<----------- request_uri ------------| (authz_details)
-      |                                     |
-      | 2. authorization request ---------->| Approver consents
-      |                                     |   -> authority_hash
-      |<-------------- code ----------------| -> Mission active
-      |                                     |   (bound to the grant)
-      |                                     |
-      | 3. token request ------------------>| gate: active?
-      |<----------- access token -----------| + authz_details
-      |                                     |   + mission claim
-      v
-~~~
-
-The flow then leaves the AS: (4) the agent calls the Resource Server
-with the token; the RS enforces the `authorization_details`
-statelessly and MAY check the `mission` claim, with no callback to the
-AS required. (5) A management revoke, or `expires_at` passing,
-moves the Mission to `revoked` or `expired`, after which the AS refuses further
-issuance and refresh; a deployment MAY additionally compose RFC 7009
-{{RFC7009}} refresh-token revocation ({{revocation}}). The end-to-end
-example ({{e2e-example}}) walks this flow with concrete messages.
 
 # Mission Intent {#mission-intent}
 
@@ -1380,6 +1380,13 @@ derivation policy then in force, in one of two modes:
   event, where the Subject is established ({{approval-event}}), so a
   refusal at PAR time is best-effort over what is checkable without
   the Subject.
+  Template mode is the low-integration on-ramp: the client submits a
+  Mission Intent and no `authorization_details` proposal at all, so
+  an estate adopts Mission governance without teaching clients RAR
+  authoring, and the client-side cost is the Intent envelope alone;
+  the Mission Template profile
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) profiles the
+  mapping's publication and versioning.
 
 In both modes the AS MUST bound every derived entry by the Mission
 Intent: each derived entry's `resource` MUST be one of the Intent's
@@ -1856,7 +1863,13 @@ Stated as a limit: the subset rule is fully defined only over
 `mission_resource_access` and its Common Constraints. Authority
 expressed in another type has whatever subset relation that type
 defines, or none, and where it has none the entry is carried as
-approved: never narrowed, delegated, or projected. The narrowing
+approved: never narrowed, delegated, or projected. That property is
+declared at advertisement time, not discovered at a refused
+derivation: for every supported type, the AS MUST state, wherever it
+documents the type as supported ({{discovery}}), whether it enforces
+a subset relation for it; a type documented without one is thereby
+declared carried-as-approved, non-delegable and non-projectable
+while that documentation stands. The narrowing
 guarantee is therefore strongest while authority stays in
 `mission_resource_access` entries, and weakens as expressiveness
 moves into opaque policy-language entries.
@@ -3475,6 +3488,19 @@ consumer applies the forward-compatibility rule of {{lifecycle}} (only
 non-active). Only the issuer reports `state`
 ({{only-issuer-reports-state}}).
 
+Token format is not a conformance surface: an AS MAY issue
+Mission-bound access tokens as opaque reference tokens rather than
+JWTs. For such a deployment this section is the claims carriage, not
+only a freshness overlay: the introspection response conveys what
+the token itself does not, the granted `authorization_details` as
+the top-level introspection response member {{RFC9396}} defines,
+together with the `mission` member above, under the same caller
+rules ({{caller-authorization-and-minimization}}). A Resource Server
+in such an estate satisfies its token-consumption obligations
+({{rs-enforcement}}) from the introspection response alone, and an
+opaque-token estate without introspection remains a scope-only
+deployment ({{rs-enforcement}}).
+
 The AS includes the `mission` member only when it has authenticated the
 caller, the caller is authorized for the token
 ({{caller-authorization-and-minimization}}), and the presented token
@@ -4031,6 +4057,12 @@ baseline a Mission-aware client relies on, and this specification,
 not out-of-band documentation, is the type's normative definition.
 A client MAY use the RFC 9396 client metadata `authorization_details_types`
 at registration to declare the types it understands.
+
+The supported-type documentation this metadata points into also
+carries each type's delegation boundary: the AS states there whether
+it enforces a subset relation for the type ({{other-types}}), so a
+client can tell before proposing which authority would be carried as
+approved, never narrowed, delegated, or projected.
 
 An advertised type, `mission_resource_access` included, appears in
 authorization requests only as a proposal subject to derivation
@@ -5546,6 +5578,16 @@ resolve before interoperating.
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Reader-program normative follow-ups: the delegation boundary is
+  declared at advertisement time (an AS states, wherever it
+  documents a supported `authorization_details` type, whether it
+  enforces a subset relation for it, {{other-types}}, {{discovery}});
+  reference-token deployments named first-class (introspection as
+  the claims carriage for an opaque Mission-bound token,
+  {{introspection}}); template mode framed as the no-RAR on-ramp
+  ({{authorization-derivation}}); Authority Sources moved after
+  Protocol Flow within the Overview (structure only).
 
 - Editorial consolidation; no normative change: every removed
   sentence restates a rule that remains normatively stated at its

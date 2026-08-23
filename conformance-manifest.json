@@ -20,7 +20,7 @@
       },
       "draft-mcguinness-mission-substrate.md": {
         "revision": "0330ddb01b768fc4e4dc9ea166ab5dcfaa3ea2a3",
-        "content_sha256": "d0e8ebf4aaef42daf4232df0b8911f6218a1fba8379bea72ea88aed13e302d81"
+        "content_sha256": "75750b17dd297d70567bedcc841eea364d880355f94a53b2fcd80928832968ec"
       },
       "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
         "revision": "0330ddb01b768fc4e4dc9ea166ab5dcfaa3ea2a3",
@@ -40,7 +40,7 @@
       },
       "draft-mcguinness-oauth-mission.md": {
         "revision": "0330ddb01b768fc4e4dc9ea166ab5dcfaa3ea2a3",
-        "content_sha256": "308da95813e7bf376944adc7fb778b5c7951ae66c882219a1880aa78d6f4823b"
+        "content_sha256": "2ec009b5bef54aafbc887784e9ba90ea908297a2afd91ff4cf924d9ca2f795a7"
       },
       "draft-mcguinness-oauth-mission-issuance-grant.md": {
         "revision": "0330ddb01b768fc4e4dc9ea166ab5dcfaa3ea2a3",
