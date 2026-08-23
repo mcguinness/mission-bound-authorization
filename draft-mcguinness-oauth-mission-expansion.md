@@ -265,7 +265,13 @@ This document does NOT define:
   document alone, every expansion is adjudicated by a fresh human
   approval.
 
-# Conventions and Terminology
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when approved authority will predictably need to
+widen mid-task via fresh approval. It depends normatively on Mission-
+Bound Authorization for OAuth 2.0 and is not adoptable alone.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

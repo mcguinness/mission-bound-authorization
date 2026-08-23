@@ -180,6 +180,13 @@ contract, action classification, or failure conditions; those are
 normatively defined in {{I-D.draft-mcguinness-mission-runtime}} and
 are referenced, not duplicated, here.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when runtime enforcement is deployed and decisions
+need durable, verifiable records. It depends normatively on Mission-
+Bound Runtime Enforcement, and Mission Substrate Requirements and is not
+adoptable alone.
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

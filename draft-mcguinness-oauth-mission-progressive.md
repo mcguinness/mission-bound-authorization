@@ -198,7 +198,7 @@ approval event, integrity-anchor envelope, and subset rule. It uses
 Predecessor Mission, Successor Mission, and Expansion request as the
 expansion profile defines them.
 
-# Conventions and Terminology
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

@@ -385,7 +385,14 @@ This document is an experimental sketch. It fixes the binding's
 shape and its Mission Substrate Statement; worked test vectors and a
 per-endpoint error taxonomy are deferred to a later revision.
 
-## Conventions and Terminology
+# Status: An Experimental Sketch {#doc-status}
+
+Adopt this document when evaluating a UMA 2.0 deployment only. It
+depends normatively on Mission Substrate Requirements and is not
+adoptable alone. It is exploratory: interfaces may change without
+compatibility, and no deployment is claimed.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

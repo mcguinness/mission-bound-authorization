@@ -151,6 +151,14 @@ This is a newer, experimental profile and is not required by any
 Mission Assurance Level
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
+# Status: An Experimental Profile {#doc-status}
+
+Adopt this document when in-flight work must unwind safely if the
+Mission ends mid-workflow. It depends normatively on Mission-Bound
+Runtime Enforcement, and Mission Substrate Requirements and is not
+adoptable alone. It is experimental: complete enough to implement, with
+advancement or retirement governed by feedback.
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

@@ -216,6 +216,12 @@ token issuance, the subset rule, and lifecycle gating are all defined
 in {{I-D.draft-mcguinness-oauth-mission}} and are referenced, not
 re-specified, here.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when you must observe or change Mission state beyond
+token expiry (revoke, suspend, complete). It depends normatively on
+Mission-Bound Authorization for OAuth 2.0 and is not adoptable alone.
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

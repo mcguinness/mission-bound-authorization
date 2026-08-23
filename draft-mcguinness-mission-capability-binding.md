@@ -157,6 +157,14 @@ requirement is the runtime profile's
 not claim this companion is unaffected: the AuthZEN binding's
 decision contract consumes an already established action identity.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when actions come from a discovered catalog where
+invoked identity can drift from approval. It depends normatively on
+Mission-Bound Runtime Enforcement: AuthZEN Profile, Mission-Bound
+Runtime Enforcement, and Mission Substrate Requirements and is not
+adoptable alone.
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

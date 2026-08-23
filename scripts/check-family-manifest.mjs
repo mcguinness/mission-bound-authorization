@@ -793,6 +793,57 @@ function main() {
     }
   }
 
+  // (r) Document Status convention (reader program, Aug 2026): every draft
+  // except the published core carries a top-level "# Status" section so a
+  // cold reader learns standing, adoption trigger, and dependency closure
+  // before the machinery. The core's standing lives in its Introduction and
+  // Conformance sections; it is the one exemption.
+  for (const f of fs.readdirSync(ROOT)) {
+    if (!f.startsWith("draft-mcguinness-") || !f.endsWith(".md")) continue;
+    if (f === "draft-mcguinness-oauth-mission.md") continue;
+    const text = readFile(path.join(ROOT, f), f);
+    if (!/^# Status/m.test(text)) {
+      fail("doc-status", `${f}: missing the top-level "# Status" section (family skeleton)`);
+    }
+  }
+
+  // (s) Conventions anchor stability: every Conventions heading carries an
+  // explicit kramdown anchor, so cross-document links never depend on a
+  // generated slug. Uniform slugs are NOT required (published fragments on
+  // pre-existing anchors stay stable); presence is.
+  for (const f of fs.readdirSync(ROOT)) {
+    if (!f.startsWith("draft-mcguinness-") || !f.endsWith(".md")) continue;
+    const text = readFile(path.join(ROOT, f), f);
+    for (const line of text.split("\n")) {
+      if (/^#{1,2} Conventions and (Terminology|Definitions)\b/.test(line) && !line.includes("{#")) {
+        fail("conventions-anchor", `${f}: Conventions heading lacks an explicit anchor: ${line}`);
+      }
+    }
+  }
+
+  // (t) Mapping Assessment drift tripwire: the substrate's assessment of the
+  // OAuth binding pins the exact binding bytes it was last verified against
+  // (the conformance manifest's content digest for the binding). Any change
+  // to the binding moves the digest, so this check fails until the
+  // assessment is re-read and the marker re-pinned; a stale normative
+  // assessment cannot ship silently.
+  {
+    const sub = readFile(path.join(ROOT, "draft-mcguinness-mission-substrate.md"), "draft-mcguinness-mission-substrate.md");
+    const mm = sub.match(/<!-- assessed-oauth-digest: ([0-9a-f]{16}) -->/);
+    const conf = JSON.parse(readFile(path.join(ROOT, "conformance-manifest.json"), "conformance-manifest.json"));
+    const oauth = conf.source && conf.source.specs && conf.source.specs["draft-mcguinness-oauth-mission.md"];
+    if (!mm) {
+      fail("assessment-pin", "draft-mcguinness-mission-substrate.md: assessed-oauth-digest marker missing from the Mapping Assessment section");
+    } else if (!oauth || typeof oauth.content_sha256 !== "string") {
+      fail("assessment-pin", "conformance-manifest.json: no content digest entry for draft-mcguinness-oauth-mission.md");
+    } else if (mm[1] !== oauth.content_sha256.slice(0, 16)) {
+      fail(
+        "assessment-pin",
+        `assessed-oauth-digest ${mm[1]} != manifest oauth digest ${oauth.content_sha256.slice(0, 16)}; re-verify the Mapping Assessment against the changed binding, then re-pin the marker`,
+      );
+    }
+  }
+
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):
 `);

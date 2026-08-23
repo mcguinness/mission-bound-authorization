@@ -220,7 +220,13 @@ mapping, the scoped precedence rule for the OAuth-native binding, and
 the change-ownership rule are collected in {{family}} and are not
 needed by an adopter outside that family.
 
-# Conventions and Terminology
+# Status: A Normative Contract for Bindings {#doc-status}
+
+Adopt this document when runtime implementers consume its commitment
+construction and kernel contract; binding authors profile it. It is
+adoptable on its own.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
@@ -1207,6 +1213,8 @@ MUST land in this document, and the owning family section becomes a
 reference to it; no change is ever made solely to move words.
 
 ## OAuth Binding Mapping Assessment {#oauth-statement}
+
+<!-- assessed-oauth-digest: 308da95813e7bf37 -->
 
 This section is this document's Mapping Assessment of the OAuth
 Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published

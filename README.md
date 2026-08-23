@@ -174,11 +174,13 @@ information-flow leakage within approved authority is out of scope.
 Three rings, smallest first; each ring is complete without the next:
 
 - **The model and a binding**: [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) (the
-  informative model) and
-  [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html) (the normative
-  kernel contract), plus one binding's dependency-closed adoption
+  informative model), plus one binding's dependency-closed adoption
   set from the peer table below (the manifest's `adoption_requires`
-  edges name each binding's floor). For an OAuth estate that is
+  edges name each binding's floor). The
+  [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
+  (the binding-neutral kernel contract) are for binding authors and
+  for reviewers validating a mapping; adopting an existing binding
+  never requires reading them. For an OAuth estate that is
   [the OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html)
   alone: one self-contained document, and a useful deployment by
   itself. The peer bindings declare their own floors.
@@ -194,7 +196,23 @@ Three rings, smallest first; each ring is complete without the next:
 - **Optional capabilities**: approval workflows, delegation,
   cross-domain projection, agent harnessing, evidence, and fleet
   management, each selectable on its own with its declared
-  dependencies; [`DRAFTS.md`](DRAFTS.md) is the complete catalog.
+  dependencies; [`DRAFTS.md`](DRAFTS.md) is the complete catalog. Two
+  easy-to-miss pieces earn an early look: the work-product
+  commitment model (results carry integrity, not only actions: the
+  OAuth binding's Integrity and Commitments section) and the swarm
+  ladder
+  (one agent to a fleet without new machinery: the Architecture's
+  scaling treatment).
+
+The runtime ring in one breath: a gateway (the PEP) sits where the
+agent's actions leave its boundary; before a consequential action it
+asks a decision service (the PDP) whether this action, with these
+concrete parameters, may run under this Mission right now; the
+answer is grounded in the Mission's current authority and lifecycle
+state, and it expires in minutes. Everything in the runtime
+documents elaborates that sentence: what counts as consequential,
+where the gate sits, how fresh "right now" must be, and what
+evidence a permit or refusal leaves behind.
 
 | You want to… | Start with |
 |---|---|
@@ -227,7 +245,9 @@ is designed to compose with them, not to replace them.
 ## The architecture, in verbs
 
 The family organizes along a verb spine: each verb answers one
-question and is owned by named documents. The
+question and is owned by named documents. The verbs are a table of
+contents, not new machinery: each names a question an adopter
+already has and points at the documents that answer it. The
 [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
 is the citable form of this view.
 

@@ -181,7 +181,7 @@ including a domain-transition reset, is prohibited; a new authority
 basis is an Expansion successor or another fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-# Conventions and Terminology
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

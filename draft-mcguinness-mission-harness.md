@@ -200,6 +200,13 @@ boundary the engine already has, never a copy of Mission state into
 engine state or of engine state into the Mission record
 ({{engine-mapping}}).
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when a harness holds session state across restarts
+and must stop work when the Mission dies. It depends normatively on
+Mission-Bound Runtime Enforcement, and Mission Substrate Requirements
+and is not adoptable alone.
+
 # Scope
 
 This document defines:

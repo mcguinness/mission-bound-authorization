@@ -81,7 +81,13 @@ indefinitely through a stream of fresh short-lived tokens. Because
 the Person approves, it is covered by the `s256` content address, and
 it cannot be changed in place.
 
-# Conventions and Terminology
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when a citable profile of AAuth's native
+`expires_at` is needed (base AAuth enforces it regardless; the profile's
+own conformance line is OPTIONAL). It is adoptable on its own.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

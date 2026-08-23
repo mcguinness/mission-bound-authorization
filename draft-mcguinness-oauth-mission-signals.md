@@ -203,6 +203,12 @@ profile it adopts). A deployment that does not stand up an event stream
 uses the polling surfaces of the Status profile instead and is
 unaffected by this document.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when consumers need push notice of state changes
+instead of polling per Mission. It depends normatively on Mission Status
+and Lifecycle for OAuth 2.0 and is not adoptable alone.
+
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}

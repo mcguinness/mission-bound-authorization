@@ -265,6 +265,13 @@ The end-to-end flow this binding realizes:
    |           |- re-evaluate ->|                     |
 ~~~
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when the PDP speaks AuthZEN and needs the decision-
+contract wire mapping. It depends normatively on Mission-Bound Runtime
+Enforcement, Mission Runtime Evidence, and Mission Substrate
+Requirements and is not adoptable alone.
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

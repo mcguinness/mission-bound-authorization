@@ -374,7 +374,14 @@ shape and its Mission Substrate Statement; worked test vectors, a
 per-surface error taxonomy, and the discovery-field registrations
 noted in {{iana}} are deferred to a later revision.
 
-## Conventions and Terminology
+# Status: An Experimental Sketch {#doc-status}
+
+Adopt this document when evaluating a GNAP deployment only. It depends
+normatively on Mission Substrate Requirements and is not adoptable
+alone. It is exploratory: interfaces may change without compatibility,
+and no deployment is claimed.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

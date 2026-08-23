@@ -432,6 +432,12 @@ execution-time Mission enforcement; it does not weaken the issuance
 profile's stateless token-validation, subset, delegation, or
 constraint-enforcement requirements.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when actions need a point-of-use check, not just
+issuance-time gating. It depends normatively on Mission Substrate
+Requirements and is not adoptable alone.
+
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
@@ -1722,6 +1728,13 @@ class whose bound demands that.
   these classes: it bounds staleness only by the lifetime, so a revoked
   Mission keeps deriving consequence until tokens age out, which is the
   ambient-authority gap this profile exists to close.
+
+An informative worked example of the latency arithmetic: with a
+published staleness bound of 60 seconds for a PDP-gated class, a
+permit validity of 30 seconds, and a declared execution bound of 30
+seconds, a revocation committed at the issuer stops new effect after
+at most 120 seconds; a path outside PDP gating keeps only the
+derived token's lifetime as its bound.
 
 For a deployment whose access tokens are short-lived and whose
 issuance and refresh are state-gated per the OAuth binding

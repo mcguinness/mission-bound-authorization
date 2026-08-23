@@ -221,6 +221,12 @@ approved Mission and its Authority Set under
 verify that the recorded approval surface corresponded to the authority
 later enforced.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when you must prove what the Approver actually saw,
+not only what was approved. It depends normatively on Mission-Bound
+Authorization for OAuth 2.0 and is not adoptable alone.
+
 # Scope
 
 This document defines:

@@ -170,6 +170,12 @@ does not restate the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} or the status profile; a
 deployment that does not adopt it is unaffected.
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when an operator needs fleet enumeration and bulk
+lifecycle across many Missions. It depends normatively on Mission Status
+and Lifecycle for OAuth 2.0 and is not adoptable alone.
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

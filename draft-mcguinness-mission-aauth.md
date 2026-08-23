@@ -167,7 +167,13 @@ or deterministic cross-resource permission semantics.  Those are
 possible AAuth companion specifications rather than requirements of this
 binding.
 
-# Conventions and Terminology
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when the substrate is AAuth: Mission context on its
+native propose/approve flow. It depends normatively on Mission Substrate
+Requirements and is not adoptable alone.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL
 NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**,

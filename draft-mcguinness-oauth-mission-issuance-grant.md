@@ -174,6 +174,13 @@ join, the issuance join, and native Mission-awareness, each adopted
 where its cost is warranted
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when a MAS-governed estate wants Mission-bound gated
+tokens without full intake at each AS. It depends normatively on Mission
+Authority Server, and Mission-Bound Authorization for OAuth 2.0 and is
+not adoptable alone.
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

@@ -197,7 +197,14 @@ deployment planning against AAM's component list can name the
 Mission surface that realizes each entry and the documents whose
 conformance targets it is thereby claiming.
 
-# Conventions and Terminology
+# Status: An Experimental Sketch {#doc-status}
+
+Adopt this document when adopting Cloudflare's AAM vocabulary and
+mapping it onto existing mechanisms. It is adoptable on its own. It is
+exploratory: interfaces may change without compatibility, and no
+deployment is claimed.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

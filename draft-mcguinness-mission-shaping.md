@@ -200,6 +200,12 @@ A deployment that exposes shaping as a network service may do so
 ({{exposing-shaping-as-a-service}}), but that surface is a local
 implementation detail, not an interoperability contract.
 
+# Status: An Informative Companion {#doc-status}
+
+Adopt this document when you need a defined client-side path from user
+prompt to candidate Mission Intent. It is informative and creates no
+conformance target.
+
 # Relationship to the Issuance Profile {#relationship}
 
 This document is optional and layered on
@@ -236,7 +242,7 @@ client, the Agent (Client) of the issuance profile that submits the
 Mission Intent; the shaper runs on that Agent's side of the trust
 boundary.
 
-# Conventions and Terminology
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

@@ -318,7 +318,14 @@ binding obtains the token-plane chokepoint (Mission-bound
 credentials and issuance gating), a capability difference between
 the bindings rather than a maturity one.
 
-# Conventions and Terminology
+# Status: An Optional Profile {#doc-status}
+
+Adopt this document when the AS cannot change: run Mission governance as
+a standalone control plane. It depends normatively on Mission Substrate
+Requirements, Mission-Bound Authorization for OAuth 2.0, and Mission
+Status and Lifecycle for OAuth 2.0 and is not adoptable alone.
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
