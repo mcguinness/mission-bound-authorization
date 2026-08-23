@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             22 August 2026
-Expires: 23 February 2027
+Intended status: Experimental                             23 August 2026
+Expires: 24 February 2027
 
 
             Mission Progressive Authorization for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -144,6 +144,13 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  Nothing here
    places a new requirement back on the expansion profile or the
    issuance profile.
+
+   Maturity: experimental.  Maintenance: lab-best-effort.  Adopt when:
+   Authority cannot be enumerated up front; policy-bounded drawdown
+   beats over-provisioning.  Requires: Mission-Bound Authorization for
+   OAuth 2.0; Mission Expansion for OAuth 2.0.  Also requires,
+   conditionally: Mission-Bound Runtime Enforcement (when drawdown maps
+   to the runtime profile's action classes).
 
 3.  Relationship to the Expansion Profile
 

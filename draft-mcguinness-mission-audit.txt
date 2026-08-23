@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          22 August 2026
-Expires: 23 February 2027
+Intended status: Standards Track                          23 August 2026
+Expires: 24 February 2027
 
 
                        Mission Audit Transparency
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -178,6 +178,22 @@ Table of Contents
    on them.  The signed evidence the suite produces without a
    Transparency Service ([I-D.draft-mcguinness-oauth-mission]) does not
    depend on this profile.
+
+   Maturity: stable.  Maintenance: active.  Adopt when: A cross-domain
+   party must verify evidence integrity without trusting issuer logs.
+   Requires: Mission Substrate Requirements; Mission-Bound Authorization
+   for OAuth 2.0.  Also requires, conditionally: Mission Approval
+   Governance (when approval governance records are audited); Mission
+   Open-World Discovery (when discovery evidence is audited); Mission-
+   Aware Agent Harnesses (when harness or egress evidence is audited);
+   Mission Mandate (when the Mandate profile is deployed); Mission
+   Runtime Evidence (when runtime decision or execution evidence is
+   audited); Mission Child Delegation for OAuth 2.0 (when child
+   delegation evidence is audited); Mission Consent Evidence for OAuth
+   2.0 (when consent evidence is audited); Mission Containment for OAuth
+   2.0 (when containment evidence is audited); Mission Lifecycle Signals
+   for OAuth 2.0 (when lifecycle transitions arrive as Signals); Mission
+   Work Products (when work-product bindings are audited).
 
 4.  Relationship to the Issuance Profile
 

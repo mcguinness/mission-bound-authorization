@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          22 August 2026
-Expires: 23 February 2027
+Intended status: Standards Track                          23 August 2026
+Expires: 24 February 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -175,6 +175,11 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-architecture]): projection changes
    where a Mission is honored, not the strength at which either domain
    enforces it.  Each trust domain runs at its own level.
+
+   Maturity: stable.  Maintenance: active.  Adopt when: A Mission from
+   one trust domain must be honored by an AS in another (also the
+   floor's conditional dependency).  Requires: Mission-Bound
+   Authorization for OAuth 2.0.
 
 3.  Conventions and Terminology
 

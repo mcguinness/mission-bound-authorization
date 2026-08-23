@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             22 August 2026
-Expires: 23 February 2027
+Intended status: Experimental                             23 August 2026
+Expires: 24 February 2027
 
 
                       Mission Consumption Metering
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -299,6 +299,15 @@ Table of Contents
    implementation, one deployment not operated by its implementer, and
    one independently implemented counterpart component; they demand
    exercised machinery and stable surfaces, not adoption counts.
+
+   Maturity: experimental.  Maintenance: lab-floor-referenced.  Adopt
+   when: A Mission needs cumulative caps (budget, calls, duration,
+   egress), not just scope.  Requires: Mission-Bound Runtime
+   Enforcement; Mission Runtime Evidence; Mission Substrate
+   Requirements; Mission-Bound Authorization for OAuth 2.0.  Also
+   requires, conditionally: Mission-Bound Runtime Enforcement: AuthZEN
+   Profile (when the AuthZEN binding is the runtime wire); Mission
+   Consent Evidence for OAuth 2.0 (when Consent Evidence is recorded).
 
 3.  Relationship to the Issuance and Runtime Profiles
 

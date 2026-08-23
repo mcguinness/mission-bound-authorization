@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             22 August 2026
-Expires: 23 February 2027
+Intended status: Experimental                             23 August 2026
+Expires: 24 February 2027
 
 
         Mission Transaction Authorization Profile for OAuth 2.0
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -169,6 +169,12 @@ Table of Contents
    evaluation rather than as a stable interface.  This document is
    Experimental for that reason, tracking its substrate and crossing to
    the stable tier by reclassification when the substrate does.
+
+   Maturity: experimental.  Maintenance: active-experimental.  Adopt
+   when: One action needs a fresh, portable, cross-org authorization
+   with no live callback.  Requires: Mission-Bound Runtime Enforcement;
+   Mission Substrate Requirements; Mission-Bound Authorization for OAuth
+   2.0.
 
 3.  Conventions and Terminology
 

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          22 August 2026
-Expires: 23 February 2027
+Intended status: Standards Track                          23 August 2026
+Expires: 24 February 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -79,42 +79,43 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Scope
-     2.1.  Evidence Model
-   3.  Conventions and Terminology
-   4.  Consent Disclosure Object
-     4.1.  Constraint Provenance
-     4.2.  Material Notice Requirements
-     4.3.  Intent Translation
-     4.4.  Layered Rendering
-     4.5.  Disclosure Interrogation
-   5.  The Consent Rendering Hash
-   6.  Rendering Assurance
-   7.  Consent Evidence Object
-     7.1.  Integrity and Verification
-   8.  Binding to Mission Approval
-     8.1.  Declined Approval Events
-     8.2.  Revision-Required Events
-     8.3.  Expansion and Delta Disclosure
-   9.  Audit Reconstruction
-     9.1.  Minimization and Redaction
-   10. Conformance
-   11. Security Considerations
-     11.1.  Rendering Confusion
-     11.2.  Template Downgrade
-     11.3.  Evidence Does Not Grant Authority
-     11.4.  Decline Suppression
-     11.5.  Interrogation as a Persuasion Surface
-     11.6.  Incomplete Material Notices
-   12. Privacy Considerations
-   13. IANA Considerations
-     13.1.  Media Type Registry
-       13.1.1.  application/mission-consent-evidence+json
-       13.1.2.  application/mission-consent-evidence+jws
-       13.1.3.  application/mission-consent-disclosure+json
-   14. References
-     14.1.  Normative References
-     14.2.  Informative References
+   2.  Status: An Optional Profile
+   3.  Scope
+     3.1.  Evidence Model
+   4.  Conventions and Terminology
+   5.  Consent Disclosure Object
+     5.1.  Constraint Provenance
+     5.2.  Material Notice Requirements
+     5.3.  Intent Translation
+     5.4.  Layered Rendering
+     5.5.  Disclosure Interrogation
+   6.  The Consent Rendering Hash
+   7.  Rendering Assurance
+   8.  Consent Evidence Object
+     8.1.  Integrity and Verification
+   9.  Binding to Mission Approval
+     9.1.  Declined Approval Events
+     9.2.  Revision-Required Events
+     9.3.  Expansion and Delta Disclosure
+   10. Audit Reconstruction
+     10.1.  Minimization and Redaction
+   11. Conformance
+   12. Security Considerations
+     12.1.  Rendering Confusion
+     12.2.  Template Downgrade
+     12.3.  Evidence Does Not Grant Authority
+     12.4.  Decline Suppression
+     12.5.  Interrogation as a Persuasion Surface
+     12.6.  Incomplete Material Notices
+   13. Privacy Considerations
+   14. IANA Considerations
+     14.1.  Media Type Registry
+       14.1.1.  application/mission-consent-evidence+json
+       14.1.2.  application/mission-consent-evidence+jws
+       14.1.3.  application/mission-consent-disclosure+json
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
    Appendix A.  Rendering-Assurance Rungs Above the Floor
    Appendix B.  Worked Disclosure and Test Vector
    Acknowledgments
@@ -141,7 +142,7 @@ Table of Contents
    used for authority.  What no server-side commitment can prove, that
    the pixels presented to the Approver matched the committed object, is
    the what-you-see-is-what-you-sign problem this profile names and
-   bounds in Section 6.  What this profile provides is a durable,
+   bounds in Section 7.  What this profile provides is a durable,
    integrity-protected record that ties a specific structured disclosure
    to a specific approval decision and Authority Set, so that divergence
    between the recorded disclosure and the enforced authority becomes
@@ -149,16 +150,16 @@ Table of Contents
 
    How much a deployment can narrow the rendering gap is not all-or-
    nothing.  This profile defines a ladder of rendering assurance
-   (Section 6) whose rungs move the trust from an unbounded,
+   (Section 7) whose rungs move the trust from an unbounded,
    unverifiable rendering layer toward the Approver's own authenticator
    signing the exact disclosure commitment, letting the deployment pick
    the assurance its threat model needs.
 
    Conformance to this profile is the ladder's floor, Rung 0
-   (Section 6), plus the floor duties this profile attaches to it:
+   (Section 7), plus the floor duties this profile attaches to it:
 
    *  commit the structured disclosure object, rendered within the
-      translation floor (Section 4.3);
+      translation floor (Section 5.3);
 
    *  bind it to the Mission anchors;
 
@@ -167,13 +168,13 @@ Table of Contents
    *  carry the high-risk material notices with their acknowledgments;
       and
 
-   *  record the interrogation offered (Section 4.5).
+   *  record the interrogation offered (Section 5.5).
 
    What conformance requires is that what was shown is committed and
    reconstructible; everything past that is a rung or a SHOULD, the
    broader material-notice discipline and delta rendering as
    recommendations and each rung above Rung 0 as a named optional claim
-   (Section 10).
+   (Section 11).
 
    Consent Evidence does not grant authority.  Authority remains the
    approved Mission and its Authority Set under
@@ -181,29 +182,37 @@ Table of Contents
    verify that the recorded approval surface corresponded to the
    authority later enforced.
 
-2.  Scope
+2.  Status: An Optional Profile
+
+   Maturity: stable.  Maintenance: active.  Adopt when: You must prove
+   what the Approver actually saw, not only what was approved.
+   Requires: Mission-Bound Authorization for OAuth 2.0.  Also requires,
+   conditionally: Mission Approval Governance (when an Approval
+   Governance Record is recorded).
+
+3.  Scope
 
    This document defines:
 
-   *  the consent disclosure object (Section 4);
+   *  the consent disclosure object (Section 5);
 
    *  the Intent Translation floor, rendering committed authority as
-      natural language (Section 4.3);
+      natural language (Section 5.3);
 
    *  Disclosure Interrogation, the Approver's question channel over the
-      disclosure (Section 4.5);
+      disclosure (Section 5.5);
 
-   *  the consent_rendering_hash commitment (Section 5);
+   *  the consent_rendering_hash commitment (Section 6);
 
-   *  the Consent Evidence object (Section 7);
+   *  the Consent Evidence object (Section 8);
 
    *  binding and recording rules for initial approval, expansion
-      approval, declined, and revision-required events (Section 8);
+      approval, declined, and revision-required events (Section 9);
 
-   *  retention and audit reconstruction requirements (Section 9); and
+   *  retention and audit reconstruction requirements (Section 10); and
 
    *  conformance for a Consent-Evidence-capable Mission Issuer
-      (Section 10).
+      (Section 11).
 
    This document does not define user-interface layout, a legal consent
    standard, or any new OAuth grant.  The translation floor constrains
@@ -216,7 +225,7 @@ Table of Contents
    Server is likewise the committing Mission Issuer
    ([I-D.draft-mcguinness-mission-aauth]).
 
-2.1.  Evidence Model
+3.1.  Evidence Model
 
    This profile separates three artifacts:
 
@@ -241,10 +250,10 @@ Table of Contents
    they yield land on the Mission record's submission_evidence.
    Material verified provenance is nonetheless part of the approval
    surface: the disclosure commits it through submission_provenance_hash
-   (Section 4), covered by consent_rendering_hash, so the recorded
+   (Section 5), covered by consent_rendering_hash, so the recorded
    rendering proves which provenance supported the decision.
 
-3.  Conventions and Terminology
+4.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -266,7 +275,7 @@ Table of Contents
    Consent Evidence:  A durable, integrity-protected record of the
       consent disclosure and approval event.
 
-4.  Consent Disclosure Object
+5.  Consent Disclosure Object
 
    A Consent Disclosure object has these members:
 
@@ -278,7 +287,7 @@ Table of Contents
       client submitted an authority proposal, the proposal_hash value
       ([I-D.draft-mcguinness-oauth-mission]).  The disclosure object
       carries these hashes rather than the full mission container
-      (Section 7) because it is constructed before approval commits the
+      (Section 8) because it is constructed before approval commits the
       Mission: the Mission id and lifecycle do not yet exist, and the
       disclosure can commit only to the proposed Intent, the submitted
       proposal, and the Authority Set it actually renders.  The Consent
@@ -297,8 +306,8 @@ Table of Contents
       anchor envelope with typ mission-submission-provenance and value
       the submission_evidence array, canonicalized with JCS [RFC8785],
       hashed with SHA-256, and encoded like consent_rendering_hash
-      (Section 5).  Raw evidence artifacts stay out of the disclosure
-      (Section 2.1); this member makes the material verified provenance
+      (Section 6).  Raw evidence artifacts stay out of the disclosure
+      (Section 3.1); this member makes the material verified provenance
       a committed part of the approval surface, covered by
       consent_rendering_hash.
 
@@ -364,19 +373,19 @@ Table of Contents
    material_notices:  REQUIRED.  An array, possibly empty.  Notices that
       materially affect the Approver's decision.  A notice SHOULD be
       included for each material-notice condition present, as listed in
-      Section 4.2.
+      Section 5.2.
 
    risk_summary:  OPTIONAL.  An array of objects, each with a dimension
       and a statement.  When present, it MUST cover the risk dimensions
       the disclosure rules name (irreversibility, spend, delegation, and
       data access) when the Authority Set carries them.  When present,
       it MUST also identify, as dimensions, the material-notice
-      conditions (Section 4.2) present in the Authority Set.
+      conditions (Section 5.2) present in the Authority Set.
       material_notices remains the REQUIRED carrier of material risk;
       risk_summary is a rendered summary over it.
 
    constraint_provenance:  OPTIONAL.  An array attributing bounds in the
-      Authority Set to the authority that imposed them (Section 4.1).
+      Authority Set to the authority that imposed them (Section 5.1).
       Each entry has:
 
       applies_to:  REQUIRED.  An object identifying the bound, by the
@@ -429,7 +438,7 @@ Table of Contents
       interactions required by policy, such as checking a high-risk
       notice or confirming an expansion delta.  SHOULD be present when
       material_notices carries a notice of a high-risk class
-      (Section 4.2), then carrying one acknowledgment action per such
+      (Section 5.2), then carrying one acknowledgment action per such
       notice.
 
    A Consent Disclosure object MUST NOT omit material authority.  If the
@@ -449,7 +458,7 @@ Table of Contents
 
    *  consumption bounds.
 
-4.1.  Constraint Provenance
+5.1.  Constraint Provenance
 
    constraint_provenance attributes each bound in the Authority Set to
    the authority that imposed it, so the Approver and a later auditor
@@ -458,7 +467,7 @@ Table of Contents
 
    constraint_provenance is disclosure and audit material: it is
    rendered for consent and committed by consent_rendering_hash
-   (Section 5), but it grants no authority, is not carried on any token,
+   (Section 6), but it grants no authority, is not carried on any token,
    and is not enforced.  It is the consent-layer home for constraint
    authorship; the Authority Set itself
    ([I-D.draft-mcguinness-oauth-mission]) carries only the bound, not
@@ -474,7 +483,7 @@ Table of Contents
        "source": "judicial", "source_uri": "urn:court:order:2026-55" }
    ]
 
-4.2.  Material Notice Requirements
+5.2.  Material Notice Requirements
 
    A material notice SHOULD be included for each of these conditions
    when present in the proposed Authority Set or Mission context:
@@ -515,12 +524,12 @@ Table of Contents
    *  a consumption bound.
 
    For each material notice of a high-risk class, approver_actions
-   (Section 4) SHOULD carry an explicit acknowledgment action
+   (Section 5) SHOULD carry an explicit acknowledgment action
    identifying that notice.  The Mission Issuer SHOULD NOT record an
    approved decision unless the Approver completed every acknowledgment
    the disclosure carries.  Where the rendered disclosure carries
    acknowledgment actions, the Mission Issuer MUST record each
-   completion in the evidence's acknowledgments member (Section 7), so
+   completion in the evidence's acknowledgments member (Section 8), so
    completion is auditable and not only the commitment.
 
    The acknowledgment is per notice: the disclosure commits the
@@ -529,7 +538,7 @@ Table of Contents
    authentication strength the issuance profile's deployment floor sets
    ([I-D.draft-mcguinness-oauth-mission]).
 
-4.3.  Intent Translation
+5.3.  Intent Translation
 
    Coverage says what a disclosure contains.  It does not stop a
    deployment from presenting the Authority Set as serialized structure
@@ -548,7 +557,7 @@ Table of Contents
 
    *  A serialized Authority Set (JSON, token claims) MUST NOT be the
       primary rendering.  A deployment MAY offer one as a detail layer
-      (Section 4.4).
+      (Section 5.4).
 
    *  A Common Constraint ([I-D.draft-mcguinness-oauth-mission]) has
       registered semantics, and its rendered form MUST state them.  A
@@ -559,35 +568,35 @@ Table of Contents
    *  Where a capability source supplies a human-readable label for a
       resource or action, the rendering SHOULD pair the label with the
       identifier.  The identifier is authoritative; a label that
-      contradicts its identifier is rendering confusion (Section 11.1).
+      contradicts its identifier is rendering confusion (Section 12.1).
 
    *  Translation does not soften what the issuance profile's rendering
       rules fix: an action family is rendered as the breadth it is, and
       client-supplied text is rendered inert
       ([I-D.draft-mcguinness-oauth-mission]).
 
-   The floor is template-testable: the template testing of Section 11.2
+   The floor is template-testable: the template testing of Section 12.2
    SHOULD include fixtures proving the template translates every Common
    Constraint key and material-notice class the deployment uses.
 
-4.4.  Layered Rendering
+5.4.  Layered Rendering
 
    A deployment MAY render the disclosure summary-first, with detail
    behind further interaction, provided that:
 
    *  the committed Consent Disclosure object retains the full coverage
-      of Section 4; layering removes nothing from the object;
+      of Section 5; layering removes nothing from the object;
 
    *  every material notice, and any acknowledgment it carries
-      (Section 4.2), surfaces in the first layer; and
+      (Section 5.2), surfaces in the first layer; and
 
    *  the full rendering of authority_summary is one interaction away,
       and the first layer states that it is available.
 
-   consent_rendering_hash (Section 5) commits the disclosure object, not
+   consent_rendering_hash (Section 6) commits the disclosure object, not
    a layer, so layering changes presentation, not evidence.
 
-4.5.  Disclosure Interrogation
+5.5.  Disclosure Interrogation
 
    A faithful disclosure answers what the Mission may do.  The question
    an Approver weighs is often why: why does a support-ticket task need
@@ -603,7 +612,7 @@ Table of Contents
    An answer the consent surface presents in its own voice MUST be drawn
    from recorded material: Shaping Evidence for why the task motivated
    an entry ([I-D.draft-mcguinness-mission-shaping]), constraint
-   provenance for whose rule a bound is (Section 4.1), and identified
+   provenance for whose rule a bound is (Section 5.1), and identified
    deployment policy for bounds the Mission Issuer imposed.  Where the
    deployment instead relays an answer from the requesting agent
    (AAuth's clarification chat is this channel,
@@ -617,15 +626,15 @@ Table of Contents
    approves the same committed authority.  When interrogation convinces
    the Approver the authority is wrong, the path is the existing one:
    decline or require narrowing, and approval of different authority is
-   a new derivation and a new disclosure (Section 5).
+   a new derivation and a new disclosure (Section 6).
 
    When the deployment offers interrogation, the evidence records it:
    each question, what it concerned, and what grounded the answer
-   (interrogation, Section 7).  Interrogation before a decline is the
+   (interrogation, Section 8).  Interrogation before a decline is the
    record's most valuable case: it preserves which entry the Approver
    probed and could not accept.
 
-5.  The Consent Rendering Hash
+6.  The Consent Rendering Hash
 
    consent_rendering_hash is the integrity-anchor encoded form of the
    SHA-256 [RFC6234] of the JCS [RFC8785] canonical bytes of this
@@ -681,9 +690,9 @@ Table of Contents
    produce the same rendered form within a given modality, not across
    modalities.
 
-6.  Rendering Assurance
+7.  Rendering Assurance
 
-   The commitment of Section 5 records what disclosure the Authorization
+   The commitment of Section 6 records what disclosure the Authorization
    Server says it rendered; it cannot by itself prove what a human
    perceived.  This is the what-you-see-is-what-you-sign problem.  This
    profile does not close it with a server-side commitment, which is
@@ -695,12 +704,12 @@ Table of Contents
    over a disclosure that is also deterministically renderable (Rung 1)
    and an auditor can re-render exactly what the confirmation signed.
 
-   Rung 0, Recorded disclosure:  The baseline of Section 5: the
+   Rung 0, Recorded disclosure:  The baseline of Section 6: the
       structured disclosure is committed and bound to the Mission
       anchors.  Proves the AS recorded this disclosure for this
       authority; proves nothing about what was shown.
 
-   Rung 0 is the conforming floor of this profile (Section 10).  Every
+   Rung 0 is the conforming floor of this profile (Section 11).  Every
    rung above it is optional and defined in Appendix A, so the ladder
    above the floor is one block a deployment opts into: deterministic
    template rendering (Rung 1), an attested renderer (Rung 2), the
@@ -716,7 +725,7 @@ Table of Contents
    any electronic-signature scheme.  What the ladder provides is a
    verifiable, bounded reduction of the rendering trust base.
 
-7.  Consent Evidence Object
+8.  Consent Evidence Object
 
    A Consent Evidence object has these members:
 
@@ -732,14 +741,14 @@ Table of Contents
          Mission, consent_rendering_hash.
 
       *  When decision is declined, no Mission was created
-         (Section 8.1), so there is no id.  It instead contains issuer
+         (Section 9.1), so there is no id.  It instead contains issuer
          and the intent_hash and authority_hash (with proposal_hash
          where present) the disclosure corresponded to, matching the
-         disclosure object's source_hashes (Section 4).  It MUST NOT
+         disclosure object's source_hashes (Section 5).  It MUST NOT
          contain id.
 
       *  When decision is narrowed, the review required a narrowing
-         revision and no Mission was created (Section 8.2).  Like a
+         revision and no Mission was created (Section 9.2).  Like a
          decline, it contains issuer and the reviewed disclosure's
          intent_hash and authority_hash (with proposal_hash where
          present), matching that disclosure's source_hashes, and MUST
@@ -769,7 +778,7 @@ Table of Contents
       record each of these values it possesses at the approval event.
 
    disclosure:  REQUIRED.  The Consent Disclosure object, or a durable
-      reference to it (Section 9.1) paired with the
+      reference to it (Section 10.1) paired with the
       consent_rendering_hash it verifies against.
 
    co_approvals:  OPTIONAL.  An array of evidence descriptors, one per
@@ -798,7 +807,7 @@ Table of Contents
       Governance Record's record digest
       ([I-D.draft-mcguinness-mission-approval-governance]), binding this
       evidence to the authoritative governance record; verified per
-      Section 7.1.
+      Section 8.1.
 
    rendering_attestation:  OPTIONAL and experimental.  An object.
       Evidence that an attested, identified rendering component produced
@@ -822,9 +831,9 @@ Table of Contents
 
       This profile fixes what is signed and bound, not the authenticator
       protocol.  A deployment SHOULD include it for a high-risk
-      material-notice class (Section 4.2).  Verification of a present
+      material-notice class (Section 5.2).  Verification of a present
       confirmation, and the treatment of one that fails, is step 7 of
-      Section 7.1.
+      Section 8.1.
 
    approved_at:  REQUIRED when decision is approved.  An RFC 3339
       [RFC3339] timestamp.
@@ -836,13 +845,13 @@ Table of Contents
       timestamp.
 
    decision:  REQUIRED.  One of approved, declined, or narrowed.
-      narrowed records a revision-required outcome (Section 8.2).
+      narrowed records a revision-required outcome (Section 9.2).
 
    decline_reason:  OPTIONAL.  A string.  Present when decision is
       declined and the deployment records a reason.
 
    acknowledgments:  REQUIRED when decision is approved and the rendered
-      disclosure carried acknowledgment actions (Section 4.2).  An array
+      disclosure carried acknowledgment actions (Section 5.2).  An array
       with one entry per acknowledgment the Approver completed, each
       identifying the acknowledged notice by its condition and the
       Authority Set entry it applies to, and carrying an RFC 3339
@@ -851,7 +860,7 @@ Table of Contents
       the committed disclosure.
 
    interrogation:  OPTIONAL.  An array recording the Approver's pre-
-      decision questions at the consent surface (Section 4.5), in the
+      decision questions at the consent surface (Section 5.5), in the
       order asked.  Each entry carries question, the question as asked
       or selected; applies_to, the Authority Set entry, constraint, or
       notice it concerned, when one was identified; and answer_source,
@@ -902,7 +911,7 @@ Table of Contents
       compact, a JWS Compact Serialization [RFC7515] over the JCS
       canonical bytes of the Consent Evidence object with
       evidence_envelope removed.  The protected-header requirements and
-      the verification path are defined in Section 7.1.
+      the verification path are defined in Section 8.1.
 
    Example, over the worked disclosure of Appendix B:
 
@@ -956,7 +965,7 @@ Table of Contents
      "typ": "mission-consent-evidence+jws"
    }
 
-7.1.  Integrity and Verification
+8.1.  Integrity and Verification
 
    When evidence_envelope.format is jws-compact, the protected header
    MUST carry a typ of mission-consent-evidence+jws and a kid that
@@ -965,7 +974,7 @@ Table of Contents
    or an evidence service authorized by the Mission Issuer.  The typ
    names the secured representation, the JWS itself rather than its
    payload: its value is the application/mission-consent-evidence+jws
-   media type (Section 13) with the application/ prefix omitted
+   media type (Section 14) with the application/ prefix omitted
    ([RFC7515], Section 4.1.9), while the payload's identifier stays
    application/mission-consent-evidence+json, the value the audit
    profile's evidence-type table and its payload-preimage-content-type
@@ -989,8 +998,8 @@ Table of Contents
 
    6.  when decision is approved, verifies that the Mission anchors in
        mission match the Mission record being audited.  When decision is
-       declined or narrowed there is no Mission record (Section 8.1,
-       Section 8.2); the verifier instead confirms the mission
+       declined or narrowed there is no Mission record (Section 9.1,
+       Section 9.2); the verifier instead confirms the mission
        descriptor carries issuer and the two source_hashes anchors and
        no id; and
 
@@ -1026,18 +1035,18 @@ Table of Contents
    carried inside the signed mission.  Reconstructing the disclosure is
    a separate step that depends on retrieval: when the disclosure object
    is inlined, a verifier recomputes consent_rendering_hash over it and
-   compares; when it is carried by reference (Section 9.1), the verifier
-   retrieves it and verifies it against consent_rendering_hash.
+   compares; when it is carried by reference (Section 10.1), the
+   verifier retrieves it and verifies it against consent_rendering_hash.
 
    A verifier MUST NOT treat a disclosure that is merely unretrievable
    as an integrity failure of the evidence record; failure to retrieve a
    referenced disclosure within the retention window is an audit failure
-   (Section 9), not a signature or anchor failure.
+   (Section 10), not a signature or anchor failure.
 
    Evidence whose envelope format is unsupported MUST be rejected rather
    than accepted without verification.
 
-8.  Binding to Mission Approval
+9.  Binding to Mission Approval
 
    At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
 
@@ -1058,10 +1067,10 @@ Table of Contents
    6.  when approved, bind the Mission record to the
        consent_rendering_hash.
 
-   For expansion approvals, the disclosure requirements of Section 8.3
+   For expansion approvals, the disclosure requirements of Section 9.3
    apply.
 
-8.1.  Declined Approval Events
+9.1.  Declined Approval Events
 
    Declined approval events are security-relevant.  A deployment
    claiming this profile MUST record Consent Evidence when an Approver
@@ -1073,7 +1082,7 @@ Table of Contents
    authority.  It exists to prevent silent retry, coercion, and
    rendering confusion from being invisible to audit.
 
-8.2.  Revision-Required Events
+9.2.  Revision-Required Events
 
    A revision-required outcome, in which the review can approve only a
    narrowed version and invites a narrowing revision under the
@@ -1091,7 +1100,7 @@ Table of Contents
    evidence MAY carry predecessor_intent_hashes committing the chain of
    reviewed proposals that preceded it.
 
-8.3.  Expansion and Delta Disclosure
+9.3.  Expansion and Delta Disclosure
 
    When the approval event is for Mission Expansion, the Consent
    Disclosure object MUST identify the predecessor Mission and SHOULD
@@ -1111,9 +1120,9 @@ Table of Contents
    without the delta fails to show the Approver what is being widened,
    which is what this recommendation exists to prevent; the disclosure
    it did render remains committed and reconstructible under the floor
-   (Section 10).
+   (Section 11).
 
-9.  Audit Reconstruction
+10.  Audit Reconstruction
 
    A deployment claiming this profile MUST retain enough information for
    an authorized auditor to reconstruct:
@@ -1133,7 +1142,7 @@ Table of Contents
    Retention MUST last at least as long as the Mission's audit horizon,
    the term the issuance profile defines
    ([I-D.draft-mcguinness-oauth-mission]).  Declined and narrowed events
-   create no Mission (Section 8.1, Section 8.2) and so have no Mission
+   create no Mission (Section 9.1, Section 9.2) and so have no Mission
    audit horizon; a deployment MUST retain their evidence for a
    deployment-declared window.
 
@@ -1143,7 +1152,7 @@ Table of Contents
    reconciling the recorded approval surface against later-enforced
    authority consults discharge state.
 
-9.1.  Minimization and Redaction
+10.1.  Minimization and Redaction
 
    The portable Consent Evidence object MAY carry a durable reference to
    the full Consent Disclosure object rather than the object itself.  A
@@ -1156,25 +1165,25 @@ Table of Contents
    A verifier with authorization MUST be able to retrieve or reconstruct
    the disclosure for the retention period.  It MUST verify the
    retrieved object against consent_rendering_hash.  Non-retrievability
-   within the retention window is an audit failure (Section 9) within
+   within the retention window is an audit failure (Section 10) within
    deployment agreement, not an integrity failure of the evidence record
-   (Section 7.1).
+   (Section 8.1).
 
    Free-form task text and approver comments SHOULD be redacted or
    stored by reference when not required for ordinary audit.
 
-10.  Conformance
+11.  Conformance
 
-   The conforming floor is Rung 0 (Section 6): what was shown is
+   The conforming floor is Rung 0 (Section 7): what was shown is
    committed, bound to the Mission anchors, signed, and reconstructible.
    A conforming Consent-Evidence-capable Mission Issuer MUST:
 
    *  construct a Consent Disclosure object, with the required members
-      of Section 4, for each approval event;
+      of Section 5, for each approval event;
 
-   *  render within the translation floor (Section 4.3);
+   *  render within the translation floor (Section 5.3);
 
-   *  compute consent_rendering_hash (Section 5);
+   *  compute consent_rendering_hash (Section 6);
 
    *  record Consent Evidence for approval and decline decisions, and
       for narrowed decisions where the deployment supports approval
@@ -1184,32 +1193,32 @@ Table of Contents
 
    *  for the high-risk classes, include their material notices with the
       per-notice acknowledgment those classes require, recording each
-      acknowledgment completion (Section 4.2);
+      acknowledgment completion (Section 5.2);
 
-   *  record the interrogation it offers (Section 4.5); and
+   *  record the interrogation it offers (Section 5.5); and
 
-   *  retain evidence for audit reconstruction (Section 9).
+   *  retain evidence for audit reconstruction (Section 10).
 
    Beyond that floor, a conforming Mission Issuer:
 
    *  SHOULD include a material notice for each further condition of
-      Section 4.2 present;
+      Section 5.2 present;
 
    *  SHOULD gate approved on acknowledgments beyond the high-risk
       classes; and
 
-   *  SHOULD render expansion approvals as a delta (Section 8.3).
+   *  SHOULD render expansion approvals as a delta (Section 9.3).
 
    Each rung above Rung 0 is a named optional claim (Appendix A), made
    only when its requirements are satisfied and its evidence recorded.
 
    A conforming verifier of Consent Evidence MUST implement the checks
-   in Section 7.1.  It MUST treat failure to retrieve a referenced
+   in Section 8.1.  It MUST treat failure to retrieve a referenced
    disclosure during the retention window as an audit failure.
 
-11.  Security Considerations
+12.  Security Considerations
 
-11.1.  Rendering Confusion
+12.1.  Rendering Confusion
 
    The primary threat is rendering confusion: the Approver sees one
    thing while the Mission records another.  This profile mitigates that
@@ -1218,50 +1227,50 @@ Table of Contents
    Authority Set is detectable in audit.  It does not eliminate the
    threat: the limits of a server-side commitment, and the degrees by
    which the optional rungs reduce the rendering trust base, are stated
-   with the ladder (Section 6, Appendix A).  A deployment that needs
+   with the ladder (Section 7, Appendix A).  A deployment that needs
    assurance that the Approver's authenticator confirmed a specific
    disclosure commitment SHOULD evaluate Rung 3 for its high-risk
    classes.
 
-11.2.  Template Downgrade
+12.2.  Template Downgrade
 
    An attacker could use an outdated or less explicit template.  The
    Consent Disclosure object includes template_id and template_version;
    deployments SHOULD reject templates not approved for the action
    classes being authorized.
 
-11.3.  Evidence Does Not Grant Authority
+12.3.  Evidence Does Not Grant Authority
 
    Consent Evidence proves what was recorded as shown and decided.  It
    MUST NOT be accepted as a token, grant, or substitute for the
    Mission's authority_hash.
 
-11.4.  Decline Suppression
+12.4.  Decline Suppression
 
    An attacker could repeatedly reshape and resubmit a declined Mission
    to obtain approval through fatigue.  Recording declined events lets
    deployments detect repeated attempts against the same task,
    requester, or Authority Set.
 
-11.5.  Interrogation as a Persuasion Surface
+12.5.  Interrogation as a Persuasion Surface
 
-   Disclosure Interrogation (Section 4.5) lets the Approver ask why; the
+   Disclosure Interrogation (Section 5.5) lets the Approver ask why; the
    same channel lets a compromised agent argue.  An injected agent that
    authored a hostile goal can author the reassuring answers the goal
-   provokes.  The grounding rule of Section 4.5 is the mitigation: the
+   provokes.  The grounding rule of Section 5.5 is the mitigation: the
    consent surface's own voice speaks only from recorded material,
    relayed agent text is rendered inert and visibly the agent's, and the
    recorded interrogation entries expose a persuasion pattern to the
-   same audit that Section 11.4 gives repeated resubmission.
+   same audit that Section 12.4 gives repeated resubmission.
 
-11.6.  Incomplete Material Notices
+12.6.  Incomplete Material Notices
 
    If material notices omit high-risk authority, the Approver's consent
    may not be meaningful.  Deployments SHOULD test disclosure templates
    against Authority Set fixtures and reject templates that cannot
    render all material notice classes.
 
-12.  Privacy Considerations
+13.  Privacy Considerations
 
    Consent Evidence can contain sensitive task descriptions, business
    context, approver identity, subject identity, and high-risk authority
@@ -1279,20 +1288,20 @@ Table of Contents
    deployment sensitive to that side channel SHOULD scope sequence per
    Mission or per audit scope rather than use a single global counter.
 
-13.  IANA Considerations
+14.  IANA Considerations
 
-13.1.  Media Type Registry
+14.1.  Media Type Registry
 
    IANA is requested to register three media types per [RFC6838]: one
    for the Consent Evidence object, a distinct one for the Consent
-   Disclosure object it may reference (Section 9.1), and one for the
+   Disclosure object it may reference (Section 10.1), and one for the
    JWS-secured Consent Evidence representation that the
-   evidence_envelope's protected typ names (Section 7.1).  The Mission
+   evidence_envelope's protected typ names (Section 8.1).  The Mission
    audit profile ([I-D.draft-mcguinness-mission-audit]) references the
    Consent Evidence media type.  The third registration uses the +jws
    structured syntax suffix already registered with IANA.
 
-13.1.1.  application/mission-consent-evidence+json
+14.1.1.  application/mission-consent-evidence+json
 
    *  Type name: application
 
@@ -1304,7 +1313,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 12
 
    *  Interoperability considerations: see this document
 
@@ -1337,7 +1346,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-13.1.2.  application/mission-consent-evidence+jws
+14.1.2.  application/mission-consent-evidence+jws
 
    *  Type name: application
 
@@ -1351,9 +1360,9 @@ Table of Contents
       ([RFC7515], Section 3.1): base64url-encoded values separated by
       period characters
 
-   *  Security considerations: see Section 11 and [RFC7515], Section 10
+   *  Security considerations: see Section 12 and [RFC7515], Section 10
 
-   *  Interoperability considerations: see this document (Section 7.1)
+   *  Interoperability considerations: see this document (Section 8.1)
 
    *  Published specification: this document
 
@@ -1384,7 +1393,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-13.1.3.  application/mission-consent-disclosure+json
+14.1.3.  application/mission-consent-disclosure+json
 
    *  Type name: application
 
@@ -1396,7 +1405,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 12
 
    *  Interoperability considerations: see this document
 
@@ -1429,9 +1438,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-14.  References
+15.  References
 
-14.1.  Normative References
+15.1.  Normative References
 
    [BCP47]    Best Current Practice 47,
               <https://www.rfc-editor.org/info/bcp47>.
@@ -1492,7 +1501,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-14.2.  Informative References
+15.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
@@ -1559,13 +1568,13 @@ Table of Contents
 Appendix A.  Rendering-Assurance Rungs Above the Floor
 
    This appendix defines the rungs above the conforming floor of Rung 0
-   (Section 6).  Each is a named optional claim (Section 10).  Rung 1 is
+   (Section 7).  Each is a named optional claim (Section 11).  Rung 1 is
    optional and stable; Rungs 2 through 4 are additionally
    *experimental*, to adopt for evaluation, not as a stable interface,
    because each imports a trust infrastructure this profile does not
    supply: platform or trusted-execution-environment attestation for
    Rung 2, transaction-confirming authenticators for Rung 3.  The
-   cumulative rule of Section 6 applies: a rung is claimed only over a
+   cumulative rule of Section 7 applies: a rung is claimed only over a
    disclosure that also satisfies the rungs below it.
 
    Rung 1, Deterministic rendering:  An auditor can re-render the
@@ -1579,20 +1588,20 @@ Appendix A.  Rendering-Assurance Rungs Above the Floor
          produce the same rendered form within a presentation modality;
 
       *  commit the template content bytes in rendering_template_digest
-         (Section 4); and
+         (Section 5); and
 
       *  keep the named template retrievable or reconstructable by an
-         authorized auditor for the retention period (Section 9).
+         authorized auditor for the retention period (Section 10).
 
    Rung 2, Attested rendering:  The Consent Evidence carries a
-      rendering_attestation (Section 7): evidence that an attested,
+      rendering_attestation (Section 8): evidence that an attested,
       identified rendering component (a first-party AS-hosted consent
       surface, or a renderer attested by the platform or a trusted
       execution environment) produced the rendering.  The trusted base
       shrinks from any rendering layer to an attested one.
 
    Rung 3, Approver confirmation:  The Consent Evidence carries a
-      rendering_confirmation (Section 7): a signature produced by the
+      rendering_confirmation (Section 8): a signature produced by the
       Approver's authenticator over the consent_rendering_hash at
       approval, binding the approval credential itself to the exact
       committed disclosure.  What this proves is narrow but real: that
@@ -1604,7 +1613,7 @@ Appendix A.  Rendering-Assurance Rungs Above the Floor
       what-you-sign only when the authenticator also renders a value
       derived from the disclosure.  A deployment claiming this rung
       SHOULD apply it to a Mission whose Authority Set carries a high-
-      risk material-notice class (Section 4.2).
+      risk material-notice class (Section 5.2).
 
    Rung 4, Out-of-band confirmation:  For the most material actions,
       confirmation is obtained at execution time on a channel the
@@ -1618,14 +1627,14 @@ Appendix A.  Rendering-Assurance Rungs Above the Floor
    specific disclosure commitment is verifiable up to trust in that
    authenticator, rather than in an arbitrary rendering layer.  The
    verifier obligations for these rungs are steps 7 and 8 of
-   Section 7.1; their absence asserts no rung above the ones the record
+   Section 8.1; their absence asserts no rung above the ones the record
    satisfies and is never an integrity failure.
 
 Appendix B.  Worked Disclosure and Test Vector
 
    This non-normative vector lets an implementation verify its
-   consent_rendering_hash computation (Section 5) byte for byte.  The
-   disclosure is the one the evidence example of Section 7 records.  It
+   consent_rendering_hash computation (Section 6) byte for byte.  The
+   disclosure is the one the evidence example of Section 8 records.  It
    renders the Authority Set of the issuance profile's test vectors
    ([I-D.draft-mcguinness-oauth-mission]): invoices.read and journal-
    entries.write bounded by a max_amount of 500.00 USD on
@@ -1743,7 +1752,7 @@ Appendix B.  Worked Disclosure and Test Vector
    reversible; constraint_provenance attributes the max_amount bound to
    the Subject, who stated it in the task request.  The notice is of a
    high-risk class, so approver_actions carries its per-notice
-   acknowledgment (Section 4.2).  The requesting_client names the agent
+   acknowledgment (Section 5.2).  The requesting_client names the agent
    that will wield the granted authority.  The Approver is the Subject,
    so the top-level subject member is absent.
 

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          22 August 2026
-Expires: 23 February 2027
+Intended status: Standards Track                          23 August 2026
+Expires: 24 February 2027
 
 
                     Mission Expansion for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -82,51 +82,52 @@ Table of Contents
      1.1.  Status: an optional extension
      1.2.  Relationship to the issuance profile
      1.3.  Scope
-   2.  Conventions and Terminology
-   3.  Expansion Overview
-     3.1.  Protocol flow
-     3.2.  Eligibility
-     3.3.  Expansion is not step-up
-   4.  The Expansion Request
-     4.1.  The token exchange request
-     4.2.  Proving possession of the predecessor
-     4.3.  Predecessor must be active
-   5.  Adjudication
-     5.1.  Mission Issuer verification order
-     5.2.  Completion modes
-     5.3.  The deferred window
-     5.4.  Successor expiry
-   6.  The Predecessor Mission Reference
-   7.  The Superseded Predecessor State
-     7.1.  No implicit rollback
-   8.  Replacement Expansion
-   9.  Continuing Under an Independently Approved Mission
-   10. Concurrent Expansion Reconciliation
-   11. Creation Idempotency
-     11.1.  The operation fingerprint
-     11.2.  The durable reservation
-     11.3.  Recovery is delivery
-     11.4.  Revalidation and lookup order
-     11.5.  Tombstone retention
-   12. Expansion Denial Reasons
-   13. Worked Example
-   14. Conformance
-   15. Security Considerations
-     15.1.  Predecessor confusion
-     15.2.  Possession proof
-     15.3.  Authority comes only from new consent
-     15.4.  Race against predecessor lifecycle
-     15.5.  Duplicate creation
-     15.6.  Expansion versus step-up
-     15.7.  Policy probing
-     15.8.  Audit linkage
-   16. Privacy Considerations
-     16.1.  Predecessor-chain correlation
-     16.2.  Related-work correlation
-     16.3.  Disclosure of the broadened task
-   17. IANA Considerations
-     17.1.  Mission Lifecycle States Registration
-     17.2.  Mission Denial Reasons Registry
+   2.  Status: An Optional Profile
+   3.  Conventions and Terminology
+   4.  Expansion Overview
+     4.1.  Protocol flow
+     4.2.  Eligibility
+     4.3.  Expansion is not step-up
+   5.  The Expansion Request
+     5.1.  The token exchange request
+     5.2.  Proving possession of the predecessor
+     5.3.  Predecessor must be active
+   6.  Adjudication
+     6.1.  Mission Issuer verification order
+     6.2.  Completion modes
+     6.3.  The deferred window
+     6.4.  Successor expiry
+   7.  The Predecessor Mission Reference
+   8.  The Superseded Predecessor State
+     8.1.  No implicit rollback
+   9.  Replacement Expansion
+   10. Continuing Under an Independently Approved Mission
+   11. Concurrent Expansion Reconciliation
+   12. Creation Idempotency
+     12.1.  The operation fingerprint
+     12.2.  The durable reservation
+     12.3.  Recovery is delivery
+     12.4.  Revalidation and lookup order
+     12.5.  Tombstone retention
+   13. Expansion Denial Reasons
+   14. Worked Example
+   15. Conformance
+   16. Security Considerations
+     16.1.  Predecessor confusion
+     16.2.  Possession proof
+     16.3.  Authority comes only from new consent
+     16.4.  Race against predecessor lifecycle
+     16.5.  Duplicate creation
+     16.6.  Expansion versus step-up
+     16.7.  Policy probing
+     16.8.  Audit linkage
+   17. Privacy Considerations
+     17.1.  Predecessor-chain correlation
+     17.2.  Related-work correlation
+     17.3.  Disclosure of the broadened task
+   18. IANA Considerations
+     18.1.  Mission Lifecycle States Registration
+     18.2.  Mission Denial Reasons Registry
    Acknowledgments
    References
      Normative References
@@ -155,7 +156,7 @@ Table of Contents
 
    The mechanism reuses the issuance profile end to end.  An expansion
    carries a new Mission Intent in an [RFC8693] token exchange
-   (Section 4) bound to the predecessor by possession of the
+   (Section 5) bound to the predecessor by possession of the
    predecessor's Mission-bound access token, leading to a fresh approval
    event ([I-D.draft-mcguinness-oauth-mission]) with its own integrity
    anchors and Mission record.  The successor's authority comes only
@@ -174,7 +175,7 @@ Table of Contents
    it issues no expansion request, records no predecessor member, and
    never enters the superseded state this document introduces.  The
    issuance profile's lifecycle (active, revoked, expired) is complete
-   without expansion; the superseded state defined here (Section 7) is
+   without expansion; the superseded state defined here (Section 8) is
    relevant only when expansion is used.
 
    A Mission Issuer claims conformance to this document only when it
@@ -201,21 +202,21 @@ Table of Contents
 
    *  the expansion request: how a client initiates a successor Mission
       and how that request is bound to the predecessor's grant
-      (Section 4);
+      (Section 5);
 
    *  the predecessor lineage member on the successor's mission claim
-      and Mission record (Section 6);
+      and Mission record (Section 7);
 
    *  the terminal superseded predecessor state and its transition
-      (Section 7);
-
-   *  replacement expansion as the mode, with branch expansion deferred
       (Section 8);
 
-   *  concurrent-expansion reconciliation, with a closed set of
-      reconciliation status codes (Section 10); and
+   *  replacement expansion as the mode, with branch expansion deferred
+      (Section 9);
 
-   *  the expansion denial reasons (Section 12).
+   *  concurrent-expansion reconciliation, with a closed set of
+      reconciliation status codes (Section 11); and
+
+   *  the expansion denial reasons (Section 13).
 
    This document does NOT define:
 
@@ -224,10 +225,10 @@ Table of Contents
 
    *  runtime per-action enforcement or the classification of a denial
       as expansion-eligible; that is the runtime layer's concern
-      (Section 3.2, [I-D.draft-mcguinness-mission-runtime]);
+      (Section 4.2, [I-D.draft-mcguinness-mission-runtime]);
 
    *  branch expansion, in which predecessor and successor both remain
-      active (Section 8);
+      active (Section 9);
 
    *  multi-hop or cross-domain expansion; an expansion is adjudicated
       by the predecessor's Mission Issuer (its issuer); or
@@ -239,7 +240,13 @@ Table of Contents
       document alone, every expansion is adjudicated by a fresh human
       approval.
 
-2.  Conventions and Terminology
+2.  Status: An Optional Profile
+
+   Maturity: stable.  Maintenance: active.  Adopt when: Approved
+   authority will predictably need to widen mid-task via fresh approval.
+   Requires: Mission-Bound Authorization for OAuth 2.0.
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -255,21 +262,21 @@ Table of Contents
 
    Predecessor Mission:  The active Mission an expansion enlarges.  It
       is the baseline for the successor and is referenced by the
-      successor's mission.predecessor member (Section 6).
+      successor's mission.predecessor member (Section 7).
 
    Successor Mission:  The Mission a replacement expansion creates
       through a fresh approval event.  It carries its own Authority Set,
       integrity anchors, and mission_id, and a predecessor member
-      linking it to the predecessor (Section 6).
+      linking it to the predecessor (Section 7).
 
    Expansion request:  An [RFC8693] token exchange that carries a
       Mission Intent and presents the predecessor Mission's Mission-
       bound access token as the subject_token, asking the Mission Issuer
-      to adjudicate a successor (Section 4).
+      to adjudicate a successor (Section 5).
 
-3.  Expansion Overview
+4.  Expansion Overview
 
-3.1.  Protocol flow
+4.1.  Protocol flow
 
     Agent (client)               Mission Issuer (AS)
         |                            |
@@ -298,20 +305,20 @@ Table of Contents
 
    The request is an [RFC8693] token exchange bound to the predecessor
    by possession of the predecessor's Mission-bound access token
-   (Section 4), so the Mission Issuer adjudicates a successor of a
+   (Section 5), so the Mission Issuer adjudicates a successor of a
    specific predecessor rather than an unrelated new Mission.  An
    expansion always widens authority, so a fresh consent supplies the
    broader authority, obtained through the deferred token response
    ([I-D.draft-gerber-oauth-deferred-token-response]) or the
-   deployment's interactive approval (Section 5.2); a request that
-   widens nothing is refused (Section 5.1).  The successor's authority
+   deployment's interactive approval (Section 6.2); a request that
+   widens nothing is refused (Section 6.1).  The successor's authority
    comes only from that consent.  Supersession is deferred to
    activation: the successor activates and the predecessor becomes
    superseded atomically when the successor's authority is issued, so an
    expansion that never completes leaves the predecessor active
-   (Section 7).
+   (Section 8).
 
-3.2.  Eligibility
+4.2.  Eligibility
 
    A client initiates expansion after an action is denied because the
    requested authority is outside the active Mission's Authority Set and
@@ -332,10 +339,10 @@ Table of Contents
    particular denial source: a client that knows, by any means, that an
    action needs authority the active Mission lacks MAY initiate
    expansion.  Whether the Mission Issuer adjudicates a successor
-   remains its decision (Section 5); an eligible denial is not an
+   remains its decision (Section 6); an eligible denial is not an
    authorization in favor of expansion.
 
-3.3.  Expansion is not step-up
+4.3.  Expansion is not step-up
 
    Expansion is a governance operation.  It is distinct from
    authentication step-up [RFC9470].  A request denied because an acr or
@@ -344,9 +351,9 @@ Table of Contents
    denied because the requested authority is not in the active Mission's
    Authority Set requires expansion: the Authority Set must be enlarged
    through a new approval event.  The two are not interchangeable;
-   Section 15.6 treats the security consequence of conflating them.
+   Section 16.6 treats the security consequence of conflating them.
 
-4.  The Expansion Request
+5.  The Expansion Request
 
    To expand a predecessor Mission, the requester MUST prove possession
    of the predecessor Mission's authority through a sender-constrained
@@ -355,15 +362,15 @@ Table of Contents
    rests on, stated once and independent of any wire binding.
 
    On the OAuth wire this document binds that requirement to an
-   [RFC8693] token exchange at the token endpoint (Section 4.1), in
+   [RFC8693] token exchange at the token endpoint (Section 5.1), in
    which the predecessor's own sender-constrained Mission-bound access
    token is the subject_token and possession is proven against that
-   token's confirmation key (Section 4.2).  The Mission Authority Server
+   token's confirmation key (Section 5.2).  The Mission Authority Server
    profile ([I-D.draft-mcguinness-mission-authority-server]) binds the
    same abstract requirement to an authenticated-client submission on
    its token-less surface; the two are peer bindings of one requirement.
 
-4.1.  The token exchange request
+5.1.  The token exchange request
 
    A client initiates an expansion as an [RFC8693] token exchange at the
    token endpoint.  The request carries:
@@ -380,7 +387,7 @@ Table of Contents
 
    subject_token:  REQUIRED.  The predecessor Mission's sender-
       constrained Mission-bound access token.  The Mission Issuer
-      resolves the predecessor from this token (Section 4.2); this
+      resolves the predecessor from this token (Section 5.2); this
       token, not any identifier, selects the predecessor
       authoritatively.
 
@@ -427,7 +434,7 @@ Table of Contents
    predecessor:  OPTIONAL.  A string.  The mission_id of the
       predecessor, a non-authoritative cross-check and audit value only.
       The Mission Issuer resolves and selects the predecessor from
-      subject_token (Section 4.2); when predecessor is present the
+      subject_token (Section 5.2); when predecessor is present the
       Mission Issuer MUST verify it names that same resolved Mission and
       refuse a mismatch with invalid_grant. predecessor does not select
       or authorize a predecessor: a client MUST NOT be able to expand a
@@ -436,7 +443,7 @@ Table of Contents
    creation_request_id:  REQUIRED.  The creation idempotency identifier:
       an ASCII string of at most 255 octets, opaque to the Mission
       Issuer beyond equality, that identifies this one Mission-creation
-      operation across every completion mode (Section 11).  At least 128
+      operation across every completion mode (Section 12).  At least 128
       bits of client-generated randomness is RECOMMENDED; a UUID
       [RFC9562] satisfies this.  The Mission Issuer MUST refuse an
       exchange missing it with invalid_request.
@@ -449,15 +456,15 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]) MUST be
    refused with invalid_request: the operations do not combine.
 
-   The possession proof of Section 4.2 is presented only on the token
+   The possession proof of Section 5.2 is presented only on the token
    endpoint's authenticated back channel and MUST NOT appear on any
    front channel.  Where a deployment completes an expansion through its
-   retained interactive approval (Section 5.2), the front-channel
+   retained interactive approval (Section 6.2), the front-channel
    approval ceremony carries only the consent decision; the predecessor
    binding and possession proof are established by the token exchange in
    every completion mode.
 
-4.2.  Proving possession of the predecessor
+5.2.  Proving possession of the predecessor
 
    The issuance profile resolves a Mission from the credential the
    client presents, never from a client-supplied mission_id
@@ -483,7 +490,7 @@ Table of Contents
        [RFC9449]: the Mission Issuer MUST reject a replayed proof.
 
    4.  When predecessor is present, the Mission Issuer MUST verify the
-       resolved Mission is the one it names (Section 4.1).
+       resolved Mission is the one it names (Section 5.1).
 
    The confirmation key, not the identifier, authorizes the expansion.
    A client that does not hold the predecessor's Mission-bound access
@@ -512,7 +519,7 @@ Table of Contents
 
    The Mission Issuer MUST record each expansion presentation and count
    it toward the deployment's anomaly detection, and the per-predecessor
-   rate limit (Section 15.7) applies unconditionally.  Because the
+   rate limit (Section 16.7) applies unconditionally.  Because the
    subject_token is a short-lived, sender-constrained access token
    rather than a reusable refresh credential, presenting it for
    expansion carries no refresh rotation or replay-detection
@@ -525,17 +532,17 @@ Table of Contents
    already holds and can prove possession of, and a client cannot name
    an arbitrary predecessor.
 
-4.3.  Predecessor must be active
+5.3.  Predecessor must be active
 
    The Mission Issuer MUST resolve the predecessor from subject_token
    and verify it is in the active state before adjudicating, and MUST
    re-verify it at completion when adjudication is deferred or
-   interactive (Section 5.3).  An expansion request against a
+   interactive (Section 6.3).  An expansion request against a
    predecessor that is not active MUST be refused with invalid_grant and
-   a reconciliation status (Section 10):
+   a reconciliation status (Section 11):
 
    *  if the predecessor made a terminal exit from active (it is
-      revoked, expired, or already superseded, Section 7), the status is
+      revoked, expired, or already superseded, Section 8), the status is
       predecessor_state_changed;
 
    *  if the predecessor is in a non-terminal non-active state, for
@@ -547,36 +554,36 @@ Table of Contents
    from a non-active Mission; this rule extends the same gate to
    adjudicating an expansion of one.
 
-5.  Adjudication
+6.  Adjudication
 
    Adjudication of an expansion derives the successor's Authority Set
    from the submitted Mission Intent and bounds it by policy, exactly as
    for any Mission.  The successor's authority is whatever this
-   derivation and the completion of Section 5.2 yield; it is not the
+   derivation and the completion of Section 6.2 yield; it is not the
    predecessor's authority plus a delta computed by this document.  A
    deployment that wants the successor to retain the predecessor's
    authority expresses that authority in the expansion Mission Intent so
    the derivation reproduces it.
 
    The Mission Issuer processes an expansion token exchange in the
-   verification order of Section 5.1 and completes it in one of the
-   modes of Section 5.2.
+   verification order of Section 6.1 and completes it in one of the
+   modes of Section 6.2.
 
-5.1.  Mission Issuer verification order
+6.1.  Mission Issuer verification order
 
    The Mission Issuer MUST evaluate an expansion token exchange in this
    order, refusing on the first failure:
 
    1.  Parse the exchange, require subject_token with subject_token_type
        = urn:ietf:params:oauth:token-type:access_token, rejecting a
-       refresh token, and require creation_request_id (Section 4.1).
+       refresh token, and require creation_request_id (Section 5.1).
 
-   2.  Resolve the predecessor Mission from subject_token (Section 4.2).
+   2.  Resolve the predecessor Mission from subject_token (Section 5.2).
 
    3.  Verify possession: the presenter controls the subject_token's own
        confirmation key ([RFC9449] DPoP proof jkt, or [RFC8705] mTLS
        x5t#S256), and, for a DPoP proof, the proof jti is single-use
-       (Section 4.2).
+       (Section 5.2).
 
    4.  Verify the acting agent (actor_token, or the request's client
        authentication) is authorized to request expansion of this
@@ -584,23 +591,23 @@ Table of Contents
 
    5.  Look up the (client, creation_request_id) reservation and, where
        one exists, recover the recorded operation instead of proceeding
-       (Section 11).  The lookup follows client authentication and
+       (Section 12).  The lookup follows client authentication and
        possession verification and precedes the predecessor lifecycle
-       gate of step 6 (Section 11.4).
+       gate of step 6 (Section 12.4).
 
-   6.  Verify the predecessor is active (Section 4.3) and, when
+   6.  Verify the predecessor is active (Section 5.3) and, when
        predecessor is present, that it names the resolved Mission.
 
    7.  Derive the successor's Authority Set under policy from the
-       submitted Mission Intent (Section 5) and verify that it widens
+       submitted Mission Intent (Section 6) and verify that it widens
        the predecessor: when the derived requested authority is a subset
        of the predecessor's own Effective Authority Set, refuse the
        exchange with the nothing_to_expand denial reason, as there is
-       nothing to expand (Section 12).
+       nothing to expand (Section 13).
 
-   8.  Complete per Section 5.2; at a deferred or interactive
+   8.  Complete per Section 6.2; at a deferred or interactive
        completion, re-verify the predecessor's Mission state before
-       issuing (Section 5.3).
+       issuing (Section 6.3).
 
    On any failure the Mission Issuer MUST refuse with invalid_request,
    invalid_grant, or invalid_token as appropriate, and MUST NOT create a
@@ -618,15 +625,15 @@ Table of Contents
    the effective set and is expansion-eligible.  Such authority returns
    only through a fresh-consent successor, with the predecessor's
    containment history surfaced in the expansion consent disclosure
-   (Section 5.2, [I-D.draft-mcguinness-oauth-mission-containment]),
+   (Section 6.2, [I-D.draft-mcguinness-oauth-mission-containment]),
    never by re-deriving under the predecessor.
 
-5.2.  Completion modes
+6.2.  Completion modes
 
    An expansion completes in one of two modes, each obtaining the fresh
    approval the successor's authority requires.  The deferred token
    response is a completion mode, not a replacement: both modes rest on
-   the same possession-proven token exchange (Section 4), and the
+   the same possession-proven token exchange (Section 5), and the
    interactive path is retained.
 
    Deferred:  When approval is asynchronous, the Mission Issuer returns
@@ -652,7 +659,7 @@ Table of Contents
    expansion response is a successor or a refusal, never a token derived
    under the predecessor: a request whose derived authority is a subset
    of the predecessor's own Effective Authority Set is refused with
-   nothing_to_expand (Section 5.1, Section 12).  Policy-adjudicated
+   nothing_to_expand (Section 6.1, Section 13).  Policy-adjudicated
    expansion within a pre-consented authority ceiling is the
    experimental progressive authorization companion's concern
    ([I-D.draft-mcguinness-oauth-mission-progressive]): an in-ceiling
@@ -666,7 +673,7 @@ Table of Contents
    profile's approval event.  The consent disclosure MUST reflect the
    successor's authority being adjudicated.  Expansion never widens
    authority without a new consent: if the Approver declines, no
-   successor is created and the predecessor is untouched (Section 12).
+   successor is created and the predecessor is untouched (Section 13).
 
    At completion the Mission Issuer computes the successor's integrity
    anchors (intent_hash, authority_hash, and, where the exchange carried
@@ -674,19 +681,19 @@ Table of Contents
    successor's authority is issued (the resolving poll for a deferred
    completion, or the code redemption for an interactive completion),
    creates the successor Mission record in the active state, with its
-   predecessor member set (Section 6), atomically with the predecessor's
-   transition to superseded (Section 7).  Until the successor activates
+   predecessor member set (Section 7), atomically with the predecessor's
+   transition to superseded (Section 8).  Until the successor activates
    the predecessor remains active; an expansion that never completes,
    whose deferred approval lapses, or whose authorization code is never
    redeemed or expires, creates no successor and leaves the predecessor
    active.
 
    Whichever mode is selected, the exchange's creation_request_id
-   reservation (Section 11) makes completion recoverable: a client that
+   reservation (Section 12) makes completion recoverable: a client that
    loses the response recovers the one committed operation, never a
    second creation.
 
-5.3.  The deferred window
+6.3.  The deferred window
 
    A completion may occur later than the request, across a deferred or
    interactive approval window.  Two rules govern that window:
@@ -694,13 +701,13 @@ Table of Contents
    *  The predecessor's Mission state MUST be re-verified at issuance
       (completion), not only at request time.  A predecessor that was
       terminated or contained during the window MUST fail completion,
-      per the compare-and-set of Section 10.  This preserves the new-
+      per the compare-and-set of Section 11.  This preserves the new-
       derivation kill a terminal predecessor state effects: a deferred
       approval MUST NOT become a bypass of it.
 
    *  Expiry of the subject_token during the window MUST NOT gate
       completion.  The predecessor binding and the possession proof are
-      evaluated and recorded at request time (Section 4.2); the short-
+      evaluated and recorded at request time (Section 5.2); the short-
       lived subject_token expiring while approval is pending does not
       invalidate the pending exchange.  The re-verification above is of
       the predecessor's Mission state, not of the expired token.
@@ -737,7 +744,7 @@ Table of Contents
    rendered; that consent event is the only point in this profile at
    which a human can witness the cascade before it happens.
 
-5.4.  Successor expiry
+6.4.  Successor expiry
 
    The successor's effective expires_at follows the issuance profile's
    requested-versus-effective rule
@@ -759,7 +766,7 @@ Table of Contents
    profile's atomic creation-time check: where the submission's
    intent.expires_at passes while the expansion is pending, completion
    creates no successor Mission and the exchange fails with this
-   profile's denial semantics (Section 12).
+   profile's denial semantics (Section 13).
 
    An auditor verifies the successor record by inequalities, never by
    matching a recomputed minimum: in every case the effective value is
@@ -770,7 +777,7 @@ Table of Contents
    value was rendered and approved at the expansion consent event.  Any
    further shortening is justified by recorded policy.
 
-6.  The Predecessor Mission Reference
+7.  The Predecessor Mission Reference
 
    The successor records a lineage link to the predecessor as a
    predecessor member, both on the successor's mission claim and on the
@@ -798,14 +805,14 @@ Table of Contents
 
    related_to:  OPTIONAL.  A string.  The mission_id of a Mission this
       Mission is related to by lineage without superseding it, used for
-      a non-superseding link such as a branch (Section 8).  Unlike
+      a non-superseding link such as a branch (Section 9).  Unlike
       predecessor, its presence does not imply that the referenced
       Mission was superseded and it carries no lifecycle consequence.
 
    successor:  OPTIONAL.  A string.  The mission_id of the successor
       that superseded this Mission by expansion, recorded on the
       superseded predecessor's Mission record at supersession
-      (Section 7).  It is the reverse of the successor's predecessor
+      (Section 8).  It is the reverse of the successor's predecessor
       link, letting a consumer that holds a superseded predecessor
       discover its successor directly.  The Status profile surfaces it
       in the status response
@@ -837,7 +844,7 @@ Table of Contents
    *  *Immutability.* predecessor is set at the successor's approval
       event and MUST NOT change thereafter.  The Mission record is
       immutable except for its state and the one-time successor link a
-      supersession sets on the predecessor (Section 7).
+      supersession sets on the predecessor (Section 8).
 
    *  *Origin.* The predecessor and successor share an issuer: an
       expansion is adjudicated by the predecessor's Mission Issuer.  A
@@ -856,7 +863,7 @@ Table of Contents
      }
    }
 
-7.  The Superseded Predecessor State
+8.  The Superseded Predecessor State
 
    This document adds one terminal state to the issuance profile's
    lifecycle, used only by expansion:
@@ -881,11 +888,11 @@ Table of Contents
 
    *  *Atomic with successor activation.* The successor activates, and
       the predecessor enters superseded, in one atomic operation at the
-      point the successor's authority is issued (Section 5.2: the
+      point the successor's authority is issued (Section 6.2: the
       resolving deferred poll or the interactive code redemption), not
       at the approval decision that precedes it.  In that same operation
       the Mission Issuer sets the predecessor's successor member to the
-      successor's mission_id (Section 6).  Until the successor activates
+      successor's mission_id (Section 7).  Until the successor activates
       the predecessor remains active.
 
       -  An expansion that never completes, whose deferred approval
@@ -937,7 +944,7 @@ Table of Contents
       forward-compatibility rule: superseded, like any non-active state,
       is non-deriving.
 
-7.1.  No implicit rollback
+8.1.  No implicit rollback
 
    The Mission Issuer MUST NOT implicitly resurrect a superseded
    predecessor when its successor is later revoked, expired, or itself
@@ -947,10 +954,10 @@ Table of Contents
    authority, with its own predecessor link preserving the lineage.  A
    rollback is therefore a new governed Mission, not a state reversal.
 
-8.  Replacement Expansion
+9.  Replacement Expansion
 
    A successful expansion is a *replacement*: the successor replaces the
-   predecessor, and the predecessor becomes superseded (Section 7).
+   predecessor, and the predecessor becomes superseded (Section 8).
    Replacement is the only mode this document defines.
 
    Under replacement, exactly one successor is created per predecessor,
@@ -961,7 +968,7 @@ Table of Contents
    successor to retain the predecessor's authority alongside the new
    authority expresses the combined authority in the expansion Mission
    Intent, so the successor's authority_hash commits exactly the
-   authority the Approver saw and approved (Section 5).
+   authority the Approver saw and approved (Section 6).
 
    A *branch* mode, in which the predecessor and the successor both
    remain active after expansion (for example, a separately scoped child
@@ -969,13 +976,13 @@ Table of Contents
    here.  A deployment that needs a separately scoped task alongside a
    still-active Mission creates an ordinary new Mission under the
    issuance profile and MAY set that Mission's related_to member
-   (Section 6) to the original Mission's mission_id to preserve lineage;
+   (Section 7) to the original Mission's mission_id to preserve lineage;
    it does not set predecessor, which would imply a supersession, so the
    original remains active.  An atomic, grant-bound branch expansion
    that creates such a child within a single expansion approval event is
    deferred to a future revision of this document.
 
-9.  Continuing Under an Independently Approved Mission
+10.  Continuing Under an Independently Approved Mission
 
    A deployment can end one Mission and continue the work under another
    without this document's expansion protocol: it approves an ordinary
@@ -1012,7 +1019,7 @@ Table of Contents
       prior Mission.
 
    A deployment MAY record the relationship as related_to on the new
-   Mission (Section 6). related_to is issuer-recorded correlation
+   Mission (Section 7). related_to is issuer-recorded correlation
    metadata, not client-asserted authority: this document defines no
    client request parameter for it, and mission_intent carries the task
    and its submission evidence, never a relationship member; the input
@@ -1036,19 +1043,19 @@ Table of Contents
    the predecessor link and the disclosed history that expansion's
    approval renders.
 
-10.  Concurrent Expansion Reconciliation
+11.  Concurrent Expansion Reconciliation
 
    More than one expansion request MAY be in flight against the same
    predecessor at once, and more than one MAY be adjudicated and
    awaiting its completion.  Because replacement produces exactly one
-   successor per predecessor (Section 8) and supersession is deferred to
-   activation (Section 7), the Mission Issuer MUST serialize the
+   successor per predecessor (Section 9) and supersession is deferred to
+   activation (Section 8), the Mission Issuer MUST serialize the
    completions that would activate a successor of the same predecessor,
    so that concurrent expansions cannot each activate one.
 
    The Mission Issuer MUST apply compare-and-set semantics at successor
-   activation (Section 5.2).  This is the completion-side re-
-   verification of the deferred window (Section 5.3).  In the same
+   activation (Section 6.2).  This is the completion-side re-
+   verification of the deferred window (Section 6.3).  In the same
    atomic step that would activate the successor and supersede the
    predecessor, the Mission Issuer MUST verify:
 
@@ -1074,8 +1081,8 @@ Table of Contents
 
    predecessor_state_changed:  The predecessor made a terminal exit from
       active (to revoked, expired, or superseded) before this expansion
-      could complete, whether caught at request binding (Section 4.3) or
-      at the compare-and-set on successor activation (Section 10).  The
+      could complete, whether caught at request binding (Section 5.3) or
+      at the compare-and-set on successor activation (Section 11).  The
       client MUST NOT retry the same expansion against this predecessor.
 
    predecessor_not_active:  The predecessor is in a non-terminal non-
@@ -1099,50 +1106,50 @@ Table of Contents
    alongside the invalid_grant error:
 
    mission_expansion_status:  A string carrying one reconciliation
-      status from this document's closed set (Section 10).  It is
+      status from this document's closed set (Section 11).  It is
       returned by the step that failed.  At the token endpoint, on the
       token exchange response and on a deferred token response poll
-      (Section 5.2), it is a member of the JSON error response body,
+      (Section 6.2), it is a member of the JSON error response body,
       alongside the OAuth error member.  On the retained interactive
       path's front-channel authorization error response, which carries
       error parameters rather than a JSON body, it is carried as an
       error response parameter of the same name.  Adjudication denial
       reasons ride the separate mission_denial_reason member
-      (Section 12).
+      (Section 13).
 
-11.  Creation Idempotency
+12.  Creation Idempotency
 
    A creation_request_id identifies one Mission-creation operation
    across every completion mode.  The Mission Issuer MUST durably bind
    the authenticated client, the identifier, the operation fingerprint
-   (Section 11.1), and the resulting continuation or successor Mission,
+   (Section 12.1), and the resulting continuation or successor Mission,
    atomically with the creation decision.  Repetition of the exchange
-   recovers that operation (Section 11.3); it MUST NOT repeat Mission
+   recovers that operation (Section 12.3); it MUST NOT repeat Mission
    creation or any creation-side effect: creation accounting, creation
    lifecycle events, evidence emission.
 
    The identifier is REQUIRED in every completion mode because the
    client cannot know in advance which mode the Mission Issuer will
    select, and because the existing single-use artifacts do not close
-   the retry fault.  DPoP proof jti single-use (Section 4.2) prevents
+   the retry fault.  DPoP proof jti single-use (Section 5.2) prevents
    replay of one captured proof; a client that loses the response
    retries with a fresh, valid proof, and without the identifier that
    retry is a second creation.  The retained interactive path's single-
    use artifacts prevent only duplicate redemption within one ceremony;
    the reservation made at initiation is what prevents a retry from
-   starting a second ceremony (Section 11.3).
+   starting a second ceremony (Section 12.3).
 
    The child delegation profile
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]) carries the
    same parameter with the same semantics on its child-creation
    exchange, as mission_denial_reason is shared across the profiles that
-   mint a Mission related to an existing one (Section 12).  Delegation-
+   mint a Mission related to an existing one (Section 13).  Delegation-
    family-creating exchanges adopt the same definitions by reference,
-   each under its own domain-separating op value (Section 11.1); the
+   each under its own domain-separating op value (Section 12.1); the
    continuation profile's async-delegation exchange does so
    ([I-D.draft-mcguinness-oauth-mission-continuation]).
 
-11.1.  The operation fingerprint
+12.1.  The operation fingerprint
 
    The operation fingerprint commits what the operation is, so a
    repeated identifier is distinguishable from a reused one.  It is
@@ -1171,14 +1178,14 @@ Table of Contents
    client:  The authenticated client identifier.
 
    source:  The mission_id of the source Mission resolved from
-      subject_token (Section 4.2): the predecessor here, the parent
+      subject_token (Section 5.2): the predecessor here, the parent
       under child delegation.  The resolved identifier is the member,
       never the raw subject_token, since a legitimate retry may carry a
       newly issued token for the same Mission, and never the optional
       cross-check alone, which is non-authoritative.
 
    cnf:  The verified presenter confirmation: the DPoP proof key's jkt,
-      or the mTLS certificate's x5t#S256 (Section 4.2).
+      or the mTLS certificate's x5t#S256 (Section 5.2).
 
    actor:  The verified acting-agent identity, with its relevant actor
       context, where the exchange carries one (actor_token); absent
@@ -1210,7 +1217,7 @@ Table of Contents
    jti, the client-authentication assertion serialization, the raw
    subject_token serialization, and creation_request_id itself.
 
-11.2.  The durable reservation
+12.2.  The durable reservation
 
    A reservation is the durable record binding the authenticated client,
    the creation_request_id, and the fingerprint.  It is created in a
@@ -1223,13 +1230,13 @@ Table of Contents
    committed atomically with Mission creation; credential generation MAY
    follow the commit.  This closes the crash window: when the Mission
    commits and the Mission Issuer fails before responding, the retry
-   finds the committed operation and resumes delivery (Section 11.3),
+   finds the committed operation and resumes delivery (Section 12.3),
    never creating again.
 
    A repeated presentation of the same (client, creation_request_id)
    resolves by fingerprint:
 
-   *  same fingerprint, operation completed: recover it (Section 11.3);
+   *  same fingerprint, operation completed: recover it (Section 12.3);
 
    *  same fingerprint, operation reserved or pending: return the same
       continuation, or a retryable in-progress result;
@@ -1237,12 +1244,12 @@ Table of Contents
    *  different fingerprint: refuse with invalid_request.  The
       identifier was reused for a different operation.
 
-11.3.  Recovery is delivery
+12.3.  Recovery is delivery
 
    The Mission Issuer stores the operation's stable outcome, never its
    serialized response: the completion mode with its continuation
    handle, or the created Mission's identifier with its delivery-
-   artifact metadata.  A revalidated retry (Section 11.4) recovers that
+   artifact metadata.  A revalidated retry (Section 12.4) recovers that
    outcome:
 
    *  A pending deferred completion returns the same deferral: the same
@@ -1261,7 +1268,7 @@ Table of Contents
       recovered by minting a fresh delivery credential for the already-
       created successor, provided that successor remains active and the
       requester re-establishes the recorded authorization context
-      (Section 11.4).  The fresh credential is a delivery event with
+      (Section 12.4).  The fresh credential is a delivery event with
       ordinary issuance accounting; it MUST NOT repeat creation
       accounting: no second creation lifecycle event, no second evidence
       emission, no second count against any creation budget.
@@ -1270,7 +1277,7 @@ Table of Contents
    operation yields the Mission the operation already created, or the
    continuation it already opened, and nothing else.
 
-11.4.  Revalidation and lookup order
+12.4.  Revalidation and lookup order
 
    A matching creation_request_id never bypasses authentication or
    possession.  Before recovering anything, the Mission Issuer MUST
@@ -1283,9 +1290,9 @@ Table of Contents
    *  the same authorized acting agent;
 
    *  possession of the recorded sender-constraint identity, the stored
-      cnf of Section 11.1; and
+      cnf of Section 12.1; and
 
-   *  fingerprint compatibility (Section 11.2).
+   *  fingerprint compatibility (Section 12.2).
 
    No key-rotation recovery path is defined: a requester that can no
    longer prove possession of the recorded cnf does not recover the
@@ -1293,13 +1300,13 @@ Table of Contents
 
    The idempotency lookup occurs after client authentication and
    possession verification and before the predecessor lifecycle gate
-   (Section 5.1).  The order is load-bearing: the retry worth recovering
+   (Section 6.1).  The order is load-bearing: the retry worth recovering
    is exactly the one whose predecessor transitioned to superseded when
-   the first attempt succeeded (Section 7), so re-running the
+   the first attempt succeeded (Section 8), so re-running the
    predecessor-active gate first would refuse the very recovery this
    mechanism exists to serve.
 
-11.5.  Tombstone retention
+12.5.  Tombstone retention
 
    Retention has two tiers.  The full delivery-artifact record MAY be
    retained briefly.  The idempotency tombstone, the (client,
@@ -1313,19 +1320,19 @@ Table of Contents
    tombstone expires is outside the contract and is processed as a new
    operation.
 
-12.  Expansion Denial Reasons
+13.  Expansion Denial Reasons
 
    An adjudication that completes with the Approver declining, or with
    the Mission Issuer refusing on policy grounds, denies the expansion:
    no successor is created and the predecessor remains active and
    untouched.  Such a denial surfaces per the completion mode
-   (Section 5.2): as an OAuth error on the token exchange response
+   (Section 6.2): as an OAuth error on the token exchange response
    (typically invalid_request for a request the Mission Issuer will not
    derive a valid Authority Set from), as the deferred substrate's
    access_denied resolution on a deferred poll, or through the
    interactive approval's own decline path.  It MAY additionally carry
    one machine-readable reason code from the Mission Denial Reasons
-   registry (Section 17.2); this document defines four:
+   registry (Section 18.2); this document defines four:
 
    out_of_policy:  The Mission Issuer's governance policy refuses the
       requested authority class for this Mission, independent of who
@@ -1341,14 +1348,14 @@ Table of Contents
    nothing_to_expand:  The derived requested authority is a subset of
       the predecessor's own Effective Authority Set, so there is nothing
       to expand: ordinary token derivation under the predecessor already
-      serves the request (Section 5.1).  This refusal surfaces on the
+      serves the request (Section 6.1).  This refusal surfaces on the
       token exchange response itself, as invalid_request, and MUST carry
       this reason code; it is never answered with a token derived under
       the predecessor, so an expansion response is never ambiguously a
       non-successor.
 
    A companion profile registers an extension to this set in the Mission
-   Denial Reasons registry (Section 17.2) rather than defining it here
+   Denial Reasons registry (Section 18.2) rather than defining it here
    (for example, the experimental progressive authorization companion
    registers out_of_ceiling,
    [I-D.draft-mcguinness-oauth-mission-progressive], and the
@@ -1358,12 +1365,12 @@ Table of Contents
    an unrecognized reason code as a denial with no further semantics.
 
    A Mission Issuer MUST NOT use a reason code to disclose policy
-   boundaries beyond the adjudicated request (Section 15.7); omitting
+   boundaries beyond the adjudicated request (Section 16.7); omitting
    the reason code is always permitted, with one exception:
    nothing_to_expand MUST be carried on its refusal.  It reveals only
    that the requester already holds the requested authority, which the
    requester can observe from its own token, so the policy-probing
-   rationale for omission does not apply (Section 15.7); carrying it
+   rationale for omission does not apply (Section 16.7); carrying it
    keeps a non-widening refusal distinguishable from a policy denial.
    When present, a reason code is carried in a mission_denial_reason
    member: at the token endpoint, on the token exchange response and on
@@ -1385,13 +1392,13 @@ Table of Contents
    profile's error vocabulary directly: an expansion request whose
    predecessor cross-check does not match the subject_token-resolved
    Mission, or whose predecessor is not active, fails with invalid_grant
-   (Section 4.2, Section 4.3); an expansion Mission Intent the Mission
+   (Section 5.2, Section 5.3); an expansion Mission Intent the Mission
    Issuer cannot parse or cannot derive a valid Authority Set from fails
    with invalid_request or, where the issuance profile uses it,
    invalid_authorization_details ([RFC9396]), exactly as for any Mission
    creation.
 
-13.  Worked Example
+14.  Worked Example
 
    The Q3 reconciliation Mission msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
    authorizes reading invoices and posting journal entries under $500.
@@ -1445,7 +1452,7 @@ Table of Contents
    Authority Set it was actually approved for, not the predecessor's
    plus a delta.
 
-14.  Conformance
+15.  Conformance
 
    An implementation claims conformance to this document only in the
    Mission Issuer role, under one of two targets: as an expansion-
@@ -1454,7 +1461,7 @@ Table of Contents
 
    A Mission Issuer that records related_to without adjudicating
    expansion conforms to the *related_to correlation* target when it
-   meets every rule of Section 9: authenticated and authorized input,
+   meets every rule of Section 10: authenticated and authorized input,
    pre-approval resolution, creation-time atomic recording,
    immutability, consistent non-disclosing failure behavior, and no
    predecessor member.  Nothing else in this section applies to that
@@ -1464,41 +1471,41 @@ Table of Contents
 
    *  accept an [RFC8693] token exchange whose subject_token is the
       predecessor's Mission-bound access token, with subject_token_type
-      of access_token, treating it as an expansion (Section 4.1), and
+      of access_token, treating it as an expansion (Section 5.1), and
       reject a refresh token as the subject_token;
 
    *  resolve the predecessor from subject_token, verify possession
       against the token's own confirmation key, refuse a predecessor
       cross-check that does not match the resolved Mission or a
       predecessor that is not active with invalid_grant, and evaluate
-      the request in the verification order of Section 5.1 (Section 4.2,
-      Section 4.3);
+      the request in the verification order of Section 6.1 (Section 5.2,
+      Section 5.3);
 
    *  require a creation_request_id on every expansion exchange,
       refusing a missing one with invalid_request, and recover a
       repeated one under the reservation, recovery, revalidation, and
-      retention rules of Section 11;
+      retention rules of Section 12;
 
    *  refuse an exchange whose derived requested authority is a subset
       of the predecessor's own Effective Authority Set, carrying the
-      nothing_to_expand denial reason (Section 5.1, Section 12);
+      nothing_to_expand denial reason (Section 6.1, Section 13);
 
-   *  complete the expansion in one of the modes of Section 5.2,
+   *  complete the expansion in one of the modes of Section 6.2,
       obtaining new consent for the successor's authority through the
       deferred token response or the retained interactive approval
-      (Section 5) and enforcing the successor-expiry rule (Section 5.4);
+      (Section 6) and enforcing the successor-expiry rule (Section 6.4);
 
    *  record the predecessor member on the successor's mission claim and
-      Mission record (Section 6);
+      Mission record (Section 7);
 
    *  activate the successor and transition the predecessor to
       superseded atomically when the successor's authority is issued,
       leaving the predecessor active until then, re-verifying
-      predecessor state at completion (Section 5.3), and refuse further
-      derivation under a superseded Mission (Section 7); and
+      predecessor state at completion (Section 6.3), and refuse further
+      derivation under a superseded Mission (Section 8); and
 
    *  serialize concurrent expansions against the same predecessor with
-      the reconciliation semantics of Section 10.
+      the reconciliation semantics of Section 11.
 
    An expansion-capable Mission Issuer is also a conforming issuance-
    profile Mission Issuer ([I-D.draft-mcguinness-oauth-mission]); this
@@ -1506,15 +1513,15 @@ Table of Contents
    requires no new behavior: it enforces a successor's tokens exactly as
    it enforces any Mission-bound token, and treats the predecessor
    member, if it reads it at all, as audit context it MUST NOT use to
-   grant authority (Section 6).
+   grant authority (Section 7).
 
    Every expansion this document defines is adjudicated as a fresh
-   approval event (Section 5).  The experimental progressive
+   approval event (Section 6).  The experimental progressive
    authorization companion defines a further OPTIONAL capability,
    *Expansion with Progressive Authorization*, with its own conformance
    requirements ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
-15.  Security Considerations
+16.  Security Considerations
 
    Expansion's central guarantee is the issuance profile's, applied to
    the successor: a user's fresh approval bounds every token derived for
@@ -1522,7 +1529,7 @@ Table of Contents
    predecessor binding, the predecessor-to-successor handoff, and the
    lineage link.
 
-15.1.  Predecessor confusion
+16.1.  Predecessor confusion
 
    A client could attempt to expand a Mission it does not control, for
    example by naming another tenant's or subject's mission_id in the
@@ -1534,7 +1541,7 @@ Table of Contents
       presents, not from the predecessor value, and possession is proven
       against that token's own confirmation key; the Mission Issuer
       verifies that the resolved Mission matches the named one and
-      refuses a mismatch with invalid_grant (Section 4.2).  A client
+      refuses a mismatch with invalid_grant (Section 5.2).  A client
       that does not hold the predecessor's Mission-bound access token
       and its sender-constraint key cannot expand it.
 
@@ -1543,7 +1550,7 @@ Table of Contents
       Issuers; an expansion is adjudicated only at the predecessor's own
       issuer.
 
-15.2.  Possession proof
+16.2.  Possession proof
 
    A stolen or exfiltrated predecessor credential could be replayed to
    request an expansion.
@@ -1552,20 +1559,20 @@ Table of Contents
 
    *  The subject_token is a sender-constrained access token, not a
       reusable bearer refresh credential, and possession is proven
-      against the token's own confirmation key (Section 4.2): a bearer
+      against the token's own confirmation key (Section 5.2): a bearer
       copy of the token, without its DPoP key or mTLS certificate,
       cannot carry the proof.  A refresh token MUST NOT be accepted as
-      the subject_token (Section 4.1).
+      the subject_token (Section 5.1).
 
    *  The DPoP proof jti is single-use ([RFC9449]), so a captured proof
-      cannot be replayed (Section 5.1).
+      cannot be replayed (Section 6.1).
 
    *  The short-lived subject_token bounds the window in which even a
       key-holding attacker could act, and the possession proof is bound
       and recorded at request time so a legitimate deferred completion
-      is not gated on that lifetime (Section 5.3).
+      is not gated on that lifetime (Section 6.3).
 
-15.3.  Authority comes only from new consent
+16.3.  Authority comes only from new consent
 
    An expansion could be misused to widen authority without the Approver
    re-consenting, if a successor were allowed to inherit or extend
@@ -1575,16 +1582,16 @@ Table of Contents
 
    *  The successor's authority comes only from the Authority Set
       derived and consented at the expansion approval event; the
-      authority_hash commits exactly that set (Section 5).  The
+      authority_hash commits exactly that set (Section 6).  The
       predecessor member carries no authority and cannot widen the
-      successor (Section 6).
+      successor (Section 7).
 
-   *  The successor-expiry rule (Section 5.4) keeps the successor's
+   *  The successor-expiry rule (Section 6.4) keeps the successor's
       expires_at from silently exceeding the predecessor's, so expansion
       cannot launder a longer lifetime past the originally approved
       horizon.
 
-15.4.  Race against predecessor lifecycle
+16.4.  Race against predecessor lifecycle
 
    Between the moment a client decides to expand and the moment the
    successor activates, the predecessor may be revoked, expire, or be
@@ -1597,15 +1604,15 @@ Table of Contents
 
    *  The Mission Issuer verifies predecessor state and the no-existing-
       successor condition in the same atomic step that would activate
-      the successor (Section 5.3), and serializes the completions that
-      activate a successor of the same predecessor (Section 10).
+      the successor (Section 6.3), and serializes the completions that
+      activate a successor of the same predecessor (Section 11).
 
    *  A failed check refuses with invalid_grant and a reconciliation
       status that tells the client whether to discover an existing
       successor or stop, without leaking the predecessor's new internal
-      state beyond that (Section 10).
+      state beyond that (Section 11).
 
-15.5.  Duplicate creation
+16.5.  Duplicate creation
 
    To a client, a lost response is indistinguishable from a failed
    creation.  Without idempotency the natural retry after a network
@@ -1619,22 +1626,22 @@ Table of Contents
 
    *  The REQUIRED creation_request_id, with its durable reservation and
       uniqueness constraint, makes the retry recover the one committed
-      operation, concurrent retries included (Section 11, Section 11.2).
+      operation, concurrent retries included (Section 12, Section 12.2).
 
    *  The identifier is a deduplication handle, not a secret and not a
       credential: recovery re-establishes client authentication,
       possession of the recorded confirmation key, and the recorded
       authorization context, so the recovery path never weakens the
-      possession requirements of Section 4.2 (Section 11.4).
+      possession requirements of Section 5.2 (Section 12.4).
 
    *  Reservations are scoped to the authenticated client, so one
       client's identifiers cannot interfere with, or replay, another's.
 
    *  Storage is bounded: the tombstone is small, its horizon is
-      published (Section 11.5), and a Mission Issuer MAY cap outstanding
+      published (Section 12.5), and a Mission Issuer MAY cap outstanding
       reservations per client.
 
-15.6.  Expansion versus step-up
+16.6.  Expansion versus step-up
 
    Conflating expansion with authentication step-up [RFC9470] would
    route an authentication shortfall through an approval event the
@@ -1646,10 +1653,10 @@ Table of Contents
    Mitigation: a denial that is an authentication shortfall (acr, amr)
    is satisfied by step-up and MUST NOT be routed to expansion; a denial
    that is an authority shortfall is the one expansion addresses
-   (Section 3.3).  The component that classifies the denial
-   (Section 3.2) makes this distinction.
+   (Section 4.3).  The component that classifies the denial
+   (Section 4.2) makes this distinction.
 
-15.7.  Policy probing
+16.7.  Policy probing
 
    A client could submit many expansion requests for the same
    predecessor to map the Mission Issuer's policy boundary from the
@@ -1661,34 +1668,34 @@ Table of Contents
       predecessor per client.  The bound is unconditional: it caps both
       policy probing and the approval prompts a client can drive against
       an Approver (prompt fatigue).  Every expansion presentation is
-      recorded and counted toward anomaly detection (Section 4.2).
+      recorded and counted toward anomaly detection (Section 5.2).
 
    *  A denial reason MUST NOT disclose policy boundaries beyond the
-      adjudicated request (Section 12); a denial reports whether the
+      adjudicated request (Section 13); a denial reports whether the
       requested authority was approved, not the full surface of what
       would have been.
 
-15.8.  Audit linkage
+16.8.  Audit linkage
 
    The predecessor member makes the expansion chain observable: an
    authorized auditor can trace a successor back through its
    predecessors to the original Mission.  This is a core governance
    property of expansion.  An implementation that omits the member
    breaks the chain and defeats it; the member is therefore mandatory on
-   a successor (Section 6).
+   a successor (Section 7).
 
    General OAuth security guidance applies to the underlying credentials
    through the issuance profile.
 
-16.  Privacy Considerations
+17.  Privacy Considerations
 
    The privacy surface expansion adds over the issuance profile is the
    lineage link and the authority detail disclosed when a task is
    broadened.
 
-16.1.  Predecessor-chain correlation
+17.1.  Predecessor-chain correlation
 
-   The predecessor member that gives audit linkage (Section 15.8) is
+   The predecessor member that gives audit linkage (Section 16.8) is
    also a correlation surface: it links a successor to its predecessor
    across distinct approval events, so a party that can read the chain
    can correlate the evolving task over time, which is more than any
@@ -1699,7 +1706,7 @@ Table of Contents
    every credential audience.  The issuance profile's Mission Identifier
    correlation considerations apply to each Mission in the chain.
 
-16.2.  Related-work correlation
+17.2.  Related-work correlation
 
    related_to correlates independently approved tasks the way the
    predecessor chain correlates a succession, without the authority
@@ -1708,7 +1715,7 @@ Table of Contents
    and the issuance profile's Mission Identifier correlation
    considerations apply to both Missions it names.
 
-16.3.  Disclosure of the broadened task
+17.3.  Disclosure of the broadened task
 
    The expansion Mission Intent and the consent disclosure rendered at
    the expansion approval event reveal how the approved task is
@@ -1716,37 +1723,37 @@ Table of Contents
    the Approver and authorized governance consumers, consistent with the
    issuance profile's treatment of consent disclosure.
 
-17.  IANA Considerations
+18.  IANA Considerations
 
-   The predecessor member of the mission claim (Section 6) is not
+   The predecessor member of the mission claim (Section 7) is not
    registered in a dedicated registry: it is carried inside the already-
    registered mission claim, an open object for which the issuance
    profile establishes no member registry.  No new claim, parameter, or
    token-introspection registration is required for the lineage link.
 
    This document defines two sets of symbolic codes: the expansion
-   reconciliation status codes (Section 10), a closed set conveyed in
+   reconciliation status codes (Section 11), a closed set conveyed in
    mission_expansion_status, and the expansion denial reasons
-   (Section 12), conveyed in the shared mission_denial_reason member.
+   (Section 13), conveyed in the shared mission_denial_reason member.
    As members of the OAuth error response JSON body at the token
    endpoint, both are namespaced to their error responses and require no
    registration; their authorization error response parameter forms,
    used on the retained interactive path, are registered below.
 
    The reconciliation status codes remain specification-defined: the
-   closed set is small and fully specified in Section 10.  A future
+   closed set is small and fully specified in Section 11.  A future
    revision MAY establish a "Mission Expansion Reconciliation Status"
    registry for it with a Specification Required [RFC8126] policy; until
    then this document is the value space.
 
    The denial reasons are registry-backed: this document establishes the
-   Mission Denial Reasons registry (Section 17.2), the one registry-
+   Mission Denial Reasons registry (Section 18.2), the one registry-
    backed carrier for adjudication-denial values across the family,
    seeds it with the four values it defines, and each further document
    that defines a value on the carrier requests its own registration in
    it.
 
-17.1.  Mission Lifecycle States Registration
+18.1.  Mission Lifecycle States Registration
 
    This document requests registration of one state in the issuance
    profile's Mission Lifecycle States registry
@@ -1759,7 +1766,7 @@ Table of Contents
    +============+==========+==================+============+===========+
    | superseded | yes      | A predecessor    | IETF       | this      |
    |            |          | Mission that     |            | document, |
-   |            |          | a successor      |            | Section 7 |
+   |            |          | a successor      |            | Section 8 |
    |            |          | has replaced     |            |           |
    |            |          | through a        |            |           |
    |            |          | replacement      |            |           |
@@ -1770,11 +1777,11 @@ Table of Contents
 
                                   Table 2
 
-17.2.  Mission Denial Reasons Registry
+18.2.  Mission Denial Reasons Registry
 
    IANA is requested to create the "Mission Denial Reasons" registry.
    The registration policy is Specification Required [RFC8126].  A
-   Designated Expert reviews a submission for the discipline Section 12
+   Designated Expert reviews a submission for the discipline Section 13
    requires: a Value matching ^[a-z][a-z0-9_]*$ not already registered,
    a Semantics sentence precise enough that a consumer can tell the
    denial from every other registered value, and a Reference that fixes
@@ -1784,7 +1791,7 @@ Table of Contents
    suffices.
 
    The registry covers values of the mission_denial_reason parameter
-   only (Section 12); the Resource Server WWW-Authenticate
+   only (Section 13); the Resource Server WWW-Authenticate
    mission_denial attribute ([I-D.draft-mcguinness-oauth-mission],
    Section "Resource Server Enforcement") and AuthZEN decision-context
    denial reasons ([I-D.draft-mcguinness-mission-authzen]) are separate
@@ -1795,7 +1802,7 @@ Table of Contents
    semantics, unless the defining documents state the mapping.
 
    A consumer MUST treat an unrecognized value as a denial with no
-   further semantics (Section 12).  A Designated Expert MUST reject a
+   further semantics (Section 13).  A Designated Expert MUST reject a
    registration whose governing specification attempts to redefine this
    interaction rather than adding a value bound by it.
 
@@ -1811,7 +1818,7 @@ Table of Contents
    *  *Reference*: the specification defining the value.
 
    This document seeds the registry with the values it defines
-   (Section 12):
+   (Section 13):
 
    +==========================+================+============+=========+
    | Value                    | Semantics      | Change     |Reference|
@@ -1820,7 +1827,7 @@ Table of Contents
    | out_of_policy            | The Mission    | IETF       |this     |
    |                          | Issuer's       |            |document,|
    |                          | governance     |            |Section  |
-   |                          | policy refuses |            |12       |
+   |                          | policy refuses |            |13       |
    |                          | the requested  |            |         |
    |                          | authority      |            |         |
    |                          | class for this |            |         |
@@ -1831,13 +1838,13 @@ Table of Contents
    | approver_rejected        | The Approver   | IETF       |this     |
    |                          | declined the   |            |document,|
    |                          | expansion at   |            |Section  |
-   |                          | the consent    |            |12       |
+   |                          | the consent    |            |13       |
    |                          | step.          |            |         |
    +--------------------------+----------------+------------+---------+
    | out_of_scope_for_purpose | The requested  | IETF       |this     |
    |                          | authority is   |            |document,|
    |                          | incompatible   |            |Section  |
-   |                          | with the       |            |12       |
+   |                          | with the       |            |13       |
    |                          | Mission's      |            |         |
    |                          | recorded       |            |         |
    |                          | purpose.       |            |         |
@@ -1845,7 +1852,7 @@ Table of Contents
    | nothing_to_expand        | The derived    | IETF       |this     |
    |                          | requested      |            |document,|
    |                          | authority is a |            |Section  |
-   |                          | subset of the  |            |12       |
+   |                          | subset of the  |            |13       |
    |                          | predecessor's  |            |         |
    |                          | own Effective  |            |         |
    |                          | Authority Set, |            |         |
@@ -1883,7 +1890,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 4.1
+   *  Reference: this document, Section 5.1
 
    *  Name: mission_expansion_status
 
@@ -1891,7 +1898,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 10
+   *  Reference: this document, Section 11
 
    *  Name: mission_denial_reason
 
@@ -1899,7 +1906,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 12; also carried by the child
+   *  Reference: this document, Section 13; also carried by the child
       delegation profile
       ([I-D.draft-mcguinness-oauth-mission-child-delegation])
 
@@ -1909,7 +1916,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 4.1, Section 11; also carried by
+   *  Reference: this document, Section 5.1, Section 12; also carried by
       the child delegation profile
       ([I-D.draft-mcguinness-oauth-mission-child-delegation])
 

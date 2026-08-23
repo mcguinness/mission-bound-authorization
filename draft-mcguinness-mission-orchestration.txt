@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             22 August 2026
-Expires: 23 February 2027
+Intended status: Experimental                             23 August 2026
+Expires: 24 February 2027
 
 
                   Mission Orchestration and Unwinding
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -73,39 +73,40 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Terminology
-   3.  Scope
-     3.1.  Orchestration Profile
-   4.  Mission Substrate
-   5.  Reversibility Classes
-     5.1.  Action-Class Source
-   6.  Unwind Plan
-     6.1.  Unwind Plan Integrity
-     6.2.  Worked Unwind Plan
-   7.  State-Change Behavior
-     7.1.  Trigger Sources
-   8.  In-Flight Requests
-     8.1.  Cancellation Attempt
-   9.  Compensation
-     9.1.  Compensation Authority Basis
-     9.2.  Unwind Ordering and Partial Failure
-   10. Human Review
-   11. Orchestration Evidence
-     11.1.  Record Integrity and Retention
-     11.2.  Evidence Ordering
-   12. Relationship to Harness and Runtime Profiles
-   13. Conformance
-   14. Security Considerations
-     14.1.  Compensation Is Authority-Bearing
-     14.2.  Unknown Outcomes
-     14.3.  Reversibility Misclassification
-     14.4.  Compensation Loops
-     14.5.  Race With Runtime Permits
-   15. Privacy Considerations
-   16. IANA Considerations
-   17. References
-     17.1.  Normative References
-     17.2.  Informative References
+   2.  Status: An Experimental Profile
+   3.  Conventions and Terminology
+   4.  Scope
+     4.1.  Orchestration Profile
+   5.  Mission Substrate
+   6.  Reversibility Classes
+     6.1.  Action-Class Source
+   7.  Unwind Plan
+     7.1.  Unwind Plan Integrity
+     7.2.  Worked Unwind Plan
+   8.  State-Change Behavior
+     8.1.  Trigger Sources
+   9.  In-Flight Requests
+     9.1.  Cancellation Attempt
+   10. Compensation
+     10.1.  Compensation Authority Basis
+     10.2.  Unwind Ordering and Partial Failure
+   11. Human Review
+   12. Orchestration Evidence
+     12.1.  Record Integrity and Retention
+     12.2.  Evidence Ordering
+   13. Relationship to Harness and Runtime Profiles
+   14. Conformance
+   15. Security Considerations
+     15.1.  Compensation Is Authority-Bearing
+     15.2.  Unknown Outcomes
+     15.3.  Reversibility Misclassification
+     15.4.  Compensation Loops
+     15.5.  Race With Runtime Permits
+   16. Privacy Considerations
+   17. IANA Considerations
+   18. References
+     18.1.  Normative References
+     18.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -133,13 +134,25 @@ Table of Contents
    answers.  The harness answers "may this unit of work continue."  This
    document answers "how is in-flight state unwound once continuation is
    stopped."  The runtime profile still gates each action.  The checks
-   compose; none replaces the others (Section 12).
+   compose; none replaces the others (Section 13).
 
    This is a newer, experimental profile and is not required by any
    Mission Assurance Level
    ([I-D.draft-mcguinness-mission-architecture]).
 
-2.  Conventions and Terminology
+2.  Status: An Experimental Profile
+
+   Maturity: experimental.  Maintenance: lab-best-effort.  Adopt when:
+   In-flight work must unwind safely if the Mission ends mid-workflow.
+   Requires: Mission-Bound Runtime Enforcement; Mission Substrate
+   Requirements.  Also requires, conditionally: Mission-Aware Agent
+   Harnesses (when the harness profile is co-deployed); Mission Runtime
+   Evidence (when compensation links runtime evidence); Mission-Bound
+   Authorization for OAuth 2.0 (when the OAuth binding is the
+   substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status
+   polling is the trigger source).
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -170,7 +183,7 @@ Table of Contents
       without starting another consequential action and with all prior
       outcomes recorded.
 
-3.  Scope
+4.  Scope
 
    This document is experimental: adopt it for evaluation, not as a
    stable interface.  Safe unwinding of in-flight agent work is the
@@ -179,17 +192,17 @@ Table of Contents
 
    This document defines:
 
-   *  action reversibility classes (Section 5);
+   *  action reversibility classes (Section 6);
 
-   *  unwind plans (Section 6);
+   *  unwind plans (Section 7);
 
-   *  behavior on Mission state changes (Section 7);
+   *  behavior on Mission state changes (Section 8);
 
-   *  in-flight request handling (Section 8);
+   *  in-flight request handling (Section 9);
 
-   *  compensation and human review evidence (Section 11); and
+   *  compensation and human review evidence (Section 12); and
 
-   *  conformance for a Mission-aware orchestrator (Section 13).
+   *  conformance for a Mission-aware orchestrator (Section 14).
 
    This document does not define a workflow language, a compensation
    API, or a replacement for runtime PEP enforcement.  Its object shapes
@@ -197,14 +210,14 @@ Table of Contents
    records and proves, not how an orchestrator is internally structured.
 
    This profile applies to workflows whose steps derive from a reviewed
-   workflow definition or operation profile (Section 5.1, Section 6.1).
+   workflow definition or operation profile (Section 6.1, Section 7.1).
    A dynamically planned graph, whose steps a model composes at runtime,
    is out of scope for unwind plans: such work falls back to harness
    stop behavior ([I-D.draft-mcguinness-mission-harness]) and runtime
    gating ([I-D.draft-mcguinness-mission-runtime]), neither of which
    depends on a pre-committed plan.
 
-3.1.  Orchestration Profile
+4.1.  Orchestration Profile
 
    A deployment claiming this profile MUST publish or otherwise make
    available an orchestration profile for governed workflows.  The
@@ -232,7 +245,7 @@ Table of Contents
    OAuth Authorization Server metadata extension and does not alter
    token format.
 
-4.  Mission Substrate
+5.  Mission Substrate
 
    This profile is defined against the Mission model rather than against
    OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
@@ -245,8 +258,8 @@ Table of Contents
    identifier and issuer, the kernel's Mission Reference and Controller;
    and the lifecycle state space with its only-active-permits rule, the
    kernel's governance gate, which drives state-change behavior
-   (Section 7). unwind_plan_hash is a commitment mechanism this profile
-   defines for its own artifact (Section 6.1), not a kernel function:
+   (Section 8). unwind_plan_hash is a commitment mechanism this profile
+   defines for its own artifact (Section 7.1), not a kernel function:
    the kernel requires no particular integrity anchors.  The runtime
    enforcement evidence its records link
    ([I-D.draft-mcguinness-mission-runtime-evidence]) is a companion
@@ -267,7 +280,7 @@ Table of Contents
    |                  |             | work, and evaluates in-flight   |
    |                  |             | steps; post-completion behavior |
    |                  |             | runs only on an established     |
-   |                  |             | non-active state (Section 7)    |
+   |                  |             | non-active state (Section 8)    |
    +------------------+-------------+---------------------------------+
    | State-Observable | required    | The orchestration profile MUST  |
    |                  |             | define the source of Mission    |
@@ -276,7 +289,7 @@ Table of Contents
    |                  |             | action class, calibrated        |
    |                  |             | against the runtime profile's   |
    |                  |             | non-normative freshness table   |
-   |                  |             | (Section 3.1)                   |
+   |                  |             | (Section 4.1)                   |
    +------------------+-------------+---------------------------------+
    | Structured       | conditional | Consumed only for a successor's |
    | Authority        |             | or remedial Mission's own       |
@@ -289,7 +302,7 @@ Table of Contents
    |                  |             | Mission's committed steps, and  |
    |                  |             | a resource_policy basis lies    |
    |                  |             | outside Mission authority       |
-   |                  |             | entirely (Section 9.1)          |
+   |                  |             | entirely (Section 10.1)         |
    +------------------+-------------+---------------------------------+
    | Monotonic        | not         | The orchestrator derives no     |
    | Derivation       | consumed    | authority; a superseded         |
@@ -298,21 +311,21 @@ Table of Contents
    |                  |             | derivation from the successor's |
    |                  |             | grant, not by rebinding the     |
    |                  |             | predecessor's authority         |
-   |                  |             | (Section 7)                     |
+   |                  |             | (Section 8)                     |
    +------------------+-------------+---------------------------------+
    | Credential-Bound | not         | The runtime profile still       |
    |                  | consumed    | governs each consequential      |
    |                  |             | action at the last controllable |
-   |                  |             | boundary (Section 12); under a  |
+   |                  |             | boundary (Section 13); under a  |
    |                  |             | resource_policy compensation    |
    |                  |             | basis the orchestrator presents |
    |                  |             | no Mission-bound credential     |
-   |                  |             | (Section 9.1)                   |
+   |                  |             | (Section 10.1)                  |
    +------------------+-------------+---------------------------------+
    | Independently    | not         | The orchestrator establishes    |
    | Verifiable       | consumed    | Mission state through its       |
    |                  |             | declared trigger sources        |
-   |                  |             | (Section 7.1); it verifies no   |
+   |                  |             | (Section 8.1); it verifies no   |
    |                  |             | Mission property offline        |
    +------------------+-------------+---------------------------------+
    | Portable         | not         | This document produces          |
@@ -320,8 +333,8 @@ Table of Contents
    |                  |             | own, under the record integrity |
    |                  |             | and retention requirements      |
    |                  |             | imported from the runtime       |
-   |                  |             | profile (Section 11,            |
-   |                  |             | Section 11.1)                   |
+   |                  |             | profile (Section 12,            |
+   |                  |             | Section 12.1)                   |
    +------------------+-------------+---------------------------------+
 
           Table 1: Orchestration profile capability consumption
@@ -335,14 +348,14 @@ Table of Contents
    where a deployment compensates under a separate_mission basis, can
    host this profile, provided it also supplies a commitment mechanism
    for the unwind plan: this document's unwind_plan_hash, or a declared
-   adapter in the substrate's sense (Section 6.1).  The portability
+   adapter in the substrate's sense (Section 7.1).  The portability
    claim is capability-scoped rather than substrate-wide for the reason
    the substrate's Capability Confusion consideration states: every
    property this profile requires matches an explicit capability claim
    and its scope, never the generic statement that a binding supports
    Missions.
 
-5.  Reversibility Classes
+6.  Reversibility Classes
 
    Each consequential step in a governed workflow MUST be assigned one
    of these reversibility classes before execution:
@@ -400,7 +413,7 @@ Table of Contents
    the orchestrator at runtime to avoid review or compensation
    requirements.
 
-5.1.  Action-Class Source
+6.1.  Action-Class Source
 
    The orchestrator MUST derive reversibility class from a trusted
    source:
@@ -416,14 +429,14 @@ Table of Contents
    An agent plan, model output, or tool description MAY suggest a class.
    Such a suggestion MUST NOT be the sole authority for lowering class.
    If sources conflict, the orchestrator MUST use the class that is at
-   least the minimum the mapping table of Section 5 requires for the
+   least the minimum the mapping table of Section 6 requires for the
    operation's runtime action class.
 
-6.  Unwind Plan
+7.  Unwind Plan
 
    Before dispatching a consequential step, the orchestrator MUST have
    an unwind plan.  The plan is deployment documentation committed for
-   audit (Section 6.1), not a wire format; the members below are the
+   audit (Section 7.1), not a wire format; the members below are the
    information it MUST record, in whatever representation the deployment
    commits.  The plan has these members:
 
@@ -431,7 +444,7 @@ Table of Contents
 
    mission_id:  REQUIRED.  The Mission governing the step.
 
-   reversibility:  REQUIRED.  One of the classes in Section 5.
+   reversibility:  REQUIRED.  One of the classes in Section 6.
 
    pre_start_behavior:  REQUIRED.  Behavior when Mission state is non-
       active before the step starts.  One of suppress, pause,
@@ -466,9 +479,9 @@ Table of Contents
 
    The unwind plan does not authorize compensation by itself.  A
    compensation action that is consequential MUST itself be authorized
-   under one of the compensation authority bases (Section 9.1).
+   under one of the compensation authority bases (Section 10.1).
 
-6.1.  Unwind Plan Integrity
+7.1.  Unwind Plan Integrity
 
    The unwind_plan_hash over the step's unwind plan MUST be durably
    recorded strictly before the step's dispatch.  The hash is computed
@@ -482,7 +495,7 @@ Table of Contents
    The commit procedure is:
 
    1.  The orchestrator MUST commit the hash in an Orchestration
-       Evidence record durably written before dispatch (Section 11).  As
+       Evidence record durably written before dispatch (Section 12).  As
        an alternative, a deployment MAY commit it instead as a
        coordinated member of the step's Decision Evidence, through the
        runtime evidence companion's coordinated-extension seam
@@ -507,7 +520,7 @@ Table of Contents
 
    Every unwind-plan member MUST derive from a trusted source.  The
    compensation action, review queue, and safe point, like the
-   reversibility class (Section 5.1), MUST derive from a reviewed
+   reversibility class (Section 6.1), MUST derive from a reviewed
    workflow definition or operation profile.  Model output MUST NOT
    define them.
 
@@ -521,7 +534,7 @@ Table of Contents
    defining an unwind-plan member with nothing between proposal and
    dispatch.
 
-6.2.  Worked Unwind Plan
+7.2.  Worked Unwind Plan
 
    {
      "step_id": "post_journal_entry",
@@ -538,7 +551,7 @@ Table of Contents
    }
 
    Its unwind_plan_hash is computed with the integrity-anchor envelope
-   (Section 6.1): typ mission-unwind-plan, iss https://as.example.com,
+   (Section 7.1): typ mission-unwind-plan, iss https://as.example.com,
    and this plan as the envelope value.  The canonical-bytes block is
    the exact JCS [RFC8785] output, a single line of UTF-8 with no
    whitespace, shown wrapped only for layout; remove the layout line
@@ -557,9 +570,9 @@ Table of Contents
    unwind_plan_hash =
      sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c
 
-   The evidence example of Section 11 carries this value.
+   The evidence example of Section 12 carries this value.
 
-7.  State-Change Behavior
+8.  State-Change Behavior
 
    When an orchestrator learns that a Mission is no longer active, or
    cannot establish active state within the deployment's staleness
@@ -569,12 +582,12 @@ Table of Contents
 
    2.  suppress or pause queued work;
 
-   3.  evaluate every in-flight step under Section 8;
+   3.  evaluate every in-flight step under Section 9;
 
    4.  execute or schedule post-completion behavior for completed steps
        whose unwind plan requires it; and
 
-   5.  emit Orchestration Evidence under Section 11.
+   5.  emit Orchestration Evidence under Section 12.
 
    The two triggers differ in what they permit.  An established non-
    active state runs the full sequence.  Staleness alone, an active
@@ -614,7 +627,7 @@ Table of Contents
    successor carries its own Authority Set
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-7.1.  Trigger Sources
+8.1.  Trigger Sources
 
    An orchestrator can learn of Mission state change from:
 
@@ -637,7 +650,7 @@ Table of Contents
    the safer state until it can reconcile.  For example, a signed
    revoked signal overrides a stale local active cache.
 
-8.  In-Flight Requests
+9.  In-Flight Requests
 
    An in-flight step moves through these outcome classes:
 
@@ -666,7 +679,7 @@ Table of Contents
    administration, an unknown outcome MUST NOT be treated as success or
    as harmless suppression.
 
-8.1.  Cancellation Attempt
+9.1.  Cancellation Attempt
 
    When the unwind plan requires cancellation, the orchestrator MUST:
 
@@ -683,16 +696,16 @@ Table of Contents
    Cancellation acceptance by an upstream queue is not proof that an
    external action did not occur.
 
-9.  Compensation
+10.  Compensation
 
    Compensation is governed work.  After a Mission becomes non-active, a
    compensation action MUST NOT be performed by presenting that
    Mission's authority.  It proceeds only under one of the bases of
-   Section 9.1: resource_policy or separate_mission.  If neither
+   Section 10.1: resource_policy or separate_mission.  If neither
    applies, the orchestrator MUST escalate to human review.
 
    The compensation record is an Orchestration Evidence record
-   (Section 11) with orchestration_decision set to compensate.  In that
+   (Section 12) with orchestration_decision set to compensate.  In that
    case its authority_basis, linked_evidence, compensation_action, and
    compensation_outcome members are REQUIRED.  Through those members the
    record links:
@@ -711,7 +724,7 @@ Table of Contents
 
    *  the outcome (compensation_outcome).
 
-9.1.  Compensation Authority Basis
+10.1.  Compensation Authority Basis
 
    Compensation after a non-active transition MUST NOT proceed by
    presenting the terminated Mission's authority.  The authority basis
@@ -741,7 +754,7 @@ Table of Contents
    binding each compensation to the specific committed step it offsets
    rather than standing as an open-ended remedial power.
 
-9.2.  Unwind Ordering and Partial Failure
+10.2.  Unwind Ordering and Partial Failure
 
    When compensation spans dependent steps, the orchestrator MUST run
    the compensations in reverse dependency order unless the unwind plan
@@ -754,7 +767,7 @@ Table of Contents
    in Orchestration Evidence, so an auditor can see which effects were
    not offset.
 
-10.  Human Review
+11.  Human Review
 
    When the orchestrator routes a step to human review (human_review),
    the review concludes with one of three outcomes:
@@ -770,7 +783,7 @@ Table of Contents
    MUST record the outcome and its authority basis in Orchestration
    Evidence.
 
-11.  Orchestration Evidence
+12.  Orchestration Evidence
 
    An Orchestration Evidence record is a JSON object [RFC8259] with
    these members:
@@ -794,7 +807,7 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-harness]): status, signal,
       runtime_decision, harness, operator, or a deployment-defined
       source.  This profile does not define its own; a trigger source
-      from Section 7.1 maps to the corresponding value (a harness stop
+      from Section 8.1 maps to the corresponding value (a harness stop
       decision to harness, an operator action to operator).
 
    orchestration_decision:  REQUIRED.  One of suppress, pause, cancel,
@@ -826,11 +839,11 @@ Table of Contents
       where the hash was committed through Decision Evidence instead, on
       the step's first Orchestration Evidence record.  The integrity
       anchor over the step's unwind plan, committed durably before
-      dispatch (Section 6.1).
+      dispatch (Section 7.1).
 
    authority_basis:  REQUIRED when orchestration_decision is compensate;
       otherwise absent.  One of resource_policy or separate_mission
-      (Section 9.1).
+      (Section 10.1).
 
    compensation_action:  REQUIRED when orchestration_decision is
       compensate.  The deployment-defined compensation action reference.
@@ -859,7 +872,7 @@ Table of Contents
 
       This document registers no media type; its two local-use type
       identifiers are mission-orchestration-evidence, which typ carries
-      here, and mission-unwind-plan (Section 6.1).
+      here, and mission-unwind-plan (Section 7.1).
 
    Example:
 
@@ -886,7 +899,7 @@ Table of Contents
    A later record for the same step carries the compensate decision.
    Review confirmed that the posting committed before the Mission was
    revoked; a pre-provisioned remedial Mission that is active authorizes
-   the reversing entry (Section 9.1).  The record links the review
+   the reversing entry (Section 10.1).  The record links the review
    record above and the original runtime enforcement evidence, and omits
    unwind_plan_hash because it is not the step's first record:
 
@@ -915,7 +928,7 @@ Table of Contents
      "occurred_at": "2026-11-02T09:03:00Z"
    }
 
-11.1.  Record Integrity and Retention
+12.1.  Record Integrity and Retention
 
    Orchestration Evidence records are subject to the record integrity
    and retention requirements of the runtime profile
@@ -929,7 +942,7 @@ Table of Contents
 
    *  a retention window no shorter than the Mission's audit horizon.
 
-11.2.  Evidence Ordering
+12.2.  Evidence Ordering
 
    An orchestrator MUST include a deployment-defined sequence number or
    otherwise order evidence records when multiple steps are affected by
@@ -938,12 +951,12 @@ Table of Contents
    Ordering lets an auditor reconstruct whether the orchestrator stopped
    before or after a given step committed.
 
-12.  Relationship to Harness and Runtime Profiles
+13.  Relationship to Harness and Runtime Profiles
 
    The two execution profiles share, rather than duplicate, their common
    machinery: the state_source value space is defined once by the
    Harness profile ([I-D.draft-mcguinness-mission-harness]) and reused
-   here (Section 11), and the Orchestration Evidence mission descriptor
+   here (Section 12), and the Orchestration Evidence mission descriptor
    is the same shape as the Harness Evidence descriptor.  A deployment
    that needs both records emits each at its own decision point; neither
    subsumes the other.  The runtime profile
@@ -971,18 +984,18 @@ Table of Contents
       hold per the harness resume algorithm
       ([I-D.draft-mcguinness-mission-harness]).
 
-13.  Conformance
+14.  Conformance
 
    A conforming Mission-aware orchestrator MUST:
 
    *  assign a reversibility class to each consequential step;
 
    *  record an unwind plan, and durably commit its hash strictly before
-      dispatch, failing closed if the commit fails (Section 6.1);
+      dispatch, failing closed if the commit fails (Section 7.1);
 
    *  stop new governed work when Mission state is non-active or stale;
 
-   *  classify in-flight steps under Section 8;
+   *  classify in-flight steps under Section 9;
 
    *  apply post-completion behavior for committed or unknown outcomes;
 
@@ -994,45 +1007,45 @@ Table of Contents
    A deployment MAY claim this profile for only some workflows.  It MUST
    identify workflows and paths outside the claim.
 
-14.  Security Considerations
+15.  Security Considerations
 
-14.1.  Compensation Is Authority-Bearing
+15.1.  Compensation Is Authority-Bearing
 
    Compensation can itself be consequential.  A deployment MUST NOT
    perform compensation by presenting a terminated Mission's authority.
    It acts only under resource policy or a separate active Mission
-   (Section 9.1).  Otherwise termination could become a path to
+   (Section 10.1).  Otherwise termination could become a path to
    unauthorized remedial actions.
 
-14.2.  Unknown Outcomes
+15.2.  Unknown Outcomes
 
    Distributed systems often cannot prove whether an in-flight action
    committed.  Treating unknown as harmless creates audit gaps.  This
    profile requires unknown outcomes for high-risk classes to be
    reviewed or handled under stricter policy.
 
-14.3.  Reversibility Misclassification
+15.3.  Reversibility Misclassification
 
    An orchestrator can evade review by classifying a step as reversible
    when it is not.  Resource policy and operation profiles SHOULD define
    minimum reversibility classes for protected operations.
    Orchestrators MUST NOT lower them.
 
-14.4.  Compensation Loops
+15.4.  Compensation Loops
 
    Compensation actions can fail and trigger further compensation.  A
    deployment SHOULD cap compensation chains and escalate to human
    review when repeated compensation would create additional external
    effects.
 
-14.5.  Race With Runtime Permits
+15.5.  Race With Runtime Permits
 
    A runtime permit obtained before revocation might still be presented
    after the orchestrator learns the Mission is non-active.  The
    orchestrator MUST stop dispatching such work.  The runtime PEP MUST
    still enforce its own permit freshness and Mission-state checks.
 
-15.  Privacy Considerations
+16.  Privacy Considerations
 
    Orchestration Evidence can expose workflow structure, business
    milestones, resource names, and failure conditions.  Deployments
@@ -1040,13 +1053,13 @@ Table of Contents
    need to know and avoid recording raw user content when identifiers
    are sufficient.
 
-16.  IANA Considerations
+17.  IANA Considerations
 
    This document makes no IANA request.
 
-17.  References
+18.  References
 
-17.1.  Normative References
+18.1.  Normative References
 
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
@@ -1105,7 +1118,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-17.2.  Informative References
+18.2.  Informative References
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

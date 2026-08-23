@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          22 August 2026
-Expires: 23 February 2027
+Intended status: Standards Track                          23 August 2026
+Expires: 24 February 2027
 
 
                           AAuth Mission Expiry
@@ -48,7 +48,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 February 2027.
+   This Internet-Draft will expire on 24 February 2027.
 
 Copyright Notice
 
@@ -67,15 +67,16 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Terminology
-   3.  The expires_at Member
-   4.  Enforcement
-   5.  Proposal and Approval
-   6.  Relationship to Other Specifications
-   7.  Conformance
-   8.  Security Considerations
-   9.  Privacy Considerations
-   10. IANA Considerations
+   2.  Status: An Optional Profile
+   3.  Conventions and Terminology
+   4.  The expires_at Member
+   5.  Enforcement
+   6.  Proposal and Approval
+   7.  Relationship to Other Specifications
+   8.  Conformance
+   9.  Security Considerations
+   10. Privacy Considerations
+   11. IANA Considerations
    Acknowledgments
    References
      Normative References
@@ -89,7 +90,7 @@ Table of Contents
    current time to it and treat a mission past it as terminated, and no
    token carrying mission_s256 may outlive it
    [I-D.draft-hardt-oauth-aauth-protocol].  This document profiles the
-   member with the deltas in Section 3 and Section 4.
+   member with the deltas in Section 4 and Section 5.
 
    An AAuth mission is approved once and then relied on for as long as
    it stays active.  Absent an expiry, an approval remains usable
@@ -98,7 +99,14 @@ Table of Contents
    the Person approves, it is covered by the s256 content address, and
    it cannot be changed in place.
 
-2.  Conventions and Terminology
+2.  Status: An Optional Profile
+
+   Maturity: stable.  Maintenance: frozen-until-upstream-release.  Adopt
+   when: A citable profile of AAuth's native expires_at is needed (base
+   AAuth enforces it regardless; the profile's own conformance line is
+   OPTIONAL).  Requires: nothing beyond its listed references.
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -111,7 +119,7 @@ Table of Contents
    proposal, and the {approver, s256} mission reference as defined by
    [I-D.draft-hardt-oauth-aauth-protocol].
 
-3.  The expires_at Member
+4.  The expires_at Member
 
    AAuth defines expires_at as an OPTIONAL member of the approved
    mission blob [I-D.draft-hardt-oauth-aauth-protocol].  This profile
@@ -128,7 +136,7 @@ Table of Contents
 
    A mission whose approved blob has no expires_at member has no expiry.
 
-4.  Enforcement
+5.  Enforcement
 
    AAuth requires every PS decision path to compare the current time to
    expires_at and to treat a mission past it as terminated, and it caps
@@ -139,7 +147,7 @@ Table of Contents
    reference, so that status and logging reflect the transition without
    delay.
 
-5.  Proposal and Approval
+6.  Proposal and Approval
 
    A mission proposal MAY include expires_at.  The PS or the Person MAY
    add or change the value during clarification, before approval.  The
@@ -151,7 +159,7 @@ Table of Contents
    the member's absence according to its policy.  A proposal is not a
    guarantee that the approved blob will carry the bound.
 
-6.  Relationship to Other Specifications
+7.  Relationship to Other Specifications
 
    The Mission Context Binding for AAuth
    [I-D.draft-mcguinness-mission-aauth] requires AAuth's native
@@ -166,23 +174,23 @@ Table of Contents
    automatic expiry with explicit termination as that document
    specifies.
 
-7.  Conformance
+8.  Conformance
 
    An *AAuth Person Server* conforms to this profile when it:
 
    1.  requires expires_at, once present in the approved mission blob,
        to be an RFC 3339 date-time naming an instant later than
-       approved_at (Section 3); and
+       approved_at (Section 4); and
 
    2.  documents its clock synchronization, comparison precision, and
-       tolerated clock skew (Section 8).
+       tolerated clock skew (Section 9).
 
    Prompt termination at the deadline itself, rather than at the next
-   request under the reference, remains a SHOULD (Section 4).  Support
+   request under the reference, remains a SHOULD (Section 5).  Support
    for expires_at remains OPTIONAL, following the approved blob member
    it profiles.
 
-8.  Security Considerations
+9.  Security Considerations
 
    Clock synchronization, comparison precision, and tolerated clock skew
    MUST be documented by the deployment.  An Agent SHOULD NOT schedule
@@ -193,20 +201,20 @@ Table of Contents
    termination mechanism.
 
    Already-issued Auth Tokens are the residual after expiry.  The
-   issuance bound in Section 4 keeps that residual inside the mission's
+   issuance bound in Section 5 keeps that residual inside the mission's
    lifetime: no token issued under the mission outlives expires_at.
 
    Immutability defeats lifetime extension.  An attacker who controls an
    Agent cannot stretch an approved mission's lifetime; a longer
    lifetime requires a new proposal and a new approval by the Person.
 
-9.  Privacy Considerations
+10.  Privacy Considerations
 
    expires_at is part of the private mission blob and is not disclosed
    to Resources or Access Servers.  It adds no correlation surface
    beyond the blob itself.
 
-10.  IANA Considerations
+11.  IANA Considerations
 
    This document requests no IANA registrations.  The AAuth Protocol
    does not currently establish a registry for approved mission-blob
