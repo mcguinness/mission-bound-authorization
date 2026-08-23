@@ -513,11 +513,17 @@ reproducible, not anchored: like the drawdown policy body it bounds,
 it is not folded into `ceiling_hash` ({{progressive-authorization}}),
 so a change to the published cadence is issuer-record trust, not
 detectable from the Mission's own anchors. To stay reproducible in
-audit, the cadence in force MUST be a separately versioned
-declaration retained alongside the drawdown policy, per the issuance
-profile's own rule that a mutable, unversioned value MUST NOT serve
-this role, and its version MUST be recorded with every
-policy-adjudicated drawdown ({{audit-linkage}}).
+audit without a new schema member, the cadence is part of the
+drawdown policy's own versioned content: a deployment's drawdown
+policy document MUST state the cadence effective under a given
+version, identified by the `policy_id` and `policy_version` the
+`ceiling_drawdown` activation already carries
+({{progressive-authorization}}), per the issuance profile's own rule
+that a mutable, unversioned value MUST NOT serve this role. An
+auditor recovers the cadence that governed a given drawdown by
+resolving the retained drawdown policy document at the
+`policy_version` that drawdown's `approval_basis` already records,
+exactly as it resolves the drawdown logic itself.
 
 The review approval is an ordinary expansion approval that
 re-consents, or narrows, the ceiling. Its consent disclosure MUST
@@ -595,11 +601,12 @@ authorized auditor exactly as for human-approved expansions
 The record MUST carry the chain's cumulative drawdown count, so the
 rate bound of {{in-ceiling-expansion}} is auditable from the records
 alone. A deployment MUST retain the consented `authority_ceiling`,
-`drawdown_policy`, `ceiling_hash`, and the ceiling review cadence
-version in force at that drawdown ({{ceiling-review}}) with every
-Mission record in the chain for the audit horizon, so an auditor can
-verify every drawdown was within the consented envelope and against
-the cadence that applied when it was adjudicated.
+`drawdown_policy`, and `ceiling_hash` with every Mission record in
+the chain for the audit horizon, so an auditor can verify every
+drawdown was within the consented envelope and, by resolving the
+retained drawdown policy document at the `policy_version` each
+drawdown's `ceiling_drawdown` approval basis already records, against
+the cadence that applied when it was adjudicated ({{ceiling-review}}).
 
 Where a drawdown is triggered by the agent encountering a resource
 not named at approval, and the resource self-declares its operations
@@ -645,9 +652,11 @@ Authorization** is a conforming expansion-capable Mission Issuer
   record each as an approval event carrying the chain's cumulative
   drawdown count ({{in-ceiling-expansion}}, {{audit-linkage}}); and
 - bound each chain by the published ceiling review cadence, refusing
-  policy adjudication past it, recording the cadence version applied at
-  each drawdown, and rendering the chain's record since the prior
-  review in the review approval's disclosure ({{ceiling-review}}).
+  policy adjudication past it, and rendering the chain's record since
+  the prior review in the review approval's disclosure
+  ({{ceiling-review}}); state the cadence effective under each
+  drawdown policy version in that policy's own versioned content
+  ({{ceiling-review}}).
 
 # Security Considerations {#security-considerations}
 
@@ -701,6 +710,22 @@ defined by this profile, and the `mission-authority-ceiling` anchor
 convention, none of which require registration.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+-01
+
+- Mirrored the OAuth binding's Mission Template uncommitted-policy-body
+  pattern onto `drawdown_policy`: a SHOULD to additionally commit the
+  policy body under an integrity anchor or disclose it under Consent
+  Evidence ({{progressive-authorization}}). Reframed the ceiling
+  review cadence as a recency ceiling on the `ceiling_drawdown`
+  approval basis's `approved_at`, reproducible from the drawdown
+  policy's own versioned content identified by the existing
+  `policy_id`/`policy_version` rather than a new commitment or a new,
+  separately versioned member ({{ceiling-review}}, {{audit-linkage}}).
 
 # Acknowledgments
 {:numbered="false"}

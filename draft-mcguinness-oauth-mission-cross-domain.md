@@ -1201,7 +1201,7 @@ of the re-mint, rather than trust in the minting domain's assertion
 of them, MAY require issuer-signed hop receipts
 ({{I-D.draft-mcguinness-oauth-actor-receipts}}).
 
-## Per-Domain Delegation Depth
+## Per-Domain Delegation Depth {#per-domain-delegation-depth}
 
 Because the cross-domain grant carries no `act` chain
 ({{cross-domain-grant}}), a Resource AS that issues delegated tokens of
@@ -1532,3 +1532,19 @@ inside the partner domain. The lifetime shrinks at every hop and never
 exceeds the Mission's `expires_at`. The ID-JAG carried identity
 *between* trust domains; the Transaction Token carried context
 *within* one. The Mission bound both.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+-01
+
+- Reshaped Per-Domain Delegation Depth's disclosure from a flat
+  SHOULD to a conditional, interface-addressed MUST, mirroring the
+  child delegation profile's `max_derivations` disclosure pattern,
+  and corrected the composed-bound arithmetic: the disclosed bound is
+  the sum of each distinct Resource AS domain's applicable
+  `max_depth` (or a conservative per-domain maximum), not one
+  per-domain `max_depth` times a flat domain count, and domains are
+  counted by distinct Resource AS from the resource-to-AS mapping,
+  never by resource count ({{pre-established-trust}}).

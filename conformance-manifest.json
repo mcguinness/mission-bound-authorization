@@ -26,6 +26,10 @@
     "revision": "fed8428db1723cbbf5e60aebbcef29e1de988e57",
     "content_sha256": "48b31d93ea5231a67f57a0aba8349e6bcb9feb9d863357b2ea5522978c86faf7"
    },
+   "draft-mcguinness-oauth-mission-cross-domain.md": {
+    "revision": "0000000000000000000000000000000000000000",
+    "content_sha256": "39763855736c359502b005a33ef1c912f7d4025807bf9435fadd0057252c56e0"
+   },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
     "content_sha256": "8780173e8411381f3693903b731b2f7cab19e21aaaa73cf07c19943a92927723"
@@ -49,6 +53,10 @@
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "af16a065fa5eb5df906f77800aa55550c2a8f9d2",
     "content_sha256": "b2fec9ce20a5b1d017d1d0f60cb1571ae0fea5f9c43b5008baa6b6377499a7b6"
+   },
+   "draft-mcguinness-oauth-mission-progressive.md": {
+    "revision": "0000000000000000000000000000000000000000",
+    "content_sha256": "b42364436c101248738549eb7a351847465e5b58c6529fe262db30253c5f85b7"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "b6218ccbe45b28597f72929cb1763457fca18182",
@@ -147,7 +155,9 @@
    "mas.enterprise",
    "core.standing-consent",
    "core.standing-consent-recency",
-   "template.dispatch"
+   "template.dispatch",
+   "progressive.ceiling-drawdown",
+   "cross-domain.projection"
   ]
  },
  "profiles": [
@@ -13771,7 +13781,7 @@
    "tests": [
     {
      "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (\u00a7 in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -13851,40 +13861,6 @@
    "notes": "Split from the single #670 row per PR #683 review 1. Unlike its sibling rows, this claim is a restraint (an absence of action) fully decidable from the pure function alone, with no missing integration piece, so coverage is 'tested' rather than 'partial'."
   },
   {
-   "id": "orchestration.authority-narrowing.evidence-step-id-required",
-   "spec": "draft-mcguinness-mission-orchestration.md",
-   "anchor": "orchestration-evidence",
-   "text": "OPTIONAL, and REQUIRED when the record reports a re-evaluation under",
-   "role": "orchestrator",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "signals.events"
-   },
-   "profiles": [],
-   "surface": "evidence-emission",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "an Orchestration Evidence record reporting a re-evaluation under the authority-narrowing trigger carries step_id, naming the affected step, even though step_id is otherwise OPTIONAL",
-    "local": "buildAuthorityNarrowingEvidence (src/packages/orchestration/src/evidence.ts) narrows BuildOrchestrationEvidenceInput's optional step_id to a required string at the type level and throws at runtime when it is empty, delegating to buildOrchestrationEvidence for every other rule (compensate-member enforcement, envelope signing) unchanged."
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > evidence: step_id is REQUIRED on an authority-narrowing record (fail closed when absent)",
-     "level": "unit",
-     "surface": "evidence-emission"
-    },
-    {
-     "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > evidence: a valid authority-narrowing record carries step_id, state_source signal, and mission_state active",
-     "level": "unit",
-     "surface": "evidence-emission"
-    }
-   ],
-   "notes": "Split from the single #670 row per PR #683 review 1, which named conditional step_id as one of the observable facets the original row omitted.",
    "id": "template.dispatch.idempotent-retry-returns-committed",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
@@ -13952,6 +13928,69 @@
     "normative": "a completed Dispatch operation is recovered on retry even after the Mission Issuer retires the template version that created it, since retirement stops new dispatch but does not terminate an already-dispatched Mission"
    },
    "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "progressive.drawdown-policy.body-commitment-should",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-authorization",
+   "text": "A deployment SHOULD additionally commit the drawdown policy body under an integrity anchor, computed the way the issuance profile computes `authority_hash`",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the committed ceiling_hash covers only the drawdown_policy identifier, not its body, unless the deployment additionally anchors the body under an integrity anchor or discloses it under Consent Evidence"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "progressive.ceiling-review.cadence-versioned-with-policy",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "a deployment's drawdown policy document MUST state the cadence effective under a given version, identified by the `policy_id` and `policy_version` the `ceiling_drawdown` activation already carries",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment's drawdown policy document states, for every policy_version it defines, the ceiling review cadence effective under that version, so an auditor can resolve the cadence in force at a past drawdown from the retained policy_id/policy_version alone"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "cross-domain.delegation-depth.composed-bound-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "per-domain-delegation-depth",
+   "text": "Where an approval interface displays a per-domain `max_depth` as a limit on delegation depth, that interface MUST also disclose the composed bound reachable across every distinct Resource AS domain a projected entry may reach",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval interface that renders a per-domain max_depth as a delegation-depth limit also discloses the composed bound across every distinct Resource AS domain the entry may be projected to (a per-domain sum or conservative maximum, counted by distinct Resource AS, never by resource count), not the per-domain max_depth alone"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": []
   }
