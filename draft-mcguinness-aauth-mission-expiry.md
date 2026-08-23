@@ -81,7 +81,15 @@ indefinitely through a stream of fresh short-lived tokens. Because
 the Person approves, it is covered by the `s256` content address, and
 it cannot be changed in place.
 
-# Conventions and Terminology
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: frozen-until-upstream-release.
+Adopt when: A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL).
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

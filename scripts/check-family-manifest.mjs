@@ -68,6 +68,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
 import { maturityDisplay, validateDraftsIndex, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
@@ -789,6 +790,87 @@ function main() {
       fail(
         "external-normative",
         `DEPENDENCIES.md: the external-normative-ids block is stale; regenerate it to:\n${expected}`,
+      );
+    }
+  }
+
+  // (r) Family Status skeleton, manifest-synchronized (#643 review): every
+  // draft except the published core carries a top-level "# Status" section
+  // holding a generated family-status block whose content exact-matches the
+  // manifest's adoption fields (maturity, maintenance, pull trigger,
+  // adoption_requires, conditional requires_when). Bespoke prose lives
+  // outside the block; the block cannot drift from the manifest.
+  {
+    const bySlug = new Map(drafts.map((d) => [d.slug, d]));
+    for (const d of drafts) {
+      if (d.file === "draft-mcguinness-oauth-mission.md") continue;
+      const text = readFile(path.join(ROOT, d.file), d.file);
+      const head = text.match(/^# Status[^\n]*$/m);
+      if (!head) {
+        fail("doc-status", `${d.file}: missing the top-level "# Status" section (family skeleton)`);
+        continue;
+      }
+      const start = text.indexOf(head[0]) + head[0].length;
+      const rest = text.slice(start);
+      const nextHead = rest.search(/^# [^#\n]/m);
+      const section = nextHead === -1 ? rest : rest.slice(0, nextHead);
+      const lines = [
+        "<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->",
+        `Maturity: ${d.maturity}. Maintenance: ${d.maintenance}.`,
+        `Adopt when: ${d.pull_when}`,
+      ];
+      const ar = d.adoption_requires || [];
+      lines.push(ar.length
+        ? `Requires: ${ar.map((s) => bySlug.get(s).title).join("; ")}.`
+        : "Requires: nothing beyond its listed references.");
+      const rw = d.requires_when || [];
+      if (rw.length) {
+        lines.push(`Also requires, conditionally: ${rw.map((e) => e.requires.map((s) => bySlug.get(s).title).join(" and ") + " (when " + e.when + ")").join("; ")}.`);
+      }
+      lines.push("<!-- family-status: END -->");
+      const expected = lines.join("\n");
+      const bm = section.match(/<!-- family-status: BEGIN[\s\S]*?END -->/);
+      if (!bm) {
+        fail("doc-status", `${d.file}: family-status block missing from the Status section`);
+      } else if (bm[0] !== expected) {
+        fail("doc-status", `${d.file}: family-status block does not match the manifest; regenerate it to:\n${expected}`);
+      }
+    }
+  }
+
+  // (s) Conventions anchor stability: every Conventions heading carries an
+  // explicit kramdown anchor, so cross-document links never depend on a
+  // generated slug. Uniform slugs are NOT required (published fragments on
+  // pre-existing anchors stay stable); presence is.
+  for (const f of fs.readdirSync(ROOT)) {
+    if (!f.startsWith("draft-mcguinness-") || !f.endsWith(".md")) continue;
+    const text = readFile(path.join(ROOT, f), f);
+    for (const line of text.split("\n")) {
+      if (/^#{1,2} Conventions and (Terminology|Definitions)\b/.test(line) && !line.includes("{#")) {
+        fail("conventions-anchor", `${f}: Conventions heading lacks an explicit anchor: ${line}`);
+      }
+    }
+  }
+
+  // (t) Mapping Assessment change-coupling tripwire (#643 review): the
+  // substrate's assessment of the OAuth binding pins the binding bytes it
+  // was last verified against, hashed HERE from the source file directly
+  // (never read from another pinned surface, so mechanically re-pinning a
+  // manifest cannot satisfy it by accident). It forces the marker to move
+  // in the same change that moves the binding, prompting a re-read of the
+  // assessment; it is a coupling device, not proof the re-read happened.
+  {
+    const sub = readFile(path.join(ROOT, "draft-mcguinness-mission-substrate.md"), "draft-mcguinness-mission-substrate.md");
+    const mm = sub.match(/<!-- assessed-oauth-digest: ([0-9a-f]{16}) -->/);
+    const srcDigest = createHash("sha256")
+      .update(fs.readFileSync(path.join(ROOT, "draft-mcguinness-oauth-mission.md")))
+      .digest("hex");
+    if (!mm) {
+      fail("assessment-pin", "draft-mcguinness-mission-substrate.md: assessed-oauth-digest marker missing from the Mapping Assessment section");
+    } else if (mm[1] !== srcDigest.slice(0, 16)) {
+      fail(
+        "assessment-pin",
+        `assessed-oauth-digest ${mm[1]} != sha256(draft-mcguinness-oauth-mission.md) ${srcDigest.slice(0, 16)}; the binding changed: re-read the Mapping Assessment, then re-pin the marker`,
       );
     }
   }

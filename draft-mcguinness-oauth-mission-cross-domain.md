@@ -237,7 +237,13 @@ The capability is orthogonal to the family's Mission Assurance Levels
 where a Mission is honored, not the strength at which either domain
 enforces it. Each trust domain runs at its own level.
 
-# Conventions and Terminology
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).
+Requires: Mission-Bound Authorization for OAuth 2.0.
+<!-- family-status: END -->
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

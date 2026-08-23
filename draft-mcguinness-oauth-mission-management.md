@@ -170,6 +170,15 @@ does not restate the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} or the status profile; a
 deployment that does not adopt it is unaffected.
 
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: An operator needs fleet enumeration and bulk lifecycle across many Missions.
+Requires: Mission Status and Lifecycle for OAuth 2.0.
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Authority Server (when the standalone MAS is the binding); Mission Child Delegation for OAuth 2.0 (when Child Mission lineage filters are used).
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

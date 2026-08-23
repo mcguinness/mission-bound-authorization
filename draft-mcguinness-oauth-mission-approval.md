@@ -157,6 +157,13 @@ evaluation rather than as a stable interface. This document is
 Standards Track despite that posture because it tracks its substrate
 and stabilizes with it.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Approval is asynchronous: a human review queue, not an immediate decision.
+Requires: Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Approval Governance (when an Approval Governance Record is recorded).
+<!-- family-status: END -->
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and on the

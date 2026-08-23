@@ -263,6 +263,12 @@ evaluation rather than as a stable interface. This document is
 Experimental for that reason, tracking its substrate and crossing to
 the stable tier by reclassification when the substrate does.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: active-experimental.
+Adopt when: One action needs a fresh, portable, cross-org authorization with no live callback.
+Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

@@ -496,7 +496,7 @@
    ],
    "requires_when": [
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -555,7 +555,7 @@
    ],
    "requires_when": [
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -729,7 +729,7 @@
      ]
     },
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -780,7 +780,7 @@
    ],
    "requires_when": [
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -892,7 +892,7 @@
      ]
     },
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -984,7 +984,7 @@
    ],
    "requires_when": [
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -1136,7 +1136,7 @@
      ]
     },
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -1716,7 +1716,7 @@
    ],
    "requires_when": [
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
@@ -1812,7 +1812,7 @@
    ],
    "requires_when": [
     {
-     "when": "the OAuth core is the binding",
+     "when": "the OAuth binding is the substrate",
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]

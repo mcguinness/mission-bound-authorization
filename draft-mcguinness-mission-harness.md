@@ -200,6 +200,15 @@ boundary the engine already has, never a copy of Mission state into
 engine state or of engine state into the Mission record
 ({{engine-mapping}}).
 
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: A harness holds session state across restarts and must stop work when the Mission dies.
+Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
+Also requires, conditionally: Mission Authority Server (when a gateway PEP outside the harness carries the Mission reference); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status is the freshness source).
+<!-- family-status: END -->
+
 # Scope
 
 This document defines:

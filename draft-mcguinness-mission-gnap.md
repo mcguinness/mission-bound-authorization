@@ -374,7 +374,16 @@ shape and its Mission Substrate Statement; worked test vectors, a
 per-surface error taxonomy, and the discovery-field registrations
 noted in {{iana}} are deferred to a later revision.
 
-## Conventions and Terminology
+# Status: An Experimental Sketch {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: sketch. Maintenance: lab-best-effort.
+Adopt when: Evaluating a GNAP deployment only.
+Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission Expansion for OAuth 2.0 (when grant modification creates an Expansion successor); Mission Containment for OAuth 2.0 (when Mission Containment is adopted); Mission Status and Lifecycle for OAuth 2.0 (when the Status profile is adopted).
+<!-- family-status: END -->
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

@@ -225,6 +225,13 @@ stable path for a resource outside every envelope is a fresh
 human-approved expansion
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-best-effort.
+Adopt when: An open-world agent meets resources its approval never named.
+Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
+Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness supplies taint state); Mission-Bound Authorization for OAuth 2.0 and Mission Progressive Authorization for OAuth 2.0 (when ceiling adjudication is the deployed mode).
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

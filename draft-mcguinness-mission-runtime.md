@@ -432,6 +432,15 @@ execution-time Mission enforcement; it does not weaken the issuance
 profile's stateless token-validation, subset, delegation, or
 constraint-enforcement requirements.
 
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Actions need a point-of-use check, not just issuance-time gating.
+Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
@@ -1722,6 +1731,20 @@ class whose bound demands that.
   these classes: it bounds staleness only by the lifetime, so a revoked
   Mission keeps deriving consequence until tokens age out, which is the
   ambient-authority gap this profile exists to close.
+
+An informative worked example of the latency arithmetic: for a
+PDP-gated class with a published staleness bound of 60 seconds and a
+declared execution bound of 30 seconds, a revocation committed
+immediately after a state observation stops new effect after at most
+90 seconds: the stale view remains acceptable for up to 60 seconds,
+a permit issued from that view expires no later than the view's
+valid-through (the permit cap above), and a permitted action
+completes within its execution bound. The general worst case above
+counts the permit validity window as its own term because a state
+source reporting an explicit lease end can leave a permit window
+beyond the staleness bound; under observation-time reporting the
+permit cap collapses that term. A path outside PDP gating keeps only
+the derived token's lifetime as its bound.
 
 For a deployment whose access tokens are short-lived and whose
 issuance and refresh are state-gated per the OAuth binding

@@ -186,6 +186,13 @@ expansion-capable Mission Issuer
 a new requirement back on the expansion profile or the issuance
 profile.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-best-effort.
+Adopt when: Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning.
+Requires: Mission-Bound Authorization for OAuth 2.0; Mission Expansion for OAuth 2.0.
+Also requires, conditionally: Mission-Bound Runtime Enforcement (when drawdown maps to the runtime profile's action classes).
+<!-- family-status: END -->
+
 # Relationship to the Expansion Profile {#relationship}
 
 This document depends normatively on the expansion profile
@@ -198,7 +205,7 @@ approval event, integrity-anchor envelope, and subset rule. It uses
 Predecessor Mission, Successor Mission, and Expansion request as the
 expansion profile defines them.
 
-# Conventions and Terminology
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
