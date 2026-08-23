@@ -569,13 +569,31 @@ return the same in-progress result; different fingerprint, refuse
 with `invalid_request`
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
 durable reservation"). The reservation and the dispatched Mission's
-identifier MUST be committed atomically with every creation-side
-effect: instance derivation, `max_active` and `dispatch_rate`
-accounting, and evidence emission. A revalidated retry MUST establish
-the same authenticated Dispatcher, its continued membership in
-`allowed_dispatchers`, possession of the recorded `cnf`, and that the
-template version the original Dispatch checked against is still the
-applicable one, before recovering anything
+identifier MUST be committed atomically with instance derivation and
+`max_active`/`dispatch_rate` accounting. Evidence emission is not
+part of that same atomic commit: the Mission Issuer atomically
+commits the evidence record, or a durable outbox entry for it, with
+Mission creation, and delivers or publishes it idempotently
+afterward, since external emission cannot generally participate in
+the datastore transaction.
+
+A revalidated retry's obligations depend on whether the original
+operation already committed creation. For a **completed** operation,
+the Mission Issuer MUST verify the recorded template identity,
+`template_version`, and fingerprint; the requester's continued
+membership in `allowed_dispatchers` and possession of the recorded
+`cnf`; and that the created Mission remains `active`, before
+recovering it. Current template applicability, including whether the
+checked `template_version` is still in force, is NOT re-evaluated for
+a completed operation: a template's own lifecycle already governs
+retirement, which stops further dispatch but does not terminate a
+Mission already dispatched ({{template-lifecycle}}), so recovery of
+that Mission MUST survive later retirement of the template version
+that created it. For a **reserved or pending** operation, which has
+not yet committed creation, the Mission Issuer instead revalidates
+the retry exactly as a fresh Dispatch: current `allowed_dispatchers`
+membership, possession of `cnf`, and current template applicability
+all apply, since no Mission yet exists for the retry to recover
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
 "Revalidation and lookup order").
 
@@ -945,8 +963,26 @@ This is a proposed registration. The value is used under the reserved
 advance of registration completing; this document is the specification
 that names and defines it.
 
-Beyond that registration, this document requests no further IANA
-action. Following the restraint of the sibling profiles:
+This document also registers one parameter in the "OAuth Parameters"
+registry:
+
+- Name: `dispatch_event_id`
+- Parameter Usage Location: token request
+- Change Controller: IETF
+- Reference: this document, {{grant-type}}, {{dispatch}}
+
+`dispatch_event_id` is a distinct name from the expansion profile's
+`creation_request_id` ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
+even though it plays the identifier-and-reservation-key role that
+parameter's registration defines: it is already load-bearing as the
+`template` lineage member's field and in `approval_basis.activation`
+({{dispatch}}), and in the Dispatch grant-type parameter list
+({{grant-type}}), so this document keeps the name rather than
+reusing the expansion profile's own registered parameter under
+`op: dispatch`.
+
+Beyond these two registrations, this document requests no further
+IANA action. Following the restraint of the sibling profiles:
 
 - `template_hash` is a Mission integrity anchor whose `typ`,
   `mission-template`, follows the issuance profile's collision-resistant
