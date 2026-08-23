@@ -7897,7 +7897,7 @@
     "normative": "context.mission.subject is OPTIONAL in general and REQUIRED for a request claiming the cross-domain Origin Principal profile; the PEP populates it only from a verified source, never from an unverified request value"
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/origin-principal.test.ts",
@@ -7911,7 +7911,8 @@
      "level": "unit",
      "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "Partial (#539 stage A): the mcp-payments PEP envelope-construction path is covered -- populated only from verified TokenFacts, omitted entirely (never a synthesized empty object) when the profile is not claimed. Not claimed tested/closed: the controlling review disposition ties this row to origin-principal-mapping-required and requires both to stay open until the Cross-Org grant and ID-JAG RAS entry paths are repaired in the same wave (stage 2); both still drop mission.subject today."
   },
   {
    "id": "authzen.context-actor.provenance-not-in-act-chain",
