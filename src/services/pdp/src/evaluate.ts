@@ -13,6 +13,7 @@ import {
   AUTHORITY_ENTRY_TYP,
   compareAmounts,
   computeAnchor,
+  type EntitlementObservation,
   type EntitlementResolver,
   isValidAmount,
   type OriginPrincipal,
@@ -362,11 +363,23 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     // local principal that does not equal the authenticated request subject
     // (rule 10's `require mapped_subject == (subject.properties.iss,
     // subject.id)`) are all "a failed ... result" at this step: one
-    // classification, no bypass on any sub-cause.
-    const mappingResult = await opts.principalMapping?.resolve({ origin, audience: req.context.audience });
-    const validUntilMs = mappingResult ? Date.parse(mappingResult.valid_until) : NaN;
+    // classification, no bypass on any sub-cause. A network/store failure
+    // inside the resolver is the SAME kind of failed result, not a distinct
+    // authorization outcome or an unclassified transport exception (#686
+    // review): caught here and normalized to the identical denial, so it
+    // takes the ordinary evidence path rather than escaping evaluate().
+    let mappingResult: PrincipalMappingObservation | undefined;
+    try {
+      mappingResult = await opts.principalMapping?.resolve({ origin, audience: req.context.audience });
+    } catch {
+      mappingResult = undefined;
+    }
+    // The explicit undefined check (rather than folding it into
+    // `mappingEstablished` below) is also what lets TypeScript narrow
+    // `mappingResult` for every use after this point.
+    if (mappingResult === undefined) return deny("principal_mapping_failed");
+    const validUntilMs = Date.parse(mappingResult.valid_until);
     const mappingEstablished =
-      mappingResult !== undefined &&
       Number.isFinite(validUntilMs) &&
       now().getTime() <= validUntilMs &&
       localIss !== undefined &&
@@ -392,11 +405,18 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     // `observed_at` produce a negative age that trivially satisfies any
     // bound, so a future timestamp must be rejected on its own, not merely
     // relied on to eventually exceed the bound.
+    // A throwing entitlement resolver is likewise a failed result, not a
+    // transport exception (#686 review): caught and normalized the same way
+    // as a throwing mapping resolver, above.
     const entitlementBoundS = opts.entitlementStalenessBoundSeconds;
-    const entitlement =
-      entitlementBoundS !== undefined
-        ? await opts.entitlement?.resolve({ local: mappingResult.local, audience: req.context.audience })
-        : undefined;
+    let entitlement: EntitlementObservation | undefined;
+    if (entitlementBoundS !== undefined) {
+      try {
+        entitlement = await opts.entitlement?.resolve({ local: mappingResult.local, audience: req.context.audience });
+      } catch {
+        entitlement = undefined;
+      }
+    }
     const observedAtMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
     const entitlementAgeMs = now().getTime() - observedAtMs;
     const entitlementCurrent =

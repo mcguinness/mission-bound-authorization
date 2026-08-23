@@ -113,6 +113,43 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     expect(dec.context.denial_reason).toBe("principal_mapping_failed");
   });
 
+  it("@spec cross-domain#origin-principal-mapping (#686 review) -- a THROWING principalMapping resolver (network/store failure) denies principal_mapping_failed, never escapes evaluate() as an exception", async () => {
+    const opts = baseOpts({
+      principalMapping: {
+        resolve: async () => {
+          throw new Error("mapping store unreachable");
+        },
+      },
+      entitlement: { resolve: async () => ENTITLED },
+      entitlementStalenessBoundSeconds: 600,
+    });
+    await expect(evaluate(req(), opts)).resolves.toEqual(
+      expect.objectContaining({ decision: false, context: expect.objectContaining({ denial_reason: "principal_mapping_failed" }) }),
+    );
+  });
+
+  it("@spec cross-domain#dual-axis (#686 review) -- a THROWING entitlement resolver (network/store failure) denies principal_mapping_failed, never escapes evaluate() as an exception; the already-established mapping still binds principal_mapping evidence to the refusal", async () => {
+    const opts = baseOpts({
+      principalMapping: { resolve: async () => FRESH_MAPPING },
+      entitlement: {
+        resolve: async () => {
+          throw new Error("entitlement service timeout");
+        },
+      },
+      entitlementStalenessBoundSeconds: 600,
+    });
+    const dec = await evaluate(req(), opts);
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("principal_mapping_failed");
+    expect(dec.context.principal_mapping).toEqual({
+      origin: ORIGIN,
+      local: LOCAL,
+      policy: FRESH_MAPPING.policy,
+      observed_at: FRESH_MAPPING.observed_at,
+      valid_until: FRESH_MAPPING.valid_until,
+    });
+  });
+
   it("mapping resolver returns undefined (missing/ambiguous/disabled mapping): denies principal_mapping_failed", async () => {
     const dec = await evaluate(req(), resolverOpts(undefined, ENTITLED, 600));
     expect(dec.decision).toBe(false);
