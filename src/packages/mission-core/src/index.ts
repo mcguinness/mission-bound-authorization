@@ -75,6 +75,13 @@ export {
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";
+export type {
+  EntitlementObservation,
+  EntitlementResolver,
+  OriginPrincipal,
+  PrincipalMappingObservation,
+  PrincipalMappingResolver,
+} from "./origin-principal.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {
   ACCEPT_TXN_CHALLENGE_HEADER,
