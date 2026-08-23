@@ -83,9 +83,16 @@ let server: McpPaymentsServer;
 let root: string;
 let leafTools: AATTools;
 
-/** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
- *  at this read (Finding 1); `allowedFreshnessSources` below declares "load_view" as trusted. */
-const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
+/**
+ * @spec runtime#state-freshness: a synchronous live read, freshness-stamped
+ * at this read (Finding 1); `allowedFreshnessSources` below declares
+ * "load_view" as trusted. Implements the canonical (issuer, id) tuple
+ * contract (@spec authority-server#reference-tuple, #685 review).
+ */
+const loadView = (ref: { id: string; issuer: string }) =>
+  ref.id === view.id && ref.issuer === view.issuer
+    ? { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    : undefined;
 
 async function dpopProof(
   htu: string,

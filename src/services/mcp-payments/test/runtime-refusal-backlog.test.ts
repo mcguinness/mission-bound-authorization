@@ -81,8 +81,8 @@ function buildStack(missionView: MissionView, fga: Fga) {
   const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
-  const loadView = (ref: { id: string }) =>
-    ref.id === missionView.id
+  const loadView = (ref: { id: string; issuer: string }) =>
+    ref.id === missionView.id && ref.issuer === missionView.issuer
       ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({

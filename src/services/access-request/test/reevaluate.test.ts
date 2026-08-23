@@ -94,8 +94,10 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
       // stamped at this read (Finding 1); "load_view" declared trusted below.
+      // Implements the canonical (issuer, id) tuple contract (@spec
+      // authority-server#reference-tuple, #685 review).
       loadView: (ref) =>
-        ref.id === VIEW.id
+        ref.id === VIEW.id && ref.issuer === VIEW.issuer
           ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
           : undefined,
       instanceEpoch: "epoch-1",
