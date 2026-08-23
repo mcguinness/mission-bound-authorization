@@ -247,6 +247,17 @@ the Approver MAY additionally consent to:
   Mission: a string or URI identifying the policy under which the Mission
   Issuer MAY adjudicate an in-ceiling expansion by policy rather than by
   a fresh human approval. The policy's content is deployment-defined.
+  Committing only the `drawdown_policy` identifier under `ceiling_hash`
+  leaves the policy body itself uncommitted, so a change to its logic
+  between the initial ceiling consent and a given drawdown is not
+  detectable from `ceiling_hash` alone. A deployment SHOULD
+  additionally commit the drawdown policy body under an integrity
+  anchor, computed the way the issuance profile computes
+  `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}), or
+  disclose it under Consent Evidence
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), so a
+  policy-adjudicated drawdown stays auditable against the policy
+  content a human actually consented to, not only its identifier.
 
 Where present, `authority_ceiling` and `drawdown_policy` are recorded
 on the Mission and committed by a `ceiling_hash`. The `ceiling_hash`
@@ -493,6 +504,21 @@ request falls back to a fresh human approval, exactly as a request
 the drawdown policy does not authorize does
 ({{in-ceiling-expansion}}).
 
+The cadence is a recency ceiling on the `ceiling_drawdown` approval
+basis's `approved_at`, the kind of declared maximum standing-consent
+age the issuance profile permits a deployment to declare
+({{I-D.draft-mcguinness-oauth-mission}}); this profile makes
+publishing one mandatory rather than optional. It is recorded and
+reproducible, not anchored: like the drawdown policy body it bounds,
+it is not folded into `ceiling_hash` ({{progressive-authorization}}),
+so a change to the published cadence is issuer-record trust, not
+detectable from the Mission's own anchors. To stay reproducible in
+audit, the cadence in force MUST be a separately versioned
+declaration retained alongside the drawdown policy, per the issuance
+profile's own rule that a mutable, unversioned value MUST NOT serve
+this role, and its version MUST be recorded with every
+policy-adjudicated drawdown ({{audit-linkage}}).
+
 The review approval is an ordinary expansion approval that
 re-consents, or narrows, the ceiling. Its consent disclosure MUST
 render the chain's record since the prior review:
@@ -569,9 +595,11 @@ authorized auditor exactly as for human-approved expansions
 The record MUST carry the chain's cumulative drawdown count, so the
 rate bound of {{in-ceiling-expansion}} is auditable from the records
 alone. A deployment MUST retain the consented `authority_ceiling`,
-`drawdown_policy`, and `ceiling_hash` with every Mission record in
-the chain for the audit horizon, so an auditor can verify every
-drawdown was within the consented envelope.
+`drawdown_policy`, `ceiling_hash`, and the ceiling review cadence
+version in force at that drawdown ({{ceiling-review}}) with every
+Mission record in the chain for the audit horizon, so an auditor can
+verify every drawdown was within the consented envelope and against
+the cadence that applied when it was adjudicated.
 
 Where a drawdown is triggered by the agent encountering a resource
 not named at approval, and the resource self-declares its operations
@@ -617,8 +645,9 @@ Authorization** is a conforming expansion-capable Mission Issuer
   record each as an approval event carrying the chain's cumulative
   drawdown count ({{in-ceiling-expansion}}, {{audit-linkage}}); and
 - bound each chain by the published ceiling review cadence, refusing
-  policy adjudication past it and rendering the chain's record since the
-  prior review in the review approval's disclosure ({{ceiling-review}}).
+  policy adjudication past it, recording the cadence version applied at
+  each drawdown, and rendering the chain's record since the prior
+  review in the review approval's disclosure ({{ceiling-review}}).
 
 # Security Considerations {#security-considerations}
 
