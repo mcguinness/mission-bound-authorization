@@ -53,6 +53,18 @@ export const MISSION_TEMPLATE_TYP = "mission-template";
 export const MISSION_CREATION_FINGERPRINT_TYP = "mission-creation-fingerprint";
 
 /**
+ * @spec runtime-evidence#evidence-pii — the family anchor idiom's `typ` for a
+ * protected subject reference over a closed `{iss, sub}` object (an origin
+ * or destination-local principal), named explicitly by the privacy rule:
+ * "the deterministic public digest of the family anchor idiom ... with typ
+ * `mission-origin-subject`". A deterministic digest of an enumerable
+ * identifier is dictionary-attackable correlation infrastructure, not
+ * concealment, and a deployment using it MUST disclose that limitation
+ * (the same source text).
+ */
+export const MISSION_ORIGIN_SUBJECT_TYP = "mission-origin-subject";
+
+/**
  * @spec mission#intent-submission-evidence — the `artifact_hash` of a verified
  * Intent Submission Evidence entry as the Mission Record lands it: the family
  * anchor idiom over the entry AS PRESENTED. Record-trusted provenance metadata
