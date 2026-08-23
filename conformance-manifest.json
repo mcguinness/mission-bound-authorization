@@ -20,7 +20,7 @@
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "d40007a7aacddd2929801d52ea9c2d15923da734",
-    "content_sha256": "730fea001e1ba596f4f20a7c90f6639a6d8f2f596041485891c8d5f5278e5cf4"
+    "content_sha256": "c1e14193d93f7919dc145d1d5188d7d147499a382b83dce52827e14f1d37457e"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "d40007a7aacddd2929801d52ea9c2d15923da734",
@@ -40,7 +40,7 @@
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "d40007a7aacddd2929801d52ea9c2d15923da734",
-    "content_sha256": "34cf97a338984271bcfb9436506c006cd105f3f61b21533a118fd5a65fb92f08"
+    "content_sha256": "83e2cab81313d9a2ae4dfbf5a730a4073f4aca777890d1f5bbe0a169ce28ecd5"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "d40007a7aacddd2929801d52ea9c2d15923da734",
@@ -99,7 +99,8 @@
    "commitment",
    "propagation",
    "governance-record",
-   "mission-statement"
+   "mission-statement",
+   "deployment-documentation"
   ],
   "levels": [
    "unit",
@@ -1034,6 +1035,126 @@
      "surface": "introspection"
     }
    ]
+  },
+  {
+   "id": "core.other-types.transformation-boundary-declared",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "other-types",
+   "text": "the AS MUST state, in the deployment documentation that names the type as supported",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment documentation listing each supported authorization_details type states whether the AS understands the type's subset relation and its delegation semantics; a type without both is declared carried-as-approved"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Documentation surface: observable by reading the deployment's published supported-type documentation, not by an endpoint probe."
+  },
+  {
+   "id": "core.introspection.opaque-requires-introspection",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment issuing opaque Mission-bound tokens exposes introspection for them carrying the mode's members"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+  },
+  {
+   "id": "core.introspection.opaque-active-carriage",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST carry, as introspection response members, the audience-filtered granted `authorization_details`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an active introspection response for an opaque Mission-bound token carries the audience-filtered granted authorization_details, the mission member, aud, cnf where sender-constrained, and act where delegated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+  },
+  {
+   "id": "core.introspection.authority-only-when-active",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "The granted `authorization_details` and any `act` chain appear only on an active response",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an inactive introspection response carries mission state facts only, never authorization_details or act"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+  },
+  {
+   "id": "core.introspection.opaque-rs-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST refuse the request rather than serve it from any cached or out-of-band belief about the token's authority",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS that cannot obtain a valid introspection response for an opaque Mission-bound token refuses the request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
   },
   {
    "id": "core.anchors.entry-commitment",
