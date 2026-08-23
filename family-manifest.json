@@ -1882,12 +1882,14 @@
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-expansion"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-expansion"
    ],
    "references": [
     "draft-mcguinness-mission-architecture",

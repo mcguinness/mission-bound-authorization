@@ -54,8 +54,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -64,6 +62,8 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
@@ -173,7 +173,7 @@ Nothing here places a new requirement back on the issuance profile.
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
-Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0.
+Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0; Mission Expansion for OAuth 2.0.
 <!-- family-status: END -->
 
 # Relationship to Other Profiles {#relationship}
@@ -193,10 +193,16 @@ The runtime enforcement profile {{I-D.draft-mcguinness-mission-runtime}}
 is a normative dependency for its action classes, which the
 prohibited-class rule tests against ({{prohibited-classes}}).
 
+The expansion profile {{I-D.draft-mcguinness-oauth-mission-expansion}}
+is also a normative dependency: Dispatch adopts its creation
+idempotency apparatus (the operation fingerprint, the durable
+reservation, revalidation, and recovery-as-delivery) by reference,
+under its own `op: dispatch` fingerprint value, rather than restating
+it ({{dispatch}}).
+
 Progressive authorization
-({{I-D.draft-mcguinness-oauth-mission-progressive}}) and expansion
-({{I-D.draft-mcguinness-oauth-mission-expansion}}) are informative
-siblings. Progressive removes the per-expansion human from a consented
+({{I-D.draft-mcguinness-oauth-mission-progressive}}) is an informative
+sibling. Progressive removes the per-expansion human from a consented
 authority ceiling on a single evolving Mission; this document removes
 the per-dispatch human from a consented template that mints many
 independent Missions. Both concentrate one considered human consent to
