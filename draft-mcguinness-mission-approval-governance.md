@@ -410,7 +410,16 @@ These rules are the record's security core.
   the approval it claims to govern or it does not commit. A
   policy-authority Approver satisfies this with a `policy` assertion
   carrying its provenance chain, subject to the high-risk-class
-  restriction of {{policy-approval-recency}}.
+  restriction of {{policy-approval-recency}}. A Mission rooted in a
+  named standing-consent `approval_basis`
+  ({{I-D.draft-mcguinness-oauth-mission}}) satisfies this rule
+  through that record instead of a contributing assertion:
+  `consent_principal` (equal to `approver`), `root_commitment`, and
+  `approved_at`, already fixed at the approval event and immutable,
+  stand in place of a matching assertion, subject to the same
+  high-risk-class restriction. No assertion is fabricated in the
+  name of the activating policy or the requesting actor to stand in
+  for a fresh human decision that did not occur.
 - An assertion that fails authentication, event binding, or policy
   authorization MUST NOT contribute to the evaluation and MUST NOT
   be counted toward any policy rule.
@@ -516,6 +525,14 @@ assertion satisfying the accountable-approver rule of
 class-named exception under this section admits `kind: policy` for
 that class.
 
+The same default binds a Mission whose accountable-approver rule is
+satisfied through its own `approval_basis` record rather than an
+assertion ({{assertion-requirements}}): recording an AGR for such a
+Mission carrying one of the four classes requires a committed,
+class-named exception under this section; absent it, the record MUST
+NOT be created and, by {{atomic-commitment}}, the Mission MUST NOT be
+created `active`.
+
 Approval Governance is an optional extension
 ({{optional-status}}); the rules of this section are a conservative
 default of that profile, not a family-wide guarantee, and a
@@ -605,7 +622,10 @@ is testable, member by member:
   `service` and `policy` assertions are governance inputs, never
   consent events, and are never presented as co-approvals.
 - The consent evidence `approver` MUST equal the `principal` of the
-  record's accountable assertion ({{assertion-requirements}}).
+  record's accountable assertion ({{assertion-requirements}}); for a
+  standing-consent Mission whose accountable-approver rule is
+  satisfied by `approval_basis` rather than an assertion, it MUST
+  equal `approval_basis.consent_principal` instead.
 - `approval_authority`, when present, MUST equal
   `approval_policy.id`; `approval_policy_version`, when present,
   MUST equal `approval_policy.version`.
@@ -638,10 +658,12 @@ same boundary for rich authorization requests); this record therefore
 stays off protocol messages and out of enforcement projections,
 matching the issuance profile's control-plane discipline.
 
-{{policy-approval-recency}} bounds only the AGR `policy` assertion
-path. The issuance profile's standing-consent authority bases carry
-their own human-approval instant, in `approval_basis.approved_at`,
-traced through `consent_principal` and a commitment
+{{policy-approval-recency}} bounds the AGR `policy` assertion path
+and, by extension, a standing-consent Mission whose `approval_basis`
+record stands in for that assertion ({{assertion-requirements}}). The
+issuance profile's standing-consent authority bases carry their own
+human-approval instant, in `approval_basis.approved_at`, traced
+through `consent_principal` and a commitment
 ({{I-D.draft-mcguinness-oauth-mission}}); the template profile's
 `template` basis and the progressive profile's `ceiling_drawdown`
 basis both populate it, and each profile declares its own maximum age
@@ -652,14 +674,14 @@ for progressive
 paths are therefore analogous, each bounding staleness against a
 retained human-approval instant, but distinct in what they gate: this
 section's ceiling governs whether the issuer may count a `policy`
-assertion at evaluation, with its own clock-skew allowance and
-`decided_at`/`evaluation.evaluated_at` ordering; a profile's own
-maximum age governs whether the dispatch or drawdown may happen at
-all, independent of whether an AGR is ever recorded. Where a
-deployment maps a standing-consent basis onto an AGR assertion, as
-those two profiles specify, the assertion's `authority.approved_at`
-is sourced from `approval_basis.approved_at`, and this section's
-rules then apply to it like any other `policy` assertion.
+assertion, or activate a Mission whose `approval_basis` stands in for
+one, at evaluation; a profile's own maximum age governs whether the
+dispatch or drawdown may happen at all, independent of whether an AGR
+is ever recorded. A standing-consent Mission's accountable-approver
+rule is satisfied by `approval_basis` itself
+({{assertion-requirements}}), never by fabricating a `policy`
+assertion in its place; the high-risk-class default of this section
+still binds that record directly.
 
 # Mission Evidence {#audit-evidence}
 

@@ -1776,12 +1776,6 @@
      "requires": [
       "draft-mcguinness-mission-runtime"
      ]
-    },
-    {
-     "when": "a deployment records an Approval Governance Record for a policy-adjudicated drawdown carrying a consumption bound",
-     "requires": [
-      "draft-mcguinness-mission-approval-governance"
-     ]
     }
    ],
    "references": [
@@ -1908,14 +1902,6 @@
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive"
-   ],
-   "requires_when": [
-    {
-     "when": "a deployment records an Approval Governance Record for a dispatched instance carrying a consumption bound",
-     "requires": [
-      "draft-mcguinness-mission-approval-governance"
-     ]
-    }
    ]
   },
   {

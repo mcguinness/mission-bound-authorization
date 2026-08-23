@@ -190,7 +190,6 @@ Nothing here places a new requirement back on the issuance profile.
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
 Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0.
-Also requires, conditionally: Mission Approval Governance (when a deployment records an Approval Governance Record for a dispatched instance carrying a consumption bound).
 <!-- family-status: END -->
 
 # Relationship to Other Profiles {#relationship}
@@ -690,32 +689,19 @@ requires for that class, through `consent_principal` and
 renders the bound at the same surface under the metering profile's
 consent-integrity rule ({{I-D.draft-mcguinness-mission-metering}}).
 
-A deployment that adopts Approval Governance
+Where a deployment adopts Approval Governance
 ({{I-D.draft-mcguinness-mission-approval-governance}}) and records a
-Governance Record for a dispatched instance carrying a consumption
-bound MUST declare that profile's class-named exception admitting
-`kind: policy` for the class. Absent the exception, the class-named
-default requires `kind: human` for the accountable-approver assertion,
-which no dispatched instance can supply, and the Mission fails to
-activate under that profile's atomic-commitment rule. The
-accountable-approver assertion, required by the issuance profile's
-`approver`/`approval_basis.consent_principal` equivalence and by
-Approval Governance's consent-evidence-relationship rule to carry that
-same `principal`, maps onto the template's standing consent as:
-
-- `principal`: `approval_basis.consent_principal`, the template's
-  human approver, equal to the Mission's `approver`;
-- `kind`: `policy`;
-- `authority.policy_id` and `authority.version`:
-  `approval_basis.activation`'s `template_id` and `template_version`;
-- `authority.approved_at`: `approval_basis.approved_at`, the same
-  consent instant, never the Dispatch instant; and
-- authentication: the Mission Issuer's own retained template record,
-  the same source `approved_at` is read from ({{dispatch}}).
-
-The Dispatcher, `approval_basis.activation_actor`, is not an assertion
-principal: it triggers the Dispatch and asserts nothing, so the record
-never claims a fresh human decision that did not occur.
+Governance Record for a dispatched instance, the template's
+`approval_basis` satisfies that profile's accountable-approver rule
+directly, through the same `consent_principal`, `root_commitment`,
+and `approved_at` this document already requires: no assertion is
+fabricated in the name of the Dispatcher or the Dispatch Policy to
+stand in for a fresh human decision that did not occur. Approval
+Governance's own high-risk-class default still binds that record: a
+dispatched instance carrying a consumption bound activates only where
+a committed, class-named exception admits it; absent the exception,
+the Mission fails to activate under that profile's atomic-commitment
+rule.
 
 The deployment's configured dispatch-prohibited action set MUST cover
 every action the published mapping classifies as irreversible,
