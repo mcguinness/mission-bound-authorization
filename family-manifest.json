@@ -977,7 +977,8 @@
    "pull_when": "Actions need a point-of-use check, not just issuance-time gating.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
