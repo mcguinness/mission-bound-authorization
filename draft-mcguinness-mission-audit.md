@@ -106,6 +106,8 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   I-D.draft-mcguinness-mission-discovery:
     title: "Mission Open-World Discovery"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
@@ -130,8 +132,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   RFC8610:
   I-D.draft-ietf-scitt-scrapi:
   I-D.draft-mcguinness-mission-runtime:
@@ -475,13 +475,16 @@ member.
 Each registrable evidence type fixes the exact bytes that are hashed,
 the media type carried in `payload-preimage-content-type`, the
 operational `typ` its retained form carries (none where the retained
-object is unsigned), and the producer authoritative for it. A producer
-MUST commit to the canonical bytes named here. A relying party MUST
-verify the producer is authoritative for the type
-({{registration-policy}}) before treating a record as part of the
-Mission's feed. The table is a normative catalog of evidence types,
-not a registry: a row registers nothing, and its identifier is
-defined, and registered where it is, by the profile the row cites.
+object is unsigned), and the producer authoritative for it. This
+table is the normative definition only for the four evidence types
+this document itself defines ({{iana}}); for every other row, the
+cited profile fixes those properties normatively, and this table is
+an informative catalog of them, consulted only where that profile is
+adopted. A producer MUST commit to the canonical bytes its defining
+profile names. A relying party MUST verify the producer is
+authoritative for the type ({{registration-policy}}) before treating
+a record as part of the Mission's feed; a row registers nothing on
+its own.
 
 | Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
 |---|---|---|---|---|
@@ -611,15 +614,16 @@ to `application/mission-approval-record+json` and keeps a digest of one
 evidence type from being read as another.
 
 Each companion-defined row binds only a deployment that produces that
-evidence, so the reference is consulted only where the profile is
-adopted. A row whose defining profile is Experimental (the Discovery
-Evidence, Containment evidence, Protected event receipt, and Work
-Product Binding rows) stays on that profile's maturity: its reference
-is a conditional normative down-reference, binding only a deployment
-that produces that row's evidence, and a deployment not running an
-Experimental profile omits its rows. A deployment that does not run
-the Signals profile commits lifecycle transitions as the transition
-object ({{transition-object}}) instead of the Signals SET.
+evidence, so the citation is consulted only where the profile is
+adopted. The Discovery Evidence, Containment evidence, Protected
+event receipt, and Work Product Binding rows cite profiles at
+Experimental maturity; the reference classification convention's
+maturity bound keeps this document's citation to each informative,
+and each cited profile places the registration duty on its own
+adopters. A deployment not running one of those profiles omits its
+rows. A deployment that does not run the Signals profile commits
+lifecycle transitions as the transition object
+({{transition-object}}) instead of the Signals SET.
 
 A Child Evidence record registers on the Parent Mission's feed: the
 `sub` is the parent's ({{feed}}), its producer is the `issuer`, and
@@ -1577,6 +1581,8 @@ Service are defined elsewhere:
   ({{I-D.draft-mcguinness-mission-mandate}});
 - the Child Evidence type identifier by the child-delegation profile
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
+- the Discovery Evidence media type by the discovery profile
+  ({{I-D.draft-mcguinness-mission-discovery}});
 - the Harness Evidence and Egress Evidence type identifiers by the
   harness profile ({{I-D.draft-mcguinness-mission-harness}});
 - the Containment Evidence and Protected Event Receipt type
