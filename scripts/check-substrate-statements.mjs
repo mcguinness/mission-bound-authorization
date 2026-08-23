@@ -23,10 +23,10 @@
 //       a new consumer table self-registers) uses only a legal
 //       Consumption value (`required`, `required and produced`,
 //       `required when <condition>`, `not consumed`, or `produced`),
-//       names a canonical capability, and carries a non-empty Scope of
-//       consumption cell (#620; unlike Statements, a consumer table
-//       legitimately omits untouched capabilities and needs no fixed
-//       order).
+//       names a canonical capability without repeating it, and carries a
+//       non-empty Scope of consumption cell (#620; unlike Statements, a
+//       consumer table legitimately omits untouched capabilities and
+//       needs no fixed order).
 //
 // Semantic completeness of temporal/failure elements remains a review
 // property; (c) is the structural proxy.
@@ -167,10 +167,15 @@ for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.e
         continue;
       }
       let j = i + 2;
+      const seen = new Set();
       while (j < lines.length && lines[j].startsWith("|")) {
         const [name, claim, scope] = cells(lines[j]);
         if (!CAPABILITIES.includes(name)) {
           fail("consumer-capability", `${file}:${j + 1}: "${name}" is not one of the canonical eight capabilities`);
+        } else if (seen.has(name)) {
+          fail("consumer-capability", `${file}:${j + 1}: "${name}" appears more than once in this table`);
+        } else {
+          seen.add(name);
         }
         if (!CONSUMER_CLAIM.test(claim ?? "")) {
           fail(
@@ -182,6 +187,9 @@ for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.e
           fail("consumer-scope", `${file}:${j + 1} (${name}): a consumer row must carry a non-empty Scope of consumption cell`);
         }
         j += 1;
+      }
+      if (j === i + 2) {
+        fail("consumer-format", `${file}:${i + 1}: a consumer table must carry at least one row`);
       }
     }
   }
