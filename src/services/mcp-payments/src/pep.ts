@@ -10,7 +10,14 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
-import { TXN_AUTHORIZATION_REQUIRED, type JsonValue, type TxnMissionClaim , type PropagatedMissionReference } from "@mission/core";
+import {
+  computeAnchor,
+  type JsonValue,
+  MISSION_ORIGIN_SUBJECT_TYP,
+  type PropagatedMissionReference,
+  TXN_AUTHORIZATION_REQUIRED,
+  type TxnMissionClaim,
+} from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
@@ -661,6 +668,33 @@ export class Pep {
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
 
+    // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
+    // runtime-evidence#evidence-pii (#686 review) — the PDP's decision context
+    // carries the RAW origin/local {iss, sub} pairs (an ephemeral, in-process
+    // decision contract); the RETAINED Decision Evidence below must not. Every
+    // decision that reached step 4a's mapping success (permit or a later-step
+    // denial, e.g. entitlement-caused principal_mapping_failed) carries this
+    // member, replacing the raw identities with protected references (the
+    // family anchor idiom, typ mission-origin-subject) before persisting.
+    const rawPrincipalMapping = decision.context.principal_mapping as
+      | {
+          origin: OriginPrincipal;
+          local: OriginPrincipal;
+          policy: { id: string; version: string };
+          observed_at: string;
+          valid_until: string;
+        }
+      | undefined;
+    const protectedPrincipalMapping = rawPrincipalMapping
+      ? {
+          origin: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, rawPrincipalMapping.origin as unknown as JsonValue),
+          local: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, rawPrincipalMapping.local as unknown as JsonValue),
+          policy: rawPrincipalMapping.policy,
+          observed_at: rawPrincipalMapping.observed_at,
+          valid_until: rawPrincipalMapping.valid_until,
+        }
+      : undefined;
+
     this.deps.evidence.record({
       kind: "decision",
       decision: decision.decision,
@@ -674,6 +708,7 @@ export class Pep {
       // `evaluation_id` the PDP response carries, additive alongside the
       // pre-existing `decision_id` copy this record already keeps.
       ...(decision.context.evaluation_id ? { evaluation_id: decision.context.evaluation_id as string } : {}),
+      ...(protectedPrincipalMapping ? { principal_mapping: protectedPrincipalMapping } : {}),
       mission_id: view.id,
       authority_hash: view.authority_hash,
       action: mapping.action,

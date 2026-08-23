@@ -12,8 +12,17 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { computeAnchor, MISSION_ORIGIN_SUBJECT_TYP, verifyAnchor } from "@mission/core";
 import type { EvaluationRequest, Fga, MissionView, OriginPrincipal } from "@mission/pdp";
-import { CANONICAL_RESOURCE, EvidenceStore, PaymentsStore, Pep, sourceDigestOf, type TokenFacts } from "../src/index.js";
+import {
+  CANONICAL_RESOURCE,
+  EvidenceStore,
+  PaymentsStore,
+  Pep,
+  sourceDigestOf,
+  type DecisionEvidence,
+  type TokenFacts,
+} from "../src/index.js";
 
 const ISSUER = "https://as.test";
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
@@ -104,12 +113,15 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     expect(envelopes[0]?.subject).toEqual({ id: "emp-4417" });
   });
 
-  it("PepDeps.principalMapping/.entitlement/.entitlementStalenessBoundSeconds forward unchanged to the PDP: a profile-claiming request permits once mapping and entitlement both resolve", async () => {
+  const LOCAL: OriginPrincipal = { iss: ISSUER, sub: "emp-4417" };
+  const MAPPING_POLICY = { id: "policy-1", version: "1" };
+
+  function buildWithMapping(entitled: boolean): { pep: Pep; evidence: EvidenceStore; envelopes: EvaluationRequest[] } {
     const envelopes: EvaluationRequest[] = [];
-    const LOCAL: OriginPrincipal = { iss: ISSUER, sub: "emp-4417" };
+    const evidence = new EvidenceStore();
     const pep = new Pep({
       payments: new PaymentsStore(),
-      evidence: new EvidenceStore(),
+      evidence,
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       loadView: (id) =>
@@ -121,30 +133,88 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       principalMapping: {
         resolve: async () => ({
           local: LOCAL,
-          policy: { id: "policy-1", version: "1" },
+          policy: MAPPING_POLICY,
           observed_at: new Date().toISOString(),
           valid_until: new Date(Date.now() + 3_600_000).toISOString(),
         }),
       },
-      entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
+      entitlement: { resolve: async () => ({ entitled, observed_at: new Date().toISOString() }) },
       entitlementStalenessBoundSeconds: 600,
     });
-    const token: TokenFacts = {
-      sub: LOCAL.sub,
-      clientId: "ap-agent",
-      iss: LOCAL.iss,
-      mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539", subject: ORIGIN },
-      cnfJkt: "jkt-1",
-    };
-    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
+    return { pep, evidence, envelopes };
+  }
+
+  const tokenFor = (): TokenFacts => ({
+    sub: LOCAL.sub,
+    clientId: "ap-agent",
+    iss: LOCAL.iss,
+    mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539", subject: ORIGIN },
+    cnfJkt: "jkt-1",
+  });
+
+  it("PepDeps.principalMapping/.entitlement/.entitlementStalenessBoundSeconds forward unchanged to the PDP: a profile-claiming request permits once mapping and entitlement both resolve", async () => {
+    const { pep } = buildWithMapping(true);
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, tokenFor());
     expect(res.permitted, JSON.stringify(res)).toBe(true);
     expect(res.decision?.context.principal_mapping).toEqual({
       origin: ORIGIN,
       local: LOCAL,
-      policy: { id: "policy-1", version: "1" },
+      policy: MAPPING_POLICY,
       observed_at: expect.any(String),
       valid_until: expect.any(String),
     });
+  });
+
+  it("@spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs", async () => {
+    const { pep, evidence } = buildWithMapping(true);
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, tokenFor());
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    const rec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
+    expect(rec?.principal_mapping).toBeDefined();
+    const pm = rec?.principal_mapping;
+    if (!pm) throw new Error("expected principal_mapping on the retained record");
+    expect(pm.policy).toEqual(MAPPING_POLICY);
+    expect(typeof pm.observed_at).toBe("string");
+    expect(typeof pm.valid_until).toBe("string");
+    // Protected references: reproducible digests under the family anchor
+    // idiom, domain-separated by the Mission's issuer -- never the raw
+    // {iss, sub} pair or either bare value anywhere in the record.
+    expect(pm.origin).toMatch(/^sha-256:/);
+    expect(pm.local).toMatch(/^sha-256:/);
+    expect(pm.origin).toBe(computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, ORIGIN));
+    expect(pm.local).toBe(computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, LOCAL));
+    expect(verifyAnchor(pm.origin, MISSION_ORIGIN_SUBJECT_TYP, ISSUER, ORIGIN)).toBe(true);
+    expect(verifyAnchor(pm.local, MISSION_ORIGIN_SUBJECT_TYP, ISSUER, LOCAL)).toBe(true);
+    const serialized = JSON.stringify(rec);
+    expect(serialized).not.toContain(ORIGIN.sub);
+    expect(serialized).not.toContain(LOCAL.sub);
+    expect(serialized).not.toContain(ORIGIN.iss);
+  });
+
+  it("@spec runtime-evidence#principal_mapping (#686 review) -- an entitlement-caused principal_mapping_failed DENIAL still retains principal_mapping (protected references), since the mapping itself was established before entitlement failed", async () => {
+    const { pep, evidence } = buildWithMapping(false); // entitled: false
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, tokenFor());
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("principal_mapping_failed");
+    const rec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
+    expect(rec?.decision).toBe(false);
+    expect(rec?.denial_reason).toBe("principal_mapping_failed");
+    expect(rec?.principal_mapping).toEqual({
+      origin: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, ORIGIN),
+      local: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, LOCAL),
+      policy: MAPPING_POLICY,
+      observed_at: expect.any(String),
+      valid_until: expect.any(String),
+    });
+  });
+
+  it("a request NOT claiming the profile never carries principal_mapping on its retained Decision Evidence", async () => {
+    const { pep, evidence } = buildWithMapping(true);
+    const token: TokenFacts = { ...tokenFor(), mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539" } };
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    const rec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
+    expect(rec?.principal_mapping).toBeUndefined();
   });
 
   it("a profile-claiming token at a deployment with no principalMapping/entitlement configured denies principal_mapping_failed, never falls back to ordinary enforcement", async () => {
