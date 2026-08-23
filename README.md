@@ -179,8 +179,11 @@ Three rings, smallest first; each ring is complete without the next:
   edges name each binding's floor). The
   [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
   (the binding-neutral kernel contract) are for binding authors and
-  for reviewers validating a mapping; adopting an existing binding
-  never requires reading them. For an OAuth estate that is
+  for reviewers validating a mapping; whether an adopter also needs
+  them is each binding's own declared adoption closure (the
+  `adoption_requires` edges): the OAuth binding is self-contained
+  and never requires them, while several peer bindings and the
+  runtime documents pull the substrate in as a dependency. For an OAuth estate that is
   [the OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html)
   alone: one self-contained document, and a useful deployment by
   itself. The peer bindings declare their own floors.

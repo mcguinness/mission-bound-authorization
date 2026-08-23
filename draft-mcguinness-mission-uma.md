@@ -387,10 +387,12 @@ per-endpoint error taxonomy are deferred to a later revision.
 
 # Status: An Experimental Sketch {#doc-status}
 
-Adopt this document when evaluating a UMA 2.0 deployment only. It
-depends normatively on Mission Substrate Requirements and is not
-adoptable alone. It is exploratory: interfaces may change without
-compatibility, and no deployment is claimed.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: sketch. Maintenance: lab-best-effort.
+Adopt when: Evaluating a UMA 2.0 deployment only.
+Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission Issuance Grant for OAuth 2.0 (when the expires_at member is adopted).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

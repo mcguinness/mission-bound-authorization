@@ -145,6 +145,12 @@ in-progress deferred substrate
 ({{I-D.draft-gerber-oauth-deferred-token-response}}) and will track it
 as it evolves.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-best-effort.
+Adopt when: Reviewers routinely narrow a proposed Mission rather than approve or deny.
+Requires: Mission-Bound Authorization for OAuth 2.0; Mission Deferred Approval for OAuth 2.0.
+<!-- family-status: END -->
+
 # Relationship to the Deferred Approval Profile {#profile-relationship}
 
 This document depends normatively on the deferred approval profile

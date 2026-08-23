@@ -232,6 +232,13 @@ contains a Mission; otherwise it remains a plain issuance-profile
 Mission Issuer. Nothing here places a new requirement back on the
 issuance profile.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-floor-referenced.
+Adopt when: A live Mission must be narrowed, not ended, on a protected event.
+Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
+Also requires, conditionally: Mission Expansion for OAuth 2.0 (when contained authority is restored via a successor).
+<!-- family-status: END -->
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and is not

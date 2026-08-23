@@ -218,9 +218,11 @@ re-specified, here.
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when you must observe or change Mission state beyond
-token expiry (revoke, suspend, complete). It depends normatively on
-Mission-Bound Authorization for OAuth 2.0 and is not adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
+Requires: Mission-Bound Authorization for OAuth 2.0.
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-definitions}
 

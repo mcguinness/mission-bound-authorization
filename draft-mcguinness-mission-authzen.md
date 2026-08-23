@@ -267,10 +267,12 @@ The end-to-end flow this binding realizes:
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when the PDP speaks AuthZEN and needs the decision-
-contract wire mapping. It depends normatively on Mission-Bound Runtime
-Enforcement, Mission Runtime Evidence, and Mission Substrate
-Requirements and is not adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: The PDP speaks AuthZEN and needs the decision-contract wire mapping.
+Requires: Mission-Bound Runtime Enforcement; Mission Runtime Evidence; Mission Substrate Requirements.
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected credentials are evaluated); Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-definitions}
 

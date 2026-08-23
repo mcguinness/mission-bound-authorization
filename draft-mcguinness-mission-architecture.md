@@ -439,6 +439,12 @@ security model describes the trusted base and how each component's
 compromise degrades the guarantees. Each profile's own Security
 Considerations remain normative over both.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: informational. Maintenance: active.
+Adopt when: Before adopting anything: the Mission model, invariants, and assurance levels the rest cite.
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 Where this document uses words like "must" or "should," they carry

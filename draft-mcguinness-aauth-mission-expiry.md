@@ -83,9 +83,11 @@ it cannot be changed in place.
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when a citable profile of AAuth's native
-`expires_at` is needed (base AAuth enforces it regardless; the profile's
-own conformance line is OPTIONAL). It is adoptable on its own.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: frozen-until-upstream-release.
+Adopt when: A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL).
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

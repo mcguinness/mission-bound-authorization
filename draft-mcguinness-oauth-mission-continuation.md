@@ -174,6 +174,13 @@ delegation, or cross-domain projection hop under the requirements of
 issuance-profile Mission Issuer. Nothing here places a new
 requirement back on the issuance profile.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-best-effort.
+Adopt when: Authorized work continues across hops or time without re-presented credentials.
+Requires: Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Expansion for OAuth 2.0 (when the async-delegation transport creates refresh families).
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

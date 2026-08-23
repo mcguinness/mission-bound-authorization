@@ -159,11 +159,12 @@ decision contract consumes an already established action identity.
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when actions come from a discovered catalog where
-invoked identity can drift from approval. It depends normatively on
-Mission-Bound Runtime Enforcement: AuthZEN Profile, Mission-Bound
-Runtime Enforcement, and Mission Substrate Requirements and is not
-adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Actions come from a discovered catalog where invoked identity can drift from approval.
+Requires: Mission-Bound Runtime Enforcement: AuthZEN Profile; Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-definitions}
 

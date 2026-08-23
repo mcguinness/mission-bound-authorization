@@ -222,9 +222,11 @@ needed by an adopter outside that family.
 
 # Status: A Normative Contract for Bindings {#doc-status}
 
-Adopt this document when runtime implementers consume its commitment
-construction and kernel contract; binding authors profile it. It is
-adoptable on its own.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Runtime implementers consume its commitment construction and kernel contract; binding authors profile it.
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -1214,7 +1216,7 @@ reference to it; no change is ever made solely to move words.
 
 ## OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-oauth-digest: 308da95813e7bf37 -->
+<!-- assessed-oauth-digest: aeac0b924020b4da -->
 
 This section is this document's Mapping Assessment of the OAuth
 Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published

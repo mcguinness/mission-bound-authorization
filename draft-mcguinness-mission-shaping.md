@@ -202,9 +202,12 @@ implementation detail, not an interoperability contract.
 
 # Status: An Informative Companion {#doc-status}
 
-Adopt this document when you need a defined client-side path from user
-prompt to candidate Mission Intent. It is informative and creates no
-conformance target.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: informational. Maintenance: active.
+Adopt when: You need a defined client-side path from user prompt to candidate Mission Intent.
+Requires: nothing beyond its listed references.
+Also requires, conditionally: Mission Substrate Requirements (when shaping evidence digests are produced); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
+<!-- family-status: END -->
 
 # Relationship to the Issuance Profile {#relationship}
 

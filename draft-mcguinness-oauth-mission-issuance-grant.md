@@ -176,10 +176,12 @@ where its cost is warranted
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when a MAS-governed estate wants Mission-bound gated
-tokens without full intake at each AS. It depends normatively on Mission
-Authority Server, and Mission-Bound Authorization for OAuth 2.0 and is
-not adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS.
+Requires: Mission Authority Server; Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
 

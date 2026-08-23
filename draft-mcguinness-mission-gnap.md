@@ -376,10 +376,12 @@ noted in {{iana}} are deferred to a later revision.
 
 # Status: An Experimental Sketch {#doc-status}
 
-Adopt this document when evaluating a GNAP deployment only. It depends
-normatively on Mission Substrate Requirements and is not adoptable
-alone. It is exploratory: interfaces may change without compatibility,
-and no deployment is claimed.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: sketch. Maintenance: lab-best-effort.
+Adopt when: Evaluating a GNAP deployment only.
+Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission Expansion for OAuth 2.0 (when grant modification creates an Expansion successor); Mission Containment for OAuth 2.0 (when Mission Containment is adopted); Mission Status and Lifecycle for OAuth 2.0 (when the Status profile is adopted).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

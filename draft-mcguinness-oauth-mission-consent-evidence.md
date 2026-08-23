@@ -223,9 +223,12 @@ later enforced.
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when you must prove what the Approver actually saw,
-not only what was approved. It depends normatively on Mission-Bound
-Authorization for OAuth 2.0 and is not adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: You must prove what the Approver actually saw, not only what was approved.
+Requires: Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Approval Governance (when an Approval Governance Record is recorded).
+<!-- family-status: END -->
 
 # Scope
 

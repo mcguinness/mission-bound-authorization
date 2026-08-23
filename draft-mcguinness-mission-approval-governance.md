@@ -163,6 +163,12 @@ approval, deferred approval
 Mission Authority Server's native asynchronous approval alike, and
 depends on no deferral substrate.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
+Requires: Mission Substrate Requirements.
+<!-- family-status: END -->
+
 # Conventions and Definitions {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

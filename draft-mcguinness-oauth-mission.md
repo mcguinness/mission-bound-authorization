@@ -4682,12 +4682,17 @@ child generations, together with the derivations summed across an
 entire child subtree, can therefore exceed what a single approval
 appears to bound at consent time. This is a composition property of
 independently-bounded mechanisms, not a defect in any one of them.
-An informative illustration: with delegation depth 2, projection
-into 3 trust domains, and 2 child generations, the composed reach is
-the product, 12 independently-rooted lineages; with `max_derivations`
-10 on each Mission in the subtree, the derivations summed across it
-approach 120, while every individual number the Approver saw reads
-2, 3, or 10.
+An informative illustration with the variables explicit: a
+child-delegation deployment allowing `max_children` 3 per Mission
+with `max_child_depth` 2 admits up to 12 descendant Missions (3 in
+the first generation, up to 9 in the second), each with its own
+independent `max_derivations`; at 10 each, the subtree admits up to
+120 derivations while no single bound the Approver saw exceeds 10.
+Cross-domain projection composes separately: a projected grant
+preserves the Mission's lineage rather than rooting a new one, and
+the Resource AS's local issuance under it is bounded by that grant's
+own lifetime and local policy, not counted against the origin
+issuer's per-Mission derivation cap.
 A deployment SHOULD disclose the composed bound, not only the
 immediate Mission's, at the consent surface, and MAY impose a global
 cap out of band where a single approval's apparent bound must hold in

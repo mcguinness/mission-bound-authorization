@@ -305,6 +305,13 @@ implementation, one deployment not operated by its implementer, and
 one independently implemented counterpart component; they demand
 exercised machinery and stable surfaces, not adoption counts.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-floor-referenced.
+Adopt when: A Mission needs cumulative caps (budget, calls, duration, egress), not just scope.
+Requires: Mission-Bound Runtime Enforcement; Mission Runtime Evidence; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission-Bound Runtime Enforcement: AuthZEN Profile (when the AuthZEN binding is the runtime wire); Mission Consent Evidence for OAuth 2.0 (when Consent Evidence is recorded).
+<!-- family-status: END -->
+
 # Relationship to the Issuance and Runtime Profiles {#relationship}
 
 This document depends normatively on the issuance profile and the
