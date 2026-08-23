@@ -49,6 +49,8 @@ const VIEW: MissionView = {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: ISSUER, sub: "alice" },
+  client_id: "ap-agent",
 };
 
 const TOKEN: TokenFacts = {
@@ -67,8 +69,8 @@ let server: McpPaymentsServer;
 
 /** @spec runtime#state-freshness: a synchronous live read, freshness-
  *  stamped at this read (Finding 1); "load_view" declared trusted below. */
-const loadViewFor = (v: MissionView) => (id: string) =>
-  id === v.id ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined;
+const loadViewFor = (v: MissionView) => (ref: { id: string }) =>
+  ref.id === v.id ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined;
 
 d("M4 core enforcement tier", () => {
   beforeAll(async () => {

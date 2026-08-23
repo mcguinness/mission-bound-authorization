@@ -97,6 +97,8 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       version: 1,
       authority_hash: "sha-256:g1hash",
       authority_set: [entry],
+      subject: { iss: ISSUER, sub: "alice" },
+      client_id: "ap-agent",
     };
     const payments = seedPayments();
     const evidence = new EvidenceStore();
@@ -106,7 +108,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       evidence,
       fga: conn.fga,
       modelId: conn.modelId,
-      loadView: (id) => (id === view.id ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined),
+      loadView: (ref) => (ref.id === view.id ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined),
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
@@ -114,7 +116,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     const server = new McpPaymentsServer({
       pep,
       payments,
-      loadView: (id) => (id === view.id ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined),
+      loadView: (ref) => (ref.id === view.id ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined),
       jwks: { keys: [] },
       issuer: ISSUER,
       serverCard: card,
@@ -265,11 +267,13 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
           constraints: { vendors: ["acme", "globex"] },
         },
       ],
+      subject: { iss: ISSUER, sub: "alice" },
+      client_id: "ap-agent",
     };
     const payments = seedPayments();
     const evidence = new EvidenceStore();
     const card = { name: "payments", tools: ["list_invoices"] };
-    const loadView = (id: string) => (id === missionId ? { view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined);
+    const loadView = (ref: { id: string }) => (ref.id === missionId ? { view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined);
     const pep = new Pep({
       payments,
       evidence,
@@ -333,13 +337,15 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
         constraints: { vendors: ["acme", "globex"] },
       },
     ],
+    subject: { iss: ISSUER, sub: "alice" },
+    client_id: "ap-agent",
   };
 
   function build(fga: import("@mission/pdp").Fga): { server: McpPaymentsServer } {
     const payments = seedPayments();
     const evidence = new EvidenceStore();
     const card = { name: "payments", tools: ["list_invoices"] };
-    const loadView = (id: string) => (id === missionId ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined);
+    const loadView = (ref: { id: string }) => (ref.id === missionId ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined);
     const pep = new Pep({
       payments,
       evidence,
@@ -395,6 +401,8 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     authority_set: [
       { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] },
     ],
+    subject: { iss: ISSUER, sub: "alice" },
+    client_id: "ap-agent",
   };
 
   function build(): { pep: Pep; evidence: EvidenceStore } {
@@ -406,7 +414,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
       // Never reached: evaluate() is mocked for this describe block's tests.
       fga: {} as unknown as import("@mission/pdp").Fga,
       modelId: "unused",
-      loadView: (id) => (id === view.id ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined),
+      loadView: (ref) => (ref.id === view.id ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined),
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf({ name: "payments" }),
     });

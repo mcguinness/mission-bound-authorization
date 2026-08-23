@@ -73,6 +73,8 @@ const VIEW: MissionView = {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: ISSUER, sub: "alice" },
+  client_id: "ap-agent",
 };
 
 let fga: Fga;
@@ -145,8 +147,8 @@ async function build(): Promise<{
   const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
-  const loadView = (id: string) =>
-    id === VIEW.id
+  const loadView = (ref: { id: string }) =>
+    ref.id === VIEW.id
       ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({

@@ -63,6 +63,8 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [READ_ENTRY, WRITE_ENTRY],
+  subject: { iss: ISSUER, sub: "alice" },
+  client_id: "ap-agent",
   ...over,
 });
 

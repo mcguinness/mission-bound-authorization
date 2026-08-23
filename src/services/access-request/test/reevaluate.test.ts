@@ -52,6 +52,8 @@ const VIEW: MissionView = {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 };
 const TOKEN: TokenFacts = {
   sub: "alice",
@@ -92,8 +94,8 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
       // stamped at this read (Finding 1); "load_view" declared trusted below.
-      loadView: (id) =>
-        id === VIEW.id
+      loadView: (ref) =>
+        ref.id === VIEW.id
           ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
           : undefined,
       instanceEpoch: "epoch-1",

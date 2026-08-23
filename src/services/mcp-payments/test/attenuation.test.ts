@@ -134,6 +134,8 @@ beforeAll(async () => {
     version: 1,
     authority_hash: mission.authority_hash,
     authority_set: mission.authority_set,
+    subject: mission.subject,
+    client_id: mission.client_id,
     // Containment delta, mapped from the kernel record (absent on a freshly
     // approved Mission, so this is the no-containment fast path).
     ...(mission.containment

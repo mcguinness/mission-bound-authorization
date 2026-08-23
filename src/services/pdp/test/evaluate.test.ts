@@ -49,6 +49,8 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
   ...over,
 });
 

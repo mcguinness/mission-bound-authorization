@@ -370,6 +370,8 @@ function viewFor(missionId: string): MissionView {
     version: fresh.version,
     authority_hash: fresh.authority_hash,
     authority_set: fresh.authority_set,
+    subject: fresh.subject,
+    client_id: fresh.client_id,
     ...(fresh.containment
       ? { containment: { version: fresh.containment.containment_version, contained: fresh.containment.contained } }
       : {}),
@@ -378,9 +380,9 @@ function viewFor(missionId: string): MissionView {
 
 // @spec runtime#state-freshness: a synchronous live read, freshness-stamped
 // at this read (Finding 1); "load_view" declared trusted at the Pep below.
-const loadView = (id: string) =>
-  as.kernel.get(id)
-    ? { view: viewFor(id), freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+const loadView = (ref: { id: string }) =>
+  as.kernel.get(ref.id)
+    ? { view: viewFor(ref.id), freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
     : undefined;
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */
