@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Approval Governance</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission-Bound Authorization records exactly one accountable Approver
+per Mission and defers approval-authority provenance to a governance
+layer. This document defines that layer's record: the Approval
+Governance Record, an issuer-retained, issuer-signed record of the
+policy, assertions, and evaluation standing behind an approval event.
+It gives an estate first-class, auditable answers to who approved,
+under which authority, and why the decision satisfied governance,
+without adding any wire artifact. The record never appears on
+tokens, protocol messages, or enforcement projections, and the
+Mission record's single accountable Approver is unchanged. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="approval" name="keyword">
+<meta content="governance" name="keyword">
+<meta content="draft-mcguinness-mission-approval-governance-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.3
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-mission-approval-governance.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Approval Governance</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 24 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-approval-governance-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-23" class="published">23 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-24">24 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Approval Governance</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission-Bound Authorization records exactly one accountable Approver
+per Mission and defers approval-authority provenance to a governance
+layer. This document defines that layer's record: the Approval
+Governance Record, an issuer-retained, issuer-signed record of the
+policy, assertions, and evaluation standing behind an approval event.
+It gives an estate first-class, auditable answers to who approved,
+under which authority, and why the decision satisfied governance,
+without adding any wire artifact. The record never appears on
+tokens, protocol messages, or enforcement projections, and the
+Mission record's single accountable Approver is unchanged.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-approval-governance/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-approval-governance/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 24 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An Optional Extension</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance Profile</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-approval-governance-rec" class="internal xref">The Approval Governance Record</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-assertion-requirements" class="internal xref">Assertion Requirements</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-evaluation-and-atomic-commi" class="internal xref">Evaluation and Atomic Commitment</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-policy-approval-recency" class="internal xref">Policy-Approval Recency</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-envelope-and-verification" class="internal xref">Envelope and Verification</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-recording-triggers" class="internal xref">Recording Triggers</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-consent-evidence-relationsh" class="internal xref">Consent Evidence Relationship</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-boundaries" class="internal xref">Boundaries</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-mission-evidence" class="internal xref">Mission Evidence</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-forged-or-padded-assertions" class="internal xref">Forged or Padded Assertions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-policy-substitution" class="internal xref">Policy Substitution</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-manufactured-accountability" class="internal xref">Manufactured Accountability</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-stale-policy-approval" class="internal xref">Stale Policy Approval</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5">
+                <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-immutability-witness" class="internal xref">Immutability Witness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.6">
+                <p id="section-toc.1-1.14.2.6.1"><a href="#section-14.6" class="auto internal xref">14.6</a>.  <a href="#name-issuer-key-compromise" class="internal xref">Issuer Key Compromise</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1.2.1">
+                    <p id="section-toc.1-1.16.2.1.2.1.1"><a href="#section-16.1.1" class="auto internal xref">16.1.1</a>.  <a href="#name-application-mission-approva" class="internal xref">application/mission-approval-governance+jws</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1.2.2">
+                    <p id="section-toc.1-1.16.2.1.2.2.1"><a href="#section-16.1.2" class="auto internal xref">16.1.2</a>.  <a href="#name-application-mission-approval" class="internal xref">application/mission-approval-governance+json</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#section-18" class="auto internal xref">18</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.1">
+                <p id="section-toc.1-1.18.2.1.1"><a href="#section-18.1" class="auto internal xref">18.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.2">
+                <p id="section-toc.1-1.18.2.2.1"><a href="#section-18.2" class="auto internal xref">18.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">An authority-bearing binding of the Mission model records one
+accountable Approver and defers multi-party approval and
+approval-authority provenance to a governance layer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> states the rule for the
+OAuth binding, whose record members this document's binding rules
+consume). An enterprise
+review surface is often that governance layer: a decision may
+involve several principals, a threshold or separation-of-duty rule,
+and a delegation-of-authority policy, and an auditor later needs to
+prove not only who approved but under which authority the approval
+was valid. This document defines the Approval Governance Record
+(AGR) as governance evidence with teeth: where it is recorded, it
+participates in whether the Mission activates, so its assertions
+carry authentication and binding requirements, and its committed
+form is signed and immutable.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Before commitment, the record is part of the approval decision
+itself: an assertion that fails authentication, event binding, or
+policy authorization <span class="bcp14">MUST NOT</span> contribute, and a record that cannot be
+evaluated or persisted <span class="bcp14">MUST</span> prevent activation. After commitment, the
+record is evidence: immutable, signed, and consumed by audit, never
+by enforcement.<a href="#section-1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-extensio">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: An Optional Extension</a>
+      </h2>
+<p id="section-2-1">This document is optional. A deployment that records nothing beyond
+the Mission record's accountable <code>approver</code> is fully conformant to
+its Mission binding and unaffected by this document. Profiles <span class="bcp14">MAY</span>
+require this record; the Enterprise Mission Authority Profile does
+so under its recording triggers
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document is ceremony-independent: it applies to synchronous
+approval, deferred approval
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>), and the standalone
+Mission Authority Server's native asynchronous approval alike, and
+depends on no deferral substrate.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">Maturity: stable. Maintenance: active.
+Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
+Requires: Mission Substrate Requirements.<a href="#section-2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-3">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> as the data model for the
+Approval Governance Record. JCS canonicalization <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> applies
+wherever this document computes a digest or a signing input, under
+the canonicalization rules of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;
+this document does not define a second canonicalization.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">A digest is encoded in the integrity-anchor encoded form of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: the <code>sha-256:</code> prefix
+followed by the base64url, no-padding encoding of the digest. This
+document defines no digest algorithm of its own. Its two digests are
+classified under the substrate's default commitment construction,
+which this document imports normatively
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):
+<code>approval_policy.digest</code> is an envelope anchor, and the record
+digest (<a href="#envelope" class="auto internal xref">Section 9</a>) is a canonical-object digest.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">The terms Mission, Mission Issuer, Approver, approval event, Mission
+Intent, <code>approval_event_id</code>, <code>intent_hash</code>, <code>authority_hash</code>, and
+<code>controls</code> are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-5">
+        <dt id="section-3-5.1">Approval Governance Record (AGR):</dt>
+        <dd style="margin-left: 1.5em" id="section-3-5.2">
+          <p id="section-3-5.2.1">The record this document defines: the policy, assertions, and
+evaluation standing behind one approval event (<a href="#record" class="auto internal xref">Section 5</a>).<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-5.3">Assertion:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-5.4">
+          <p id="section-3-5.4.1">One principal's authenticated decision statement carried in an AGR
+(<a href="#record" class="auto internal xref">Section 5</a>).<a href="#section-3-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-5.5">Evaluation:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-5.6">
+          <p id="section-3-5.6.1">The issuer's determination of whether the recorded assertions
+satisfy the referenced approval policy (<a href="#record" class="auto internal xref">Section 5</a>).<a href="#section-3-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-5.7">Recording trigger:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-5.8">
+          <p id="section-3-5.8.1">A condition under which a profile requires this record for an
+approval event (<a href="#triggers" class="auto internal xref">Section 10</a>).<a href="#section-3-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="issuance-relationship">
+<section id="section-4">
+      <h2 id="name-relationship-to-the-issuanc">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the Issuance Profile</a>
+      </h2>
+<p id="section-4-1">The Mission record carries exactly one accountable <code>approver</code>, and
+this document does not change that: the accountable Approver remains
+the only principal any downstream projection, token, or enforcement
+point consumes. The record captures the standing behind that
+approval, never a second authorization surface visible outside the
+issuer.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2"><code>approval_event_id</code> joins the record to the approval event and to
+the Mission record it governs
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The record never appears on
+tokens or in any protocol message; it is issuer-retained
+control-plane state.<a href="#section-4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="record">
+<section id="section-5">
+      <h2 id="name-the-approval-governance-rec">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-the-approval-governance-rec" class="section-name selfRef">The Approval Governance Record</a>
+      </h2>
+<p id="section-5-1">An Approval Governance Record is a JSON object with these members,
+plus the integrity <code>envelope</code> <a href="#envelope" class="auto internal xref">Section 9</a> defines.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2">
+        <dt id="section-5-2.1">
+<code>approval_event_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.2">
+          <p id="section-5-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The approval event's identifier, equal to the
+Mission record's <code>approval_event_id</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.3">
+<code>mission</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.4">
+          <p id="section-5-2.4.1"><span class="bcp14">REQUIRED</span>. An object binding the record to the approved Mission:
+<code>issuer</code> (the Mission Issuer), <code>intent_hash</code>, and <code>authority_hash</code>,
+each equal to the committed Mission record member of the same
+name. A record whose binding does not match the Mission record it
+is retained with is invalid.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.5">
+<code>approval_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.6">
+          <p id="section-5-2.6.1"><span class="bcp14">REQUIRED</span>. An object identifying the governing
+delegation-of-authority policy: <code>id</code> (an identifier), <code>version</code> (a
+string), and <code>digest</code> (an integrity anchor over the retained policy
+snapshot, in the encoded form <a href="#conventions-and-definitions" class="auto internal xref">Section 3</a>
+fixes). The digest preimage is the issuance profile's
+integrity-anchor envelope (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+with <code>typ</code> <code>mission-approval-policy</code>, <code>iss</code> the Mission issuer, and
+<code>value</code> an object of <code>content_type</code> (the snapshot's media type) and
+<code>content</code> (the base64url, no-padding encoding of the snapshot
+bytes), canonicalized with JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>: the <code>typ</code>
+domain-separates this anchor from every other anchor in the family,
+and the issuer binding prevents cross-issuer replay. The snapshot
+bytes and their media type, or the referenced policy version they
+represent, <span class="bcp14">MUST</span> be retained for the Mission's audit horizon
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so an independent auditor
+reproduces the digest exactly and re-checks the evaluation against
+the policy that governed it. Threshold, quorum, veto, and separation-of-duty semantics live
+in the referenced policy; any human-readable summary of them in
+deployment tooling is advisory and carries no semantics in this
+record.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.7">
+<code>assertions</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.8">
+          <p id="section-5-2.8.1"><span class="bcp14">REQUIRED</span>. An array of one or more decision assertions. Each
+carries:<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2.8.2">
+            <dt id="section-5-2.8.2.1">
+<code>assertion_id</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.2">
+              <p id="section-5-2.8.2.2.1"><span class="bcp14">REQUIRED</span>. A string, unique within the record.<a href="#section-5-2.8.2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-5-2.8.2.3">
+<code>principal</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.4">
+              <p id="section-5-2.8.2.4.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>.<a href="#section-5-2.8.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-5-2.8.2.5">
+<code>kind</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.6">
+              <p id="section-5-2.8.2.6.1"><span class="bcp14">REQUIRED</span>. A string, one of <code>human</code>, <code>service</code>, or <code>policy</code>.<a href="#section-5-2.8.2.6.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-5-2.8.2.7">
+<code>decision</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.8">
+              <p id="section-5-2.8.2.8.1"><span class="bcp14">REQUIRED</span>. A string, one of <code>approve</code> or <code>deny</code>.<a href="#section-5-2.8.2.8.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-5-2.8.2.9">
+<code>decided_at</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.10">
+              <p id="section-5-2.8.2.10.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-5-2.8.2.10.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-5-2.8.2.11">
+<code>authority</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.12">
+              <p id="section-5-2.8.2.12.1"><span class="bcp14">REQUIRED</span>. A reference to the provenance under which this
+principal was authorized to decide. For a <code>human</code> assertion,
+the authentication context of the assertion. For a <code>policy</code>
+assertion, the deciding policy's identifier and version, and
+<code>approved_at</code>: the family's provenance chain for non-human
+approval, in which the policy approves the instance because a
+human approved the policy.<a href="#section-5-2.8.2.12.1" class="pilcrow">¶</a></p>
+<p id="section-5-2.8.2.12.2"><code>approved_at</code> is an RFC 3339 timestamp: the human approval
+instant of that exact policy version, not the assertion
+instant. <code>decided_at</code> records when the policy asserted;
+<code>approved_at</code> records when a human approved the version it
+asserts under. The issuer <span class="bcp14">MUST</span> verify <code>approved_at</code> from
+retained, authenticated governance state for the named
+<code>policy_id</code> and <code>version</code>; it <span class="bcp14">MUST NOT</span> accept <code>approved_at</code> as
+the assertion's own uncorroborated clock value
+(<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>).<a href="#section-5-2.8.2.12.2" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-5-2.8.2.13">
+<code>reason</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-5-2.8.2.14">
+              <p id="section-5-2.8.2.14.1"><span class="bcp14">OPTIONAL</span>. A string.<a href="#section-5-2.8.2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.9">
+<code>evaluation</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.10">
+          <p id="section-5-2.10.1"><span class="bcp14">REQUIRED</span>. An object recording the outcome: <code>decision</code> (a string,
+<code>approved</code>, the only value a committed record carries, since a
+record exists only for an approval that committed,
+<a href="#atomic-commitment" class="auto internal xref">Section 7</a>), <code>evaluated_at</code> (an RFC 3339 timestamp),
+and <code>contributing</code> (an array of the <code>assertion_id</code> values the
+evaluation relied on).<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.11">
+<code>envelope</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.12">
+          <p id="section-5-2.12.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection over the members above,
+in the form <a href="#envelope" class="auto internal xref">Section 9</a> defines.<a href="#section-5-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<div class="lang-json sourcecode" id="section-5-3">
+<pre>
+{
+  "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
+  "mission": {
+    "issuer": "https://as.example.com",
+    "intent_hash":
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "approval_policy": {
+    "id": "dlg-matrix",
+    "version": "v7",
+    "digest":
+      "sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0"
+  },
+  "assertions": [
+    { "assertion_id": "ast_1",
+      "principal": { "iss": "https://login.example.com",
+        "sub": "manager@example.com" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-09-30T16:58:11Z",
+      "authority": { "role": "finance-manager" } },
+    { "assertion_id": "ast_2",
+      "principal": { "iss": "https://as.example.com",
+        "sub": "policy:finance-charter" },
+      "kind": "policy", "decision": "approve",
+      "decided_at": "2026-09-30T16:58:12Z",
+      "authority": { "policy_id": "dlg-matrix", "version": "v7",
+        "approved_by": { "iss": "https://login.example.com",
+          "sub": "cfo@example.com" },
+        "approved_at": "2026-09-15T09:00:00Z" } }
+  ],
+  "evaluation": {
+    "decision": "approved",
+    "evaluated_at": "2026-09-30T16:58:13Z",
+    "contributing": ["ast_1", "ast_2"]
+  },
+  "envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0y..."
+  }
+}
+</pre><a href="#section-5-3" class="pilcrow">¶</a>
+</div>
+<p id="section-5-4">The Mission record's accountable <code>approver</code> in this example is
+<code>manager@example.com</code>; <code>ast_1</code> is that principal's own <code>approve</code>
+assertion, satisfying the accountable-approver rule of
+<a href="#assertion-requirements" class="auto internal xref">Section 6</a> directly. <code>ast_2</code> is a <code>policy</code> assertion
+carrying its own provenance chain, recorded alongside rather than in
+place of the accountable approver's assertion. The <code>envelope</code>
+member's <code>value</code> is the JWS whose payload is the JCS canonical bytes
+of this object with <code>envelope</code> itself removed (<a href="#envelope" class="auto internal xref">Section 9</a>).<a href="#section-5-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="assertion-requirements">
+<section id="section-6">
+      <h2 id="name-assertion-requirements">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-assertion-requirements" class="section-name selfRef">Assertion Requirements</a>
+      </h2>
+<p id="section-6-1">These rules are the record's security core.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1">Every assertion that contributes to the evaluation <span class="bcp14">MUST</span> be
+authenticated: a <code>human</code> assertion with the authentication the
+issuance profile requires of an Approver at an approval event, a
+<code>service</code> or <code>policy</code> assertion through an integrity-protected
+channel or signature the issuer verifies.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1">Every assertion <span class="bcp14">MUST</span> be bound to this approval event: an assertion
+is made against this <code>approval_event_id</code> and this <code>authority_hash</code>,
+and an assertion captured for one event <span class="bcp14">MUST NOT</span> be replayed into
+another.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.3">
+          <p id="section-6-2.3.1">Every contributing assertion <span class="bcp14">MUST</span> be policy-authorized: the issuer
+verifies the asserting principal was eligible to assert under the
+referenced <code>approval_policy</code> version before counting it.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.4">
+          <p id="section-6-2.4.1">Denials and vetoes <span class="bcp14">MUST</span> be recorded: an assertion set that omits a
+negative assertion misrepresents the decision.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.5">
+          <p id="section-6-2.5.1">Exactly one assertion <span class="bcp14">MUST</span> match the Mission record's accountable
+<code>approver</code> and carry an <code>approve</code> decision; the record supports
+the approval it claims to govern or it does not commit. A
+policy-authority Approver satisfies this with a <code>policy</code> assertion
+carrying its provenance chain, subject to the high-risk-class
+restriction of <a href="#policy-approval-recency" class="auto internal xref">Section 8</a>.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.6">
+          <p id="section-6-2.6.1">An assertion that fails authentication, event binding, or policy
+authorization <span class="bcp14">MUST NOT</span> contribute to the evaluation and <span class="bcp14">MUST NOT</span>
+be counted toward any policy rule.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="atomic-commitment">
+<section id="section-7">
+      <h2 id="name-evaluation-and-atomic-commi">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-evaluation-and-atomic-commi" class="section-name selfRef">Evaluation and Atomic Commitment</a>
+      </h2>
+<p id="section-7-1">Where a deployment records the Approval Governance Record for an
+approval, the record and the Mission are one commit: the issuer
+evaluates the assertions under the referenced policy, and the
+Mission record <span class="bcp14">MUST NOT</span> be created <code>active</code> unless the evaluation's
+<code>decision</code> is <code>approved</code> and the signed record persists atomically
+with the Mission's creation. Failure to authenticate the
+contributing assertions, to complete the evaluation, or to persist
+the record <span class="bcp14">MUST</span> prevent activation; there is no Mission whose
+governance record was meant to exist and does not. A governance
+evaluation that denies creates no Mission and no committed record:
+negative assertions retained inside a committed record document
+dissent (<a href="#assertion-requirements" class="auto internal xref">Section 6</a>), and a wholly declined
+approval's evidence surface is consent evidence's declined outcome
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), which
+exists without a Mission record. The issuer signs
+the evaluated record (<a href="#envelope" class="auto internal xref">Section 9</a>) and persists the signed form in
+the same commit as the Mission's creation; signing follows
+evaluation and precedes persistence, never the reverse.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A committed record is immutable. A subsequent governance action, a
+re-review or an incident finding, is a new record about a new event,
+never an edit.<a href="#section-7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="policy-approval-recency">
+<section id="section-8">
+      <h2 id="name-policy-approval-recency">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-policy-approval-recency" class="section-name selfRef">Policy-Approval Recency</a>
+      </h2>
+<p id="section-8-1">This section bounds staleness on the AGR <code>policy</code> assertion path: it
+governs a <code>policy</code> assertion's <code>authority.approved_at</code> and the
+<code>kind</code> of the accountable-approver's assertion. It does not apply to
+a <code>human</code> assertion, whose <code>decided_at</code> is the approval instant
+itself.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">A Recording Issuer that admits <code>policy</code> assertions <span class="bcp14">MUST</span> declare a
+maximum policy-approval age per consequence class (a <strong>recency
+ceiling</strong>) and a bounded clock-skew allowance, and <span class="bcp14">MAY</span> declare, per
+class, an <strong>exception</strong> admitting a <code>policy</code> assertion as the
+accountable approver's assertion for that class, each exception
+carrying its own maximum age. The ceiling, the skew allowance, and
+any exception <span class="bcp14">MUST</span> be part of the retained <code>approval_policy</code> snapshot
+that <code>approval_policy.digest</code> commits (<a href="#record" class="auto internal xref">Section 5</a>), or a separately
+versioned declaration committed from that snapshot. A mutable,
+out-of-band deployment statement <span class="bcp14">MUST NOT</span> serve this role: it would
+make the evaluation impossible to reproduce, contrary to the promise
+of <a href="#record" class="auto internal xref">Section 5</a> that the retained policy lets an auditor re-run the
+decision.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">At evaluation, the issuer <span class="bcp14">MUST</span> classify the committed Mission's
+consequence classes from the derived Authority Set and from any
+consumption bound Mission Intent <code>controls</code> carries
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The issuer <span class="bcp14">MUST</span> select,
+across every class either source carries, the strictest maximum age
+that applies, accounting for any declared exception. This is a
+property of the whole committed Mission the record's
+<code>mission.authority_hash</code> and <code>mission.intent_hash</code> bind to
+(<a href="#record" class="auto internal xref">Section 5</a>), never of one assertion or entry in isolation.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">For each <code>policy</code> assertion the evaluation would count toward the
+applicable maximum, the issuer:<a href="#section-8-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-5.1">
+          <p id="section-8-5.1.1"><span class="bcp14">MUST</span> verify <code>authority.approved_at</code> from retained, authenticated
+governance state for the exact <code>policy_id</code> and <code>version</code> the
+assertion names;<a href="#section-8-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.2">
+          <p id="section-8-5.2.1"><span class="bcp14">MUST</span> measure the assertion's age as <code>evaluation.evaluated_at</code> minus
+<code>authority.approved_at</code>, using the atomic-commitment instant
+(<a href="#atomic-commitment" class="auto internal xref">Section 7</a>);<a href="#section-8-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.3">
+          <p id="section-8-5.3.1"><span class="bcp14">MUST</span> enforce <code>authority.approved_at</code> &lt;= <code>decided_at</code> &lt;=
+<code>evaluation.evaluated_at</code>, subject to the declared clock-skew
+allowance; and<a href="#section-8-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.4">
+          <p id="section-8-5.4.1"><span class="bcp14">MUST</span> reject the assertion if <code>authority.approved_at</code> or
+<code>decided_at</code> is later than the issuer's own clock at evaluation,
+beyond that allowance.<a href="#section-8-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-6">A <code>policy</code> assertion whose age exceeds the applicable maximum, or
+whose ordering the previous paragraph does not admit, fails
+policy-authorization under <a href="#assertion-requirements" class="auto internal xref">Section 6</a>: the issuer
+<span class="bcp14">MUST NOT</span> count it toward the evaluation, and by
+<a href="#atomic-commitment" class="auto internal xref">Section 7</a> the Mission <span class="bcp14">MUST NOT</span> be created <code>active</code> on an
+evaluation that depended on it. An <code>evaluation.evaluated_at</code> later
+than the issuer's own clock, beyond the declared allowance, is a
+defect of the record rather than of one assertion: the evaluation
+<span class="bcp14">MUST NOT</span> be treated as complete, and by <a href="#atomic-commitment" class="auto internal xref">Section 7</a> the
+Mission <span class="bcp14">MUST NOT</span> be created <code>active</code> on it.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">This is issuance-time eligibility. It determines whether a Mission
+activates and does not reach back into a Mission already <code>active</code>:
+that Mission's governing policy approval was measured fresh at its
+own approval event, and a later change to the ceiling, the exception,
+or the policy's freshness does not narrow or terminate it.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">Four conditions are the high-risk classes the issuance profile
+defines: irreversible action, external commitment, privileged
+administration, and a consumption bound
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Where the committed
+Mission's derived Authority Set or Mission Intent <code>controls</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) carries one, the
+assertion satisfying the accountable-approver rule of
+<a href="#assertion-requirements" class="auto internal xref">Section 6</a> <span class="bcp14">MUST</span> be <code>kind: human</code>, unless a committed,
+class-named exception under this section admits <code>kind: policy</code> for
+that class.<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9">Approval Governance is an optional extension
+(<a href="#optional-status" class="auto internal xref">Section 2</a>); the rules of this section are a conservative
+default of that profile, not a family-wide guarantee, and a
+deployment that records no Approval Governance Record is unbounded
+by them. <code>kind: human</code> is not by itself an assurance property: the
+authentication-strength, rendering, and accountable-principal
+requirements the issuance profile and <a href="#assertion-requirements" class="auto internal xref">Section 6</a>
+otherwise impose still carry that property; this section only
+decides which assertion kind <span class="bcp14">MUST</span> be present.<a href="#section-8-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="envelope">
+<section id="section-9">
+      <h2 id="name-envelope-and-verification">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-envelope-and-verification" class="section-name selfRef">Envelope and Verification</a>
+      </h2>
+<p id="section-9-1">An Approval Governance Record carries its integrity protection in an
+<code>envelope</code> member: <span class="bcp14">REQUIRED</span>, an object with <code>format</code> (a string,
+required) and <code>value</code> (a string, required). The default <code>format</code> is
+<code>jws-compact</code>, a JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> over the JCS
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the record with the <code>envelope</code> member
+removed, signed by the Mission Issuer under a key resolvable in its
+published key material. The signed record, <code>envelope</code> included, is
+the retained, registrable form.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">A verifier <span class="bcp14">MUST</span> perform the following steps, in order, and <span class="bcp14">MUST NOT</span>
+treat a record as verified if any step fails:<a href="#section-9-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-9-3">
+<li id="section-9-3.1">
+          <p id="section-9-3.1.1">Resolve the Mission Issuer's signing key from the JWS protected
+<code>kid</code> in its published key material.<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-3.2">
+          <p id="section-9-3.2.1">Verify the JWS signature and protected header against that key.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-3.3">
+          <p id="section-9-3.3.1">Compute the JCS canonical bytes of the outer record with the
+<code>envelope</code> member removed.<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-3.4">
+          <p id="section-9-3.4.1">Require byte-for-byte equality between the decoded JWS payload
+and the canonical bytes of step 3, rejecting the record on any
+difference. The signature authenticates only its own embedded
+payload; a record that differs from that payload is
+unauthenticated regardless of whether the signature itself
+verifies.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-3.5">
+          <p id="section-9-3.5.1">Validate the mission binding of <a href="#record" class="auto internal xref">Section 5</a> against the Mission
+record it is retained with.<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-9-4">The JWS protected header <span class="bcp14">MUST</span> carry a <code>kid</code> resolvable in the Mission
+Issuer's published key material, a <code>typ</code> of
+<code>application/mission-approval-governance+jws</code>, and a <code>cty</code> of
+<code>application/mission-approval-governance+json</code> (<a href="#iana" class="auto internal xref">Section 16</a>); a verifier
+<span class="bcp14">MUST</span> reject a JWS whose protected <code>typ</code> and <code>cty</code> are not exactly
+this pair (<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, Sections 4.1.9 and 4.1.10). This
+document defines only the <code>jws-compact</code> format; an implementation
+<span class="bcp14">MUST</span> reject an envelope whose <code>format</code> is unsupported rather than
+accepting it unverified.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">The <strong>record digest</strong> is the digest, in the encoded form
+<a href="#conventions-and-definitions" class="auto internal xref">Section 3</a> fixes, over the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+canonical bytes of the complete record, <code>envelope</code> included. It is
+the one byte sequence every external binding names: audit
+registration hashes exactly these bytes (<a href="#audit-evidence" class="auto internal xref">Section 13</a>), and
+consent evidence's <code>approval_governance_digest</code> equals exactly this
+value (<a href="#consent-evidence-relationship" class="auto internal xref">Section 11</a>).<a href="#section-9-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="triggers">
+<section id="section-10">
+      <h2 id="name-recording-triggers">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-recording-triggers" class="section-name selfRef">Recording Triggers</a>
+      </h2>
+<p id="section-10-1">Defined here so a profile cites one list. The record is <span class="bcp14">REQUIRED</span> for
+an approval event when any of the following holds:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">the Mission record's <code>approver</code> differs from its <code>subject</code>;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">more than one principal contributes to the decision;<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.3">
+          <p id="section-10-2.3.1">a non-human assertion contributes to the decision;<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.4">
+          <p id="section-10-2.4.1">a threshold, veto, or separation-of-duty rule is evaluated; or<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.5">
+          <p id="section-10-2.5.1">validating any assertion requires authority standing outside the
+Mission record.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-3">Direct self-approval by one authenticated human is the degenerate
+case: the Mission record already carries it completely, and no
+record is required.<a href="#section-10-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="consent-evidence-relationship">
+<section id="section-11">
+      <h2 id="name-consent-evidence-relationsh">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-consent-evidence-relationsh" class="section-name selfRef">Consent Evidence Relationship</a>
+      </h2>
+<p id="section-11-1">Where both are recorded, the AGR is authoritative for
+approval-governance facts, and consent evidence presents a
+deliberately partial view of it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>). Agreement
+is testable, member by member:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1">Each <code>co_approvals</code> entry <span class="bcp14">MUST</span> correspond to exactly one <code>human</code>
+assertion in the record with the same <code>principal</code>, the entry's
+decision equal to the assertion's <code>decision</code>, and the entry's
+timestamp equal to the assertion's <code>decided_at</code>. Omitting an
+assertion is permitted; an entry with no corresponding assertion,
+or one that alters a decision or time, is an integrity failure.
+<code>service</code> and <code>policy</code> assertions are governance inputs, never
+consent events, and are never presented as co-approvals.<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1">The consent evidence <code>approver</code> <span class="bcp14">MUST</span> equal the <code>principal</code> of the
+record's accountable assertion (<a href="#assertion-requirements" class="auto internal xref">Section 6</a>).<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1"><code>approval_authority</code>, when present, <span class="bcp14">MUST</span> equal
+<code>approval_policy.id</code>; <code>approval_policy_version</code>, when present,
+<span class="bcp14">MUST</span> equal <code>approval_policy.version</code>.<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.4">
+          <p id="section-11-2.4.1"><code>approval_governance_digest</code>, when present, <span class="bcp14">MUST</span> equal the record
+digest (<a href="#envelope" class="auto internal xref">Section 9</a>).<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-3">The AGR governs on any disagreement.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">Where a deferred approval revises under Mission Approval Revision
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>) and the
+deployment records consent evidence, each <code>revision_required</code> outcome
+produces a <code>narrowed</code> consent-evidence decision with no corresponding
+record: no Mission yet exists for the atomic commitment rule
+(<a href="#atomic-commitment" class="auto internal xref">Section 7</a>) to attach to. Where consent evidence is
+recorded, it owns the narrowing history, through its <code>narrowed</code>
+entries and <code>predecessor_intent_hashes</code>. Where an AGR is recorded for
+the final approval, it owns the final approval-governance facts. This
+is a deliberate artifact separation, not an authority conflict.<a href="#section-11-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="boundaries">
+<section id="section-12">
+      <h2 id="name-boundaries">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-boundaries" class="section-name selfRef">Boundaries</a>
+      </h2>
+<p id="section-12-1">The record governs the Mission approval event; an action-time
+approval under the runtime profile's re-evaluation surfaces
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is a different layer and
+never joins this record.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">OAuth standardizes the requested and granted authorization data, not
+an organization's internal approval provenance (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> takes the
+same boundary for rich authorization requests); this record therefore
+stays off protocol messages and out of enforcement projections,
+matching the issuance profile's control-plane discipline.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3"><a href="#policy-approval-recency" class="auto internal xref">Section 8</a> bounds only the AGR <code>policy</code> assertion
+path. The issuance profile's standing-consent authority bases carry
+their own human-approval instant, in <code>approval_basis.approved_at</code>,
+traced through <code>consent_principal</code> and a commitment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the template profile's
+<code>template</code> basis and the progressive profile's <code>ceiling_drawdown</code>
+basis both populate it, and each profile declares its own maximum age
+against it: <code>review_cadence</code> for template, the ceiling review cadence
+for progressive
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). The two recency
+paths are therefore analogous, each bounding staleness against a
+retained human-approval instant, but distinct in what they gate: this
+section's ceiling governs whether the issuer may count a <code>policy</code>
+assertion at evaluation, with its own clock-skew allowance and
+<code>decided_at</code>/<code>evaluation.evaluated_at</code> ordering; a profile's own
+maximum age governs whether the dispatch or drawdown may happen at
+all, independent of whether an AGR is ever recorded. Where a
+deployment maps a standing-consent basis onto an AGR assertion, as
+those two profiles specify, the assertion's <code>authority.approved_at</code>
+is sourced from <code>approval_basis.approved_at</code>, and this section's
+rules then apply to it like any other <code>policy</code> assertion.<a href="#section-12-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audit-evidence">
+<section id="section-13">
+      <h2 id="name-mission-evidence">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-mission-evidence" class="section-name selfRef">Mission Evidence</a>
+      </h2>
+<p id="section-13-1">The AGR is registrable Mission evidence under the audit
+transparency profile's evidence-type pattern
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>): canonical bytes are the
+JCS canonical bytes of the complete record, <code>envelope</code> included, the
+record-digest preimage (<a href="#envelope" class="auto internal xref">Section 9</a>); <code>payload-preimage-content-type</code> is
+<code>application/mission-approval-governance+json</code>; the authoritative
+producer is the Mission <code>issuer</code>. Registration is optional
+transparency hardening; retention and immutability do not depend on
+it.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-14">
+      <h2 id="name-security-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="forged-or-padded-assertions">
+<section id="section-14.1">
+        <h3 id="name-forged-or-padded-assertions">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-forged-or-padded-assertions" class="section-name selfRef">Forged or Padded Assertions</a>
+        </h3>
+<p id="section-14.1-1">A forged or padded assertion is an authorization attack before
+commitment, not an audit defect: the assertion requirements of
+<a href="#assertion-requirements" class="auto internal xref">Section 6</a> are the control, and a deployment that
+records assertions without authenticating them has built an approval
+bypass rather than an evidence trail.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="policy-substitution">
+<section id="section-14.2">
+        <h3 id="name-policy-substitution">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-policy-substitution" class="section-name selfRef">Policy Substitution</a>
+        </h3>
+<p id="section-14.2-1">Without <code>approval_policy.digest</code> and its retention, a later reading
+cannot prove which policy governed the evaluation. The digest and
+the audit-horizon retention of <a href="#record" class="auto internal xref">Section 5</a> are the control.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="manufactured-accountability">
+<section id="section-14.3">
+        <h3 id="name-manufactured-accountability">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-manufactured-accountability" class="section-name selfRef">Manufactured Accountability</a>
+        </h3>
+<p id="section-14.3-1">The accountable-approver assertion rule of
+<a href="#assertion-requirements" class="auto internal xref">Section 6</a> prevents a set of service and policy
+assertions from claiming a Mission whose named Approver never
+asserted anything.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stale-policy-approval">
+<section id="section-14.4">
+        <h3 id="name-stale-policy-approval">
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-stale-policy-approval" class="section-name selfRef">Stale Policy Approval</a>
+        </h3>
+<p id="section-14.4-1">Without <a href="#policy-approval-recency" class="auto internal xref">Section 8</a>, a <code>policy</code> assertion could rely
+on a human approval far in the past, or stand in for the accountable
+approver on a high-risk consequence with no human assertion at all.
+The recency ceiling, its ordering checks, and the human-by-default
+consequence-class rule are the control.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="immutability-witness">
+<section id="section-14.5">
+        <h3 id="name-immutability-witness">
+<a href="#section-14.5" class="section-number selfRef">14.5. </a><a href="#name-immutability-witness" class="section-name selfRef">Immutability Witness</a>
+        </h3>
+<p id="section-14.5-1">The issuer-signed envelope of <a href="#envelope" class="auto internal xref">Section 9</a> makes post-commit
+tampering detectable. Audit registration (<a href="#audit-evidence" class="auto internal xref">Section 13</a>)
+additionally bounds issuer-side substitution, since a registered
+record's later alteration diverges from its receipt.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="issuer-key-compromise">
+<section id="section-14.6">
+        <h3 id="name-issuer-key-compromise">
+<a href="#section-14.6" class="section-number selfRef">14.6. </a><a href="#name-issuer-key-compromise" class="section-name selfRef">Issuer Key Compromise</a>
+        </h3>
+<p id="section-14.6-1">This document inherits the issuance profile's key-material
+considerations. A compromised Mission Issuer signing key can mint a
+plausible record; audit registration
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) is the existence bound, not
+a substitute for key custody.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-15">
+      <h2 id="name-privacy-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-15-1">Assertion principals and decision times are PII about reviewers. The
+record is control-plane state retained by the issuer, never
+disclosed on wire surfaces, and access to a retained record follows
+the issuer's audit-log discipline for approval-event records
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-16">
+      <h2 id="name-iana-considerations">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="media-type-registration">
+<section id="section-16.1">
+        <h3 id="name-media-type-registration">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
+        </h3>
+<p id="section-16.1-1">IANA is requested to register two media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>: the
+Approval Governance Record object, and the JWS-secured representation
+its <code>envelope</code> carries (using the <code>+jws</code> structured syntax suffix
+already registered with IANA).<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+<div id="applicationmission-approval-governancejws">
+<section id="section-16.1.1">
+          <h4 id="name-application-mission-approva">
+<a href="#section-16.1.1" class="section-number selfRef">16.1.1. </a><a href="#name-application-mission-approva" class="section-name selfRef">application/mission-approval-governance+jws</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-16.1.1-1.1">
+              <p id="section-16.1.1-1.1.1">Type name: application<a href="#section-16.1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.2">
+              <p id="section-16.1.1-1.2.1">Subtype name: mission-approval-governance+jws<a href="#section-16.1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.3">
+              <p id="section-16.1.1-1.3.1">Required parameters: none<a href="#section-16.1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.4">
+              <p id="section-16.1.1-1.4.1">Optional parameters: none<a href="#section-16.1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.5">
+              <p id="section-16.1.1-1.5.1">Encoding considerations: binary; a JWS Compact Serialization:
+base64url-encoded values separated by period characters. The
+secured payload's media type travels in the JWS protected <code>cty</code>
+(<a href="#envelope" class="auto internal xref">Section 9</a>).<a href="#section-16.1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.6">
+              <p id="section-16.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 14</a><a href="#section-16.1.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.7">
+              <p id="section-16.1.1-1.7.1">Interoperability considerations: see this document (<a href="#envelope" class="auto internal xref">Section 9</a>)<a href="#section-16.1.1-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.8">
+              <p id="section-16.1.1-1.8.1">Published specification: this document<a href="#section-16.1.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.9">
+              <p id="section-16.1.1-1.9.1">Applications that use this media type: Mission-Bound Authorization
+approval governance<a href="#section-16.1.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.10">
+              <p id="section-16.1.1-1.10.1">Fragment identifier considerations: N/A<a href="#section-16.1.1-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.11">
+              <p id="section-16.1.1-1.11.1">Additional information:<a href="#section-16.1.1-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.1.1-1.11.2.1">
+                  <p id="section-16.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-16.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-16.1.1-1.11.2.2">
+                  <p id="section-16.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-16.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-16.1.1-1.11.2.3">
+                  <p id="section-16.1.1-1.11.2.3.1">File extension(s): none<a href="#section-16.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-16.1.1-1.11.2.4">
+                  <p id="section-16.1.1-1.11.2.4.1">Macintosh file type code(s): N/A<a href="#section-16.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-16.1.1-1.12">
+              <p id="section-16.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-16.1.1-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.13">
+              <p id="section-16.1.1-1.13.1">Intended usage: COMMON<a href="#section-16.1.1-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.14">
+              <p id="section-16.1.1-1.14.1">Restrictions on usage: none<a href="#section-16.1.1-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.15">
+              <p id="section-16.1.1-1.15.1">Author: IETF<a href="#section-16.1.1-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.1-1.16">
+              <p id="section-16.1.1-1.16.1">Change controller: IETF<a href="#section-16.1.1-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="applicationmission-approval-governancejson">
+<section id="section-16.1.2">
+          <h4 id="name-application-mission-approval">
+<a href="#section-16.1.2" class="section-number selfRef">16.1.2. </a><a href="#name-application-mission-approval" class="section-name selfRef">application/mission-approval-governance+json</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-16.1.2-1.1">
+              <p id="section-16.1.2-1.1.1">Type name: application<a href="#section-16.1.2-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.2">
+              <p id="section-16.1.2-1.2.1">Subtype name: mission-approval-governance+json<a href="#section-16.1.2-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.3">
+              <p id="section-16.1.2-1.3.1">Required parameters: none<a href="#section-16.1.2-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.4">
+              <p id="section-16.1.2-1.4.1">Optional parameters: none<a href="#section-16.1.2-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.5">
+              <p id="section-16.1.2-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-16.1.2-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.6">
+              <p id="section-16.1.2-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 14</a><a href="#section-16.1.2-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.7">
+              <p id="section-16.1.2-1.7.1">Interoperability considerations: see this document<a href="#section-16.1.2-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.8">
+              <p id="section-16.1.2-1.8.1">Published specification: this document<a href="#section-16.1.2-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.9">
+              <p id="section-16.1.2-1.9.1">Applications that use this media type: Mission-Bound Authorization
+issuers and audit deployments<a href="#section-16.1.2-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.10">
+              <p id="section-16.1.2-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-16.1.2-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.11">
+              <p id="section-16.1.2-1.11.1">Additional information:<a href="#section-16.1.2-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.1.2-1.11.2.1">
+                  <p id="section-16.1.2-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-16.1.2-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-16.1.2-1.11.2.2">
+                  <p id="section-16.1.2-1.11.2.2.1">Magic number(s): none<a href="#section-16.1.2-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-16.1.2-1.11.2.3">
+                  <p id="section-16.1.2-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-16.1.2-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-16.1.2-1.11.2.4">
+                  <p id="section-16.1.2-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-16.1.2-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-16.1.2-1.12">
+              <p id="section-16.1.2-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-16.1.2-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.13">
+              <p id="section-16.1.2-1.13.1">Intended usage: COMMON<a href="#section-16.1.2-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.14">
+              <p id="section-16.1.2-1.14.1">Restrictions on usage: none<a href="#section-16.1.2-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.15">
+              <p id="section-16.1.2-1.15.1">Author: IETF<a href="#section-16.1.2-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-16.1.2-1.16">
+              <p id="section-16.1.2-1.16.1">Change controller: IETF<a href="#section-16.1.2-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="conformance">
+<section id="section-17">
+      <h2 id="name-conformance">
+<a href="#section-17" class="section-number selfRef">17. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-17-1">A <strong>Recording Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-17-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-17-2.1">
+          <p id="section-17-2.1.1">authenticate, event-bind, and policy-authorize every contributing
+assertion (<a href="#assertion-requirements" class="auto internal xref">Section 6</a>);<a href="#section-17-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.2">
+          <p id="section-17-2.2.1">record denials;<a href="#section-17-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.3">
+          <p id="section-17-2.3.1">include the accountable-approver assertion;<a href="#section-17-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.4">
+          <p id="section-17-2.4.1">evaluate under the retained policy version;<a href="#section-17-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.5">
+          <p id="section-17-2.5.1">enforce the strictest applicable policy-approval maximum age across
+the consequence classes the committed Mission's derived Authority
+Set and Mission Intent <code>controls</code> carry, from a committed ceiling
+and any committed exception (<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>);<a href="#section-17-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.6">
+          <p id="section-17-2.6.1">require <code>kind: human</code> for the accountable-approver assertion where
+the committed Mission's derived Authority Set or Mission Intent
+<code>controls</code> carries a high-risk class, unless a committed
+class-named exception applies (<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>);<a href="#section-17-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.7">
+          <p id="section-17-2.7.1">commit the record atomically with Mission creation and let failure
+prevent activation (<a href="#atomic-commitment" class="auto internal xref">Section 7</a>);<a href="#section-17-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.8">
+          <p id="section-17-2.8.1">sign the committed record and keep it immutable
+(<a href="#envelope" class="auto internal xref">Section 9</a>); and<a href="#section-17-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.9">
+          <p id="section-17-2.9.1">retain the record and the referenced policy for the Mission's
+audit horizon (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-17-2.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-17-3">A <strong>Relying Auditor</strong> <span class="bcp14">MUST</span> verify the envelope by byte equality, <span class="bcp14">MUST</span>
+validate the mission binding, and <span class="bcp14">MUST</span> obtain the retained policy
+version before treating the evaluation as re-checked
+(<a href="#envelope" class="auto internal xref">Section 9</a>).<a href="#section-17-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-18">
+      <h2 id="name-references">
+<a href="#section-18" class="section-number selfRef">18. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-18.1">
+        <h3 id="name-normative-references">
+<a href="#section-18.1" class="section-number selfRef">18.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+      <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-18.2">
+        <h3 id="name-informative-references">
+<a href="#section-18.2" class="section-number selfRef">18.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approval-revision">[I-D.draft-mcguinness-oauth-mission-approval-revision]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Revision for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document extracts the experimental approval-provenance record
+that Mission Deferred Approval first sketched into a standalone
+companion, and reshapes it so its assertions carry the
+authentication, binding, and policy-authorization requirements that
+governance evidence with teeth requires. The author thanks the
+Mission-Bound Authorization
+implementer community for feedback.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
