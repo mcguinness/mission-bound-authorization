@@ -18,7 +18,7 @@ keyword:
  - approval
 venue:
   github: "mcguinness/mission-bound-authorization"
-  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-authorization.html"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html"
 
 author:
  -
@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC6838:
   RFC7515:
   RFC7519:
@@ -62,6 +70,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   RFC9068:
   RFC9470:
   I-D.draft-reece-wimse-cross-org-delegation:
@@ -284,7 +293,13 @@ commitment construction as the substrate defines them
 ({{I-D.draft-mcguinness-mission-substrate}}); and the transaction
 authorization challenge, its claims, its endpoint, and its pending and
 polling states as the OAuth transaction authorization challenge
-defines them ({{I-D.draft-rosomakho-oauth-txn-challenge}}).
+defines them ({{I-D.draft-rosomakho-oauth-txn-challenge}}). It uses
+containment, the issuer-held narrowing of a live Mission's
+authority, as Mission Containment defines it
+({{I-D.draft-mcguinness-oauth-mission-containment}}), and discharge,
+the per-entry retirement of granted authority, as the status
+profile's lifecycle suite defines it
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 Transaction Authorization Server (TAS):
 : The OAuth Authorization Server acting in the role
@@ -368,7 +383,7 @@ and `reason_uri`, are exactly as
 {{I-D.draft-rosomakho-oauth-txn-challenge}} Section 4.2.2 defines
 them. `authorization_details` carries exactly one operation-scoped
 `mission_resource_access` entry ({{I-D.draft-mcguinness-oauth-mission}})
-or one compound-action detail whose registered semantics make the
+or one compound-action detail whose specification-defined semantics make the
 operation atomic. The Operation Profile a TAS and the resource apply
 resolves deterministically from the challenge's `iss` and that entry's
 `type` member ({{RFC9396}}): a resource versions its Operation Profile
@@ -386,8 +401,9 @@ This profile adds the following REQUIRED challenge claims:
 
 `parameter_digest`:
 : REQUIRED. Computed exactly as the runtime profile specifies
-  ({{I-D.draft-mcguinness-mission-runtime}}); this document defines no
-  second canonicalization.
+  ({{I-D.draft-mcguinness-mission-runtime}}): a canonical-object
+  digest of the imported species ({{conventions}}); this document
+  defines no second canonicalization.
 
 `cnf`:
 : REQUIRED. The presenter key {{RFC7800}} to which the resulting
@@ -442,7 +458,10 @@ require. This profile adds, in order:
    and its `cnf` against the proof of possession presented on this
    request, establishing that the presented Mission-bound access token
    was issued for the challenged resource and is held by the party
-   presenting the challenge;
+   presenting the challenge, and validating any delegation context
+   (`act` chain) the `subject_token` carries under the actor rules in
+   effect, since the token of {{transaction-token}} projects exactly
+   that verified context;
 2. requiring exact equality between the challenge's `mission` and
    `subject_token`'s `mission` invariants;
 3. establishing that the challenge's `authorization_details` is within
@@ -505,6 +524,13 @@ admission and revalidated at completion:
    the identity, or produces any other value MUST be refused; and
 6. only then run the fresh decision of step 7 and mint the token.
 
+The two numbered sequences interleave in exactly one way:
+establishment steps 1 through 4 run at admission, inside the
+`subject_token` validation of {{challenge-redemption}} step 1, and
+MUST complete before {{challenge-redemption}} step 5 binds the
+approval to the pinned subject; establishment steps 5 and 6 run at
+completion, before {{challenge-redemption}} step 7's fresh decision.
+
 ### Subject Namespaces {#subject-namespaces}
 
 A TAS MAY restrict which `subject_token` issuers and subject
@@ -559,7 +585,10 @@ anything the request asserts about itself.
 # Transaction Token {#transaction-token}
 
 On permit, the Transaction Authorization Server issues a JWT with
-protected header `typ` `mission-txn-token+jwt` ({{iana}}). This is its own
+protected header `typ` `mission-txn-token+jwt` ({{iana}}). Exact
+validation of that protected `typ` value, together with mutually
+exclusive validation rules for the artifact profiles, implements the
+substitution defense of {{RFC8725}}, Sections 3.11 and 3.12. This is its own
 JWT access-token profile with the complete validation semantics below;
 it does not conform to {{RFC9068}}, and a Resource Server that
 recognizes only `at+jwt` correctly rejects it as unknown. A deployment
@@ -659,8 +688,8 @@ path:
 3. equality of `txn`, the `mission` invariants, the operation
    `authorization_details`, and the recomputed `parameter_digest`
    with the pending operation;
-4. origin principal, local subject, and actor consistency under the
-   principal profile in effect
+4. origin principal, destination-local subject, and actor consistency
+   under the principal profile in effect
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}});
 5. current local policy, principal entitlement, and that the
    challenged operation remains within the Mission's current
@@ -700,11 +729,18 @@ consumption key; challenge `jti` identifies one admission into a
 workflow; `transaction_authorization_id` (or the ARAP task handle
 backing it) identifies one pending workflow; token `jti` identifies
 one issuance from that workflow, not the one execution; and the
-Operation Profile's idempotency key identifies one effect. At most one
-authorization result exists per accepted workflow: repeated polling
-after a decision returns the same token or result stably, and a TAS
-MUST NOT mint a second token, under a different `jti`, for a `txn`
-whose workflow already produced one. An ambiguous retry looks up the
+Operation Profile's idempotency key identifies one effect. At most
+one authorization result exists per transaction instance, across
+every workflow that references it: repeated polling after a decision
+returns the same token or result stably, and the mint gate is
+`txn`-scoped, never workflow-scoped. Before minting, the TAS MUST
+consult its issuance record for the `txn` atomically; where any
+workflow has already produced a result for that `txn`, the TAS MUST
+return that result and MUST NOT mint a second token under a
+different `jti`. A second workflow admitted for the same `txn`, a
+reissued challenge for one uncompleted operation, therefore
+converges on the first result or refuses; it never yields a second
+live token. An ambiguous retry looks up the
 prior result along this chain, from `txn` and token `jti` to the
 workflow to the idempotency key, and the resource returns
 `duplicate_suppressed` as the runtime profile defines it
@@ -767,6 +803,16 @@ Approval granted but current policy or entitlement denies:
 Parameter, resource, Mission, principal, presenter, or audience
 mismatch:
 : Terminal refusal for that token or challenge.
+
+Superseded Operation Profile version:
+: A new admission under a superseded version is refused; a superseded
+  version resolves only for workflows admitted under it
+  ({{resource-challenge}}).
+
+Effective Authority Set narrowed since admission:
+: Terminal refusal at step 5 of {{offline-verification}}; a
+  containment or discharge narrowing is an authority change, never
+  lifecycle noise.
 
 Stale or unavailable required state:
 : Fail closed. Retry only according to the declared state-recovery

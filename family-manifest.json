@@ -1037,7 +1037,8 @@
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-containment"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
@@ -1055,6 +1056,7 @@
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
