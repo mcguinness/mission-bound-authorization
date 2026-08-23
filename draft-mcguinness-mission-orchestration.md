@@ -153,11 +153,12 @@ Mission Assurance Level
 
 # Status: An Experimental Profile {#doc-status}
 
-Adopt this document when in-flight work must unwind safely if the
-Mission ends mid-workflow. It depends normatively on Mission-Bound
-Runtime Enforcement, and Mission Substrate Requirements and is not
-adoptable alone. It is experimental: complete enough to implement, with
-advancement or retirement governed by feedback.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-best-effort.
+Adopt when: In-flight work must unwind safely if the Mission ends mid-workflow.
+Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
+Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
 

@@ -199,10 +199,11 @@ conformance targets it is thereby claiming.
 
 # Status: An Experimental Sketch {#doc-status}
 
-Adopt this document when adopting Cloudflare's AAM vocabulary and
-mapping it onto existing mechanisms. It is adoptable on its own. It is
-exploratory: interfaces may change without compatibility, and no
-deployment is claimed.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: sketch. Maintenance: lab-best-effort.
+Adopt when: Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms.
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

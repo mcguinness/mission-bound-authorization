@@ -205,9 +205,12 @@ unaffected by this document.
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when consumers need push notice of state changes
-instead of polling per Mission. It depends normatively on Mission Status
-and Lifecycle for OAuth 2.0 and is not adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Consumers need push notice of state changes instead of polling per Mission.
+Requires: Mission Status and Lifecycle for OAuth 2.0.
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

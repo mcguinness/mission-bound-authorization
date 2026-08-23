@@ -169,9 +169,11 @@ binding.
 
 # Status: An Optional Profile {#doc-status}
 
-Adopt this document when the substrate is AAuth: Mission context on its
-native propose/approve flow. It depends normatively on Mission Substrate
-Requirements and is not adoptable alone.
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: frozen-until-upstream-release.
+Adopt when: The substrate is AAuth: Mission context on its native propose/approve flow.
+Requires: Mission Substrate Requirements.
+<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 
