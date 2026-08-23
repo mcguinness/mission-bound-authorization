@@ -12,11 +12,21 @@
 //       the cells that hold its temporal and failure elements; and
 //   (d) every not-supplied row uses `--` for Activation and Scope and
 //       states its reason in Limitations.
-// Plus two repo-wide tripwires:
+// Plus repo-wide tripwires:
 //   (e) the retired `supported`/`conditional`/`not supported` claim
-//       vocabulary appears in no draft table cell; and
+//       vocabulary appears in no draft table cell;
 //   (f) any table titled "…substrate capabilities" outside the registry
-//       fails, so a new binding's Statement must register here.
+//       fails, so a new binding's Statement must register here; and
+//   (g) every consumer capability-consumption table (any table with the
+//       `| Capability | Consumption | Scope of consumption |` header,
+//       found by the header itself rather than a filename allowlist, so
+//       a new consumer table self-registers) uses only a legal
+//       Consumption value (`required`, `required and produced`,
+//       `required when <condition>`, `not consumed`, or `produced`),
+//       names a canonical capability, and carries a non-empty Scope of
+//       consumption cell (#620; unlike Statements, a consumer table
+//       legitimately omits untouched capabilities and needs no fixed
+//       order).
 //
 // Semantic completeness of temporal/failure elements remains a review
 // property; (c) is the structural proxy.
@@ -48,6 +58,9 @@ const REGISTRY = [
 
 const HEADER = "| Capability | Claim | Activation | Scope and defining sections | Limitations |";
 const RETIRED = /\|\s*(supported|conditional|not supported)\s*\|/;
+const CONSUMER_HEADER = "| Capability | Consumption | Scope of consumption |";
+const CONSUMER_SEPARATOR = "| --- | --- | --- |";
+const CONSUMER_CLAIM = /^(required( and produced)?|required when .+|not consumed|produced)$/;
 
 let failures = 0;
 const fail = (tag, msg) => {
@@ -119,23 +132,14 @@ for (const entry of REGISTRY) {
   }
 }
 
-// Repo-wide tripwires. The five consumer capability tables keep the
-// retired vocabulary until #620 migrates them to consumer terms
-// (required / required when / not consumed); remove this allowlist with
-// that issue, after which retired vocabulary anywhere fails.
-const CONSUMER_TABLE_ALLOWLIST_620 = new Set([
-  "draft-mcguinness-mission-harness.md",
-  "draft-mcguinness-mission-runtime.md",
-  "draft-mcguinness-mission-orchestration.md",
-  "draft-mcguinness-mission-metering.md",
-  "draft-mcguinness-oauth-mission-containment.md",
-]);
-
+// Repo-wide tripwires.
 const registered = new Set(REGISTRY.map((e) => `${e.file}::${e.title}`));
+let consumerTables = 0;
 for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.endsWith(".md"))) {
   const lines = readFileSync(path.join(ROOT, file), "utf8").split("\n");
-  lines.forEach((line, i) => {
-    if (line.startsWith("|") && RETIRED.test(line) && !CONSUMER_TABLE_ALLOWLIST_620.has(file)) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("|") && RETIRED.test(line)) {
       fail("retired-vocabulary", `${file}:${i + 1}: retired capability-claim vocabulary in a table row`);
     }
     const m = line.match(/\{: title="([^"]*substrate capabilities[^"]*)"\}/i);
@@ -152,11 +156,39 @@ for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.e
     if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
       fail("statement-unregistered", `${file}:${i + 1}: a "Mission Substrate Statement" section in a file with no registered Statement`);
     }
-  });
+
+    // Consumer capability-consumption tables self-register by header: any
+    // table with this exact three-column header is validated, no allowlist
+    // needed (#620).
+    if (line.trim() === CONSUMER_HEADER) {
+      consumerTables += 1;
+      if (lines[i + 1]?.trim() !== CONSUMER_SEPARATOR) {
+        fail("consumer-format", `${file}:${i + 2}: a consumer table's header must be followed by the three-column separator row`);
+        continue;
+      }
+      let j = i + 2;
+      while (j < lines.length && lines[j].startsWith("|")) {
+        const [name, claim, scope] = cells(lines[j]);
+        if (!CAPABILITIES.includes(name)) {
+          fail("consumer-capability", `${file}:${j + 1}: "${name}" is not one of the canonical eight capabilities`);
+        }
+        if (!CONSUMER_CLAIM.test(claim ?? "")) {
+          fail(
+            "consumer-claim",
+            `${file}:${j + 1} (${name}): consumption must be "required", "required and produced", "required when <condition>", "not consumed", or "produced"; found "${claim}"`
+          );
+        }
+        if (!scope) {
+          fail("consumer-scope", `${file}:${j + 1} (${name}): a consumer row must carry a non-empty Scope of consumption cell`);
+        }
+        j += 1;
+      }
+    }
+  }
 }
 
 if (failures > 0) {
   console.error(`substrate-statements check FAILED: ${failures} finding(s).`);
   process.exit(1);
 }
-console.log(`substrate-statements check OK: ${REGISTRY.length} Statements validated.`);
+console.log(`substrate-statements check OK: ${REGISTRY.length} Statements, ${consumerTables} consumer tables validated.`);
