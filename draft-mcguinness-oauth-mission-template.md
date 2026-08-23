@@ -528,15 +528,65 @@ The Mission Issuer adjudicates a Dispatch in this order:
      than applying an undisclosed fourth clamp; and
    - `template` lineage member is set ({{template-member}}).
 
-A Dispatch MUST be idempotent per dispatch event identifier. The
-Dispatcher supplies a dispatch event identifier with the request; a
-repeated request bearing an identifier the Mission Issuer has already
-committed returns the Mission it already committed, and instantiates no
-second Mission. This makes retry safe at machine speed and keeps
-`max_active` and `dispatch_rate` accounting exact. The dispatch event
-identifier is this grant's realization of the creation idempotency
-the expansion profile defines for the family's Mission-creating token
-exchanges ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+A Dispatch MUST be idempotent per `dispatch_event_id`. The Dispatcher
+supplies a `dispatch_event_id` with the request, adopting the
+expansion profile's creation idempotency apparatus by reference
+under its own domain-separating `op` value, `dispatch`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
+Idempotency").
+
+The identifier and reservation key are `(authenticated client,
+dispatch_event_id)`, the Dispatcher being the authenticated client of
+{{grant-type}}. In the operation fingerprint, `op` is `dispatch`;
+`iss` and `client` are as the expansion profile defines them;
+`source` is this Dispatch's `template_id`, since a Dispatch has no
+source Mission or `subject_token` to resolve one from; `cnf` is the
+Dispatcher's verified presenter confirmation, the DPoP proof key's
+`jkt` or the mTLS certificate's `x5t#S256`; `intent` and `evidence`
+are the parsed `mission_intent` Submission envelope's members
+({{grant-type}}); `proposal` is the parsed `authorization_details`
+array, when present. `actor`, `child_actor`, `requested_token_type`,
+and `cross_check` are absent: a Dispatch carries no acting-agent
+token, no child actor, no token-exchange requested token type, and no
+predecessor or parent cross-check to compare against a resolved
+source. A dispatch-specific parameter affecting derivation, approval,
+output, or side effects extends the fingerprint the same way an
+extension parameter would under the expansion profile's own rule
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
+operation fingerprint").
+
+The reservation, its `(client, dispatch_event_id)` uniqueness, and
+the fingerprint-comparison outcomes on a repeated presentation are
+the expansion profile's, applied by reference: same fingerprint and
+completed, recover it; same fingerprint and reserved or pending,
+return the same in-progress result; different fingerprint, refuse
+with `invalid_request`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
+durable reservation"). The reservation and the dispatched Mission's
+identifier MUST be committed atomically with every creation-side
+effect: instance derivation, `max_active` and `dispatch_rate`
+accounting, and evidence emission. A revalidated retry MUST establish
+the same authenticated Dispatcher, its continued membership in
+`allowed_dispatchers`, possession of the recorded `cnf`, and that the
+template version the original Dispatch checked against is still the
+applicable one, before recovering anything
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
+"Revalidation and lookup order").
+
+Recovery is delivery of the already-dispatched Mission, never a
+second instantiation and never a second count against `max_active` or
+`dispatch_rate`. A retry recovered while the original access token
+remains valid returns that token; a retry recovered after it has
+expired is answered by minting a fresh access token for the same,
+still-`active` instance, an ordinary delivery event that repeats no
+creation accounting, exactly as the expansion profile's recovery
+defines for an expired delivery credential
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Recovery
+is delivery"). Tombstone retention follows the expansion profile's
+rule, against the deployment's published retry horizon
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Tombstone
+retention"). This makes retry safe at machine speed and keeps
+`max_active` and `dispatch_rate` accounting exact.
 
 ## The template lineage member {#template-member}
 
@@ -846,8 +896,11 @@ conforming issuance-profile Mission Issuer
 - refuse a Dispatch outside the ceiling with `out_of_template_ceiling`
   and a Dispatch of a prohibited class with `dispatch_prohibited_class`
   ({{denial-reasons}});
-- make every Dispatch idempotent per dispatch event identifier
-  ({{dispatch}});
+- make every Dispatch idempotent per `dispatch_event_id`, adopting the
+  expansion profile's creation idempotency apparatus by reference
+  under `op: dispatch`, with the `(client, dispatch_event_id)`
+  reservation, fingerprint, revalidation, and delivery-as-recovery
+  bindings of {{dispatch}};
 - answer a Dispatch in one authenticated back-channel round trip, using
   no PAR, no interactive consent surface, and never
   `authorization_pending` ({{dispatch}});
