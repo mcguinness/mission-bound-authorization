@@ -841,6 +841,17 @@ This document registers one media type per {{RFC6838}}.
 
 --- back
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Discovery Evidence gained a self-hosted Canonical Bytes subsection
+  and a full IANA media-type registration for
+  `application/mission-discovery-evidence+json`, with the Mission
+  Issuer stated as its explicit authoritative producer. The
+  operational `typ` now names that registered media type, prefix
+  omitted, dropping the prior pending-registration language (#662).
+
 # Acknowledgments
 {:numbered="false"}
 

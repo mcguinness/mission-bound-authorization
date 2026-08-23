@@ -475,16 +475,20 @@ member.
 Each registrable evidence type fixes the exact bytes that are hashed,
 the media type carried in `payload-preimage-content-type`, the
 operational `typ` its retained form carries (none where the retained
-object is unsigned), and the producer authoritative for it. This
-table is the normative definition only for the four evidence types
-this document itself defines ({{iana}}); for every other row, the
-cited profile fixes those properties normatively, and this table is
-an informative catalog of them, consulted only where that profile is
-adopted. A producer MUST commit to the canonical bytes its defining
-profile names. A relying party MUST verify the producer is
-authoritative for the type ({{registration-policy}}) before treating
-a record as part of the Mission's feed; a row registers nothing on
-its own.
+object is unsigned), and the producer authoritative for it: an
+evidence-type registration. This document is that registration,
+normatively, only for the four evidence types it itself defines
+({{iana}}); a producer of one of those types MUST commit to the
+canonical bytes fixed there. For every other row, the cited profile
+is that registration: committing to its canonical bytes is that
+profile's own conformance duty, imposed there, and this document
+neither restates it nor requires consulting that profile's text to
+satisfy it. This table is an informative catalog of every row's
+properties, consulted only where the citing profile is adopted. A
+relying party MUST verify, from the producer this table records for
+a record's type, that the record's `iss` is that producer
+({{registration-policy}}) before treating the record as part of the
+Mission's feed; a row registers nothing on its own.
 
 | Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
 |---|---|---|---|---|
@@ -1599,6 +1603,26 @@ substrate's ({{RFC9943}}). This profile derives the `sub` by profile
 rather than registering a new identifier.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- The Discovery Evidence, Containment evidence, Protected event
+  receipt, and Work Product Binding front-matter references moved
+  from normative to informative, meeting the reference
+  classification convention's maturity bound (a Standards-Track
+  draft never lists an Experimental draft as normative). The Evidence
+  Types normative rule narrowed to this document's own four evidence
+  types ({{iana}}); for every other row, committing to canonical
+  bytes is the cited profile's own conformance duty, never restated
+  or required to be consulted here, and relying-party producer
+  verification consumes only the producer identifier this table
+  records. Containment's Portable Evidence forward-pointer corrected
+  to match: Containment registers its own evidence media types.
+  Discovery Evidence gained a self-hosted canonical-bytes definition
+  and IANA media-type registration in its own profile, closing the
+  one gap this document's citation had left undefined (#662).
 
 # Acknowledgments
 {:numbered="false"}
