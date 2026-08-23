@@ -611,9 +611,13 @@ following action-scoped members:
   ({{I-D.draft-mcguinness-mission-runtime}}); it identifies one intended
   execution of one normalized request, so a legitimate re-execution
   mints a new key. REQUIRED where the Operation Profile defines one for
-  the action. The PDP atomically claims the pair (idempotency scope,
-  `idempotency_key`) together with the request's operation identity
-  ({{projections}}) before issuing a permit
+  the action. For a key in the irreversible-action, external-commitment,
+  or privileged-administration classes, the PDP atomically claims the
+  pair (idempotency scope, `idempotency_key`) together with the
+  request's operation identity ({{projections}}) before issuing a
+  permit ({{I-D.draft-mcguinness-mission-runtime}}); for a reversible
+  consequential write's key, the PDP makes no claim, and the enforcing
+  PEP or resource deduplicates instead
   ({{I-D.draft-mcguinness-mission-runtime}}). The claim resolves per
   the runtime profile's idempotency claim-state table: while the
   claim is unresolved, a matching key and operation identity is a
