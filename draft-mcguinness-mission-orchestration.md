@@ -579,7 +579,7 @@ or a comparison of the step's recorded `authorizing_entry` or
 rematerialized set.
 
 The re-evaluation outcome follows the step's in-flight class
-({{in-flight}}):
+({{in-flight}}) for three of its four classes:
 
 - a `not_dispatched` step the re-evaluation now denies MUST be
   suppressed or paused;
@@ -589,6 +589,9 @@ The re-evaluation outcome follows the step's in-flight class
   does not additionally stop it; and
 - a `committed` step MUST NOT be compensated merely because authority
   narrowed after it committed ({{compensation}}).
+
+An `unknown` step is unaffected by this trigger: {{in-flight}}'s own
+rule already requires human review for it.
 
 A step the re-evaluation still permits proceeds. The orchestrator MUST
 emit Orchestration Evidence under {{orchestration-evidence}} for every
