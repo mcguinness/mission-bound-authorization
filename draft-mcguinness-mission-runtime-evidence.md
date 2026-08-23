@@ -180,6 +180,15 @@ contract, action classification, or failure conditions; those are
 normatively defined in {{I-D.draft-mcguinness-mission-runtime}} and
 are referenced, not duplicated, here.
 
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
+Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
+Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

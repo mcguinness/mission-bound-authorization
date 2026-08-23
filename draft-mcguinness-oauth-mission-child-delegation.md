@@ -195,6 +195,13 @@ creates Child Missions ({{conformance}}); otherwise it remains a plain
 issuance-profile Mission Issuer. Nothing here places a new requirement
 back on the issuance profile.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: A sub-agent needs its own Mission outliving a call frame, with cascade termination.
+Requires: Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Expansion for OAuth 2.0 and Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation reacts to parent lifecycle states).
+<!-- family-status: END -->
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and is not

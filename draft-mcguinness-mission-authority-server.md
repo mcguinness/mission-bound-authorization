@@ -318,7 +318,16 @@ binding obtains the token-plane chokepoint (Mission-bound
 credentials and issuance gating), a capability difference between
 the bindings rather than a maturity one.
 
-# Conventions and Terminology
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
+Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
+Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).
+<!-- family-status: END -->
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

@@ -4113,6 +4113,14 @@ A protected resource MAY advertise, in its protected resource metadata
 
 # Conformance {#conformance}
 
+The smallest useful conforming deployment
+is a Mission Issuer that derives in narrowing mode from the client's
+authority proposal ({{authorization-derivation}}), emits only the
+Common Constraints of {{common-constraints}}, and implements none of
+the OPTIONAL capabilities; a scope-only Resource Server still operates
+at the coarse scope level ({{rs-enforcement}}). This note names a
+starting point and creates no new conformance class.
+
 An implementation conforms in one of three roles.
 
 A **Mission Issuer** (the Authorization Server) implements the core
@@ -4195,14 +4203,6 @@ for the companion's cross-domain grant issuance. Absent such a signal,
 a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
-
-The smallest useful conforming deployment
-is a Mission Issuer that derives in narrowing mode from the client's
-authority proposal ({{authorization-derivation}}), emits only the
-Common Constraints of {{common-constraints}}, and implements none of
-the OPTIONAL capabilities; a scope-only Resource Server still operates
-at the coarse scope level ({{rs-enforcement}}). This note names a
-starting point and creates no new conformance class.
 
 This binding's Mission Substrate Statement, the kernel mapping and
 capability table these surfaces supply to the family's substrate
@@ -4682,6 +4682,17 @@ child generations, together with the derivations summed across an
 entire child subtree, can therefore exceed what a single approval
 appears to bound at consent time. This is a composition property of
 independently-bounded mechanisms, not a defect in any one of them.
+An informative illustration with the variables explicit: a
+child-delegation deployment allowing `max_children` 3 per Mission
+with `max_child_depth` 2 admits up to 12 descendant Missions (3 in
+the first generation, up to 9 in the second), each with its own
+independent `max_derivations`; at 10 each, the subtree admits up to
+120 derivations while no single bound the Approver saw exceeds 10.
+Cross-domain projection composes separately: a projected grant
+preserves the Mission's lineage rather than rooting a new one, and
+the Resource AS's local issuance under it is bounded by that grant's
+own lifetime and local policy, not counted against the origin
+issuer's per-Mission derivation cap.
 A deployment SHOULD disclose the composed bound, not only the
 immediate Mission's, at the consent surface, and MAY impose a global
 cap out of band where a single approval's apparent bound must hold in
@@ -4824,6 +4835,7 @@ the undertaking ({{approval-event}}); it is not, by itself, evidence
 of such a person's consent to disclosure or of any other legal basis
 a disclosure requires, and whether a basis is required and what
 satisfies it is deployment and legal policy outside this protocol.
+
 Where the resource domain requires data-subject consent or another
 basis, that disclosure policy MUST be satisfied in that domain's own
 lane, wherever the deployment evaluates it (the Resource Server, a
@@ -4832,21 +4844,27 @@ for the domain) and through that lane's mechanisms (claims
 gathering, a resource-domain consent artifact), and access MUST be
 refused while required evidence is absent or invalid. A conforming
 deployment treats that refusal as the resource's answer, never as a
-Mission gap to route around. Mission approval and Mission authority
-MUST NOT be treated as the data subject's consent; a Mission record
-MAY retain a verified consent reference or facts as
+Mission gap to route around.
+
+Mission approval and Mission authority MUST NOT be treated as the
+data subject's consent; a Mission record MAY retain a verified
+consent reference or facts as
 `submission_evidence` ({{mission-record}}), and those facts are
 provenance and policy input only: the resource domain validates them
 independently under its current disclosure policy, and that policy
 remains authoritative.
 
 Third-party personal data can enter through any Intent, proposal,
-authority, or recorded-evidence member: the prose members (`goal`,
-`constraints`, `success_criteria`), `purpose`, `resources`,
-deployment-defined `controls`, any type-owned member of a proposed
-entry, the derived Authority Set entries that reach tokens
-({{mission-bound-tokens}}), and `submission_evidence` facts,
-including a consent reference. Whatever the member, it persists on
+authority, or recorded-evidence member:
+
+- the prose members (`goal`, `constraints`, `success_criteria`) and
+  `purpose`;
+- `resources` and deployment-defined `controls`;
+- any type-owned member of a proposed entry, and the derived
+  Authority Set entries that reach tokens ({{mission-bound-tokens}});
+- `submission_evidence` facts, including a consent reference.
+
+Whatever the member, it persists on
 the Mission record for its audit horizon ({{mission-record}}) and
 concentrates at the AS with the record ({{record-access}}), and the
 committed members are confirmable through the unsalted anchors by

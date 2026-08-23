@@ -385,7 +385,16 @@ This document is an experimental sketch. It fixes the binding's
 shape and its Mission Substrate Statement; worked test vectors and a
 per-endpoint error taxonomy are deferred to a later revision.
 
-## Conventions and Terminology
+# Status: An Experimental Sketch {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: sketch. Maintenance: lab-best-effort.
+Adopt when: Evaluating a UMA 2.0 deployment only.
+Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission Issuance Grant for OAuth 2.0 (when the expires_at member is adopted).
+<!-- family-status: END -->
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 

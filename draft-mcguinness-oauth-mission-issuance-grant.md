@@ -174,6 +174,15 @@ join, the issuance join, and native Mission-awareness, each adopted
 where its cost is warranted
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS.
+Requires: Mission Authority Server; Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set).
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

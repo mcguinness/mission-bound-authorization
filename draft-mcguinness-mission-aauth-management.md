@@ -433,6 +433,12 @@ stop initiating work when it receives `terminated`.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
 enforces mission state itself.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: frozen-until-upstream-release.
+Adopt when: Alongside the AAuth binding: status, termination, delegation-tree queries.
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
+
 # Terminate Operation {#terminate}
 
 ## Request

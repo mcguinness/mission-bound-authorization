@@ -176,6 +176,12 @@ constraint to the issuance profile's `mission_resource_access`. The provenance
 object and the handoff rule are companion mechanisms that a deployment
 adopts where its agents share durable work products.
 
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: lab-best-effort.
+Adopt when: Artifacts cross into another Mission and must carry provenance, never authority.
+Requires: Mission-Bound Authorization for OAuth 2.0.
+<!-- family-status: END -->
+
 # Relationship to Other Profiles {#relationship}
 
 This document depends normatively on the issuance profile

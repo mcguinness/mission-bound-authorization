@@ -181,7 +181,14 @@ including a domain-transition reset, is prohibited; a new authority
 basis is an Expansion successor or another fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-# Conventions and Terminology
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: experimental. Maintenance: active-experimental.
+Adopt when: An attenuation chain crosses organizational trust domains.
+Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Offline Attenuation for OAuth 2.0; Mission Cross-Domain Projection for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
+Also requires, conditionally: Mission Runtime Evidence (when a local token is minted from a verified Chain).
+<!-- family-status: END -->
+
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
