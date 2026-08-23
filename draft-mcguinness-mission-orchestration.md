@@ -159,7 +159,7 @@ Mission Assurance Level
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: In-flight work must unwind safely if the Mission ends mid-workflow.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
-Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source).
+Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source); Mission Lifecycle Signals for OAuth 2.0 (when Signals is the authority-change trigger source).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
@@ -1034,6 +1034,24 @@ and avoid recording raw user content when identifiers are sufficient.
 This document makes no IANA request.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Authority-Narrowing Behavior ({{authority-narrowing}}): a third
+  State-Change Behavior trigger, independent of the non-active and
+  staleness sequences, for a `mission.lifecycle-change` event's
+  generic `authority_changed` true at unchanged `state`. The
+  orchestrator rematerializes its Effective Authority Set and
+  re-evaluates each pending step's concrete resource/action, resolved
+  by a fresh PDP evaluation or the step's Decision Evidence
+  `authorizing_entry`/`entry_digest`; a denied `not_dispatched` step
+  is suppressed or paused, a denied `dispatched_not_committed` step
+  follows its existing `in_flight_behavior`, and a `committed` step is
+  never compensated on narrowing alone. `step_id` is REQUIRED on
+  Orchestration Evidence reporting this trigger. Signals promoted from
+  an informative to a normative reference (#670).
 
 # Acknowledgments
 {:numbered="false"}

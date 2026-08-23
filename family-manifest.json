@@ -904,6 +904,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission-status"
      ]
+    },
+    {
+     "when": "Signals is the authority-change trigger source",
+     "requires": [
+      "draft-mcguinness-oauth-mission-signals"
+     ]
     }
    ],
    "references": [
