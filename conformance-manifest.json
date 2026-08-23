@@ -45,6 +45,10 @@
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
     "content_sha256": "c212f435915e5dc86338b740d87db4009666aff60cbe3ed66317a5f4ebd81dc6"
+   },
+   "draft-mcguinness-mission-orchestration.md": {
+    "revision": "f9dda9f73302d4e76d0518cfbe62c35060014801",
+    "content_sha256": "7d7ce4ff175bf7d45550b15a423efc109cf21f35ac8e7172787ca5e01c41c966"
    }
   }
  },
@@ -60,7 +64,8 @@
    "Controller",
    "PRODUCER",
    "RECEIPT-ISSUER",
-   "RECEIPT-VERIFIER"
+   "RECEIPT-VERIFIER",
+   "orchestrator"
   ],
   "strengths": [
    "MUST",
@@ -13556,6 +13561,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
+  },
+  {
+   "id": "orchestration.state-change.authority-narrowing-regate",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `not_dispatched` step the re-evaluation now denies MUST be suppressed or paused",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a mission.lifecycle-change event carrying authority_changed true at unchanged state, the orchestrator rematerializes its Effective Authority Set and re-evaluates each pending step's concrete resource/action (via a fresh PDP evaluation or the step's Decision Evidence authorizing_entry/entry_digest); a not_dispatched step now denied is suppressed or paused, a dispatched_not_committed step now denied follows its unwind plan's existing in_flight_behavior, and a committed step is never compensated on narrowing alone"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #670 (fresh review). No implementation exists yet in src/packages/orchestration for this third state-change branch; src/packages/orchestration/src/state-change.ts currently implements only the non-active/staleness sequence. This row covers the not_dispatched leg only; the dispatched_not_committed and committed legs are the same normative clause and are not split into separate rows."
   }
  ]
 }
