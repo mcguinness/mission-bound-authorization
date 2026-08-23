@@ -166,6 +166,19 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     expect(dec.context.denial_reason).toBe("principal_mapping_failed");
   });
 
+  it("mapping valid, entitlement.observed_at dated in the future beyond the skew tolerance: denies principal_mapping_failed, never permits on the negative age a future timestamp produces (@spec runtime#state-freshness GAP 3, #612, mirrored here for the entitlement bound)", async () => {
+    const futureEntitlement: EntitlementObservation = { entitled: true, observed_at: new Date(NOW.getTime() + 5 * 60_000).toISOString() };
+    const dec = await evaluate(req(), resolverOpts(FRESH_MAPPING, futureEntitlement, 600));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("principal_mapping_failed");
+  });
+
+  it("mapping valid, entitlement.observed_at dated in the future WITHIN the skew tolerance: still permits (boundary control: the tolerance itself is not itself a denial)", async () => {
+    const withinSkew: EntitlementObservation = { entitled: true, observed_at: new Date(NOW.getTime() + 5_000).toISOString() };
+    const dec = await evaluate(req(), resolverOpts(FRESH_MAPPING, withinSkew, 600));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+  });
+
   it("mapping and entitlement both valid but entitlementStalenessBoundSeconds is not configured: denies principal_mapping_failed (a declared bound is required, never defaulted open)", async () => {
     const dec = await evaluate(req(), resolverOpts(FRESH_MAPPING, ENTITLED, undefined));
     expect(dec.decision).toBe(false);

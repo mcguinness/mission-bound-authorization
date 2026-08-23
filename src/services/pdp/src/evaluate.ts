@@ -312,11 +312,10 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // through as if no staleness bound applied. Below the high-consequence
   // floor the draft treats token-lifetime expiry as itself a conforming
   // state source, so an absent member there is not by itself a refusal.
+  const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
   if (req.context.freshness) {
     const observedAtMs = Date.parse(req.context.freshness.observed_at);
     const ageMs = now().getTime() - observedAtMs;
-    const skewToleranceMs =
-      (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
     const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
     // A malformed timestamp (non-finite), one dated far enough in the future
     // to be fabricated rather than ordinary clock drift, or a source outside
@@ -387,19 +386,26 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     // `stalenessBoundSeconds`. A missing resolver, a missing entitlement
     // result, `entitled !== true`, or entitlement staler than the bound each
     // deny the same way ("entitlement staleness beyond the declared bound
-    // denies likewise").
+    // denies likewise"). The same skew floor step 3 applies to
+    // `context.freshness` applies here too (@spec runtime#state-freshness,
+    // GAP 3, #612): a bare `age <= bound` check alone lets a future-dated
+    // `observed_at` produce a negative age that trivially satisfies any
+    // bound, so a future timestamp must be rejected on its own, not merely
+    // relied on to eventually exceed the bound.
     const entitlementBoundS = opts.entitlementStalenessBoundSeconds;
     const entitlement =
       entitlementBoundS !== undefined
         ? await opts.entitlement?.resolve({ local: mappingResult.local, audience: req.context.audience })
         : undefined;
     const observedAtMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
+    const entitlementAgeMs = now().getTime() - observedAtMs;
     const entitlementCurrent =
       entitlementBoundS !== undefined &&
       entitlement !== undefined &&
       entitlement.entitled === true &&
       Number.isFinite(observedAtMs) &&
-      now().getTime() - observedAtMs <= entitlementBoundS * 1000;
+      entitlementAgeMs >= -skewToleranceMs &&
+      entitlementAgeMs <= entitlementBoundS * 1000;
     if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 
