@@ -740,6 +740,34 @@ execution) is carried on derived tokens via the `act` chain
 identifier formats (for example, the formats of {{RFC9493}}) MAY be
 layered in future versions and are not required here.
 
+## Protocol Flow {#protocol-flow}
+
+~~~
+ Agent (client)                       Mission Issuer (AS)
+      |                                     |
+      | 1. PAR: intent + proposal --------->| derive authority
+      |<----------- request_uri ------------| (authz_details)
+      |                                     |
+      | 2. authorization request ---------->| Approver consents
+      |                                     |   -> authority_hash
+      |<-------------- code ----------------| -> Mission active
+      |                                     |   (bound to the grant)
+      |                                     |
+      | 3. token request ------------------>| gate: active?
+      |<----------- access token -----------| + authz_details
+      |                                     |   + mission claim
+      v
+~~~
+
+The flow then leaves the AS: (4) the agent calls the Resource Server
+with the token; the RS enforces the `authorization_details`
+statelessly and MAY check the `mission` claim, with no callback to the
+AS required. (5) A management revoke, or `expires_at` passing,
+moves the Mission to `revoked` or `expired`, after which the AS refuses further
+issuance and refresh; a deployment MAY additionally compose RFC 7009
+{{RFC7009}} refresh-token revocation ({{revocation}}). The end-to-end
+example ({{e2e-example}}) walks this flow with concrete messages.
+
 ## Authority Sources {#authority-sources}
 
 A Mission draws its authority from one of three sources: a delegating
@@ -775,34 +803,6 @@ The subject-representation discipline is the same in every source:
   beneficiary.
 - The actor model does not vary by source: `client_id` names the
   Agent, and delegates ride the `act` chain ({{delegation}}).
-
-## Protocol Flow {#protocol-flow}
-
-~~~
- Agent (client)                       Mission Issuer (AS)
-      |                                     |
-      | 1. PAR: intent + proposal --------->| derive authority
-      |<----------- request_uri ------------| (authz_details)
-      |                                     |
-      | 2. authorization request ---------->| Approver consents
-      |                                     |   -> authority_hash
-      |<-------------- code ----------------| -> Mission active
-      |                                     |   (bound to the grant)
-      |                                     |
-      | 3. token request ------------------>| gate: active?
-      |<----------- access token -----------| + authz_details
-      |                                     |   + mission claim
-      v
-~~~
-
-The flow then leaves the AS: (4) the agent calls the Resource Server
-with the token; the RS enforces the `authorization_details`
-statelessly and MAY check the `mission` claim, with no callback to the
-AS required. (5) A management revoke, or `expires_at` passing,
-moves the Mission to `revoked` or `expired`, after which the AS refuses further
-issuance and refresh; a deployment MAY additionally compose RFC 7009
-{{RFC7009}} refresh-token revocation ({{revocation}}). The end-to-end
-example ({{e2e-example}}) walks this flow with concrete messages.
 
 # Mission Intent {#mission-intent}
 
@@ -868,8 +868,8 @@ narrowed `scope`. It has the following members:
 : OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
   deployment- or registry-defined and opaque to this document. It is
-  a structured, opaque lookup key permitted only for template-mode
-  selection: the configured mapping MAY key on it
+  a structured, opaque lookup key permitted only for
+  configured-mapping-mode selection: the configured mapping MAY key on it
   ({{authorization-derivation}}), and the derived set stays bounded
   by the Intent and by policy like any derivation. It MUST NOT
   otherwise be used to derive, widen, or gate authority, and once
@@ -1367,7 +1367,7 @@ derivation policy then in force, in one of two modes:
   derivation ({{authority-proposal}}); a valid proposed entry that
   policy cannot accept is narrowed or omitted, and the granted echo
   reflects it ({{authority-proposal}}).
-- **Template mode**: no authority proposal was submitted, and
+- **Configured-mapping mode**: no authority proposal was submitted, and
   a deployment-configured mapping, keyed on the Intent's `purpose` or
   `resources`, yields the candidate entries, which are then narrowed
   to policy. The mapping is a lookup, never synthesis; the AS refuses
@@ -1380,6 +1380,15 @@ derivation policy then in force, in one of two modes:
   event, where the Subject is established ({{approval-event}}), so a
   refusal at PAR time is best-effort over what is checkable without
   the Subject.
+  Configured-mapping mode is the low-integration on-ramp: the client
+  submits a Mission Intent and no `authorization_details` proposal
+  at all, so an estate adopts Mission governance without teaching
+  clients RAR authoring, and the client-side cost is the Intent
+  envelope alone. Every Mission this mode yields still takes its own
+  fresh approval; standing consent to a pre-approved ceiling with
+  machine-speed dispatch is the separate, experimental Mission
+  Template profile ({{I-D.draft-mcguinness-oauth-mission-template}}),
+  not this mode.
 
 In both modes the AS MUST bound every derived entry by the Mission
 Intent: each derived entry's `resource` MUST be one of the Intent's
@@ -1856,7 +1865,17 @@ Stated as a limit: the subset rule is fully defined only over
 `mission_resource_access` and its Common Constraints. Authority
 expressed in another type has whatever subset relation that type
 defines, or none, and where it has none the entry is carried as
-approved: never narrowed, delegated, or projected. The narrowing
+approved: never narrowed, delegated, or projected. That boundary is
+declared where the type is documented, not discovered at a refused
+derivation: for every supported type, the AS MUST state, in the
+deployment documentation that names the type as supported
+({{discovery}}), whether it understands the type's subset relation
+and whether it understands the type's delegation semantics; a type
+documented without both is thereby declared carried-as-approved,
+non-delegable and non-projectable while that documentation stands.
+This is a deployment-documentation obligation: no metadata member or
+schema-endpoint field carries it, and no machine-readable per-type
+capability map is defined here. The narrowing
 guarantee is therefore strongest while authority stays in
 `mission_resource_access` entries, and weakens as expressiveness
 moves into opaque policy-language entries.
@@ -2492,7 +2511,7 @@ this profile defines:
 : OPTIONAL. An array. The `authorization_details` array the client
   submitted as its authority proposal ({{authority-proposal}}),
   recorded exactly as submitted. Present iff a proposal was
-  submitted; a Mission derived in template mode
+  submitted; a Mission derived in configured-mapping mode
   ({{authorization-derivation}}) records none.
 
 `authority_set`:
@@ -2836,13 +2855,13 @@ profile requires, a derived token:
 
 Stated explicitly for estates whose access tokens are opaque
 reference tokens: this document's token-carried enforcement assumes
-the JWT above and does not profile opaque tokens. Such an estate has
-two paths. A Resource Server that validates opaque tokens through
-introspection receives the `mission` member and Mission state on the
-introspection response ({{introspection}}); and an estate whose AS
-cannot issue Mission-bound tokens at all deploys the standalone
-Mission Issuer binding, which governs ordinary tokens at the
-enforcement layer ({{I-D.draft-mcguinness-mission-authority-server}}).
+the JWT above, and an opaque Mission-bound token is profiled only
+under the introspected consumption mode
+({{introspected-consumption}}), which makes introspection the
+REQUIRED claims carriage with the same enforcement obligations. An
+estate whose AS can issue neither deploys the standalone Mission
+Issuer binding, which governs ordinary tokens at the enforcement
+layer ({{I-D.draft-mcguinness-mission-authority-server}}).
 
 The AS MUST NOT include `authorization_details` exceeding the
 Mission's Authority Set. On any issuance that narrows authority (for
@@ -3089,7 +3108,10 @@ Example decoded token payload:
 ## Resource Server Enforcement {#rs-enforcement}
 
 A Resource Server enforces from the token alone; no call to the AS is
-required. A Resource Server:
+required for the JWT carriage. An opaque Mission-bound token is
+enforced from its active introspection response instead, the response
+standing as the claims source under these same rules
+({{introspected-consumption}}). A Resource Server:
 
 - MUST validate the JWT per {{RFC9068}} and verify any
   sender-constraint binding (`cnf`).
@@ -3440,8 +3462,10 @@ current state rather than inferring it from token validity.
 
 # Mission State via Token Introspection {#introspection}
 
-This section is OPTIONAL: it is one state-observable overlay on the
-lifecycle-gated baseline. The stateless baseline
+This section is OPTIONAL for the JWT carriage: there it is one
+state-observable overlay on the lifecycle-gated baseline. For a
+deployment issuing opaque Mission-bound tokens it is REQUIRED, as
+the token's claims carriage ({{introspected-consumption}}). The stateless baseline
 ({{mission-bound-tokens}}) needs no introspection; an AS that does not
 offer it, and a Resource Server that does not use it, are unaffected.
 It lets a Mission-state-aware Resource Server observe a Mission's
@@ -3555,6 +3579,44 @@ This is token introspection: it answers "is this token's
 authorization still good," keyed by the token presented. The
 canonical Mission Status surface (keyed by `mission_id`) remains out of scope
 ({{revocation}}).
+
+## Introspected Token Consumption {#introspected-consumption}
+
+The RFC 9068 JWT of {{mission-bound-tokens}} is this profile's
+self-contained carriage. An AS MAY instead issue a Mission-bound
+access token as an opaque reference token, under this mode and only
+under it; an opaque Mission-bound token outside this mode is not
+profiled ({{mission-bound-tokens}}).
+
+- Introspection support is not optional here: an AS issuing opaque
+  Mission-bound tokens MUST offer introspection for them with the
+  members this mode names.
+- An active (`active: true`) response for such a token MUST carry,
+  as introspection response members, the audience-filtered granted
+  `authorization_details` ({{RFC9396}}), the `mission` member above,
+  `aud`, `cnf` where the token is sender-constrained ({{RFC8705}},
+  {{RFC9449}}), and `act` where execution was delegated
+  ({{delegation}}): everything {{mission-bound-tokens}} requires the
+  JWT to carry, sourced from the same issuance state.
+- The granted `authorization_details` and any `act` chain appear
+  only on an active response. An inactive response stays within the
+  deviation this section already justifies: `active: false` with the
+  `mission` state facts above, never the authority itself.
+- A Resource Server consuming an opaque Mission-bound token MUST
+  resolve it through introspection before service, MUST verify
+  `active` is `true`, its own identity in `aud`, and the
+  sender-constraint binding `cnf` names, and MUST enforce the
+  response's `authorization_details` under the same rules as the
+  token-carried form ({{rs-enforcement}}), the fail-closed duties
+  included.
+- Introspection failure is refusal: a Resource Server that cannot
+  obtain a valid introspection response for an opaque Mission-bound
+  token MUST refuse the request rather than serve it from any cached
+  or out-of-band belief about the token's authority.
+
+Freshness follows the section's per-use rule: this mode makes
+introspection the claims source, and each response remains one
+observation, never a cacheable authority record.
 
 ## Examples {#examples}
 
@@ -4032,6 +4094,15 @@ not out-of-band documentation, is the type's normative definition.
 A client MAY use the RFC 9396 client metadata `authorization_details_types`
 at registration to declare the types it understands.
 
+The supported-type documentation behind this metadata also carries
+each type's transformation boundary: whether the AS understands the
+type's subset relation and delegation semantics ({{other-types}}).
+The metadata itself carries only type identifiers ({{RFC9396}}), and
+the optional schema endpoint defines no field for the boundary, so
+the declaration is deployment documentation, not an interoperable
+discovery surface; a client without access to that documentation
+learns the boundary only by attempt.
+
 An advertised type, `mission_resource_access` included, appears in
 authorization requests only as a proposal subject to derivation
 ({{authority-proposal}}): a client submits entries of advertised
@@ -4134,12 +4205,17 @@ issuance surfaces:
 - the approval event with its integrity anchors and recorded
   `approval_basis` ({{approval-event}}, {{mission-record}});
 - issuance of Mission-bound access tokens carrying the `mission` claim
-  ({{mission-bound-tokens}});
+  ({{mission-bound-tokens}}), as the RFC 9068 JWT or as an opaque
+  reference token under the introspected consumption mode, whose
+  introspection support is then REQUIRED
+  ({{introspected-consumption}});
 - the subset rule ({{subset}}); and
 - gating of issuance on Mission state ({{lifecycle}}).
 
 A **Mission-aware Resource Server** implements Resource Server
-enforcement ({{rs-enforcement}}).
+enforcement ({{rs-enforcement}}), from the token's own claims or from
+its active introspection response under the introspected consumption
+mode ({{introspected-consumption}}).
 
 A **Mission Client** implements the client surfaces:
 
@@ -4160,7 +4236,9 @@ that supports none of them is still conformant:
 - **Delegation** ({{delegation}}): issuing and consuming derived tokens
   that carry the `act` delegation chain.
 - **Introspection** ({{introspection}}): reporting Mission state through
-  the `mission` token introspection response member.
+  the `mission` token introspection response member. OPTIONAL as a
+  state overlay for JWT deployments; REQUIRED where the AS issues
+  opaque Mission-bound tokens ({{introspected-consumption}}).
 - **Cross-Domain**: projecting a Mission so it is honored by an
   Authorization Server in another trust domain. An implementation
   claiming this capability preserves, across the hop: the Mission
@@ -5552,6 +5630,20 @@ resolve before interoperating.
 
 -01
 
+- Reader-program normative follow-ups: each supported
+  `authorization_details` type's transformation boundary (subset
+  relation and delegation semantics understood, or
+  carried-as-approved) is declared in the deployment documentation
+  that names the type as supported ({{other-types}}, {{discovery}});
+  opaque Mission-bound tokens get a defined consumption mode,
+  introspection REQUIRED as the claims carriage with active-only
+  authority disclosure and fail-closed Resource Server duties
+  ({{introspected-consumption}}); the second derivation mode is
+  renamed configured-mapping mode (formerly template mode) and
+  framed as the no-RAR on-ramp ({{authorization-derivation}});
+  Authority Sources moved after Protocol Flow within the Overview
+  (structure only).
+
 - Editorial consolidation; no normative change: every removed
   sentence restates a rule that remains normatively stated at its
   home ({{mission-bound-tokens}} and {{rs-enforcement}} for
@@ -5632,13 +5724,13 @@ resolve before interoperating.
   every recorded anchor and a Mission-governed-client bare-request
   rejection accompany the change.
 - Derivation is mechanical, in two modes: narrowing (RECOMMENDED)
-  and template. The deterministic-reproducibility and
+  and configured-mapping. The deterministic-reproducibility and
   policy-inspectability rules are retired, `policy_version` stays as
   an opaque audit correlator, generative derivation is demoted to a
   local-policy extension, and the derivation trust boundary (no
-  portable Intent semantics) is stated. Template mode publishes its
-  mapping space as deployment documentation and distinguishes
-  no-mapping from policy refusals.
+  portable Intent semantics) is stated. Configured-mapping mode
+  publishes its mapping space as deployment documentation and
+  distinguishes no-mapping from policy refusals.
 - New wire surface: the `mission_error` and `derivations_remaining`
   introspection members, the `mission_denial` WWW-Authenticate
   attribute, and the `mission_constraints_supported`
