@@ -20,14 +20,19 @@
  * `suspend_until` / `on_expiry` / `tenant` members (no model exists in the
  * kernel). The `mission_capabilities_supported` delivery gate
  * ({@link MissionSignalEmitter}) is implemented: a stream that has not
- * declared `authority_changed` is not delivered a discharge commit's event. The demo stack signal wiring is also deferred; the emitter is
- * injectable at the authorization-server construction site (its
- * `onLifecycleCommit` option).
+ * declared `authority_changed` is not delivered a discharge commit's event.
+ * Delivery durability (#641) is implemented: the emitter journals one durable
+ * job per (event, consumer) in its own outbox store, redelivers byte-identical
+ * SETs under a bounded backoff until the hand-off is acknowledged, and offers
+ * a recurring dispatcher with lease-based claiming. The demo stack signal
+ * wiring is still deferred; the emitter is injectable at the
+ * authorization-server construction site (its `onLifecycleCommit` option).
  */
 
 import { randomBytes } from "node:crypto";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import type { MissionStatusLease, StateSource } from "@mission/core";
+import { type Database, openStore, type StoreOptions } from "@mission/store";
 import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
 
 /**
@@ -514,24 +519,95 @@ export interface EmitterOptions {
   kid: string;
   /** The consumer audiences to emit one SET each per committed transition. */
   consumers: SignalConsumer[];
+  /** Outbox persistence (D27 baseline): ':memory:' unless a file is given. */
+  store?: StoreOptions;
+  /** Clock injection, for deterministic retry scheduling in tests. */
+  now?: () => Date;
+  /**
+   * @spec signals#delivery — the bounded redelivery schedule (the draft's
+   * DoS rule: a transmitter MUST bound its retry schedule). The delay doubles
+   * per attempt from `baseMs`, capped at `capMs`; a job is never dropped, it
+   * only backs off to the cap.
+   */
+  retry?: { baseMs?: number; capMs?: number };
+  /**
+   * Job-claim lease: a claimed job is invisible to other dispatchers until
+   * the lease lapses, so concurrent drains (a second process over a shared
+   * file store, or overlapping dispatcher ticks) never double-deliver inside
+   * one lease window. At-least-once stands: a dispatcher that crashes holding
+   * a claim loses it at lease end and the job is redelivered.
+   */
+  leaseMs?: number;
 }
 
 /**
- * @spec signals#lifecycle-event @spec signals#event-driven
+ * @spec signals#delivery — the durable delivery ledger (#641): one row per
+ * (event, consumer audience), inserted synchronously in the kernel's
+ * lifecycle-commit hook and marked done only when every sink for the audience
+ * acknowledged the hand-off. `set_jwt` persists the signed bytes before the
+ * first delivery attempt, so every redelivery is the identical SET (same
+ * `jti`, same bytes), never a re-signed sibling assertion. UNIQUE(event_id,
+ * audience) makes a kernel-outbox replay of the same commit re-enqueue
+ * nothing.
+ */
+const OUTBOX_SCHEMA = `
+CREATE TABLE IF NOT EXISTS signal_outbox (
+  job_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  commit_json TEXT NOT NULL,
+  set_jwt TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at INTEGER NOT NULL DEFAULT 0,
+  claimed_until INTEGER,
+  done INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (event_id, audience)
+) STRICT;
+CREATE INDEX IF NOT EXISTS signal_outbox_pending
+  ON signal_outbox (done, next_attempt_at);
+`;
+
+interface OutboxRow {
+  job_id: number;
+  event_id: string;
+  audience: string;
+  commit_json: string;
+  set_jwt: string | null;
+  attempts: number;
+}
+
+/**
+ * @spec signals#lifecycle-event @spec signals#event-driven @spec signals#delivery
  *
  * The emitter glue that runs OUTSIDE the kernel: the kernel's lifecycle-commit
  * hook is synchronous, but signing a SET is async. `onCommit` (the subscriber
- * handed to the kernel construction site) returns immediately, scheduling one
- * async signing per consumer audience off the commit path; each signed SET is
- * handed to the delivery sinks registered for that audience. `drain` awaits all
- * in-flight emissions for a deterministic barrier (tests, graceful shutdown);
- * it is never on the commit path.
+ * handed to the kernel construction site) synchronously journals one durable
+ * delivery job per eligible consumer and returns; signing and delivery run off
+ * the commit path, driven by the job ledger. A failed hand-off is never
+ * swallowed: the job stays pending with a bounded backoff and is redelivered,
+ * byte-identical, until every sink for its audience acknowledges (#641). On
+ * the D27 ':memory:' baseline the ledger outlives the request, not the
+ * process; the `store.file` escape hatch is what makes it survive a restart.
+ * `drain` settles all in-flight work and dispatches everything runnable now
+ * (tests, graceful shutdown); `startDispatcher` adds the recurring drive.
  */
 export class MissionSignalEmitter {
   private readonly deliveries: Array<{ audience: string; deliver: (set: string) => unknown }> = [];
   private inflight: Array<Promise<void>> = [];
+  private readonly db: Database;
+  private readonly nowFn: () => Date;
+  private readonly retryBaseMs: number;
+  private readonly retryCapMs: number;
+  private readonly leaseMs: number;
+  private timer: ReturnType<typeof setInterval> | undefined;
 
-  constructor(private readonly opts: EmitterOptions) {}
+  constructor(private readonly opts: EmitterOptions) {
+    this.db = openStore(OUTBOX_SCHEMA, opts.store);
+    this.nowFn = opts.now ?? (() => new Date());
+    this.retryBaseMs = opts.retry?.baseMs ?? 250;
+    this.retryCapMs = opts.retry?.capMs ?? 30_000;
+    this.leaseMs = opts.leaseMs ?? 30_000;
+  }
 
   /** Register a receiver to be handed every SET for its own audience. */
   register(receiver: MissionSignalReceiver): void {
@@ -568,40 +644,144 @@ export class MissionSignalEmitter {
   }
 
   /**
-   * The kernel `onLifecycleCommit` subscriber. Synchronous: it schedules signing
-   * and returns, keeping the async SET production off the kernel's commit path.
+   * The kernel `onLifecycleCommit` subscriber. Synchronous: it journals one
+   * durable delivery job per eligible consumer (better-sqlite3 is synchronous,
+   * so the job row exists before this hook returns), then kicks the
+   * dispatcher off the commit path. The event's identity is minted here, once:
+   * a commit replayed from the kernel's finalization outbox arrives with its
+   * persisted `event_id` and the UNIQUE job key makes the replay a no-op; a
+   * direct-funnel commit without one gets a fresh identity that the job row
+   * then holds for every later attempt.
    */
   readonly onCommit = (commit: LifecycleCommit): void => {
+    const eventId = commit.event_id ?? `set_${randomBytes(15).toString("base64url")}`;
+    const journaled: LifecycleCommit = { ...commit, event_id: eventId };
+    const insert = this.db.prepare(
+      `INSERT INTO signal_outbox (event_id, audience, commit_json)
+       VALUES (?, ?, ?) ON CONFLICT (event_id, audience) DO NOTHING`,
+    );
     for (const consumer of this.opts.consumers) {
       // @spec signals#discharge-compatibility — an undeclared stream is not
       // delivered an event whose narrowing rides `authority_changed` alone.
       if (!this.deliverable(commit, consumer)) continue;
-      this.inflight.push(this.emitOne(commit, consumer.audience));
+      insert.run(eventId, consumer.audience, JSON.stringify(journaled));
     }
+    this.inflight.push(this.dispatchOnce());
   };
 
-  private async emitOne(commit: LifecycleCommit, audience: string): Promise<void> {
-    try {
-      const set = await signLifecycleEvent(commit, {
-        audience,
-        key: this.opts.key,
-        kid: this.opts.kid,
-      });
-      for (const d of this.deliveries) {
-        if (d.audience === audience) await d.deliver(set);
-      }
-    } catch {
-      // Delivery is best-effort and off the synchronous commit path; a consumer
-      // that misses an event falls back to Mission Status (draft
-      // §consumer-behavior, §missed-events-are-not-fail-open). Retry/backoff and
-      // dead-lettering are deferred to the SSF transport.
+  /** One dispatch pass: claim every runnable job and attempt its delivery. */
+  private async dispatchOnce(): Promise<void> {
+    const now = this.nowFn().getTime();
+    const candidates = this.db
+      .prepare(
+        `SELECT job_id, event_id, audience, commit_json, set_jwt, attempts
+         FROM signal_outbox
+         WHERE done = 0 AND next_attempt_at <= ?
+           AND (claimed_until IS NULL OR claimed_until <= ?)
+         ORDER BY job_id`,
+      )
+      .all(now, now) as OutboxRow[];
+    for (const row of candidates) {
+      const claimed = this.db
+        .prepare(
+          `UPDATE signal_outbox SET claimed_until = ?
+           WHERE job_id = ? AND done = 0
+             AND (claimed_until IS NULL OR claimed_until <= ?)`,
+        )
+        .run(now + this.leaseMs, row.job_id, now);
+      if (claimed.changes !== 1) continue;
+      await this.deliverJob(row);
     }
   }
 
-  /** Await all in-flight emissions. A test/shutdown barrier, never on the commit path. */
+  private async deliverJob(row: OutboxRow): Promise<void> {
+    try {
+      let set = row.set_jwt;
+      if (set === null) {
+        const journaled = JSON.parse(row.commit_json) as LifecycleCommit;
+        const fresh = await signLifecycleEvent(journaled, {
+          audience: row.audience,
+          key: this.opts.key,
+          kid: this.opts.kid,
+        });
+        // Persist the signed bytes BEFORE the first hand-off, and keep
+        // whichever signing won if a concurrent dispatcher raced this one:
+        // every attempt after this point redelivers the identical SET
+        // (@spec signals#delivery — same `jti`, same bytes).
+        this.db
+          .prepare(`UPDATE signal_outbox SET set_jwt = ? WHERE job_id = ? AND set_jwt IS NULL`)
+          .run(fresh, row.job_id);
+        const persisted = this.db
+          .prepare(`SELECT set_jwt FROM signal_outbox WHERE job_id = ?`)
+          .get(row.job_id) as { set_jwt: string | null } | undefined;
+        set = persisted?.set_jwt ?? fresh;
+      }
+      // Zero sinks is not a vacuous success: an audience whose transport is
+      // not wired yet keeps its jobs pending, so a late-registered sink (or a
+      // restarted process that wires delivery after the commit) still gets
+      // the event. Acknowledged means handed off, never "nobody to hand to".
+      const sinks = this.deliveries.filter((d) => d.audience === row.audience);
+      if (sinks.length === 0) throw new Error(`no delivery sink for ${row.audience}`);
+      for (const d of sinks) await d.deliver(set);
+      this.db
+        .prepare(`UPDATE signal_outbox SET done = 1, claimed_until = NULL WHERE job_id = ?`)
+        .run(row.job_id);
+    } catch {
+      // A failed hand-off is not swallowed: the job stays pending under a
+      // bounded backoff (@spec signals#delivery; the draft's DoS retry bound)
+      // and is redelivered until every sink for its audience acknowledges.
+      const attempts = row.attempts + 1;
+      const delay = Math.min(this.retryBaseMs * 2 ** (attempts - 1), this.retryCapMs);
+      this.db
+        .prepare(
+          `UPDATE signal_outbox
+           SET attempts = ?, next_attempt_at = ?, claimed_until = NULL
+           WHERE job_id = ? AND done = 0`,
+        )
+        .run(attempts, this.nowFn().getTime() + delay, row.job_id);
+    }
+  }
+
+  /**
+   * Settle all in-flight work, then dispatch everything runnable now. A
+   * test/shutdown barrier, never on the commit path. Jobs backing off to a
+   * future `next_attempt_at` stay pending for the dispatcher (or the next
+   * drain) rather than blocking the barrier.
+   */
   async drain(): Promise<void> {
-    const pending = this.inflight;
-    this.inflight = [];
-    await Promise.allSettled(pending);
+    while (this.inflight.length > 0) {
+      const pending = this.inflight;
+      this.inflight = [];
+      await Promise.allSettled(pending);
+    }
+    await this.dispatchOnce();
+  }
+
+  /** Start the recurring dispatcher (#641): the autonomous redelivery drive. */
+  startDispatcher(intervalMs = 1000): void {
+    if (this.timer !== undefined) return;
+    this.timer = setInterval(() => {
+      this.inflight.push(this.dispatchOnce());
+    }, intervalMs);
+    this.timer.unref?.();
+  }
+
+  stopDispatcher(): void {
+    if (this.timer !== undefined) clearInterval(this.timer);
+    this.timer = undefined;
+  }
+
+  /** Pending (undelivered) job count, for observability and tests. */
+  pending(): number {
+    const row = this.db.prepare(`SELECT COUNT(*) AS n FROM signal_outbox WHERE done = 0`).get() as {
+      n: number;
+    };
+    return row.n;
+  }
+
+  /** Stop the dispatcher and close the outbox store. */
+  close(): void {
+    this.stopDispatcher();
+    this.db.close();
   }
 }
