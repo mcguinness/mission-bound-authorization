@@ -69,14 +69,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-issuance-grant:
-    title: "Mission Issuance Grant for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -391,7 +383,6 @@ per-endpoint error taxonomy are deferred to a later revision.
 Maturity: sketch. Maintenance: lab-best-effort.
 Adopt when: Evaluating a UMA 2.0 deployment only.
 Requires: Mission Substrate Requirements.
-Also requires, conditionally: Mission Issuance Grant for OAuth 2.0 (when the expires_at member is adopted).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
@@ -775,10 +766,9 @@ The RPT is this binding's Mission-bound credential.
 An RPT issued under a Mission names it through the `mission` claim:
 the family members `id`, `issuer`, and `authority_hash` as the
 issuance profile defines them, and it SHOULD carry the `expires_at`
-member as the issuance-grant profile defines it
-({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a bounding
-commitment with no liveness. The claim is delivered on one of two
-carriage surfaces:
+member as the issuance profile defines it
+({{I-D.draft-mcguinness-oauth-mission}}), a bounding commitment with
+no liveness. The claim is delivered on one of two carriage surfaces:
 
 - **Token-carried**: a deployment issuing JWT-format RPTs carries
   the claim in the token per the issuance profile.

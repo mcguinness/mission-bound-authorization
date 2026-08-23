@@ -328,24 +328,14 @@ the one from the issuance profile's walkthrough):
 
 ## The `expires_at` Claim Member {#expires-at-member}
 
-This profile adds one member to the `mission` claim object on the
-credentials it governs, ahead of the issuance profile's revision:
-
-`expires_at`:
-: A string. An RFC 3339 {{RFC3339}} date-time mirroring the Mission
-  record's `expires_at`, spelled identically per the issuance
-  profile's record-fact naming rule.
-
-The member is a bounding and audit commitment and carries no
-liveness: expiry says nothing about revocation, and only `active`
-permits reliance. It gives a consumer what a token's own `exp`
-cannot: the Mission's remaining horizon for planning, a
-deterministic ceiling enforceable on offline validation paths (the
-value is immutable, so a credential-carried copy is always safe),
-and a check that issuance respected the lifetime cap
-({{redemption}}). A consumer that does not recognize the member
-ignores it. A Mission Issuer under any binding MAY include the
-member with these semantics.
+The issuance profile defines `expires_at` as a REQUIRED Mission
+Record member and an OPTIONAL member of the `mission` claim it
+mirrors ({{I-D.draft-mcguinness-oauth-mission}}). This profile
+elevates the claim mirror to REQUIRED for the credentials it governs:
+the `mission` object ({{grant}}) is REQUIRED and extended with
+`expires_at`. The Lifetime rule ({{redemption}}) depends on that
+elevation: no token issued under the grant may expire later than the
+`mission` object's `expires_at`.
 
 # Obtaining a Grant {#minting}
 
