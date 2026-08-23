@@ -12824,8 +12824,28 @@
     "normative": "the principal_mapping extension member's origin, local, policy, observed_at, and valid_until sub-members are all REQUIRED whenever the member is present; the origin/local references follow this document's protected-reference privacy rule"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping (#686 review) -- an entitlement-caused principal_mapping_failed DENIAL still retains principal_mapping (protected references), since the mapping itself was established before entitlement failed",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > a request NOT claiming the profile never carries principal_mapping on its retained Decision Evidence",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#539/#686 review: the PDP's decision context carries the composed mapping (permit or a later-step denial past the mapping check); the PEP's evidence.record() now copies it onto the retained Decision Evidence, replacing the raw {iss, sub} pairs with protected references (computeAnchor, typ mission-origin-subject) before persisting. Never a partial object: present with all five sub-members, or absent entirely for a request not claiming the profile."
   },
   {
    "id": "evidence.conformance.producer-bar",
@@ -13088,8 +13108,16 @@
     "normative": "where the cross-domain Origin Principal profile is in use, retained records should carry the principal_mapping extension with a protected subject reference rather than a raw identity, unless the raw identity is necessary for the stated audit purpose; a deployment using the deterministic-digest form of protected reference must disclose that it is dictionary-attackable correlation infrastructure, not concealment"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#539/#686 review: the protected-reference half is tested (the deterministic-digest form; raw {iss, sub} confirmed absent from the serialized record). The MUST-disclose-the-limitation half is not machine-tested; it is satisfied by source documentation at the point a deployment would read it (services/mcp-payments/src/evidence.ts's principal_mapping field doc, packages/mission-core/src/anchors.ts's MISSION_ORIGIN_SUBJECT_TYP doc), not verified here."
   },
   {
    "id": "evidence.privacy.pep-should-supply-digest-only-for-pii-parameters",
