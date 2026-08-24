@@ -723,9 +723,10 @@ This document maps principals onto native OAuth constructs:
   The Approver is the accountable consent principal whose approval
   created the Mission, always equal to
   `approval_basis.consent_principal`; under a standing-consent basis
-  a policy adjudicates the activation while the Approver remains the
-  human whose consent roots it ({{authority-sources}},
-  {{multi-party-approval}}).
+  a policy adjudicates the activation, recorded as the basis's
+  discriminated `adjudication` ({{mission-record}}), while the
+  Approver remains the human whose consent roots it
+  ({{authority-sources}}, {{multi-party-approval}}).
 
 On a derived token the `sub` claim is the AS-local `sub` the AS
 maps the Subject to under the injective mapping of
@@ -1977,7 +1978,12 @@ recorded by the Approval Governance Record
 ({{I-D.draft-mcguinness-mission-approval-governance}}). Consent
 Evidence may carry a deliberately partial presentation of that record
 through `co_approvals` and its approval-governance members
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). Where an
+Approval Governance Record backs the decision, the Mission's
+`approval_basis.adjudication.kind` is `agr` ({{mission-record}}),
+referencing the record rather than flattening its assertion set into
+a single principal; {{role-mapping}} names how this and other
+scenarios assign the three `approval_basis` roles.
 
 # Integrity and Commitments {#integrity-and-commitments}
 
@@ -2285,9 +2291,12 @@ this profile defines:
   `sub`.
 
 `approver`:
-: REQUIRED. An object. The Approver,
-  an object with `iss` and `sub`. MAY equal `subject`. Equal to
-  `approval_basis.consent_principal` (below).
+: REQUIRED. An object with `iss` and `sub`. DEPRECATED compatibility
+  alias for `approval_basis.consent_principal` (below), the canonical
+  accountability-root name; normatively equal to it in every Mission
+  this document produces. MAY equal `subject`. This document does not
+  remove `approver` here; its removal is scheduled for a future
+  breaking-change window.
 
 `approval_basis`:
 : REQUIRED. An object. The authorization basis this Mission is
@@ -2323,6 +2332,32 @@ this profile defines:
     names a dispatching or requesting party distinct from the
     consenting human.
 
+  `adjudication`:
+  : REQUIRED. A discriminated object naming what decided this
+    instance could be created: distinct from `activation_actor` (who
+    triggered it) and `consent_principal` (who is accountable for
+    it). Members:
+
+    `kind`:
+    : REQUIRED. A string: `human`, `policy`, or `agr`, subject to
+      the forward-compatibility rule of {{lifecycle}}.
+
+    For `kind: human`: no further members. The deciding human is
+    `consent_principal`, and this document does not add a second
+    reference to the same principal.
+
+    For `kind: policy`: `policy`, a REQUIRED object with `id` and
+    `version` identifying the deciding policy or workflow, and
+    `evidence`, an OPTIONAL reference to the evaluation that produced
+    the decision, shaped by the policy or companion profile that owns
+    it.
+
+    For `kind: agr`: no further members. The Approval Governance
+    Record retained under this Mission's `approval_event_id`
+    ({{I-D.draft-mcguinness-mission-approval-governance}}) carries
+    the decision, including any multi-assertion set, which this
+    document does not flatten into a single principal.
+
   `root_commitment`:
   : REQUIRED. A string. The commitment to the consented root: an
     integrity anchor where the root is a committed object, otherwise
@@ -2347,6 +2382,16 @@ this profile defines:
   `root_commitment` trace to an accountable human's approval of the
   named standing consent, with no fresh approval event per instance,
   and MUST carry that approval's instant as `approved_at`.
+
+  For `direct`, `adjudication.kind` MUST be `human`, unless an
+  Approval Governance Record is recorded for this approval event, in
+  which case it MUST be `agr`. A companion profile defining a
+  standing-consent `type` MUST set `adjudication.kind` to `policy`,
+  naming the identity and version of the policy or workflow that
+  adjudicated the instance, unless an Approval Governance Record is
+  recorded, in which case it MUST be `agr`; it MUST NOT flatten a
+  policy's or an Approval Governance Record's assertion set into a
+  single principal member.
 
   **Standing-consent recency.** A deployment MAY declare maximum
   standing-consent ages (recency ceilings), and MAY declare them per
@@ -2451,6 +2496,27 @@ plus a declared post-expiry period. After the Mission reaches a
 terminal state (`revoked` or `expired`), the record MUST be retained
 for the audit horizon.
 
+## Role Mapping {#role-mapping}
+
+`approval_basis` separates three questions about a Mission's own
+creation, and a scenario can assign them to different principals: who
+is accountable for it (`consent_principal`), who or what triggered it
+(`activation_actor`), and what decided it (`adjudication`). The
+companion profiles below define the scenarios; this table names how
+each assigns the three roles.
+
+| Scenario | Accountability root (`consent_principal`) | Activation actor (`activation_actor`) | Adjudication |
+|---|---|---|---|
+| Direct approval | The approving human | Equal to `consent_principal`: the Approver triggers their own approval | `kind: human`; the deciding human is `consent_principal` itself |
+| Relocated human approval ({{I-D.draft-mcguinness-oauth-mission-approval}}) | The human who completes the relocated approval event | Equal to `consent_principal`, unchanged from the direct case: the instance activates at that human's decision, not at any earlier submission | `kind: human`, as direct |
+| Template dispatch ({{I-D.draft-mcguinness-oauth-mission-template}}) | The template's human approver, fixed at template creation | The Dispatcher that requested the Dispatch, distinct from `consent_principal` | `kind: policy`, naming the template and its version: the Mission Issuer's ceiling and Dispatch Policy check adjudicated the instance, never the Dispatcher |
+| Policy drawdown ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) | The Parent Mission's human Approver | The requesting parent Agent, distinct from `consent_principal` | `kind: policy`, naming the child-creation policy, or the Parent Mission's approved delegation entry where no separate policy is named |
+| AGR-backed approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The principal the Approval Governance Record's accountable assertion names, equal to `consent_principal` | Unchanged from the underlying basis | `kind: agr`; the record's full assertion set is never collapsed into a single principal |
+
+Direct approval is the degenerate case where one human fills every
+role; that coincidence does not define the model, and no other
+scenario collapses the three questions into it.
+
 ## Mission Identifier Format {#mission-id}
 
 A Mission Identifier is an opaque URL-safe ASCII string of
@@ -2525,6 +2591,7 @@ outside carries it as `mission_id`, as in the token-response parameter
     "activation": { "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z" },
     "activation_actor": { "iss": "https://idp.example.com",
       "sub": "user_3p2q8mN1a0kV7tR" },
+    "adjudication": { "kind": "human" },
     "root_commitment":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -5480,6 +5547,17 @@ resolve before interoperating.
   one dense list item into bullets, and reordered surrounding prose
   so a rule sentence opens its paragraph or list item; every
   normative sentence kept its exact wording and home section.
+- Three-role approval model (#701): `approval_basis` gains a
+  discriminated `adjudication` member (`kind`: `human`, `policy`, or
+  `agr`) naming what decided a Mission instance, distinct from
+  `activation_actor` (who triggered it) and `consent_principal` (the
+  accountability root). A new Role Mapping table
+  ({{role-mapping}}) covers direct, relocated human approval,
+  Template dispatch, policy drawdown, and AGR-backed approval, with
+  direct approval as the degenerate one-human case. The top-level
+  `approver` member is DEPRECATED as a compatibility alias for
+  `approval_basis.consent_principal`, normatively equal to it; its
+  removal is deferred to a future breaking-change window.
 
 -00
 

@@ -527,7 +527,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
      {{grant-type}}), `template_version`, and `template_hash` (the
      `template` lineage member's fields, {{template-member}}), plus
      this Dispatch's `dispatch_event_id`; `activation_actor` is the
-     Dispatcher, distinct from `consent_principal`;
+     Dispatcher, distinct from `consent_principal` and never the
+     instance's adjudicator ({{I-D.draft-mcguinness-oauth-mission}},
+     Section "Role Mapping");
      `root_commitment` is `template_hash`; and `approved_at` (the
      issuance profile's standing-consent requirement) is the instant
      the consenting human approved this exact `template_version`,
