@@ -34,6 +34,10 @@
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
     "content_sha256": "232363f43eeddc3a21aa47352c02cbad96659af24d4be065ef58cf4f5bb9749d"
    },
+   "draft-mcguinness-oauth-mission-template.md": {
+    "revision": "5dfb40b7040fbcd838582bbabc1d09b6e7d016bf",
+    "content_sha256": "720e159b28999c39277651d23081527825d767db6ff7c3719d798e4010cc451e"
+   },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
     "content_sha256": "9ef5e45985155b3606761d7d9a24425412acae3ef1654df6cd80bbfb3c5131c3"
@@ -137,7 +141,8 @@
    "issuance-grant.state-integration",
    "mas.enterprise",
    "core.standing-consent",
-   "core.standing-consent-recency"
+   "core.standing-consent-recency",
+   "template.dispatch"
   ]
  },
  "profiles": [
@@ -13556,6 +13561,77 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
+  },
+  {
+   "id": "template.dispatch.idempotent-retry-returns-committed",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "A redemption bearing an identifier the Mission Issuer has already committed MUST return the previously committed instance and MUST NOT derive a second Mission.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Dispatch redemption bearing a dispatch_event_id already committed returns the same mission_id, never a second Mission"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Tested for the same-fingerprint retry path only (an unchanged repeated dispatch_event_id). Fingerprint-mismatch refusal, atomic-reservation concurrency, and tombstone retention are not exercised by the current suite; the current implementation dedupes on dispatch_event_id via the issuance profile's approval_event_id mechanism and does not yet implement the fingerprint object this profile's adoption of the expansion apparatus specifies."
+  },
+  {
+   "id": "template.dispatch.fingerprint-mismatch-refusal",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "different fingerprint, refuse with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dispatch_event_id reused with a different operation fingerprint (a changed template_id, intent, evidence, proposal, or cnf) is refused with invalid_request rather than recovered"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "template.dispatch.completed-recovery-survives-retirement",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "recovery of that Mission MUST survive later retirement of the template version that created it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a completed Dispatch operation is recovered on retry even after the Mission Issuer retires the template version that created it, since retirement stops new dispatch but does not terminate an already-dispatched Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   }
  ]
 }
