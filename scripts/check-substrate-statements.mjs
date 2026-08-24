@@ -48,12 +48,24 @@ const CAPABILITIES = [
   "Portable Evidence",
 ];
 
-const REGISTRY = [
-  { file: "draft-mcguinness-mission-substrate.md", title: "OAuth Mission binding capability table" },
-  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities" },
-  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities" },
-  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities" },
-  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities" },
+// Every registered Statement is a Mission binding: publishing a capability
+// table here is what "binding" means architecturally (the README says as
+// much: new bindings are authored against the substrate and claim their
+// capabilities through a Statement). `slug` names the family-manifest.json
+// draft the Statement is FOR, which is not always the file it lives in: the
+// OAuth binding's own table is hosted in the substrate document's Mapping
+// Assessment rather than in draft-mcguinness-oauth-mission.md itself.
+// scripts/generate-drafts-index.mjs imports this array as the single source
+// of truth for "which manifest slugs are bindings," so this list is
+// exhaustive by construction: the tripwires below (statement-unregistered)
+// already fail CI the moment a sixth Statement table appears anywhere in the
+// corpus without a matching entry here.
+export const REGISTRY = [
+  { file: "draft-mcguinness-mission-substrate.md", title: "OAuth Mission binding capability table", slug: "draft-mcguinness-oauth-mission" },
+  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities", slug: "draft-mcguinness-mission-authority-server" },
+  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities", slug: "draft-mcguinness-mission-aauth" },
+  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities", slug: "draft-mcguinness-mission-uma" },
+  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities", slug: "draft-mcguinness-mission-gnap" },
 ];
 
 const HEADER = "| Capability | Claim | Activation | Scope and defining sections | Limitations |";
@@ -61,12 +73,6 @@ const RETIRED = /\|\s*(supported|conditional|not supported)\s*\|/;
 const CONSUMER_HEADER = "| Capability | Consumption | Scope of consumption |";
 const CONSUMER_SEPARATOR = "| --- | --- | --- |";
 const CONSUMER_CLAIM = /^(required( and produced)?|required when .+|not consumed|produced)$/;
-
-let failures = 0;
-const fail = (tag, msg) => {
-  failures += 1;
-  console.error(`[${tag}] ${msg}`);
-};
 
 function tableEndingAt(lines, titleIdx) {
   const rows = [];
@@ -82,121 +88,137 @@ function cells(row) {
   return row.split("|").slice(1, -1).map((c) => c.trim());
 }
 
-for (const entry of REGISTRY) {
-  const filePath = path.join(ROOT, entry.file);
-  let text;
-  try {
-    text = readFileSync(filePath, "utf8");
-  } catch {
-    fail("statement-missing", `${entry.file}: file not found`);
-    continue;
-  }
-  const lines = text.split("\n");
-  const titleIdx = lines.findIndex((l) => l.includes(`{: title="${entry.title}"}`));
-  if (titleIdx === -1) {
-    fail("statement-missing", `${entry.file}: no table titled "${entry.title}"`);
-    continue;
-  }
-  const rows = tableEndingAt(lines, titleIdx);
-  if (rows.length < 2 || rows[0].trim() !== HEADER) {
-    fail("statement-format", `${entry.file} ("${entry.title}"): header must be exactly the five-column Statement header`);
-    continue;
-  }
-  const body = rows.slice(2); // header + separator
-  const names = body.map((r) => cells(r)[0]);
-  if (names.length !== CAPABILITIES.length || names.some((n, i) => n !== CAPABILITIES[i])) {
-    fail("statement-capabilities", `${entry.file} ("${entry.title}"): rows must be exactly the canonical eight capabilities in order; found [${names.join(", ")}]`);
-    continue;
-  }
-  for (const row of body) {
-    const [name, claim, activation, scope, limitations] = cells(row);
-    if (claim !== "supplied" && claim !== "not supplied") {
-      fail("statement-claim", `${entry.file} ("${entry.title}") ${name}: claim must be "supplied" or "not supplied", found "${claim}"`);
+// Guarded so importing REGISTRY (scripts/generate-drafts-index.mjs does, as
+// the single source of truth for "which manifest slugs are bindings") never
+// runs this file's own validation as an import side effect; only running
+// this file directly does.
+function main() {
+  let failures = 0;
+  const fail = (tag, msg) => {
+    failures += 1;
+    console.error(`[${tag}] ${msg}`);
+  };
+
+  for (const entry of REGISTRY) {
+    const filePath = path.join(ROOT, entry.file);
+    let text;
+    try {
+      text = readFileSync(filePath, "utf8");
+    } catch {
+      fail("statement-missing", `${entry.file}: file not found`);
       continue;
     }
-    if (claim === "supplied") {
-      if (!activation || activation === "--") {
-        fail("statement-activation", `${entry.file} ("${entry.title}") ${name}: a supplied row must state its activation condition`);
-      }
-      if (!scope || scope === "--" || !limitations) {
-        fail("statement-elements", `${entry.file} ("${entry.title}") ${name}: a supplied row must carry Scope and Limitations cells (the temporal and failure elements)`);
-      }
-    } else {
-      if (activation !== "--" || scope !== "--") {
-        fail("statement-not-supplied", `${entry.file} ("${entry.title}") ${name}: a not-supplied row uses "--" for Activation and Scope`);
-      }
-      if (!limitations) {
-        fail("statement-not-supplied", `${entry.file} ("${entry.title}") ${name}: a not-supplied row states its reason in Limitations`);
-      }
+    const lines = text.split("\n");
+    const titleIdx = lines.findIndex((l) => l.includes(`{: title="${entry.title}"}`));
+    if (titleIdx === -1) {
+      fail("statement-missing", `${entry.file}: no table titled "${entry.title}"`);
+      continue;
     }
-  }
-}
-
-// Repo-wide tripwires.
-const registered = new Set(REGISTRY.map((e) => `${e.file}::${e.title}`));
-let consumerTables = 0;
-for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.endsWith(".md"))) {
-  const lines = readFileSync(path.join(ROOT, file), "utf8").split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.startsWith("|") && RETIRED.test(line)) {
-      fail("retired-vocabulary", `${file}:${i + 1}: retired capability-claim vocabulary in a table row`);
+    const rows = tableEndingAt(lines, titleIdx);
+    if (rows.length < 2 || rows[0].trim() !== HEADER) {
+      fail("statement-format", `${entry.file} ("${entry.title}"): header must be exactly the five-column Statement header`);
+      continue;
     }
-    const m = line.match(/\{: title="([^"]*substrate capabilities[^"]*)"\}/i);
-    if (m && !registered.has(`${file}::${m[1]}`)) {
-      fail("statement-unregistered", `${file}:${i + 1}: Statement table "${m[1]}" is not registered in check-substrate-statements.mjs`);
+    const body = rows.slice(2); // header + separator
+    const names = body.map((r) => cells(r)[0]);
+    if (names.length !== CAPABILITIES.length || names.some((n, i) => n !== CAPABILITIES[i])) {
+      fail("statement-capabilities", `${entry.file} ("${entry.title}"): rows must be exactly the canonical eight capabilities in order; found [${names.join(", ")}]`);
+      continue;
     }
-    // A differently titled table cannot evade registration: any table using
-    // the exact five-column Statement header must be registered, and any
-    // section titled "Mission Substrate Statement" must live in a file that
-    // registers a Statement here.
-    if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file)) {
-      fail("statement-unregistered", `${file}:${i + 1}: a five-column Statement table in a file with no registered Statement`);
-    }
-    if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
-      fail("statement-unregistered", `${file}:${i + 1}: a "Mission Substrate Statement" section in a file with no registered Statement`);
-    }
-
-    // Consumer capability-consumption tables self-register by header: any
-    // table with this exact three-column header is validated, no allowlist
-    // needed (#620).
-    if (line.trim() === CONSUMER_HEADER) {
-      consumerTables += 1;
-      if (lines[i + 1]?.trim() !== CONSUMER_SEPARATOR) {
-        fail("consumer-format", `${file}:${i + 2}: a consumer table's header must be followed by the three-column separator row`);
+    for (const row of body) {
+      const [name, claim, activation, scope, limitations] = cells(row);
+      if (claim !== "supplied" && claim !== "not supplied") {
+        fail("statement-claim", `${entry.file} ("${entry.title}") ${name}: claim must be "supplied" or "not supplied", found "${claim}"`);
         continue;
       }
-      let j = i + 2;
-      const seen = new Set();
-      while (j < lines.length && lines[j].startsWith("|")) {
-        const [name, claim, scope] = cells(lines[j]);
-        if (!CAPABILITIES.includes(name)) {
-          fail("consumer-capability", `${file}:${j + 1}: "${name}" is not one of the canonical eight capabilities`);
-        } else if (seen.has(name)) {
-          fail("consumer-capability", `${file}:${j + 1}: "${name}" appears more than once in this table`);
-        } else {
-          seen.add(name);
+      if (claim === "supplied") {
+        if (!activation || activation === "--") {
+          fail("statement-activation", `${entry.file} ("${entry.title}") ${name}: a supplied row must state its activation condition`);
         }
-        if (!CONSUMER_CLAIM.test(claim ?? "")) {
-          fail(
-            "consumer-claim",
-            `${file}:${j + 1} (${name}): consumption must be "required", "required and produced", "required when <condition>", "not consumed", or "produced"; found "${claim}"`
-          );
+        if (!scope || scope === "--" || !limitations) {
+          fail("statement-elements", `${entry.file} ("${entry.title}") ${name}: a supplied row must carry Scope and Limitations cells (the temporal and failure elements)`);
         }
-        if (!scope) {
-          fail("consumer-scope", `${file}:${j + 1} (${name}): a consumer row must carry a non-empty Scope of consumption cell`);
+      } else {
+        if (activation !== "--" || scope !== "--") {
+          fail("statement-not-supplied", `${entry.file} ("${entry.title}") ${name}: a not-supplied row uses "--" for Activation and Scope`);
         }
-        j += 1;
-      }
-      if (j === i + 2) {
-        fail("consumer-format", `${file}:${i + 1}: a consumer table must carry at least one row`);
+        if (!limitations) {
+          fail("statement-not-supplied", `${entry.file} ("${entry.title}") ${name}: a not-supplied row states its reason in Limitations`);
+        }
       }
     }
   }
+
+  // Repo-wide tripwires.
+  const registered = new Set(REGISTRY.map((e) => `${e.file}::${e.title}`));
+  let consumerTables = 0;
+  for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.endsWith(".md"))) {
+    const lines = readFileSync(path.join(ROOT, file), "utf8").split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith("|") && RETIRED.test(line)) {
+        fail("retired-vocabulary", `${file}:${i + 1}: retired capability-claim vocabulary in a table row`);
+      }
+      const m = line.match(/\{: title="([^"]*substrate capabilities[^"]*)"\}/i);
+      if (m && !registered.has(`${file}::${m[1]}`)) {
+        fail("statement-unregistered", `${file}:${i + 1}: Statement table "${m[1]}" is not registered in check-substrate-statements.mjs`);
+      }
+      // A differently titled table cannot evade registration: any table using
+      // the exact five-column Statement header must be registered, and any
+      // section titled "Mission Substrate Statement" must live in a file that
+      // registers a Statement here.
+      if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file)) {
+        fail("statement-unregistered", `${file}:${i + 1}: a five-column Statement table in a file with no registered Statement`);
+      }
+      if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
+        fail("statement-unregistered", `${file}:${i + 1}: a "Mission Substrate Statement" section in a file with no registered Statement`);
+      }
+
+      // Consumer capability-consumption tables self-register by header: any
+      // table with this exact three-column header is validated, no allowlist
+      // needed (#620).
+      if (line.trim() === CONSUMER_HEADER) {
+        consumerTables += 1;
+        if (lines[i + 1]?.trim() !== CONSUMER_SEPARATOR) {
+          fail("consumer-format", `${file}:${i + 2}: a consumer table's header must be followed by the three-column separator row`);
+          continue;
+        }
+        let j = i + 2;
+        const seen = new Set();
+        while (j < lines.length && lines[j].startsWith("|")) {
+          const [name, claim, scope] = cells(lines[j]);
+          if (!CAPABILITIES.includes(name)) {
+            fail("consumer-capability", `${file}:${j + 1}: "${name}" is not one of the canonical eight capabilities`);
+          } else if (seen.has(name)) {
+            fail("consumer-capability", `${file}:${j + 1}: "${name}" appears more than once in this table`);
+          } else {
+            seen.add(name);
+          }
+          if (!CONSUMER_CLAIM.test(claim ?? "")) {
+            fail(
+              "consumer-claim",
+              `${file}:${j + 1} (${name}): consumption must be "required", "required and produced", "required when <condition>", "not consumed", or "produced"; found "${claim}"`
+            );
+          }
+          if (!scope) {
+            fail("consumer-scope", `${file}:${j + 1} (${name}): a consumer row must carry a non-empty Scope of consumption cell`);
+          }
+          j += 1;
+        }
+        if (j === i + 2) {
+          fail("consumer-format", `${file}:${i + 1}: a consumer table must carry at least one row`);
+        }
+      }
+    }
+  }
+
+  if (failures > 0) {
+    console.error(`substrate-statements check FAILED: ${failures} finding(s).`);
+    process.exit(1);
+  }
+  console.log(`substrate-statements check OK: ${REGISTRY.length} Statements, ${consumerTables} consumer tables validated.`);
 }
 
-if (failures > 0) {
-  console.error(`substrate-statements check FAILED: ${failures} finding(s).`);
-  process.exit(1);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
 }
-console.log(`substrate-statements check OK: ${REGISTRY.length} Statements, ${consumerTables} consumer tables validated.`);
