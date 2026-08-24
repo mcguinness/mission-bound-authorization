@@ -185,7 +185,9 @@ bound, and fails safe on the Mission's `expires_at`, already meets
 the suite's revocation-propagation model without this channel
 ({{I-D.draft-mcguinness-oauth-mission-status}}). This channel is
 never the sole state source, and a missed event reads as stale state,
-never as still `active`. Deploy this profile where polling per
+never as still `active`.
+
+Deploy this profile where polling per
 Mission does not scale or the staleness bound must shrink below a
 practical polling interval. The Mission Issuer is an SSF transmitter
 and the consumer an SSF receiver in the framework's own vocabulary
@@ -272,7 +274,9 @@ A Mission Issuer that emits events MUST support at least one method.
 A consumer discovers the supported methods from the SSF Transmitter
 Configuration Metadata rather than from a separate Authorization
 Server metadata member. The consumer's stream configuration declares,
-in its `delivery` object, the method it uses. The Mission Issuer MUST
+in its `delivery` object, the method it uses.
+
+The Mission Issuer MUST
 respect the declared method. It MUST NOT silently fall back to a
 less-timely method.
 
@@ -667,7 +671,9 @@ verification event. A Mission Issuer MAY additionally emit a periodic
 stream-status heartbeat. A stream is verified live when the consumer
 has received a verified verification or heartbeat event within the
 stream's heartbeat interval; such an event attests that any committed
-transition for the stream's subjects would have been delivered. On a
+transition for the stream's subjects would have been delivered.
+
+On a
 stream verified live, silence is freshness-preserving: the consumer
 MAY continue to rely on cached Mission state for those subjects up to
 the next heartbeat interval, without polling Mission Status per
@@ -679,7 +685,9 @@ has gone without a verified verification or heartbeat event for longer
 than the Mission Issuer's advertised `mission_max_stale_seconds`
 ({{I-D.draft-mcguinness-oauth-mission-status}}). Once its cached state
 is stale, the consumer MUST re-establish current state before further
-reliance. The Mission Status operation is the RECOMMENDED fallback
+reliance.
+
+The Mission Status operation is the RECOMMENDED fallback
 surface. A consumer that cannot verify its stream, or that was down
 and may have missed events, applies the same rule rather than
 continuing on possibly stale state.

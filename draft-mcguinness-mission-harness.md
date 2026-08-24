@@ -180,7 +180,9 @@ Harness continuity is useful, but it is not authority. A task graph can
 survive after the Mission that justified it is revoked. A cached tool
 connection can remain usable after the business condition that
 authorized it ends. A child agent can keep running after its parent
-Mission is suspended. This profile defines what a harness must do to
+Mission is suspended.
+
+This profile defines what a harness must do to
 avoid treating recoverable runtime state as authorization. That is one
 of the harness's two duties; the other is establishing the mediated
 execution environment, in which work in a mediated action class has no
@@ -190,7 +192,9 @@ Two ledgers coexist by design, and neither mirrors the other. The
 harness or its workflow engine keeps the execution ledger: task
 graphs, retry queues, event histories, progress. The Mission Issuer
 keeps the authorization ledger: the approved task, its lifecycle, and
-what each decision permitted. They are separated because they sit in
+what each decision permitted.
+
+They are separated because they sit in
 different trust domains: the execution ledger lives with the
 component this profile assumes compromisable, and a kill switch
 cannot live inside the thing it kills. The only shared key is the
@@ -393,7 +397,9 @@ mediated, the statement MAY name the destination set the channel may
 reach, so the published claim and the enforced allowlist are the same
 object. An egress on a channel the statement does not mark mediated,
 or to a destination outside a named set, MUST be refused and recorded
-({{egress-evidence}}). The gate applies the same fail-closed Mission
+({{egress-evidence}}).
+
+The gate applies the same fail-closed Mission
 state rule as the resume checks ({{resume-checks}}): work whose
 Mission is not active does not egress. An in-process gate mediates the
 agent's egress interface and supports no containment claim. The gate
@@ -1253,7 +1259,9 @@ transparency feed ({{I-D.draft-mcguinness-mission-audit}}). Its
 canonical bytes are the record's JCS canonicalization under the
 imported evidence conventions. Its type identifier is
 `application/mission-harness-evidence+json` (a local-use identifier
-pending registration). A harness that registers its evidence
+pending registration).
+
+A harness that registers its evidence
 publishes its signing key in the deployment key set alongside the
 PEP key the runtime profile requires, so a relying party can verify
 the harness as the record's authoritative producer. Harness and

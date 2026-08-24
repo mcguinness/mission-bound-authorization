@@ -460,7 +460,9 @@ A model-proposed plan is not excluded; it is unadopted. A deployment
 MAY admit one through its review surface: a human review or a
 deterministic validation against a reviewed operation profile.
 Admission adopts the proposal into the deployment's committed
-documentation before dispatch. The adopted plan is then a reviewed
+documentation before dispatch.
+
+The adopted plan is then a reviewed
 definition, and the Orchestration Evidence that commits its hash
 records the admission. What the rule excludes is model output
 defining an unwind-plan member with nothing between proposal and
@@ -528,6 +530,7 @@ The two triggers differ in what they permit. An established
 non-active state runs the full sequence. Staleness alone, an active
 state that cannot be established within the bound, performs items 1,
 2, 3, and 5 and MUST NOT execute post-completion behavior (item 4).
+
 Compensation is itself consequential work, and unwinding work nobody
 stopped is not fail-closed. Post-completion behavior runs only on an
 established non-active state.
