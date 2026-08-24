@@ -158,16 +158,23 @@ integrity envelope to this document, so a Standards-Track
 decision-API binding, and any future binding, emits the same
 records.
 
-This document defines three record types: the Decision Evidence
-Object, for a PDP's decision on a consequential action; the
-Execution Evidence Object, for the outcome of a permitted action;
-and the Refusal Record, for a PEP or PDP refusal that occurs before
-any PDP decision. It fixes their members, canonicalization, integrity
+This document defines three record types:
+
+- the Decision Evidence Object, for a PDP's decision on a consequential
+  action;
+- the Execution Evidence Object, for the outcome of a permitted
+  action; and
+- the Refusal Record, for a PEP or PDP refusal that occurs before
+  any PDP decision.
+
+It fixes their members, canonicalization, integrity
 envelope, media types, and retention. A decision-API binding maps
 its own wire request and response onto these records; the OpenID
 AuthZEN Profile {{I-D.draft-mcguinness-mission-authzen}} is the
 family's Standards-Track binding and the reference producer this
-document's examples are drawn from. `evaluation_id` is the
+document's examples are drawn from.
+
+`evaluation_id` is the
 correlation key across every record and wire artifact of one
 evaluation; each record additionally carries its own record
 identifier (`evidence_id`, `execution_id`, or `refusal_id`). This
@@ -564,13 +571,17 @@ a PDP refusal of an in-scope request that reaches it without the
 Mission decision context a runtime enforcement scope requires, per
 the AuthZEN binding ({{I-D.draft-mcguinness-mission-authzen}}). Such a
 refusal has no PDP decision and cannot populate the PDP-derived
-members above. A deployment records it as a Refusal Record, carrying
+members above.
+
+A deployment records it as a Refusal Record, carrying
 only facts the refusing role verified: a PEP populates the members it
 can attest from token validation and its own state establishment; a
 PDP populates the members it can attest from the request it received.
 Neither role attests facts only the other could verify: the PDP
 cannot attest PEP-side token checks, and the PEP cannot attest the
-PDP's own context-completeness check. The boundary is the PDP
+PDP's own context-completeness check.
+
+The boundary is the PDP
 decision: a Refusal Record is exclusively pre-decision, and once a
 PDP has decided, every final disposition of a consequential permit,
 whether completed, failed, or suppressed before release, is Execution
@@ -1184,13 +1195,16 @@ actually attempted or executed).
 Equality between the two Execution Evidence digests is the
 binding-held case. Inequality is a parameter deviation, and the
 record REMAINS VALID: evidence of an unauthorized execution is still
-evidence, never an invalid record to discard. When the executing PEP
+evidence, never an invalid record to discard.
+
+When the executing PEP
 detects the deviation before acting, it MUST refuse the action and
 emit Execution Evidence with `outcome` `suppressed` and `error`
 `parameter_mismatch` ({{example-parameter-deviation}}). A deviation
 recorded against an `outcome` of `completed` or `failed`, a buggy or
 compromised executor having gone ahead despite the mismatch, is
 equally representable and is never grounds to reject the record.
+
 Whatever the recorded `outcome`, when the two digests diverge the
 audit consumer MUST classify the execution as a parameter deviation
 and treat it as equivalent to an unauthorized action for compliance
@@ -1224,11 +1238,15 @@ verify the referenced records and the cross-record joins of
 transparency is claimed for a record, it additionally verifies the
 transparency commitment, which proves registration and never
 substitutes for verifying the record itself
-({{I-D.draft-mcguinness-mission-audit}}). A deployment MAY instead
+({{I-D.draft-mcguinness-mission-audit}}).
+
+A deployment MAY instead
 accept a copied field on the receipt signer's authority alone, but
 only under an explicit policy that names the receipt issuer as
 attesting that fact directly; that policy is the one path that
-forgoes source verification. A receipt whose underlying evidence is
+forgoes source verification.
+
+A receipt whose underlying evidence is
 unavailable within its retention obligations is an integrity
 reference, not portable proof: hashes alone do not make erased
 evidence available.
@@ -1835,7 +1853,9 @@ This document fixes one concrete discovery convention: the PDP
 publishes its JWKS at a deployment-published location named in the
 enforcement scope statement ({{I-D.draft-mcguinness-mission-runtime}}),
 and the PEP or executor key set is published and named there
-likewise. The retired-key rule of the issuance profile's key
+likewise.
+
+The retired-key rule of the issuance profile's key
 management ({{I-D.draft-mcguinness-oauth-mission}}) extends to
 evidence signing keys: a retired signing key MUST remain resolvable
 in the published key set for at least the evidence retention window,
@@ -1843,7 +1863,9 @@ so records signed before a rotation stay verifiable after it. The
 key's compromise status, and the authenticated compromise boundary,
 come from the deployment-defined key-status mechanism. Once the
 signing key is identified as compromised, the compromise-boundary
-rule applies. A verifier MUST NOT use a timestamp asserted by the
+rule applies.
+
+A verifier MUST NOT use a timestamp asserted by the
 target artifact, or authenticated only by the target artifact's
 compromised signing key, to place that artifact before the boundary;
 it MAY use the authenticated time of an independently trusted
@@ -1855,7 +1877,9 @@ establishes its existence before that boundary. Where the key is
 identified as compromised but no authenticated boundary is
 available, the artifact is not verified: the verifier MUST NOT infer
 a boundary from artifact timestamps, its own clock, or an
-implementation default. Such a proof establishes only that those bytes
+implementation default.
+
+Such a proof establishes only that those bytes
 existed by the proof time; it does not establish the truth of the
 artifact, the actual signature time, or that the key was not
 compromised earlier. This rule applies whether or not the deployment
@@ -1863,7 +1887,9 @@ adopted the audit profile: registration under the audit profile
 ({{I-D.draft-mcguinness-mission-audit}}) or a trusted timestamp is
 the optional recovery mechanism, and without one, a record under the
 compromised key is not verified merely because it claims a
-pre-boundary time. For a Receipt-based proof, the verifier completes
+pre-boundary time.
+
+For a Receipt-based proof, the verifier completes
 the audit profile's Receipt verification in full, including the
 Transparency Service signature, the authenticated registration time,
 the inclusion proof, the type binding, and the digest linkage to the
@@ -1873,7 +1899,9 @@ non-compromised proof-verification path: where a key authenticating
 the proof is itself identified as compromised, the proof is subject
 to this same rule for that key and qualifies only through a distinct
 independent pre-boundary anchor; otherwise it cannot rescue the
-artifact. An artifact refused under this rule is not verified in
+artifact.
+
+An artifact refused under this rule is not verified in
 every case. A missing, unavailable, or unresolvable proof is an
 audit failure; a presented proof that fails its own cryptographic or
 commitment verification is an integrity failure of the proof.
@@ -1942,14 +1970,22 @@ Where the cross-domain Origin Principal profile is in use
 records SHOULD carry the composed `principal_mapping` extension
 member ({{evidence-extensions}}) with protected subject references,
 not raw identities, unless the raw identity is necessary for the
-stated audit purpose. A protected subject reference is one of: an
-audit-domain-scoped keyed pseudonym (an HMAC under an audit key,
-carried with a method identifier, a key identifier, and rotation
-semantics); a random opaque mapping reference resolvable by
-authorized auditors; or, only where cross-record correlation is
-explicitly intended, the deterministic public digest of the family
-anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ
-`mission-origin-subject` over the closed `{iss, sub}` object. A
+stated audit purpose.
+
+A protected subject reference is one of:
+
+- an
+  audit-domain-scoped keyed pseudonym (an HMAC under an audit key,
+  carried with a method identifier, a key identifier, and rotation
+  semantics);
+- a random opaque mapping reference resolvable by
+  authorized auditors; or
+- only where cross-record correlation is
+  explicitly intended, the deterministic public digest of the family
+  anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ
+  `mission-origin-subject` over the closed `{iss, sub}` object.
+
+A
 deterministic digest of an enumerable identifier is
 dictionary-attackable: it is correlation infrastructure, not
 concealment, and a deployment using it MUST disclose that
@@ -1965,7 +2001,9 @@ non-sensitive action classification metadata, consistent with the
 runtime profile's rule that raw parameters never appear in the
 record. Where raw parameters must be retained for audit, they are
 held in a separately access-controlled store keyed by
-`evaluation_id`. When the parameters
+`evaluation_id`.
+
+When the parameters
 are themselves PII, the PEP SHOULD supply only a parameter digest to
 the PDP, omitting the raw parameters, so the PDP evaluates against
 parameter-class policy without observing the raw values. The Execution

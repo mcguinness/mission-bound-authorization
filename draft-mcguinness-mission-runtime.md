@@ -480,7 +480,9 @@ The substrate this profile enforces against provides at least a
 lifecycle-gated capability (Mission state at the issuer, with reliance
 boundable by credential lifetime alone) and MAY additionally provide a
 state-observable capability (an authenticated freshness source with a
-stated staleness bound). A deployment claiming runtime enforcement for
+stated staleness bound).
+
+A deployment claiming runtime enforcement for
 an action class whose published staleness bound is tighter than the
 credential lifetime REQUIRES a state-observable substrate for that
 class; the high-consequence classes below always are. A
@@ -546,10 +548,14 @@ An informative worked example of the latency arithmetic: for a
 PDP-gated class with a published staleness bound of 60 seconds and a
 declared execution bound of 30 seconds, a revocation committed
 immediately after a state observation stops new effect after at most
-90 seconds: the stale view remains acceptable for up to 60 seconds,
-a permit issued from that view expires no later than the view's
-valid-through (the permit cap above), and a permitted action
-completes within its execution bound. The general worst case above
+90 seconds. That worst case combines:
+
+- the stale view remaining acceptable for up to 60 seconds;
+- a permit issued from that view expiring no later than the view's
+  valid-through (the permit cap above); and
+- a permitted action completing within its execution bound.
+
+The general worst case above
 counts the permit validity window as its own term because a state
 source reporting an explicit lease end can leave a permit window
 beyond the staleness bound; under observation-time reporting the
@@ -625,7 +631,9 @@ tightening MUST name a containment-aware state source, not merely an
 active one: a contained Mission stays `active`, so a Mission Status
 List bit does not move
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
-"Propagation"). A containment-aware source is full Status or
+"Propagation").
+
+A containment-aware source is full Status or
 introspection carrying `containment_version`, or Mission Lifecycle
 Signals carrying the overlay change
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
@@ -724,7 +732,9 @@ issued before the contain transition still carries it, established
 from the same Mission state source and freshness bound that governs
 the `active` check ({{state-freshness}}); a Mission stays `active`
 while contained, so this check, not the state check, is what a
-containment-aware PDP adds. The decision-API binding provides the
+containment-aware PDP adds.
+
+The decision-API binding provides the
 extension point through which a companion profile carries which
 evaluated set the PDP used ({{authzen}}).
 
@@ -853,7 +863,9 @@ The inputs above evaluate the request; this input evaluates where
 the undertaking stands. A deployment MAY evaluate policy predicates
 over the Mission's prior Decision and Execution Evidence (for
 example, a precondition that a named action class completed) as
-deployment-local context keyed on the Mission's identity. This is
+deployment-local context keyed on the Mission's identity.
+
+This is
 the sequence-aware half of the context asymmetry the architecture
 names ({{I-D.draft-mcguinness-mission-architecture}}): the resource
 prices "delete database" the same in isolation and inside an
@@ -869,11 +881,15 @@ MUST NOT expand authority beyond the issued
 `authorization_details`. Where deployment or Resource policy
 requires a history predicate, the PDP MUST fail closed when the
 predicate cannot be established or the evidence store cannot be
-consulted. A deployment that declares history evaluation in its
+consulted.
+
+A deployment that declares history evaluation in its
 Enforcement Scope Statement treats the evidence store as a state
 source under this profile's freshness discipline: a declared
 staleness bound, and refusal when the required history cannot be
-established within the bound ({{state-freshness}}). Cross-PDP
+established within the bound ({{state-freshness}}).
+
+Cross-PDP
 history composes through the deployment's evidence store or
 registered transparency records
 ({{I-D.draft-mcguinness-mission-audit}}) and is otherwise out of
@@ -1581,7 +1597,9 @@ is held by the PEP that sits at the last controllable boundary
 ({{pep-placement}}), not by the agent component. The agent therefore
 cannot present the Mission-bound credential directly; to act, it asks
 the mediating PEP, which runs the decision of {{decision}} and only then
-uses the key. No new token type, credential handle, or wire protocol is
+uses the key.
+
+No new token type, credential handle, or wire protocol is
 introduced: this is a custody and placement property of the existing
 sender-constraint key. The mediating PEP is a co-trusted process in the
 agent's own trust domain, not a delegate: the token is unchanged, the
@@ -1610,11 +1628,17 @@ For an action class it mediates, a deployment SHOULD hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and SHOULD do so for
 the irreversible-action, external-commitment, and
-privileged-administration classes. Two
-properties follow: a credential exfiltrated from a compromised agent is
-unusable without the key; and a compromised agent cannot reach a
-mediated action without passing the per-action check, because it never
-holds a usable credential for that class. Mediated execution depends on
+privileged-administration classes.
+
+Two properties follow:
+
+- a credential exfiltrated from a compromised agent is
+  unusable without the key; and
+- a compromised agent cannot reach a
+  mediated action without passing the per-action check, because it never
+  holds a usable credential for that class.
+
+Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
 ({{I-D.draft-mcguinness-mission-harness}}).
@@ -1631,12 +1655,18 @@ Where the deployment issues tokens under the client-instance-assertion
 profile ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}),
 the sender-constraint key is instance-specific: that profile forbids a
 key shared across a client's instances. Mediated custody composes with
-that rule in either of two shapes. The mediating PEP holds
-per-instance keys, taking custody of each instance's key rather than
-one shared key; or the mediating PEP is itself the attested instance
-that obtained the token, presenting the instance assertion and holding
-the instance key. In both shapes that profile's no-shared-key rule and
+that rule in either of two shapes:
+
+- the mediating PEP holds
+  per-instance keys, taking custody of each instance's key rather than
+  one shared key; or
+- the mediating PEP is itself the attested instance
+  that obtained the token, presenting the instance assertion and holding
+  the instance key.
+
+In both shapes that profile's no-shared-key rule and
 this section's custody rules are satisfied together.
+
 Attestation-based client authentication and SPIFFE
 ({{I-D.draft-ietf-oauth-attestation-based-client-auth}},
 {{I-D.draft-ietf-oauth-spiffe-client-auth}}) can supply the
@@ -1666,7 +1696,9 @@ the authority of another. On compromise of a mediating PEP's key, the
 deployment revokes the affected tokens and re-derives. A
 sender-constraint private key is never published; rotation is
 re-derivation with a new `cnf` binding plus revocation or expiry of
-the tokens bound to the old key. The Enforcement Scope Statement
+the tokens bound to the old key.
+
+The Enforcement Scope Statement
 SHOULD state the custody replica topology (a shared HSM-held key
 versus per-replica keys): replicating one `cnf` key across a PEP
 fleet widens the exposure custody exists to shrink.
