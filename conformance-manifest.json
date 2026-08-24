@@ -19,8 +19,8 @@
     "content_sha256": "ca8165d37d409dd5c90073920271830ffb2e707d4d304f9c3f215016d201aedf"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "b8507e0cc510958e255675fa683c924a8f64c794",
-    "content_sha256": "006c4a09d7f62ec8e1157be91e64fb04a80355598325d767b530c5a932b9d775"
+    "revision": "a0e9ecb7974b803ccfad13e7e10772acf4db74fc",
+    "content_sha256": "b0acbb786fb1e33b84d885b4727d50057bf559496e721c27c9db0e8d1713d8b3"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
@@ -47,8 +47,8 @@
     "content_sha256": "0c93d323cbbe4b90c8e8dfb22cbdd065d6e01fe76aa01cea7bbbd4ba4bf202bb"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "5e22cff2cee93baa1e2da4f4d52d524329bab856",
-    "content_sha256": "5eaf4a16d279b89966079c151e22df9905f1fc684245f2711f18d11cdb987f2c"
+    "revision": "4fae149171c099d700eccd4f3edb6a4bf57015b2",
+    "content_sha256": "97b1343168720b379b141c258b6bafef453ec4c4c138ba9d015bf100516576dd"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "fb157fdd890adb3bdb7cc80f69ab6532a0cb4a72",
@@ -849,10 +849,33 @@
   {
    "id": "core.tokens.scope-ceiling",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-bound-tokens",
-   "text": "The AS MUST NOT issue a Mission-bound token whose `scope` exceeds the Authority Set",
+   "anchor": "scope-projection",
+   "text": "MUST refuse issuance to a target that is `scope`-only when no safe projection exists for the applicable entries",
    "role": "AS",
-   "strength": "MUST NOT",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses issuance to a scope-only target when no safe scope projection exists for the applicable authorization_details entries, per the issuance algorithm, rather than issuing a token whose scope would over-grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.semantic-subset-condition",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "together with every independently mandatory control on that path",
+   "role": "AS",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -863,7 +886,145 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issued scope value corresponds to authority present in authorization_details; no issued token carries scope beyond the Authority Set"
+    "normative": "the effective rights the target's enforcement path grants from a projected scope, together with every independently mandatory control on that path, must be a subset of the applicable authorization_details rights."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.action-aggregation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "aggregates a broader action",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope that aggregates a broader action than a constraints-free entry grants fails the projection condition."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.resource-path-aggregation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "spans more resource instances or paths than the entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope covering more resource instances or paths than the entry fails the projection condition."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.union-widening-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "arises from the union of several entries",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope value formed as the union of more than one entry's rights fails the projection condition when the union is broader than any single entry."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.per-audience-proof",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "establishes the condition independently for each audience",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a multi-audience token, the AS proves the projection condition independently for every audience."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "fail closed under step 5",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "unknown scope semantics, unknown Resource Server behavior, or an ambiguous or stale scope-projection mapping all cause issuance to fail closed."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.derived-token-issuance-paths",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "initial issuance, refresh, Token Exchange, and any other derived-token path",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the scope-projection rule applies to every issuance path that can emit scope on a Mission-bound token, not only initial issuance."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -1060,7 +1221,7 @@
    "id": "core.other-types.transformation-boundary-declared",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "other-types",
-   "text": "the AS MUST state, in the deployment documentation that names the type as supported",
+   "text": "the AS MUST declare three independent capabilities",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -1073,7 +1234,7 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment documentation listing each supported authorization_details type states whether the AS understands the type's subset relation and its delegation semantics; a type without both is declared carried-as-approved"
+    "normative": "for every AS-supported authorization_details type, the AS declares three independent capabilities (narrowing, delegation, projection understood or not), through a machine-readable carrier where implemented or deployment documentation as the always-sufficient floor."
    },
    "level": "endpoint",
    "coverage": "todo",
