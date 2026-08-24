@@ -1754,13 +1754,13 @@ for that class, and a binding earns it through the capability claims
 of its Mission Substrate Statement, not by protocol lineage.
 
 The definition itself is the Mission Binding Properties vector's
-`credential-mission-bound` property ({{binding-properties}}): its six
-equivalence properties state in full the active-state, subset, and
-derivation-link requirement summarized above. A binding's Mission
-Substrate Statement capability claims are how that binding evidences
-the property for a covered path; the OAuth binding's Conformance
-section states its own discharge of it
-({{I-D.draft-mcguinness-oauth-mission}}).
+`credential-mission-bound` property ({{binding-properties}}), whose
+six conditions state in full the active-state, subset, and
+derivation-link requirement summarized above and map each condition
+to the Mission Substrate Statement capability, or OAuth binding
+surface, that discharges it. No single capability claim evidences the
+property alone; a binding earns it only where every condition is met
+together.
 
 ## The Mission-Bound Credential
 
@@ -2709,23 +2709,53 @@ requires a property on a path, its absence denies; nothing falls
 back silently to a weaker binding.
 
 **Credential-mission-bound** is defined by equivalence, not by one
-artifact. For the covered path the credential establishes all of:
+artifact. For the covered path the credential establishes all of
+these conditions:
 
 1. a trusted issuer authorized to issue for the Mission;
-2. the canonical (`mission.issuer`, `mission.id`) pair and the
-   recorded `authority_hash`;
+2. the canonical (`mission.issuer`, `mission.id`) pair identifying
+   the Mission: the baseline Mission reference, and an identity
+   condition only, never a token-carried Authority Set commitment;
 3. an issued authority projection no broader than the Mission's
    Authority Set for the target audience;
 4. the mapped subject, the requesting `client_id`, and actor or
    delegation context where applicable;
 5. bounded lifetime plus active-state issuance and refresh gates; and
-6. an auditable derivation link to the Mission authorization: an
-   Issuance Grant `jti`
-   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a native
-   issuance record ({{I-D.draft-mcguinness-oauth-mission}}), a
+6. an auditable derivation link from the credential to the Mission's
+   recorded Authority Set: the OAuth binding's Mission Record
+   ({{I-D.draft-mcguinness-oauth-mission}}), an Issuance Grant `jti`
+   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a
    cross-domain projection's provenance
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or an
-   equivalently specified artifact.
+   equivalently specified artifact. A token-carried Authority Set
+   commitment, where a binding supplies one, strengthens this
+   condition's local verifiability; it is never itself the
+   Mission-identity requirement of condition 2, and its absence does
+   not fail this condition where the issuer-retained record is
+   otherwise reachable.
+
+Each condition names what actually establishes it, so a Statement
+capability claim maps to a condition rather than to the property as a
+whole: condition 3 is the Substrate Statement's Monotonic Derivation
+capability, and condition 5's active-state gate is its
+Lifecycle-Gated Authorization capability. The Substrate's
+Credential-Bound capability can select correlation-only fact
+semantics ({{I-D.draft-mcguinness-mission-substrate}}), which by
+itself evidences neither the derivation-link condition (6) nor the
+authority-projection condition (3); a Credential-Bound claim alone,
+whatever semantics it selects, never by itself evidences
+`credential-mission-bound`, since conditions 1 and 4 come from the
+deployment's issuer trust configuration and the credential's own
+subject, `client_id`, and actor claims, never from a Statement
+capability row. A binding earns the property only where its
+Statement's claims jointly cover every condition.
+
+For the OAuth binding, the approval event discharges condition 4,
+the subset rule discharges condition 3, the lifecycle gate discharges
+condition 5's active-state gate, the Mission Issuer role discharges
+condition 1, and the same approval event's Mission Record, retained
+for the audit horizon, discharges condition 6
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 Sender constraint is deliberately not among them: issuance-time key
 targeting and presentation-time proof are `presenter-key-bound`, a
@@ -2737,7 +2767,7 @@ OPTIONAL, so native issuance, the Mission Issuance Grant, and a
 conforming cross-domain exchange satisfy this one property, and
 supply `presenter-key-bound` exactly where their confirmation
 binding is actually in force. A Mission Join Assertion fails
-properties 3, 5, and 6 by design, which is what separates
+conditions 3, 5, and 6 by design, which is what separates
 correlation from issuance.
 
 **Presenter-key-bound** is possession and nothing more: the
@@ -3416,10 +3446,14 @@ This document makes no IANA request.
 - Cross-referenced the three previously separate accounts of what
   earns the "Mission-bound" term: {{token-classes}} now names the
   Mission Binding Properties vector's `credential-mission-bound`
-  property ({{binding-properties}}) as the definition, with the
-  Mission Substrate Statement capability claims as how a binding
-  evidences it and the OAuth binding's Conformance section as that
-  binding's discharge (#663).
+  property ({{binding-properties}}) as the definition. Its six
+  conditions are each mapped to the Statement capability or OAuth
+  binding surface that discharges it, condition 2 (Mission identity)
+  no longer names a token-carried `authority_hash`, aligning with
+  the ruled minimal-claim direction of #702, and condition 6
+  (the auditable derivation link) names the OAuth binding's retained
+  Mission Record explicitly rather than asserting an unspecified
+  discharge (#663).
 - Non-goal reworded (#637): "a new authority format, or a new grant
   protocol" narrowed to "a new grant protocol," naming the OAuth
   binding's Mission Resource Access Profile as the family's one
