@@ -169,13 +169,14 @@ On the wire, one small claim rides every derived token:
 ```json
 { "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ" } }
+    "issuer": "https://as.example.com" } }
 ```
 
 It joins issuance, enforcement, and audit to one approved task, and
-it is deliberately small: the record stays at the issuer, and the
-token's `authorization_details` still carry the authority itself.
+it is deliberately minimal: the `authority_hash` commitment and the
+record stay at the issuer, disclosed only to a caller the deployment
+authorizes for audit or local verification, while the token's
+`authorization_details` still carry the authority itself.
 
 ## One Mission, end to end
 
