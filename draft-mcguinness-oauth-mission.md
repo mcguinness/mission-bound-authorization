@@ -4314,6 +4314,11 @@ particular, it MUST NOT advertise
 `mission_bound_authorization_supported` as `true` ({{discovery}}),
 the machine-checkable form of that claim.
 
+The Mission Binding Properties vector of
+{{I-D.draft-mcguinness-mission-architecture}} names this discharge as
+its `credential-mission-bound` property, informatively; these gates
+remain authoritative for OAuth binding conformance regardless.
+
 The `mission_bound_authorization_supported` metadata ({{discovery}})
 advertises Mission Issuer support only. It makes no assertion about any
 Resource Server, which does not advertise through Authorization Server
@@ -5580,6 +5585,11 @@ resolve before interoperating.
 
 -01
 
+- Informative pointer from the Conformance section's Mission-bound
+  gates to the architecture's Mission Binding Properties vector,
+  naming this document's discharge as its `credential-mission-bound`
+  property; the core's own gates remain authoritative and the
+  document remains self-contained (#663).
 - Mission Resource Access Profile split (#637, #645, #698): the
   `mission_resource_access` type definition, its resource and action
   matching, generic constraints, the Common Constraints registry, the
