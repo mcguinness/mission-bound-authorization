@@ -3,52 +3,56 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "1190ca236713cb32637c2dc47741f5d61f9a59e5",
-    "content_sha256": "e2b679d772068f8afbdb8e265b80f11490d9eb93a214d8df56248d95fc26d7e7"
+    "revision": "1e34458da6c935b90ed0d05d5fbefe6eba5c3cab",
+    "content_sha256": "2da68b37995b02a04161bbe4c8f15ee8b49d2189a8690d22c9ca7c6990ab7567"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "c9169c04bdf86a3a66ac89b3fb0d055d44fe9d99",
-    "content_sha256": "6b4d28985aece695781504cda464085e7a834c491fb04b87e5945b6991407220"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "c191cc1f7e7ef2dd6942cf8ee79457ea2fa60d4e96c6cc16f36ab7e5a32d3bcb"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "76900e24a39d374c10312b3f78e13b8ac47820a8",
-    "content_sha256": "76e52c8a8ddd5c22c83c0065c47a06a02c7b68ad42c43116aa31fd3b3eb90307"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "05be78b62a5f9cc093fbe42d86f7d6a4e982e7e51cec807744de96f7bf50d7a2"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "76900e24a39d374c10312b3f78e13b8ac47820a8",
     "content_sha256": "ca8165d37d409dd5c90073920271830ffb2e707d4d304f9c3f215016d201aedf"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "b8507e0cc510958e255675fa683c924a8f64c794",
-    "content_sha256": "006c4a09d7f62ec8e1157be91e64fb04a80355598325d767b530c5a932b9d775"
+    "revision": "340ca0dcefc217c044f0d81e5eefa679e8c42507",
+    "content_sha256": "42e896106046880d6c66097183cc8cd4676b4a1e0bbf2dcc4daee65ec7ad65eb"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
     "content_sha256": "94f27fb07357fba93989a05797d4798e0d662eeccdbbca2e549f217d8ce6af37"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
-    "content_sha256": "78d330c74a64280d52c3cd83bacf4007b08ad53dee20bb91a4b971c6ddfac1cf"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "8fd63b493b5f611ad4da8f5b8ab7648c9647b2fd7d248b2346d02785ed0f627d"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "a914b3a4530cb25d50399448c43096afac40da48",
     "content_sha256": "8094922e4076b1c7a6ea036bc952e3c3f767ef617d3b38e6da7756430b705730"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "c9169c04bdf86a3a66ac89b3fb0d055d44fe9d99",
-    "content_sha256": "5f7365234633996aeb1a3a9249ed6deb8037b4f680b665391c0e844f4dda0894"
+    "revision": "8c57e0e098b94006f00245aa5327ffd62c89802f",
+    "content_sha256": "31d4c8938fd34632ed3cce445b5af953cb365487cf65923cf3feb45d8ea253dd"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "5c12717f3cad29785f2f6797c5bcd1fcf15cae89",
     "content_sha256": "9668a310b3ce3338e277921bc8967a82c87a7bf0324c6802cf6593fc663c7e1b"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
-    "content_sha256": "0c93d323cbbe4b90c8e8dfb22cbdd065d6e01fe76aa01cea7bbbd4ba4bf202bb"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "5e22cff2cee93baa1e2da4f4d52d524329bab856",
-    "content_sha256": "5eaf4a16d279b89966079c151e22df9905f1fc684245f2711f18d11cdb987f2c"
+    "revision": "5b6a7b5ce09a4acde29976966292075cf424f76e",
+    "content_sha256": "b510b95d32d69ef708d8c4d30940657ec915ad01eb302d45d1562ecc2e28a0f3"
+   },
+   "draft-mcguinness-oauth-mission-resource-access.md": {
+    "revision": "8bec3f3837a990065d6bf78dc72bb2de1f77d95d",
+    "content_sha256": "ae91e21a5dd53375bb383b0912fba06847ef59e28cc7de01a5aadf5707bdd9d9"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "fb157fdd890adb3bdb7cc80f69ab6532a0cb4a72",
@@ -849,10 +853,33 @@
   {
    "id": "core.tokens.scope-ceiling",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-bound-tokens",
-   "text": "The AS MUST NOT issue a Mission-bound token whose `scope` exceeds the Authority Set",
+   "anchor": "scope-projection",
+   "text": "MUST refuse issuance to a target that is `scope`-only when no safe projection exists for the applicable entries",
    "role": "AS",
-   "strength": "MUST NOT",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses issuance to a scope-only target when no safe scope projection exists for the applicable authorization_details entries, per the issuance algorithm, rather than issuing a token whose scope would over-grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.semantic-subset-condition",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "together with every independently mandatory control on that path",
+   "role": "AS",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -863,7 +890,145 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issued scope value corresponds to authority present in authorization_details; no issued token carries scope beyond the Authority Set"
+    "normative": "the effective rights the target's enforcement path grants from a projected scope, together with every independently mandatory control on that path, must be a subset of the applicable authorization_details rights."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.action-aggregation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "aggregates a broader action",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope that aggregates a broader action than a constraints-free entry grants fails the projection condition."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.resource-path-aggregation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "spans more resource instances or paths than the entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope covering more resource instances or paths than the entry fails the projection condition."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.union-widening-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "arises from the union of several entries",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope value formed as the union of more than one entry's rights fails the projection condition when the union is broader than any single entry."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.per-audience-proof",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "establishes the condition independently for each audience",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a multi-audience token, the AS proves the projection condition independently for every audience."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "fail closed under step 5",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "unknown scope semantics, unknown Resource Server behavior, or an ambiguous or stale scope-projection mapping all cause issuance to fail closed."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.derived-token-issuance-paths",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "initial issuance, refresh, Token Exchange, and any other derived-token path",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the scope-projection rule applies to every issuance path that can emit scope on a Mission-bound token, not only initial issuance."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -1060,7 +1225,7 @@
    "id": "core.other-types.transformation-boundary-declared",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "other-types",
-   "text": "the AS MUST state, in the deployment documentation that names the type as supported",
+   "text": "the AS MUST declare three independent capabilities",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -1073,7 +1238,7 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment documentation listing each supported authorization_details type states whether the AS understands the type's subset relation and its delegation semantics; a type without both is declared carried-as-approved"
+    "normative": "for every AS-supported authorization_details type, the AS declares three independent capabilities (narrowing, delegation, projection understood or not), through a machine-readable carrier where implemented or deployment documentation as the always-sufficient floor."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -14114,6 +14279,305 @@
     "normative": "an approval interface that renders a per-domain max_depth as a delegation-depth limit also discloses the composed bound across every distinct Resource AS domain the entry may be projected to (a per-domain sum or conservative maximum, counted by distinct Resource AS, never by resource count), not the per-domain max_depth alone"
    },
    "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.type.prefix-query-fragment-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "the AS refuses such an entry with `invalid_authorization_details`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses a `prefix`-match entry whose `resource` carries a query or fragment component."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.rs-enforcement.type-scoped-matching",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "entries are alternative grants of authority, not conjunctive filters",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an RS enforcing more than one applicable mission_resource_access entry treats them as alternative grants, not a conjunctive filter."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.rs-enforcement.resource-match-unrecognized-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST treat an entry's `resource_match` value it does not recognize as unenforceable",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS treats an unrecognized resource_match value as unenforceable and fails closed."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.rs-enforcement.prefix-normalization-before-comparison",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "before the prefix comparison rather than after",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an RS applies the RFC 3986 normalization before the prefix comparison, never after."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.rs-enforcement.constraints-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST fail closed on any `constraints` key it does not understand",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS fails closed on any carried constraints key it does not understand or cannot enforce."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.rs-enforcement.no-disclosure-only-constraint",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST NOT reduce a `constraints` key to disclosure-only",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an RS must not reduce an unenforced constraints key to disclosure-only, since that silently widens the grant."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.common-constraints.intersection-no-broader",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "common-constraints",
+   "text": "the result MUST be no broader than either operand",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Common Constraint's intersection rule combines two values into a result no broader than either operand."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.delegate-eligibility.as-authenticates-delegate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "The AS MUST authenticate the delegate at the Token Exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS authenticates the delegate at Token Exchange and asserts sub/sub_profile itself, rather than accepting a self-asserted sub_profile."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.scope-projection.prefix-resource-match-exact",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "not a safe projection of a narrower `prefix` entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope value the target's own interpretation extends to a broader ancestor resource is not a safe projection of a narrower prefix entry."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.scope-projection.actions-no-aggregation",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "the target grants every action the union names, not only the entry's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope value standing for an action family, aggregate, or union of more than one entry's actions fails the projection condition."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.scope-projection.constraints-independently-enforced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "a comparison at least as tight as the entry's value",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every constraints key on an entry must be independently and identically enforced by the target at least as tightly as the entry's value for the projection to be safe."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "transformation-capabilities",
+   "text": "declares `projection` as undeclared rather than `true`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS that does not implement the full projection safety analysis declares projection undeclared, triggering the issuance profile's carried-as-approved fallback for scope on this type."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "resource-access.conformance.rs-role-independent-of-as-duties",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "conformance",
+   "text": "does not implement narrowing, delegate eligibility, or the Transformation Capabilities declaration",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Server's conformance does not depend on implementing narrowing, delegate eligibility, or the Transformation Capabilities declaration, which are Authorization-Server-only duties."
+   },
+   "level": "endpoint",
    "coverage": "todo",
    "tests": []
   }

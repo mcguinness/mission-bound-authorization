@@ -48,6 +48,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
     title: "Mission Cross-Organizational Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
@@ -1279,10 +1287,12 @@ sees Authority Set entries addressed to other audiences.
 
 # IANA Considerations
 
-This document has no IANA actions. The `mission` JWT claim, the
-`mission` introspection response member, and the
-`mission_resource_access` authorization details type it carries are
-registered by the issuance profile {{I-D.draft-mcguinness-oauth-mission}}.
+This document has no IANA actions. The `mission` JWT claim and the
+`mission` introspection response member are defined by the issuance
+profile {{I-D.draft-mcguinness-oauth-mission}}; the
+`mission_resource_access` authorization details type it carries is
+defined by that profile's Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 --- back
 
