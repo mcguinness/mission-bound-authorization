@@ -51,6 +51,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -227,10 +235,12 @@ names consequential read, consequential write, irreversible action,
 external commitment, and privileged administration), high-consequence
 classes, and parameter-bound are used as defined in
 {{I-D.draft-mcguinness-mission-runtime}}. The Mission claim (`id`,
-`issuer`, `authority_hash`), the integrity anchors (`intent_hash`,
-`authority_hash`), and `authorization_details` entries of type
-`mission_resource_access` are used as defined in
-{{I-D.draft-mcguinness-oauth-mission}}.
+`issuer`, `authority_hash`) and the integrity anchors (`intent_hash`,
+`authority_hash`) are used as defined in
+{{I-D.draft-mcguinness-oauth-mission}}; `authorization_details`
+entries of type `mission_resource_access` are used as defined in its
+Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 Additional terms:
 

@@ -55,6 +55,7 @@ hand-authored.
 | [Mission Issuance Grant for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html) | stable | approve | The issuance join: the middle integration between the standalone binding and a natively Mission-aware AS. | A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS. |
 | [Mission Management for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) | stable | govern | The fleet-management surface the status profile defers: authenticated Mission enumeration and bulk lifecycle operations, dry-run first, with a per-Mission outcome manifest. | An operator needs fleet enumeration and bulk lifecycle across many Missions. |
 | [Mission Progressive Authorization for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html) | experimental | govern | At the initial approval the Approver also consents to an authority ceiling and a drawdown policy, letting the Mission Issuer adjudicate an in-ceiling expansion by policy instead of a fresh human approval. | Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning. |
+| [Mission Resource Access Profile for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-resource-access.html) | stable | approve | Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration. | The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics. |
 | [Mission Lifecycle Signals for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) | stable | govern | A profile of the OpenID Shared Signals Framework: the Mission Issuer emits a signed Security Event Token on each Mission lifecycle transition, delivered by push or poll, so a consumer learns of a transition promptly without polling. | Consumers need push notice of state changes instead of polling per Mission. |
 | [Mission Status and Lifecycle for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) | stable | govern | A `mission_id`-keyed status surface with signed responses, plus a lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and `complete` transitions and the `suspended` and `completed` states. | You must observe or change Mission state beyond token expiry (revoke, suspend, complete). |
 | [Mission Template for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) | experimental | approve | An Approver consents once to a task template (a ceiling of resources, actions, and constraints plus a dispatch policy), and each dispatch then instantiates an ordinary, independently gated Mission from it at machine speed. | Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling. |
@@ -439,6 +440,21 @@ companions build on this binding; the binding-neutral documents
 anchor on the substrate contract.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.diff)
+
+#### Mission Resource Access Profile for OAuth 2.0
+
+The general-purpose `authorization_details` type the issuance profile's
+own examples use throughout: `mission_resource_access`. Defines the
+type's resource (exact or prefix) and action (with wildcard families)
+matching, its generic per-entry constraints and the registered Common
+Constraints vocabulary, a per-entry delegation policy, the subset and
+intersection algebra a deployment uses to compare and narrow two
+entries, this type's Scope Projection safety conditions, and its
+declaration under the issuance profile's transformation-capability map.
+A deployment MAY support this type, another AS-supported type, or
+both; the issuance profile is type-agnostic and complete without it.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-resource-access.html)
 
 #### Mission Authority Server
 
