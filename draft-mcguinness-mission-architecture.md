@@ -402,8 +402,8 @@ today on any binding). Adopting Missions on OAuth requires the
 changes the OAuth binding defines. The two axes diverge for the
 standalone binding: the Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is a normative
-standalone-controller binding over the OAuth Mission data model,
-a peer deployment topology but not an independent authorization
+standalone-controller protocol binding over the OAuth Mission data
+model: a peer deployment topology, but not an independent substrate
 model, since it normatively imports the OAuth Mission record and
 issuance profile. AAuth demonstrates model independence:
 it maps the shared kernel onto its own protocol's native Mission
@@ -3463,9 +3463,10 @@ This document makes no IANA request.
 - Reworded the blanket "the bindings are peers of one another"
   sentence in the Introduction to name two independent axes, deployment
   topology and data-model independence, and to classify the Mission
-  Authority Server as a normative standalone-controller binding over
-  the OAuth Mission data model: a peer deployment topology, not
-  evidence of model independence (#704). Cross-referenced the three
+  Authority Server as a normative standalone-controller protocol
+  binding over the OAuth Mission data model: a peer deployment
+  topology, but not an independent substrate model (#704).
+  Cross-referenced the three
   previously uncross-referenced accounts of what earns "Mission-bound"
   ({{token-classes}} and {{binding-properties}}, and the OAuth
   binding's Conformance gates): {{binding-properties}}'s

@@ -622,7 +622,9 @@ Given the closed JSON object
 }
 ~~~
 
-canonicalized under JCS, the exact canonical bytes are:
+canonicalized under JCS, the exact canonical bytes are (shown here
+wrapped only for layout; remove the layout line breaks, adding no
+characters, to recover the single-line canonical form):
 
 ~~~ text
 {"iss":"urn:example:controller:1","typ":"mission-substrate-context",

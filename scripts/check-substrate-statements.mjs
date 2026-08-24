@@ -1,10 +1,21 @@
 #!/usr/bin/env node
-// Structural tripwire for Mission Substrate Statement capability tables
-// (#554 review, item 6). Three binding Statements retained the retired
+// Structural tripwire for Mission Substrate Statement AND Mapping
+// Assessment capability tables (#554 review, item 6; kind-tagged per the
+// #717 review on #708). Three binding Statements retained the retired
 // three-state vocabulary and omitted an entire capability without any
 // validator noticing; this check makes both classes of drift fail CI.
 //
-// Checks, per registered Statement table:
+// The registry covers two distinct kinds sharing one table format (the
+// substrate requires a Mapping Assessment to use "the Statement's form"):
+// a Statement (kind "statement") is a conforming binding's own normative
+// conformance result; an Assessment (kind "assessment") is a non-claiming
+// specification's informative self-description, never a conformance
+// result, and never implies the assessed specification takes a normative
+// dependency on the substrate. The structural checks below apply
+// identically to both kinds; only the summary line and any future
+// kind-specific rule would differ.
+//
+// Checks, per registered table:
 //   (a) exactly the canonical eight capabilities, in canonical order;
 //   (b) the Claim column says only `supplied` or `not supplied`;
 //   (c) every supplied row states an activation condition (never empty,
@@ -166,8 +177,11 @@ function main() {
       // A differently titled table cannot evade registration: any table using
       // the exact five-column Statement header must be registered, and any
       // section titled "Mission Substrate Statement" must live in a file that
-      // registers a Statement here.
-      if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file)) {
+      // registers a Statement here. The substrate document itself is exempt
+      // (as it already is on the "Mission Substrate Statement" heading check
+      // below): its own non-normative skeleton illustrates the header without
+      // being a binding's Statement.
+      if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
         fail("statement-unregistered", `${file}:${i + 1}: a five-column Statement table in a file with no registered Statement`);
       }
       if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
@@ -216,7 +230,9 @@ function main() {
     console.error(`substrate-statements check FAILED: ${failures} finding(s).`);
     process.exit(1);
   }
-  console.log(`substrate-statements check OK: ${REGISTRY.length} Statements, ${consumerTables} consumer tables validated.`);
+  const statementCount = REGISTRY.filter((e) => e.kind === "statement").length;
+  const assessmentCount = REGISTRY.filter((e) => e.kind === "assessment").length;
+  console.log(`substrate-statements check OK: ${statementCount} Statements, ${assessmentCount} Assessments, ${consumerTables} consumer tables validated.`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
