@@ -37,7 +37,22 @@ const view: MissionView = {
   version: 1,
   authority_hash: "sha-256:hash539",
   authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] }],
+  // @spec authority-server#mission-join (#685) -- the Mission's own approved
+  // subject/client_id join fields, unrelated to the cross-domain Origin
+  // Principal profile's mission.subject: this test file never exercises the
+  // join check, so a plausible, internally-consistent value suffices.
+  subject: { iss: ISSUER, sub: "emp-4417" },
+  client_id: "ap-agent",
 };
+
+/**
+ * @spec authority-server#reference-tuple (#685) -- loadView is keyed on the
+ * canonical (issuer, id) pair, not a bare mission id.
+ */
+const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
+  ref.id === v.id && ref.issuer === v.issuer
+    ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    : undefined;
 
 function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
   const envelopes: EvaluationRequest[] = [];
@@ -46,8 +61,7 @@ function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
     evidence: new EvidenceStore(),
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
-    loadView: (id) =>
-      id === missionId ? { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined,
+    loadView: loadViewFor(view),
     instanceEpoch: "epoch-1",
     sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
@@ -124,8 +138,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       evidence,
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
-      loadView: (id) =>
-        id === missionId ? { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined,
+      loadView: loadViewFor(view),
       instanceEpoch: "epoch-1",
       sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
