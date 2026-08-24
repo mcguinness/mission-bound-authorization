@@ -776,6 +776,20 @@ families SHOULD be as narrow as the task allows, and the progressive
 profile's rate bound applies per chain, so mass encounter-binding is
 bounded and visible.
 
+**Harness taint-duty strength is a conformance note, not a new
+requirement.** The harness's duties to track parameter-level
+provenance and to gate egress on tainted content are SHOULD-level
+({{I-D.draft-mcguinness-mission-harness}}), outside its opt-in
+PDP-enforced taint path. A deployment whose harness supplies only
+coarse session-level taint can still satisfy this profile, but more
+encounters route to a human or are refused. A missing, stale, or
+unverifiable report is treated as tainted under the rule above
+({{adjudication}}); it is not an untainted report. This profile does
+not strengthen the harness's separate SHOULD-level post-binding
+egress response. The degradation is therefore explicit: less precise
+taint information reduces policy binding, while weaker harness
+egress enforcement remains a separately disclosed residual.
+
 **Declaration swap.** A resource that changes its declaration
 between encounter and use is caught by the digest: the runtime
 capability-drift rule refuses catalog capabilities whose source
@@ -848,6 +862,16 @@ This document registers one media type per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Security Considerations gained a conformance note stating explicitly
+  that the harness's provenance-tracking and egress-gating taint
+  duties are SHOULD-level outside its opt-in PDP-enforced path: a
+  coarse but trustworthy report still satisfies this profile at the
+  cost of more human routing, a missing, stale, or unverifiable report
+  is treated as tainted under the existing rule, and this profile
+  never strengthens the harness's own SHOULD-level egress response,
+  which remains a separately disclosed residual. No new requirement;
+  the note names where the ceiling path's routing cost actually comes
+  from (#664).
 - Discovery Evidence gained a self-hosted Canonical Bytes subsection
   and a full IANA media-type registration for
   `application/mission-discovery-evidence+json`, with the Mission
