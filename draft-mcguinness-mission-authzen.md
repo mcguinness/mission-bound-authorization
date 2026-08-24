@@ -186,7 +186,9 @@ authorization; this version's reference host is the OAuth binding,
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile" to
 its OAuth companions), whose Mission-bound access tokens the worked
-surfaces cite. The
+surfaces cite.
+
+The
 runtime profile is deliberately substrate-independent: it defines the
 decision contract, action classification, PEP placement, parameter
 binding and the time-of-check to time-of-use gap, the consumption-bound
@@ -378,7 +380,9 @@ evaluated against directly in Decision Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), so the correlator
 between a permit and its evidence, and between a denial and its
 evidence, is `evaluation_id` ({{response-context}}), not a wire-echoed
-view identifier. This profile does not pick a concrete
+view identifier.
+
+This profile does not pick a concrete
 policy-language wire form for the materialized view. Implementations
 MAY use canonical input bundles the
 AuthZEN PDP consumes directly, or an engine-native artifact. Compiling
@@ -504,7 +508,9 @@ set alone, per the runtime profile's Authority decision input
 is one such mechanism, contributing its own subtraction
 ({{I-D.draft-mcguinness-oauth-mission-containment}}). This document
 defines no member carrying the Effective Authority Set's evaluated
-state. A companion profile MAY extend the `mission` context with the
+state.
+
+A companion profile MAY extend the `mission` context with the
 member it needs, by specification, mirroring the denial-reason
 extension rule ({{runtime-denial-classification}}): an extension
 member name MUST be a collision-resistant name or a name coordinated
@@ -760,7 +766,9 @@ for an action-bound approval: `approved_at` when present, otherwise
 the PDP MUST establish the grant time from the approval record it
 resolves by `id` or from verified signed `state`. An approval whose
 completion time cannot be established is treated as unverifiable. An
-approval failing any of these checks does not satisfy the denial. The
+approval failing any of these checks does not satisfy the denial.
+
+The
 PDP MUST record the presented approval `id` in Decision Evidence. The
 approval is an input attribute, never a bearer grant: the PDP
 evaluates current policy and current state.
@@ -784,7 +792,9 @@ Which history predicates a decision requires is a policy decision:
 the materialized policy view, or the PDP's own policy, names the
 predicates it evaluates for the action. The request does not select
 them; a requester able to choose which history a decision turns on
-could pick predicates favorable to it. This document defines one
+could pick predicates favorable to it.
+
+This document defines one
 predicate type policy MAY name, `action_class_completed`: satisfied
 when the PDP's evidence store holds, for the established Mission, at
 least one Decision Evidence record with `decision` `permit` and a
@@ -1070,7 +1080,9 @@ self-consistent:
     its source, the mapping-policy identifier and version, the
     issuer-qualified input, the local output, the observation time,
     and a validity bound; the PDP verifies it as it verifies
-    `context.mission_state_observation`. A failed, missing,
+    `context.mission_state_observation`.
+
+    A failed, missing,
     ambiguous, or stale result at either step denies with the
     profile's `principal_mapping_failed` extension reason
     ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
@@ -1373,7 +1385,9 @@ This profile defines the following AuthZEN response `context` members:
       `context.mission_state_observation.mission_status_expires_at`;
       or, for a polled observation reporting neither, `freshness_at`
       plus the deployment's published maximum staleness bound for the
-      action's class. The state valid-through is never the
+      action's class.
+
+      The state valid-through is never the
       observation timestamp (`freshness_at`) by itself: an
       observation only bounds the window in combination with the
       deployment's published staleness. No mode leaves this window
@@ -1449,14 +1463,18 @@ creates no governance state: unlike Lane 2's governance workflow
 authority, no approval record, and no task handle. An obligation MAY
 involve subject interaction or an external side effect (a step-up
 challenge to the subject, a notification to another system); what it
-never does is acquire authority from an adjudicator. Fail-closed
+never does is acquire authority from an adjudicator.
+
+Fail-closed
 operation does not depend on any prior negotiation: a PDP MAY attach an obligation the PEP has not declared
 support for, and an unfulfillable or unrecognized obligation simply
 becomes an effective deny. An obligation MAY accompany a permit or a
 denial ({{response-context}}): on a permit the PEP MUST fulfill each
 obligation before releasing the action's effect; on a denial the PEP
 MUST still deny the action and MUST additionally execute every
-returned obligation. Failure to fulfill an obligation, or an
+returned obligation.
+
+Failure to fulfill an obligation, or an
 unrecognized obligation type, makes the effective result deny. On a
 permit, obligation processing is recorded in Execution Evidence's
 `obligation_outcomes`
@@ -1476,7 +1494,9 @@ metadata `supported_obligations` array. A PEP MAY declare
 `supported_obligations` in the request context, as the obligations
 profile defines {{AUTHZEN-OBL}}; the declaration is advisory. A PDP
 MAY use the declaration to avoid attaching an obligation that is
-guaranteed to fail, sparing a round trip. A PDP MAY nonetheless
+guaranteed to fail, sparing a round trip.
+
+A PDP MAY nonetheless
 attach an obligation the PEP did not declare. The PEP always fails
 closed on an obligation it cannot fulfill: this profile mandates
 correct obligation processing, not any particular obligation type,
@@ -1776,7 +1796,9 @@ authoritative at enforcement, so the PEP MUST obtain a fresh decision,
 and any resulting permit and evidence remain subject to this profile.
 The action-bound approval an `approval_required` denial calls for
 ({{I-D.draft-mcguinness-mission-runtime}}) is exactly such an approval,
-and ARAP's `approval.id` or signed `approval.state` is its carrier. An
+and ARAP's `approval.id` or signed `approval.state` is its carrier.
+
+An
 ARAP completion realizes one of two things. For an in-authority
 approval gate (the action is within the Authority Set but policy
 requires a fresh approval), the approval attribute alone satisfies the

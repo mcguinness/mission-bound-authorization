@@ -391,7 +391,9 @@ Resource-Server-specific authority projection the response returns
 Which mechanisms and authorization this endpoint accepts are
 discoverable per endpoint, not inferred from the token endpoint's
 metadata. The AS advertises the methods this endpoint accepts in
-`mission_status_endpoint_auth_methods_supported` ({{as-metadata}}). For
+`mission_status_endpoint_auth_methods_supported` ({{as-metadata}}).
+
+For
 the sender-constrained access-token path, this endpoint is an OAuth
 protected resource: the AS publishes, in its Protected Resource Metadata
 for this resource {{RFC9728}}, the `resource` identifier the token's
@@ -711,7 +713,9 @@ OAuth-shaped APIs they compose with. Each surface's exact member
 requiredness is its own: here and in Mission Management,
 `error_description` and `nonce` are REQUIRED; the Mission Authority
 Server makes `error_description` OPTIONAL and adds the MAS-only
-`error_reason`. The body is `application/json` with `Cache-Control:
+`error_reason`.
+
+The body is `application/json` with `Cache-Control:
 no-store`. `error_description` is diagnostic and is never
 authorization input. `nonce` correlates the response to the request in
 support of the signed-response and retry model of {{idempotency}} and
@@ -1074,7 +1078,9 @@ expansion, Token Exchange or other derivation, and any further profile
 that adds a condition), refusing the Intent or the derivation whose
 selector maps to nothing. The AS binds the resolved mapping's
 identifier and version to that exact `condition_digest` in
-issuer-held metadata. A requesting client MUST NOT select an
+issuer-held metadata.
+
+A requesting client MUST NOT select an
 arbitrary otherwise-valid policy merely because adding a condition is
 narrowing: an unchecked choice of mapping for a newly added condition
 could still force the premature discharge that {{completion-security}}
@@ -1234,7 +1240,9 @@ This profile owns the extension of the issuance profile's lifecycle
 state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
 Lifecycle and Gating"). The table below is the authoritative view of
 that space: every state, every transition, and the source of the event
-that drives it. Event sources are the lifecycle endpoint (an operation
+that drives it.
+
+Event sources are the lifecycle endpoint (an operation
 of {{mission-lifecycle-endpoint}}), the expiry clock (a deadline
 reached without a request), and companion adjudication (a transition a
 companion profile commits). The lifecycle-endpoint rows are exactly the
@@ -1282,7 +1290,9 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion algorithms in
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
-({{as-metadata}}). For the sender-constrained access-token path, this
+({{as-metadata}}).
+
+For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
 endpoint is: the AS publishes, in its Protected Resource Metadata for
 this resource {{RFC9728}}, the `resource` identifier the token's
@@ -1474,7 +1484,9 @@ request.
 The request `nonce` ({{mission-lifecycle-endpoint}}, Operations) is
 the idempotency key: an opaque string of 1 to 255 characters. The AS
 treats an absent, empty, longer, or non-string `nonce` as malformed
-(`invalid_request`, with no `nonce` echoed). The AS MUST deduplicate
+(`invalid_request`, with no `nonce` echoed).
+
+The AS MUST deduplicate
 lifecycle requests by the
 triple (client, `mission_id`, `nonce`) for a bounded window. On a
 retransmit carrying a `nonce` already seen for that client and
@@ -1483,7 +1495,9 @@ the AS MUST replay the original response rather than re-execute the
 operation. The same `nonce` paired with a request that is not
 byte-identical to the original MUST be refused `invalid_request`
 ({{mission-status-errors}}); the AS MUST NOT answer it with the
-unrelated original response. The window MUST be at least the validity
+unrelated original response.
+
+The window MUST be at least the validity
 span of the signed response the AS would replay (its `iat` to `exp`,
 {{mission-status-response}}), so any retransmit that could still
 present a live response is deduplicated. A deployment MAY use a longer
@@ -1545,11 +1559,16 @@ and bulk lifecycle operations for incident response, such as revoking
 every Mission for a compromised Subject, client, or tenant, are
 specified separately by Mission Management
 {{I-D.draft-mcguinness-oauth-mission-management}}; this document does
-not require them. The following capabilities remain deferred to future
-work. Approver transfer or re-anchoring, changing the party that
-anchors a Mission's consent, is not defined here. Administrative
-monotonic narrowing, such as shortening a Mission's `expires_at`, is
-not defined here.
+not require them.
+
+The following capabilities remain deferred to future
+work:
+
+- Approver transfer or re-anchoring, changing the party that
+  anchors a Mission's consent, is not defined here.
+- Administrative
+  monotonic narrowing, such as shortening a Mission's `expires_at`, is
+  not defined here.
 
 # Mission Completion and Entry Discharge {#completion}
 
@@ -1870,7 +1889,9 @@ endpoint, naming the write entry's `entry_digest`, this condition's
 `event_id` for its own occurrence record. The Authorization Server
 authenticates the caller against the resolved `discharge_policy`
 mapping, commits the latch, and returns a signed `discharge_result` of
-outcome `discharged` ({{discharge-result}}). From then on the
+outcome `discharged` ({{discharge-result}}).
+
+From then on the
 Authorization Server refuses to derive the write entry: a refresh
 returns a token carrying only the read entry. The Mission stays
 `active`, so the agent can still read the ledger to finish its
