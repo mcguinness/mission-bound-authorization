@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "fb157fdd890adb3bdb7cc80f69ab6532a0cb4a72",
-    "content_sha256": "ec94a1931e266ae41e78e3a95ccfa6188c0344cc10bd4212e3d2cb5669598e59"
+    "revision": "8c57e0e098b94006f00245aa5327ffd62c89802f",
+    "content_sha256": "91182132dd12f3fb5bd2652db1a1702dfe52d377edb636f1b9bab8439e1d3a13"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "c9169c04bdf86a3a66ac89b3fb0d055d44fe9d99",
@@ -35,8 +35,8 @@
     "content_sha256": "8094922e4076b1c7a6ea036bc952e3c3f767ef617d3b38e6da7756430b705730"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "c9169c04bdf86a3a66ac89b3fb0d055d44fe9d99",
-    "content_sha256": "5f7365234633996aeb1a3a9249ed6deb8037b4f680b665391c0e844f4dda0894"
+    "revision": "8c57e0e098b94006f00245aa5327ffd62c89802f",
+    "content_sha256": "31d4c8938fd34632ed3cce445b5af953cb365487cf65923cf3feb45d8ea253dd"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "5c12717f3cad29785f2f6797c5bcd1fcf15cae89",
