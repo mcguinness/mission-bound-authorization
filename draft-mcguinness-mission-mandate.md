@@ -858,12 +858,13 @@ presenter-authentication rule it states is normative. An external rail
 with its own mandate artifact, for example a payments network's
 payment mandate, can mint its vertical artifact from a Mission
 Mandate, recording the Mandate's `mission.id` and `authority_hash` in
-its own artifact. The two then share an audit anchor: activity on the
-rail joins back to the approved Mission that motivated it. The
-derivation itself, what the rail's artifact authorizes and how it is
-consented and revoked, is governed by that rail, not by this document;
-the Mission Mandate contributes committed facts and audit continuity,
-never authority.
+its own artifact.
+
+The two then share an audit anchor: activity on the rail joins back to
+the approved Mission that motivated it. The derivation itself, what
+the rail's artifact authorizes and how it is consented and revoked, is
+governed by that rail, not by this document; the Mission Mandate
+contributes committed facts and audit continuity, never authority.
 
 A Mandate binds no holder and is freely copyable ({{non-goals}}), so
 possession of one is not evidence that the presenter is the Mission's
@@ -871,10 +872,11 @@ Subject or client. A rail MUST NOT derive authority on possession of a
 Mandate alone. Before minting its vertical artifact, the rail MUST
 independently authenticate the presenter as the Mission's `subject` or
 `client_id` through its own channel, and treat the Mandate only as the
-committed facts that authentication is checked against. That
-authentication is necessary, never sufficient: minting is the rail's
-own authorization decision under its own governance, and neither the
-Mandate nor its presentation substitutes for it. Until a
+committed facts that authentication is checked against.
+
+That authentication is necessary, never sufficient: minting is the
+rail's own authorization decision under its own governance, and
+neither the Mandate nor its presentation substitutes for it. Until a
 holder-bound Mandate is defined ({{non-goals}}), that independent
 authentication is the only binding between the artifact and its
 presenter, and deriving authority without it repeats the

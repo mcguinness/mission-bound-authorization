@@ -535,7 +535,9 @@ authority source, and refuse when the Mission is not established
 audience-scoped to this AS, MUST carry the Mission's current
 `authorization_details` and a monotonic state `version`, and MUST
 answer within a staleness bound the deployment publishes
-({{conformance}}). Where the Mission is `active`, the consuming AS
+({{conformance}}).
+
+Where the Mission is `active`, the consuming AS
 projects issued authority through the current Effective Authority
 Set: the intersection of the grant's `authorization_details` (on
 refresh, the refresh family's own ceiling), any narrower authority the
@@ -632,19 +634,25 @@ problem from a dead Mission:
 | the same, `authorization_details` form ({{effective-set-projection}}) | `invalid_authorization_details` |
 | the Effective Authority Set source is unavailable, unverifiable, or reports a rolled-back state version ({{effective-set-projection}}) | `temporarily_unavailable`, HTTP 503 |
 
-The distinctions the client needs are "retry as is", "get a fresh
-grant", and "the Mission is dead", and the first is machine-readable:
-`temporarily_unavailable` with HTTP 503 says the authorization is
-intact and the same credential may be presented again, without parsing
-`error_description`. Most `invalid_grant` cases are the second: the
-client mints a fresh grant ({{minting}}) and retries. The dead-Mission
-case is a refresh refused on a non-active Mission; there the AS SHOULD
-make the response distinguishable with an `error_description` stating
-the Mission is not active, and a client that re-mints will in any case
-be refused at the MAS `active` gate with `mission_not_active`
-({{minting-errors}}), which is the authoritative signal to stop rather
-than retry. `invalid_scope` and `invalid_authorization_details` name a
-request the client can narrow and re-send under the same grant.
+The distinctions the client needs are retry as is, get a fresh grant,
+and the Mission is dead:
+
+- **Retry as is.** `temporarily_unavailable` with HTTP 503 is
+  machine-readable: the authorization is intact and the same
+  credential may be presented again, without parsing
+  `error_description`.
+- **Get a fresh grant.** Most `invalid_grant` cases fall here: the
+  client mints a fresh grant ({{minting}}) and retries.
+- **The Mission is dead.** The dead-Mission case is a refresh refused
+  on a non-active Mission; there the AS SHOULD make the response
+  distinguishable with an `error_description` stating the Mission is
+  not active, and a client that re-mints will in any case be refused
+  at the MAS `active` gate with `mission_not_active`
+  ({{minting-errors}}), which is the authoritative signal to stop
+  rather than retry.
+
+`invalid_scope` and `invalid_authorization_details` name a request the
+client can narrow and re-send under the same grant.
 
 ## Authorization Code Flow Carriage {#par-carriage}
 
@@ -681,11 +689,13 @@ authenticated at the authorization endpoint to the grant's `sub`: it
 proceeds only where the authenticated user is the grant's Subject
 under the deployment's mapping policy ({{issuance-join}}). The AS
 MUST refuse when a different user authenticates, so the grant cannot
-mint tokens for the wrong resource owner. For a service-owned or
-organizational Mission there is no delegating user to authenticate;
-such a grant is redeemed directly ({{redemption}}), not carried
-through the authorization code flow. The authenticated client MUST
-still be the grant's `client_id` ({{redemption}}).
+mint tokens for the wrong resource owner.
+
+For a service-owned or organizational Mission there is no delegating
+user to authenticate; such a grant is redeemed directly
+({{redemption}}), not carried through the authorization code flow.
+The authenticated client MUST still be the grant's `client_id`
+({{redemption}}).
 
 # Relationship to Other Artifacts {#relationships}
 

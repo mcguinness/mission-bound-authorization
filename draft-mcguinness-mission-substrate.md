@@ -1049,9 +1049,12 @@ Controller does not eliminate those internal trust boundaries.
 The kernel's non-active outcome stops new positive Controller
 governance decisions.  It does not automatically invalidate every
 artifact previously issued or stop a resource that cannot observe
-state.  Lifecycle-Gated Authorization and State-Observable claims must
+state.
+
+Lifecycle-Gated Authorization and State-Observable claims must
 state their coverage and residual interval.  Short credential lifetime
 can bound residual authority but is not instantaneous termination.
+
 The bounded-reliance floor ({{bounded-reliance}}) guarantees that a
 stated bound exists on every conforming path; it does not make any
 bound short.  A bound long enough to be vacuous defeats the floor's
@@ -1138,7 +1141,9 @@ The MAS separates Mission governance from an otherwise unchanged
 Authorization Server.  It can satisfy the kernel and can provide
 Structured Authority and Monotonic Derivation for operations it owns.
 It does not, by itself, prove that an OAuth access token was issued
-under a Mission.  A verified join can establish correlation, and a
+under a Mission.
+
+A verified join can establish correlation, and a
 cooperating credential issuer can add stronger lifecycle and
 credential-binding properties.  The MAS Statement needs to describe
 those with their activation conditions and preserve the boundary
