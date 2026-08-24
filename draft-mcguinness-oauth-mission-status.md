@@ -54,6 +54,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8725:
@@ -210,11 +218,13 @@ supports none of them is unaffected and remains a conforming issuance
 profile.
 
 This document does not restate the issuance profile. The Mission Intent,
-authority derivation, the `mission_resource_access` authorization
-details type, the `mission` claim, the integrity anchors, Mission-bound
-token issuance, the subset rule, and lifecycle gating are all defined
-in {{I-D.draft-mcguinness-oauth-mission}} and are referenced, not
-re-specified, here.
+authority derivation, the `mission` claim, the integrity anchors,
+Mission-bound token issuance, the subset rule, and lifecycle gating are
+all defined in {{I-D.draft-mcguinness-oauth-mission}}; the
+`mission_resource_access` authorization details type is defined in its
+Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}); both are
+referenced, not re-specified, here.
 
 # Status: An Optional Profile {#doc-status}
 
@@ -222,6 +232,7 @@ re-specified, here.
 Maturity: stable. Maintenance: active.
 Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
 Requires: Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Resource Access Profile for OAuth 2.0 (when the completion capability's terminal_when Common Constraint is used).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-definitions}
@@ -237,8 +248,10 @@ serves these surfaces with the same semantics; the AAuth Person
 Server plays the same role for its native missions through its own
 AAuth-native management surface
 {{I-D.draft-mcguinness-mission-aauth}}), Authority Set, the
-`mission` claim, `mission_id`, and the `mission_resource_access`
-authorization details type. Resource AS is used as defined in the
+`mission` claim, and `mission_id`; and the `mission_resource_access`
+authorization details type defined in its Mission Resource Access
+Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+Resource AS is used as defined in the
 cross-domain companion
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}}. It additionally
 uses:
@@ -562,8 +575,8 @@ The members are:
     ({{status-list}}).
 - `authorization_details`: the audience-scoped Authority Set entries
   relevant to the requesting audience, as the `mission_resource_access`
-  shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
-  Authority"), carried at the top level as a sibling of `mission` (as
+  shape of {{I-D.draft-mcguinness-oauth-mission-resource-access}},
+  carried at the top level as a sibling of `mission` (as
   on the token and in the introspection response). Entries addressed
   to other audiences MUST NOT be disclosed. When the request omits
   `audience` ({{mission-status-request}}), there is no requesting
@@ -1593,7 +1606,7 @@ rendered and committed, and carry no machine effect
 
 This section supplies the enforceable counterpart. It defines
 `terminal_when`, an OPTIONAL Common Constraint
-({{I-D.draft-mcguinness-oauth-mission}}) on a
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}) on a
 `mission_resource_access` entry that carries one or more completion
 conditions. When a condition is met, the entry is **discharged**: the
 Authorization Server no longer derives a token carrying that entry
@@ -1624,27 +1637,32 @@ own authority without waiting for a clock or a revoke.
 ## Relationship to the Issuance Profile {#issuance-relationship}
 
 The completion capability depends normatively on the issuance profile
-and is not implementable alone. It reuses, without restating, the
-issuance profile's Mission, `mission_resource_access` entry, Authority
-Set, subset rule, integrity anchors, lifecycle states, and issuance
-gating, and the inert `success_criteria` member of the Mission Intent.
-It uses Mission, Mission Issuer, Authority Set, and derivation as the
-issuance profile defines them.
+and on its Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and is not
+implementable alone. It reuses, without restating, the issuance
+profile's Mission, Authority Set, subset rule, integrity anchors,
+lifecycle states, and issuance gating, and the inert `success_criteria`
+member of the Mission Intent; and the Mission Resource Access
+Profile's `mission_resource_access` entry and Common Constraints
+registry. It uses Mission, Mission Issuer, Authority Set, and
+derivation as the issuance profile defines them, and the
+`mission_resource_access` entry as the Mission Resource Access Profile
+defines it.
 
-It extends the issuance profile in one narrow, additive way: it
-registers `terminal_when`, an OPTIONAL Common Constraint on a
+It extends the Mission Resource Access Profile in one narrow, additive
+way: it registers `terminal_when`, an OPTIONAL Common Constraint on a
 `mission_resource_access` entry ({{terminal-when}}), whose subset rule
-the issuance profile's existing subset comparison applies
+that profile's existing subset comparison applies
 ({{subset-extension}}). It changes no Mission lifecycle state and no
 meaning of any existing member.
 
 ## Entry Completion Conditions {#terminal-when}
 
 This section defines `terminal_when`, a Common Constraint
-({{I-D.draft-mcguinness-oauth-mission}}) carried in the `constraints`
-object of a `mission_resource_access` entry. It is a
-specification-defined Common Constraint under the issuance profile's
-naming convention ({{iana}}).
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}) carried in
+the `constraints` object of a `mission_resource_access` entry. It is a
+specification-defined Common Constraint under the Mission Resource
+Access Profile's naming convention ({{iana}}).
 
 `terminal_when`:
 : OPTIONAL. An array of one or more completion conditions. When any
@@ -2310,13 +2328,13 @@ above.
 # IANA Considerations {#iana}
 
 This document requests IANA actions for OAuth AS metadata members, a
-media type, and a registration in the issuance profile's Mission
-Common Constraints registry. It defines no new registry of its own:
-the endpoint authentication-method value space is a closed set defined
-inline ({{as-metadata}}), and the `terminal_when` Common Constraint is
-registered in the issuance profile's registry
-({{I-D.draft-mcguinness-oauth-mission}}), not established as a
-registry here ({{iana-terminal-when}}).
+media type, and a registration in the Mission Resource Access
+Profile's Mission Common Constraints registry. It defines no new
+registry of its own: the endpoint authentication-method value space is
+a closed set defined inline ({{as-metadata}}), and the `terminal_when`
+Common Constraint is registered in that profile's registry
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}), not
+established as a registry here ({{iana-terminal-when}}).
 
 ## OAuth Authorization Server Metadata Registration
 
@@ -2374,8 +2392,9 @@ Specification Required policy:
 ## Common Constraints Registry: terminal_when {#iana-terminal-when}
 
 The completion capability ({{completion}}) registers one Common
-Constraint in the issuance profile's Mission Common Constraints
-registry ({{I-D.draft-mcguinness-oauth-mission}}), under that
+Constraint in the Mission Resource Access Profile's Mission Common
+Constraints registry
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}), under that
 registry's Specification Required policy. This document supplies the
 registration's required fields:
 
@@ -2404,10 +2423,11 @@ registration's required fields:
 - Reference: this document, {{terminal-when}}
 
 `terminal_when` is a `constraints` member of the `mission_resource_access`
-authorization details type defined by the issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}). `event_type` values are
-deployment- or registry-defined and opaque to this document, as
-`purpose` is, so this document establishes no registry of event types.
+authorization details type defined by the Mission Resource Access
+Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+`event_type` values are deployment- or registry-defined and opaque to
+this document, as `purpose` is, so this document establishes no
+registry of event types.
 
 ## Well-Known URI
 

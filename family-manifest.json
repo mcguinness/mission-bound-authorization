@@ -1876,10 +1876,19 @@
    "summary": "A `mission_id`-keyed status surface with signed responses, plus a lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and `complete` transitions and the `suspended` and `completed` states.",
    "pull_when": "You must observe or change Mission state beyond token expiry (revoke, suspend, complete).",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
+   ],
+   "requires_when": [
+    {
+     "when": "the completion capability's terminal_when Common Constraint is used",
+     "requires": [
+      "draft-mcguinness-oauth-mission-resource-access"
+     ]
+    }
    ],
    "references": [
     "draft-mcguinness-mission-aauth",
@@ -1892,6 +1901,7 @@
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals"
    ]
   },
