@@ -82,6 +82,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -741,14 +749,19 @@ integrity anchors, PDP permits, Child Missions, or portable evidence
 
 The model's boundary is deliberate. The family does not define:
 
-- **A new authority format, or a new grant protocol.** Rich
+- **A new grant protocol.** Rich
   Authorization Requests {{RFC9396}} and kindred mechanisms already
-  fill the authority-expression role; the family leaves that to them
-  ({{the-mission}}). The same restraint holds against GNAP and the
-  capability-system lineage (macaroons, Biscuit, UCAN,
-  object-capability narrowing): this family composes with deployed
-  grant protocols and attenuation primitives rather than introducing
-  a competing one of its own; the OAuth binding states the comparison
+  fill the authority-expression role; the family leaves the grant
+  exchange to them ({{the-mission}}) and defines its own
+  cross-resource `authorization_details` type only where {{RFC9396}}
+  leaves type semantics to the type, in the OAuth binding's Mission
+  Resource Access Profile
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The same
+  restraint holds against GNAP and the capability-system lineage
+  (macaroons, Biscuit, UCAN, object-capability narrowing): this
+  family composes with deployed grant protocols and attenuation
+  primitives rather than introducing a competing one of its own; the
+  OAuth binding states the comparison
   ({{I-D.draft-mcguinness-oauth-mission}}).
 - **A policy language.** The PDP evaluates the Mission's Authority
   Set, constraints, and state; how a deployment authors policy beyond
@@ -3227,6 +3240,7 @@ bound profiled by `aauth-mission-expiry`.
 | Document | Role |
 |---|---|
 | `oauth-mission` | The OAuth binding, its OAuth companions' issuance profile: the OAuth realization of the Mission, the approval event and anchors, the `mission` claim, the subset rule, state-gated issuance. |
+| `oauth-mission-resource-access` | The Mission Resource Access Profile: the `mission_resource_access` authorization_details type, its resource and action matching, Common Constraints, delegation policy, and subset/intersection algebra, split from the OAuth binding so RFC 9396 typed semantics live with the type. |
 | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
 | `oauth-mission-issuance-grant` | The issuance join: MAS-minted grants an estate Authorization Server redeems at its token endpoint for Mission-bound, state-gated tokens. |
 | `mission-aauth` | The AAuth Mission Context binding: the Person Server as controlling authority, the exact-byte mission blob under AAuth's `s256` commitment, native `{approver, s256}` propagation, and active-state gating on PS endpoints and the PS-asserted and federated paths. It defines no OAuth Authority Set or additional AAuth wire members. |
@@ -3388,6 +3402,12 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Non-goal reworded (#637): "a new authority format, or a new grant
+  protocol" narrowed to "a new grant protocol," naming the OAuth
+  binding's Mission Resource Access Profile as the family's one
+  cross-resource `authorization_details` type, since RFC 9396 leaves
+  type semantics to the type and the family now defines one. Document
+  Map gains the profile's row under "The substrate and the bindings."
 - Editorial density pass on this Informational document: the
   aggregate-ceiling and artifact-plane (non-transitive work-product)
   composition readings under {{invariants}} tightened to a summary
