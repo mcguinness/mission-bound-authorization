@@ -58,13 +58,13 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | `services/authorization-server/src/kernel/catalog.ts` | per-user catalog, filtering, mission-derived status (D9), request-access link (D10), service_catalog_endpoint metadata | `services/authorization-server/test/catalog.test.ts` |
 | `draft-mcguinness-oauth-mission-cross-domain` | `dc7a897` | `services/authorization-server/src/kernel/cross-domain.ts`, `services/ras` | ID-JAG grant issuance (audience-scoped, PoP, one-time, mission-preserving), RAS validation | `services/mcp-saas/test/cross-domain.test.ts` |
 | ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) | [`-04`](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/04/) (2026-05-21) | `services/authorization-server`, `services/ras` | `oauth-id-jag+jwt` grant (incl. `client_id` claim, §3.1), RFC 7523 JWT-bearer redemption | `services/mcp-saas/test/cross-domain.test.ts` |
-| MCP EMA | 2025-11-25 track | `services/ras`, `services/mcp-saas` | enterprise-managed-authorization declaration; token-only SaaS enforcement | `services/mcp-saas/test/cross-domain.test.ts` |
+| MCP EMA | 2025-11-25 track (deliberately not advanced to 2026-07-28; disposition in Notes, #533) | `services/ras`, `services/mcp-saas` | enterprise-managed-authorization declaration; token-only SaaS enforcement | `services/mcp-saas/test/cross-domain.test.ts` |
 | `draft-mcguinness-oauth-mission-attenuation` | `eb568f5` (2026-07-15) | `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core` + `services/mcp-payments` | `attenuation#root-mapping`, `attenuation#attenuation`, `attenuation#mission-binding-check`, `attenuation#kill-switch` | `packages/mission-core/test/attenuation-chain.test.ts`, `services/mcp-payments/test/attenuation.test.ts` |
 | `draft-mcguinness-mission-audit` (SCITT profile) | `dc7a897` | `services/transparency` | append-only Merkle log, hash-committed Signed Statements, Receipts + signed tree heads, per-mission feeds, five-step offline verification | `services/transparency/test/transparency.test.ts` |
 | RFC 9162 (Merkle tree) | RFC 9162 | `services/transparency/src/merkle.ts` | leaf/node domain separation, inclusion proofs | `services/transparency/test/transparency.test.ts` |
 | `draft-mcguinness-oauth-mission-management` (partial) | `dc7a897` | `services/console-bff`, `authorization-server` (allMissions) | fleet enumeration + operator lifecycle surfaces | `services/console-bff/test/console.test.ts` |
 | `draft-mcguinness-mission-harness` (partial) | `dc7a897` | `packages/mission-core/src/binding.ts`, `services/agent/src/{harness,mediated-harness,harness-scope,egress-gate}.ts`, `services/mcp-payments/src/mcp-transport.ts` | duty 1 fail-closed resume + duty 2 mediated execution environment (real MCP channel, no PEP bypass); `harness#mission-binding` (shared `state_source`/`MissionStatusLease`/`MissionBinding`/`StopPolicy` types, `suppress` realized); `harness#mediated-egress` (execution-environment scope statement, claim-gated channel-class enumeration, sign/verify; default-deny egress gate keyed to the published statement: per-mediated-channel destination sets, state guard first, every request recorded as `EgressEvidence` with emitter role `egress`); `harness#resume-algorithm` (status-continuity: fail closed once `now > status_expires_at`, freshness re-checked at each submission) | `services/agent/test/{harness,mediated-harness,harness-scope,egress-gate}.test.ts`, `services/mcp-payments/test/mcp-channel.test.ts` |
-| `@modelcontextprotocol/sdk` | 1.29.0 | `services/mcp-payments/src/mcp-transport.ts` (in-memory transport), `services/mcp-payments/src/mcp-http-transport.ts` (StreamableHTTP transport) | `tools/list`/`tools/call` delegating to the same PEP over two transports. In-memory: mission credential in `_meta` (advances/closes the O-33 transport swap). Real StreamableHTTP (server+client): a DPoP-auth middleware enforces proof-of-possession over HTTP via `validateToken` (canonical `htu`/`htm`; `cnf.jkt` equals the proof thumbprint) before dispatch, with the credential carried in the `Authorization: DPoP`/`DPoP` headers instead of `_meta` | `services/mcp-payments/test/mcp-channel.test.ts`, `services/mcp-payments/test/mcp-http-channel.test.ts` |
+| `@modelcontextprotocol/sdk` | 1.29.0 (2025-11-25 wire track; deliberately not advanced to 2026-07-28, disposition in Notes, #533) | `services/mcp-payments/src/mcp-transport.ts` (in-memory transport), `services/mcp-payments/src/mcp-http-transport.ts` (StreamableHTTP transport) | `tools/list`/`tools/call` delegating to the same PEP over two transports. In-memory: mission credential in `_meta` (advances/closes the O-33 transport swap). Real StreamableHTTP (server+client): a DPoP-auth middleware enforces proof-of-possession over HTTP via `validateToken` (canonical `htu`/`htm`; `cnf.jkt` equals the proof thumbprint) before dispatch, with the credential carried in the `Authorization: DPoP`/`DPoP` headers instead of `_meta` | `services/mcp-payments/test/mcp-channel.test.ts`, `services/mcp-payments/test/mcp-http-channel.test.ts` |
 | `draft-mcguinness-mission-shaping` | `dc7a897` | `services/agent/src/index.ts` (shapeIntent) | untrusted intent proposal; derivation still bounds | `services/agent/test/harness.test.ts` |
 | (eval harness, goal 2) | n/a | `evals` | adversarial + legitimate suites, containment scorecard, CI gate (D24) | `evals/test/evals.test.ts` |
 | (vendor test, handbook) | n/a | `evals/src/vendor-test.ts` | four-axis valid-token-but-denied demonstration | `evals/test/vendor-test.test.ts` |
@@ -88,7 +88,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 |---|---|---|
 | `draft-mcguinness-mission-authzen` (PEP evidence, requestable denials) | `02d53dd` | M4/M6 PEP |
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
-| MCP authorization profile | 2025-11-25 (stable) | M4/M8/M9 |
+| MCP authorization profile | 2025-11-25 (stable; deliberately not advanced to 2026-07-28, disposition in Notes, #533) | M4/M8/M9 |
 | OpenFGA | `v1.18.1@sha256:efde89d2...6688` | M0 compose (done) |
 | `draft-niyikiza-oauth-attenuating-agent-tokens` (AAT substrate) | I-D in progress (no published revision) | attenuation substrate profiled by `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core/src/attenuation-chain.ts` (JWS chain, `par_hash` linkage, capability monotonicity, `del_depth`/`del_max_depth`) |
 
@@ -381,3 +381,42 @@ this matrix and the `@spec` tags to the affected code and tests.
   `@mission/core` is a named deferral.
   (`services/mcp-payments/test/{enforcement,transaction}.test.ts`,
   `services/pdp/test/evaluate.test.ts`, `services/transparency/test/transparency.test.ts`.)
+- MCP implementation/citation split (2026-08-24, issue #533, PR #711): the
+  family's drafts advanced their MCP citation to the 2026-07-28 release
+  (statelessness redesign, removed initialize/notifications/initialized
+  handshake, both SEP-2575). This implementation deliberately stays on the
+  2025-11-25 wire track: `@modelcontextprotocol/sdk` `1.29.0`, the MCP EMA
+  declaration, and the "MCP authorization profile" spike pin above are
+  unchanged. The two pins are independent by design (a family citation pin
+  names what the drafts normatively describe; this matrix names what the
+  code actually speaks on the wire), and this entry is the disclosed record
+  that the split is deliberate, not drift.
+
+  Compatibility check against the two named deltas, scoped to what this
+  implementation actually does with MCP (`tools/list`/`tools/call` over an
+  in-memory transport and a real StreamableHTTP transport,
+  `services/mcp-payments/src/{mcp-transport,mcp-http-transport}.ts`):
+  authorization here already runs per-request, not off session state --
+  DPoP proof-of-possession is verified per call from the `Authorization:
+  DPoP`/`DPoP` headers, and the Mission credential rides `_meta` on each
+  `tools/call` (`_meta["com.karlmcguinness.mission/reference"]`, sharing the
+  namespace analysis in `notes/external-pins.json`'s `MCP-META` entry),
+  never inferred from a prior request over the same connection or from
+  `initialize`-time negotiation. Nothing this implementation's PEP relies on
+  for authorization would need to change under the statelessness delta. What
+  would change on an actual 2026-07-28 upgrade, and is out of scope here:
+  the SDK's own transport-level handshake and message shapes (the
+  `initialize`/`notifications/initialized` exchange the 1.29.0 SDK still
+  performs; the new required per-request `_meta.io.modelcontextprotocol/*`
+  fields; `resultType` on results; `server/discover`), none of which this
+  matrix's `@spec` tags or tests assert against today, so none of them are
+  a broken claim: they are unimplemented protocol surface, not a failed one.
+
+  Decision: defer the SDK/wire upgrade rather than fold it into #533's pin
+  refresh. `@modelcontextprotocol/sdk@1.30.0` is published (`npm view
+  @modelcontextprotocol/sdk versions`) but its wire-version compatibility
+  was not evaluated here; adopting 2026-07-28 requires reworking both
+  transports' handshake assumptions and re-verifying the DPoP and
+  Mission-credential carriage against the new required per-request fields,
+  which is implementation work, not a documentation/pin refresh. Tracked as
+  follow-up; not yet filed as its own issue.
