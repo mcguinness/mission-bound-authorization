@@ -858,14 +858,16 @@ function main() {
 
   // (t) Mapping Assessment change-coupling tripwire (#643 review; re-pointed
   // by #708 when the assessment relocated from the substrate to the OAuth
-  // binding itself): the OAuth binding's self-assessment against the
-  // Mission Substrate contract pins the substrate bytes it was last
-  // verified against, hashed HERE from the source file directly (never
-  // read from another pinned surface, so mechanically re-pinning a
-  // manifest cannot satisfy it by accident). It forces the marker to move
-  // in the same change that moves the substrate, prompting a re-read of
-  // the assessment; it is a coupling device, not proof the re-read
-  // happened.
+  // binding itself; kept informative per the #717 review). The OAuth
+  // binding's informative self-assessment describes the Mission Substrate
+  // contract in the substrate's own Statement form, and it pins the
+  // substrate bytes it was last verified against, hashed HERE from the
+  // source file directly (never read from another pinned surface, so
+  // mechanically re-pinning a manifest cannot satisfy it by accident). It
+  // forces the marker to move in the same change that moves the substrate,
+  // prompting a re-read of the (informative) assessment for accuracy; it
+  // is a coupling device, not proof the re-read happened, and its failure
+  // is an editorial finding, never a conformance one.
   {
     const core = readFile(path.join(ROOT, "draft-mcguinness-oauth-mission.md"), "draft-mcguinness-oauth-mission.md");
     const mm = core.match(/<!-- assessed-substrate-digest: ([0-9a-f]{16}) -->/);

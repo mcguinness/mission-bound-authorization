@@ -5580,26 +5580,31 @@ resolve before interoperating.
 
 <!-- assessed-substrate-digest: 016a26b031d0ae20 -->
 
-This section is this document's own Mapping Assessment of itself
-against the Mission Substrate contract's kernel and capabilities
-({{I-D.draft-mcguinness-mission-substrate}}, Section "Mission
-Substrate Statement"). The assessment is normative as this
-document's own content: this document asserts, and maintains against
-its own text, the kernel mapping and capability claims below. It is
-not a claim of substrate conformance: this document makes no
-substrate-conformance claim and takes no requirement from the
-substrate; its reference to the substrate is informative, and the
-substrate's own reference back to this document is informative in
-turn, so neither document takes a normative dependency on the other.
-It applies to the substrate edition published from the same
-repository revision as this document (the two editions revise and
-publish in lockstep, so the assessed revision is exact; for a copy
-obtained independently of the repository, the family's conformance
-manifest publishes the assessed substrate's content digest in its
-`source.specs` entry, identifying the exact assessed bytes), in this
-document's base single-domain mode with the OPTIONAL capabilities as
-the activation conditions below state, and to the kernel and
-capability vocabulary of the substrate document as of that revision.
+This appendix is informative. It is this document's own Mapping
+Assessment of itself against the Mission Substrate contract's kernel
+and capabilities ({{I-D.draft-mcguinness-mission-substrate}}, Section
+"Mission Substrate Statement"), describing in the Statement's form
+how the surfaces this document already defines normatively realize
+that vocabulary. An assessment cannot be normative content in its own
+right while depending, even to be read, on a contract it cites only
+informatively: this document's own Conformance gates ({{conformance}})
+remain its sole normative requirements, this document publishes no
+Mission Substrate Statement and makes no substrate-conformance claim,
+and it takes no requirement from the substrate. Its reference to the
+substrate is informative, and the substrate's own reference back to
+this document is informative in turn, so neither document takes a
+normative dependency on the other. This appendix applies to the
+substrate edition published from the same repository revision as
+this document (the two editions revise and publish in lockstep, so
+the assessed revision is exact; for a copy obtained independently of
+the repository, the family's conformance manifest publishes the
+assessed substrate's content digest in its `source.specs` entry,
+identifying the exact assessed bytes), in this document's base
+single-domain mode with the OPTIONAL capabilities as the activation
+conditions below state, and to the kernel and capability vocabulary
+of the substrate document as of that revision. The digest marker
+above keeps this description synchronized with the substrate's own
+text; a mismatch prompts review, not a normative failure.
 
 For the kernel:
 
@@ -5729,6 +5734,17 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- PR #717 review fix: the OAuth Binding Mapping Assessment appendix
+  ({{oauth-statement}}) is now explicitly informative throughout,
+  correcting a layering contradiction (normative-as-own-content text
+  that depended, to be read, on a substrate contract cited only
+  informatively). This document's Conformance gates remain its sole
+  normative requirements; the appendix publishes no Mission Substrate
+  Statement and makes no substrate-conformance claim. The
+  digest-marker tripwire is unchanged in mechanism: a mismatch still
+  prompts review, now understood as an editorial finding rather than
+  a normative one.
 
 - Added an OAuth Binding Mapping Assessment appendix
   ({{oauth-statement}}): this document's own self-assessment against
