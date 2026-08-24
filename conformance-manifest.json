@@ -15,8 +15,8 @@
     "content_sha256": "7b6036a9b25391d2b46a48b1501531adf43d84c50b7d8eb78f656edb3faeb070"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "8337f81179998d21aec3875b4dcb847d418faf88",
-    "content_sha256": "0f56178f76109ac4cfc4987c0a2683793ea6fd712309bd3089c1abc75ed580a1"
+    "revision": "4531f7c42f23ce935e1645b1bd1c3d3236cdc8ef",
+    "content_sha256": "d809aa1ed72f2f7a419e5e845b885ef79891ebfdf9201163b258678efb1624b4"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "11e12adff962b5c2ba99b9d87dd0b86fa49ae059",
@@ -6736,7 +6736,7 @@
   {
    "id": "runtime.evidence.required-fields",
    "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "evidence",
+   "anchor": "required-decision-evidence",
    "text": "A record MUST contain:",
    "role": "PDP",
    "strength": "MUST",
@@ -6758,7 +6758,7 @@
   {
    "id": "runtime.evidence.no-describing-unverified-claims-as-authenticated",
    "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "evidence",
+   "anchor": "required-decision-evidence",
    "text": "For a token-validation failure, the record MUST NOT describe unverified token claims as authenticated facts.",
    "role": "PDP",
    "strength": "MUST NOT",
