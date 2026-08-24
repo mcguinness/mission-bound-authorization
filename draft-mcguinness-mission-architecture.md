@@ -1753,6 +1753,15 @@ not Mission-bound authorization. The family reserves "Mission-bound"
 for that class, and a binding earns it through the capability claims
 of its Mission Substrate Statement, not by protocol lineage.
 
+The definition itself is the Mission Binding Properties vector's
+`credential-mission-bound` property ({{binding-properties}}): its six
+equivalence properties state in full the active-state, subset, and
+derivation-link requirement summarized above. A binding's Mission
+Substrate Statement capability claims are how that binding evidences
+the property for a covered path; the OAuth binding's Conformance
+section states its own discharge of it
+({{I-D.draft-mcguinness-oauth-mission}}).
+
 ## The Mission-Bound Credential
 
 A credential carrying the `mission` claim (`id`, `issuer`,
@@ -3404,6 +3413,13 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Cross-referenced the three previously separate accounts of what
+  earns the "Mission-bound" term: {{token-classes}} now names the
+  Mission Binding Properties vector's `credential-mission-bound`
+  property ({{binding-properties}}) as the definition, with the
+  Mission Substrate Statement capability claims as how a binding
+  evidences it and the OAuth binding's Conformance section as that
+  binding's discharge (#663).
 - Non-goal reworded (#637): "a new authority format, or a new grant
   protocol" narrowed to "a new grant protocol," naming the OAuth
   binding's Mission Resource Access Profile as the family's one
