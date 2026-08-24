@@ -1,10 +1,21 @@
 #!/usr/bin/env node
-// Structural tripwire for Mission Substrate Statement capability tables
-// (#554 review, item 6). Three binding Statements retained the retired
+// Structural tripwire for Mission Substrate Statement AND Mapping
+// Assessment capability tables (#554 review, item 6; kind-tagged per the
+// #717 review on #708). Three binding Statements retained the retired
 // three-state vocabulary and omitted an entire capability without any
 // validator noticing; this check makes both classes of drift fail CI.
 //
-// Checks, per registered Statement table:
+// The registry covers two distinct kinds sharing one table format (the
+// substrate requires a Mapping Assessment to use "the Statement's form"):
+// a Statement (kind "statement") is a conforming binding's own normative
+// conformance result; an Assessment (kind "assessment") is a non-claiming
+// specification's informative self-description, never a conformance
+// result, and never implies the assessed specification takes a normative
+// dependency on the substrate. The structural checks below apply
+// identically to both kinds; only the summary line and any future
+// kind-specific rule would differ.
+//
+// Checks, per registered table:
 //   (a) exactly the canonical eight capabilities, in canonical order;
 //   (b) the Claim column says only `supplied` or `not supplied`;
 //   (c) every supplied row states an activation condition (never empty,
@@ -48,24 +59,24 @@ const CAPABILITIES = [
   "Portable Evidence",
 ];
 
-// Every registered Statement is a Mission binding: publishing a capability
-// table here is what "binding" means architecturally (the README says as
-// much: new bindings are authored against the substrate and claim their
-// capabilities through a Statement). `slug` names the family-manifest.json
-// draft the Statement is FOR, which is not always the file it lives in: the
-// OAuth binding's own table is hosted in the substrate document's Mapping
-// Assessment rather than in draft-mcguinness-oauth-mission.md itself.
-// scripts/generate-drafts-index.mjs imports this array as the single source
-// of truth for "which manifest slugs are bindings," so this list is
-// exhaustive by construction: the tripwires below (statement-unregistered)
-// already fail CI the moment a sixth Statement table appears anywhere in the
-// corpus without a matching entry here.
+// Every registered Statement or Assessment is a Mission binding: publishing
+// a capability table here is what "binding" means architecturally (the
+// README says as much: new bindings are authored against the substrate and
+// claim their capabilities through a Statement, or, for a non-claiming
+// specification, are assessed through an Assessment). `slug` names the
+// family-manifest.json draft the table is FOR, which is not always the
+// file it lives in. scripts/generate-drafts-index.mjs imports this array as
+// the single source of truth for "which manifest slugs are bindings," so
+// this list is exhaustive by construction: the tripwires below
+// (statement-unregistered) already fail CI the moment a new Statement or
+// Assessment table appears anywhere in the corpus without a matching entry
+// here.
 export const REGISTRY = [
-  { file: "draft-mcguinness-mission-substrate.md", title: "OAuth Mission binding capability table", slug: "draft-mcguinness-oauth-mission" },
-  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities", slug: "draft-mcguinness-mission-authority-server" },
-  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities", slug: "draft-mcguinness-mission-aauth" },
-  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities", slug: "draft-mcguinness-mission-uma" },
-  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities", slug: "draft-mcguinness-mission-gnap" },
+  { file: "draft-mcguinness-oauth-mission.md", title: "OAuth Mission binding capability table", slug: "draft-mcguinness-oauth-mission", kind: "assessment" },
+  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities", slug: "draft-mcguinness-mission-authority-server", kind: "statement" },
+  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities", slug: "draft-mcguinness-mission-aauth", kind: "statement" },
+  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities", slug: "draft-mcguinness-mission-uma", kind: "statement" },
+  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities", slug: "draft-mcguinness-mission-gnap", kind: "statement" },
 ];
 
 const HEADER = "| Capability | Claim | Activation | Scope and defining sections | Limitations |";
@@ -166,8 +177,11 @@ function main() {
       // A differently titled table cannot evade registration: any table using
       // the exact five-column Statement header must be registered, and any
       // section titled "Mission Substrate Statement" must live in a file that
-      // registers a Statement here.
-      if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file)) {
+      // registers a Statement here. The substrate document itself is exempt
+      // (as it already is on the "Mission Substrate Statement" heading check
+      // below): its own non-normative skeleton illustrates the header without
+      // being a binding's Statement.
+      if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
         fail("statement-unregistered", `${file}:${i + 1}: a five-column Statement table in a file with no registered Statement`);
       }
       if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
@@ -216,7 +230,9 @@ function main() {
     console.error(`substrate-statements check FAILED: ${failures} finding(s).`);
     process.exit(1);
   }
-  console.log(`substrate-statements check OK: ${REGISTRY.length} Statements, ${consumerTables} consumer tables validated.`);
+  const statementCount = REGISTRY.filter((e) => e.kind === "statement").length;
+  const assessmentCount = REGISTRY.filter((e) => e.kind === "assessment").length;
+  console.log(`substrate-statements check OK: ${statementCount} Statements, ${assessmentCount} Assessments, ${consumerTables} consumer tables validated.`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -31,6 +31,8 @@ normative:
   RFC6920:
   RFC7493:
   RFC8785:
+
+informative:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -39,8 +41,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -607,14 +607,47 @@ object, producer behavior during the transition, verifier selection
 and downgrade behavior when recognition sets differ, and the
 transition procedure itself.
 
-The OAuth binding's Integrity Anchor Test Vectors
-({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
-example of the envelope-anchor species alone (`intent_hash`,
-`proposal_hash`, `authority_hash`); an implementation can check its
-own computation against them. The canonical-object and raw-octet
-species above, the parse-time duplicate-detection rule, the I-JSON
-numeric domain, and the reject-unknown-prefix and no-downgrade
-agility rules remain prose-only: no vector pins them.
+This document gives its own byte-level worked example of the
+envelope-anchor species, independent of any binding's field names.
+Given the closed JSON object
+
+~~~ json
+{
+  "typ": "mission-substrate-context",
+  "iss": "urn:example:controller:1",
+  "value": {
+    "purpose": "Reconcile Q3 invoices",
+    "boundary": ["read:urn:example:resource:erp"]
+  }
+}
+~~~
+
+canonicalized under JCS, the exact canonical bytes are (shown here
+wrapped only for layout; remove the layout line breaks, adding no
+characters, to recover the single-line canonical form):
+
+~~~ text
+{"iss":"urn:example:controller:1","typ":"mission-substrate-context",
+"value":{"boundary":["read:urn:example:resource:erp"],"purpose":"Rec
+oncile Q3 invoices"}}
+~~~
+
+~~~ text
+sha-256:R5C5cMDxLzhle5Xac-V9qCKN4q8wSVAvbgiv3PYEzzI
+~~~
+
+An implementation can check its own canonicalization and hashing
+against this vector before applying the construction to a
+binding-specific object such as an Approved Context. A binding MAY
+publish additional worked examples over its own field names; the
+OAuth binding's Integrity Anchor Test Vectors
+({{I-D.draft-mcguinness-oauth-mission}}) are one such example, giving
+a byte-level worked example of the envelope-anchor species over
+`intent_hash`, `proposal_hash`, and `authority_hash`. The
+canonical-object and raw-octet species above, the parse-time
+duplicate-detection rule, the I-JSON numeric domain, and the
+reject-unknown-prefix and no-downgrade agility rules remain
+prose-only: no vector pins them.
 
 # Optional Capabilities {#capabilities}
 
@@ -906,17 +939,18 @@ scope in the Mission Substrate Statement are the conformance result.
 
 A specification that itself claims conformance to this document
 MUST contain a section titled "Mission Substrate Statement".  For a
-specification that makes no such claim, this document MAY instead
-publish a **Mapping Assessment**: this document's own normative
-assessment of how that specification realizes the kernel and
-capabilities, in the Statement's form ({{family}} carries one for
-the OAuth binding).  A Mapping Assessment is not the described
-specification's conformance result, and no such result exists
-unless a specification claims conformance itself; the assessment
-binds this document's readers (family documents use it as the
-mapping), and the described specification neither claims nor takes
-any requirement from it.  Either form MUST identify the
-specification version and mode to which it applies.
+specification that makes no such claim, another document MAY instead
+publish a **Mapping Assessment** of it: that other document's own
+assessment of how the unclaiming specification realizes the kernel
+and capabilities, in the Statement's form (for example, the OAuth
+binding publishes one of itself; {{I-D.draft-mcguinness-oauth-mission}},
+Section "OAuth Binding Mapping Assessment").  A Mapping Assessment is
+not the assessed specification's conformance result, and no such
+result exists unless the specification claims conformance itself;
+the assessment binds only the document that publishes it, and the
+assessed specification neither claims nor takes any requirement from
+it.  Either form MUST identify the specification version and mode to
+which it applies.
 
 For the kernel, the Statement MUST provide a checkable mapping for:
 
@@ -1103,17 +1137,18 @@ This document has no IANA actions.
 # Binding Mapping Guidance {#crosswalk}
 
 This appendix is informative.  Four bindings publish their own
-normative Mission Substrate Statements, and this document publishes
-its Mapping Assessment of the OAuth binding
-({{oauth-statement}}): the standalone MAS
+normative Mission Substrate Statements: the standalone MAS
 ({{I-D.draft-mcguinness-mission-authority-server}}), AAuth
 ({{I-D.draft-mcguinness-mission-aauth}}), UMA
 ({{I-D.draft-mcguinness-mission-uma}}), and GNAP
 ({{I-D.draft-mcguinness-mission-gnap}}) bindings each publish their
-own.  Those Statements, not this appendix, are the authoritative
-capability claims.  This appendix illustrates the mapping method
-through three design poles among which a new substrate can locate
-itself.
+own.  The OAuth binding instead publishes its own Mapping Assessment
+of itself against this document's kernel and capabilities
+({{I-D.draft-mcguinness-oauth-mission}}, Section "OAuth Binding
+Mapping Assessment").  Those Statements and that Assessment, not this
+appendix, are the authoritative capability claims.  This appendix
+illustrates the mapping method through three design poles among
+which a new substrate can locate itself.
 
 ## OAuth-Native Mapping: The Broad-Claims Pole
 
@@ -1176,11 +1211,12 @@ kernel requirements.
 
 # Mission-Bound Authorization Family Use {#family}
 
-This appendix is normative for documents of the Mission-Bound
-Authorization family and informative for every other adopter.  An
-adopter outside the family does not need it.
+This appendix is informative.  It maps this document's kernel and
+capability vocabulary to the terms the Mission-Bound Authorization
+family's earlier documents use; an adopter outside the family does
+not need it.
 
-The family's earlier documents, including the published OAuth binding
+The family's earlier documents, including the OAuth binding
 ({{I-D.draft-mcguinness-oauth-mission}}), use the vocabulary this
 contract was generalized from.  The terms correspond as follows:
 
@@ -1195,8 +1231,8 @@ contract was generalized from.  The terms correspond as follows:
 | Ordered governance record | the Mission log, assessment log, or audit record |
 {: title="Family vocabulary mapping"}
 
-A family document that maps its own vocabulary to the kernel's MUST
-use these correspondences.
+A family document that maps its own vocabulary to the kernel's uses
+these correspondences.
 
 The authority-role map ({{authority-roles}}) aligns with the OAuth binding's
 Authority Sources: the `authority_source` record member and its three
@@ -1207,169 +1243,32 @@ source's authority.
 
 Precedence is scoped, not global.  For the OAuth-native binding, the
 OAuth binding's definitions govern that mapping; this document governs
-the kernel and capability vocabulary.  The dependency is one-way and
-creates no cycle: this appendix takes a normative reference to the
-OAuth binding, the specification its Mapping Assessment is asserted
-against, while the OAuth binding takes no normative dependency on
-this document (its pointer back is informative, and the family
-manifest's typed edges record it as such).
+the kernel and capability vocabulary.  Neither document takes a
+normative dependency on the other: this appendix is informative, and
+the OAuth binding publishes its own Mapping Assessment of itself
+against this document's kernel in its own text
+({{I-D.draft-mcguinness-oauth-mission}}, Section "OAuth Binding
+Mapping Assessment"), informatively citing this document in turn; the
+family manifest's typed edges record both directions as informative.
 
 Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
-MUST land in this document, and the owning family section becomes a
+lands in this document, and the owning family section becomes a
 reference to it; no change is ever made solely to move words.
 
-## OAuth Binding Mapping Assessment {#oauth-statement}
+# Document History {#document-history}
 
-<!-- assessed-oauth-digest: 82f43ad562718586 -->
+\[\[ To be removed from the final specification ]]
 
-This section is this document's Mapping Assessment of the OAuth
-Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published
-under {{statement}}.  The assessment is normative as this
-document's own content: this document asserts, and maintains
-against the OAuth binding's text, the kernel mapping and capability
-claims below.  It is not the OAuth binding's conformance result:
-the OAuth binding makes no substrate-conformance claim and takes no
-requirement from this document; its pointer to this section is
-informative on its side, and the two documents' no-mutual-dependency
-rule stands.
-It applies to the OAuth binding edition published from the same
-repository revision as this document (the two editions revise and
-publish in lockstep, so the assessed revision is exact; for a copy
-obtained independently of the repository, the family's conformance
-manifest publishes the assessed binding's content digest in its
-`source.specs` entry, identifying the exact assessed bytes), in the
-binding's base single-domain mode with the OPTIONAL capabilities as
-the activation conditions below state, and to the kernel and
-capability vocabulary of this document.  The OAuth binding's own definitions
-govern every mapped construct; this assessment claims no property the
-OAuth binding does not define.
-
-For the kernel:
-
-1. The Mission Reference is `mission_id`: high-entropy, unambiguous
-   within the issuer namespace, compared by exact string equality
-   together with `mission.issuer`, never reassigned, retained for the
-   audit horizon, and disclosed beyond the issuer only on the
-   binding's authorized surfaces.
-2. The Controller is the Mission Issuer (the Authorization Server),
-   established through `mission.issuer` and the deployment's issuer
-   trust (AS metadata and published keys).
-3. The Actor handle is the authenticated OAuth client at approval;
-   the external Subject is fixed by the OAuth binding's injective mapping;
-   delegates ride the `act` chain; child and successor lineage is
-   recorded through the parent and predecessor members; actor-type
-   classification uses `sub_profile` and instance assertions where
-   deployed.
-4. The Approved Context is the Mission Intent recorded verbatim, the
-   recorded authority proposal where one was submitted, and the
-   derived Authority Set; the immutable boundary is the record's
-   immutable members; commitments are the typed integrity anchors
-   (`intent_hash`, `proposal_hash`, `authority_hash`); a material
-   change obtains a new approval through an expansion successor.
-5. The approval ceremony is the OAuth binding's approval event: authenticated
-   Approver, the distinct-approver rule for write-bearing Missions,
-   rendering of the derived Authority Set and the effective expiry,
-   and atomic record commit, with deferred, interactive, and dispatch
-   realizations.
-6. The active predicate is stored `state` equal to `active` with
-   the decision time strictly before the record's effective
-   `expires_at`, the issuer materializing the resulting `expired`
-   transition lazily where it chooses; any other stored value,
-   recognized or not, is non-active; transitions are authenticated
-   lifecycle operations; a non-active Mission refuses issuance and
-   derivation.
-7. The reliance bound is the record's effective `expires_at` (never
-   later than the requested ceiling), which caps every derived
-   credential's `exp`; the maximum residual after a Mission becomes
-   non-active is the outstanding credential lifetime, bounded by the
-   deployment's declared access-token TTL.
-8. The propagation and join surfaces are: the `mission` claim
-   (artifact issuance under the Mission, authority derivation, and
-   lifecycle-gated issuance); the `mission_id` and
-   `mission_expires_at` response members (correlation only); the
-   introspection projection (state as of the response, caller
-   authorization and minimization applying); the Status surfaces
-   (state as of a signed observation with explicit freshness); and
-   the grant binding (the issuer's native association of Mission,
-   Subject, client, and credential).
-9. The governance record is the Mission Record with its approval
-   evidence and lifecycle history, retained for the audit horizon,
-   with integrity resting on record custody and the typed anchors.
-
-The capability table:
-
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | State-gated issuance and every derivation gate | Outstanding credentials run to their own `exp`; the residual is bounded, not zero |
-| State-Observable | supplied | Status, introspection, or Signals companion active | Those surfaces | Staleness bounded by each surface's declared freshness |
-| Structured Authority | supplied | always | `authorization_details` of AS-supported types, each type's own specification defining semantics (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints) | Semantics exist per supported type, not universally |
-| Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
-| Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
-| Authorized Context Correlation | supplied | the Delegation role active ({{I-D.draft-mcguinness-oauth-mission}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
-| Independently Verifiable | supplied | Mandate, signed Status, or audit companion active | Anchor recomputation and signed artifacts per those profiles | Signature verification never establishes current state |
-| Portable Evidence | supplied | Evidence, Mandate, or audit companion active | Per those profiles | The governance record is otherwise issuer-local |
-{: title="OAuth Mission binding capability table"}
-
-Temporal elements: every issued credential's `exp` is capped by the
-record's effective `expires_at`; state observations carry their
-surface's declared freshness; the residual after non-active is the
-outstanding credential lifetime under the deployment's declared TTL.
-Failure behavior: an unknown lifecycle state is non-active; an
-unresolvable reference, a failed anchor verification, and an unknown
-`authorization_details` type fail closed; where a row's activation
-condition does not hold, the property is not supplied and a consumer
-MUST NOT rely on it.
-
-The OAuth binding's three OPTIONAL implementation roles, which its
-Conformance section names OPTIONAL capabilities
-({{I-D.draft-mcguinness-oauth-mission}}), are surfaces an
-implementation may or may not offer, each independent of the others. The capability table above states scoped guarantee
-claims: properties the OAuth binding supplies and the conditions
-under which each is supplied. The two vocabularies answer different
-questions and are not equivalent; the entries below relate them
-without collapsing one into the other. Declaring an OPTIONAL role
-never creates a claim beyond the eight already stated above.
-
-Introspection:
-: Exercises State-Observable.  One of State-Observable's three named
-  activation surfaces, alongside Status and Signals; declaring it
-  activates that otherwise-conditional claim.
-
-Delegation:
-: Exercises Lifecycle-Gated Authorization, Structured Authority,
-  Monotonic Derivation, Credential-Bound, and Authorized Context
-  Correlation.  The OAuth binding's delegation subset-checks
-  `authorization_details`, carries the `mission` claim unchanged,
-  sender-constrains the delegated credential to the delegate's own
-  key, and refuses issuance unless the Mission is active.  The Token
-  Exchange that issues the delegated credential associates, at
-  issuance, the Mission and Subject carried by the Mission-bound
-  `subject_token` with the delegate identity established by the
-  `actor_token` or the delegate's own client authentication, binding
-  all three to the newly issued credential without itself
-  establishing a new grant binding: an access-token-only delegated
-  exchange is a derived token under the subject_token's existing
-  binding, not a second binding of its own
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the
-  Mission to the Grant").  Four
-  of the five claims are supplied always, and Delegation exercises
-  them rather than creating them; Authorized Context Correlation is
-  the exception, activated by this role, whose Token Exchange join
-  is its supplier.  The `act` chain itself supplies none of them: it
-  is attribution, never authority.
-
-Cross-Domain:
-: Exercises Lifecycle-Gated Authorization, Structured Authority,
-  Monotonic Derivation, and Credential-Bound.  Carries these four
-  always-supplied guarantees across the domain hop: the Mission
-  reference and `authority_hash` intact, authority that only
-  narrows, and projection gated on active state, while adding an
-  interoperable projection surface the guarantees alone do not
-  provide.  It does not become Portable Evidence by crossing a
-  domain: that claim activates only when an Evidence, Mandate, or
-  audit companion is active, and Cross-Domain is not among them.
-
+- Removed the normative dependency on the OAuth binding (#708): the
+  OAuth Binding Mapping Assessment moved to the OAuth binding's own
+  text, which now publishes it about itself; the Family Use appendix
+  is now informative throughout, with no assessment of its own; the
+  front matter's reference to the OAuth binding moved from normative
+  to informative; and this document's Default Commitment Construction
+  section gained its own neutral, binding-independent worked example
+  so the construction no longer leans on the OAuth binding's vectors.
+  No kernel or capability requirement changed.
 
 # Acknowledgments
 {:numbered="false"}
