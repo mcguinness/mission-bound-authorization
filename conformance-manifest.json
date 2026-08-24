@@ -823,7 +823,7 @@
    "id": "core.grant-binding.multiple-bindings-per-mission",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "A Mission MAY carry zero or more bindings.",
+   "text": "A Mission MAY carry zero or more grant bindings.",
    "role": "AS",
    "strength": "MAY",
    "applicability": {
@@ -843,10 +843,10 @@
    "tests": []
   },
   {
-   "id": "core.grant-binding.rebind-rejected",
+   "id": "core.grant-binding.lineage-resolves-stable-mission",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "the AS MUST NOT establish a second binding for a grant lineage already bound to a Mission, and MUST refuse with `invalid_grant` a derivation that would resolve an already-bound grant lineage to a Mission other than the one it is bound to",
+   "text": "The AS MUST resolve a bound grant lineage to the same Mission on every derivation performed against it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -857,9 +857,9 @@
     "runtime-enforced"
    ],
    "surface": "token-endpoint",
-   "assertion": "refusal",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "a grant lineage already bound to Mission A is refused invalid_grant on any attempt to derive it against, or rebind it to, a different Mission B; the original binding to Mission A is unaffected by the refused attempt"
+    "normative": "repeated derivations against one grant lineage (a refresh, or a further Token-Exchange-created family rooted in it) always resolve to, and every issued token's `mission` claim always names, the same Mission id and issuer; no sequence of otherwise-valid requests against that lineage ever changes which Mission it resolves to. No profile-defined operation lets a client present an input naming a different Mission for an already-bound lineage, so a reassignment is an AS-internal storage fault (fail closed, audit), never a client-triggerable, wire-observable refusal"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -867,10 +867,9 @@
   },
   {
    "id": "core.grant-binding.token-exchange-preserves-mission",
-   "facet": "token-exchange-derivation",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "an additional refresh-token family a continuation transport establishes later for the same Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}), a further Token Exchange derivation, and a cross-domain local grant a Resource AS mints under the projected Mission ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) are each their own binding. Each binding identifies exactly one Mission",
+   "text": "A Token Exchange derivation ({{RFC8693}}) that returns only an access token establishes no new grant lineage",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -883,18 +882,17 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) resolves to, and the issued token carries, the same one Mission as the subject_token; it is never modeled as binding a second Mission"
+    "normative": "an access-token-only Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) creates no new grant binding; the issued token is a derived token whose `mission` claim identifies the same one Mission the subject_token's own binding resolved to. Only a Token Exchange that establishes reusable authorization state (a new refresh-token family, for example the continuation profile's delegation-family-creating exchange, {{I-D.draft-mcguinness-oauth-mission-continuation}}) creates a new grant binding, rooted in that same Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
   },
   {
-   "id": "core.grant-binding.cross-domain-destination-family",
-   "facet": "cross-domain-local-grant",
+   "id": "core.grant-binding.cross-domain-credential-association",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "an additional refresh-token family a continuation transport establishes later for the same Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}), a further Token Exchange derivation, and a cross-domain local grant a Resource AS mints under the projected Mission ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) are each their own binding. Each binding identifies exactly one Mission",
+   "text": "the local access token it mints there is a derived token: it identifies the one originating Mission (`mission.id`, `mission.issuer`) but is not backed by a persistent local lineage",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -907,7 +905,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the local token a destination-domain Resource AS mints under a projected Mission is its own binding at that Resource AS, identifying the one originating Mission (`mission.id`, `mission.issuer`) the cross-domain grant conveyed, never a second or locally-created Mission ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}, Section \"Validation at the Resource AS\")"
+    "normative": "a cross-domain projection establishes no destination-side grant binding: the local access token a destination-domain Resource AS mints under a projected Mission identifies the one originating Mission (`mission.id`, `mission.issuer`) the single-use cross-domain grant conveyed, as a derived-token credential association, never a second or locally-created Mission, and never a persistent local grant lineage the issuer's fleet index would need to track ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}, Section \"Validation at the Resource AS\")"
    },
    "level": "cross-component",
    "coverage": "todo",
