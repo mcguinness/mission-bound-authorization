@@ -70,6 +70,11 @@
 //                                derived from check-substrate-statements.mjs's Statement
 //                                registry, the family's definition of "binding") names a slug
 //                                that is not a family-manifest.json draft
+//   (v) catalog stacks        - DRAFTS.md's generated "Reference stacks" table (#709 review,
+//                                P2: the linked catalog must itself expose the manifest's
+//                                reference-stacks/assurance-level axis, not just the
+//                                per-document index) is stale against the manifest's
+//                                `reference_stacks` object
 
 import fs from "node:fs";
 import path from "node:path";
@@ -78,7 +83,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
-import { maturityDisplay, validateDraftsIndex, validateBindingPackages, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
+import { maturityDisplay, validateDraftsIndex, validateReferenceStacks, validateBindingPackages, GROUP_SECTION_TITLES, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -684,19 +689,9 @@ function main() {
   // (o) Groups: the enum is well-formed, every draft's `group` is in it, and
   // the draft is named under its group's "###" section in DRAFTS.md's
   // catalog — the placement semantics the retired README adoption map used
-  // to carry.
-  const GROUP_SECTION_TITLES = {
-    "architecture": "Architecture",
-    "approval-time": "Approval time",
-    "lifecycle": "Lifecycle",
-    "runtime-enforcement": "Runtime enforcement",
-    "bindings-substrate": "The substrate and the bindings",
-    "agent-runtime": "Agent runtime",
-    "sub-agents": "Sub-agents",
-    "cross-domain-projection": "Cross-domain projection",
-    "proof-portability": "Proof and portability",
-    "security-model": "Security model",
-  };
+  // to carry. GROUP_SECTION_TITLES is imported from
+  // generate-drafts-index.mjs, which also uses it to render the generated
+  // index's "Group" column, so the two cannot name a group differently.
   validateEnumArray("groups", "groups", manifest.groups);
   const validGroups = new Set(Array.isArray(manifest.groups) ? manifest.groups : []);
   for (const g of validGroups) {
@@ -892,6 +887,13 @@ function main() {
   // and this check is a straight freshness comparison, the same shape as
   // (l) for DRAFTS.md's index.
   for (const e of validateBindingPackages(ROOT)) fail("binding-packages", e);
+
+  // (v) Catalog stacks: DRAFTS.md's "Reference stacks" table must match what
+  // the manifest's `reference_stacks` object computes (#709 review, P2: the
+  // catalog the README's one link points at must itself expose the
+  // assurance-level/reference-stack axis as generated content, not leave it
+  // absent). Same shape as (l) and (u).
+  for (const e of validateReferenceStacks(ROOT)) fail("catalog-stacks", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):

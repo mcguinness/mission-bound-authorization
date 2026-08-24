@@ -33,6 +33,116 @@ the last three:
 - **Action**: one concrete use of that authority at a resource or
   through a decision point.
 
+## Find your path
+
+One path, four steps: choose a verb, choose a binding, see the
+minimum document package that binding needs, then go to the complete
+catalog for everything else. Nothing below duplicates anything
+above it.
+
+### 1. Choose a verb
+
+The family organizes along a verb spine: each verb answers one
+question and is owned by named documents. The verbs are a table of
+contents, not new machinery: each names a question an adopter
+already has and points at the documents that answer it. The
+[Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
+is the citable form of this view.
+
+| Verb | The question | Main mechanisms |
+|---|---|---|
+| **Propose** | What task is being requested? | [Intent Shaping](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html) (client-side, untrusted proposal) |
+| **Approve and Record** | Who approved what, at which control point, under what governance? | [The OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) and its peers (below); [Deferred Approval](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html); [Template](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) (consent once to a ceiling, instantiate at machine speed); one more |
+| **Govern** | How does the Mission change or end? | [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) (pull), [Signals](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) (push), [Containment](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) (issuer-held monotonic narrowing); five more |
+| **Enforce Each Action** | May this exact action run now? | [Runtime contract](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html), [AuthZEN binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html), [Transaction Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html), [Capability Binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) |
+| **Run and Wind Down** | What happens across sessions, queues, and restarts? | [Harness](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html), [Orchestration](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) |
+| **Delegate** | Is new subordinate authority created? | [Child Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html), [Offline Attenuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html), [Cross-Organizational Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) |
+| **Project** | How is existing authority honored elsewhere? | [Cross-Domain Projection](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html), [Cross-Organizational Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) |
+| **Continue** | How does authorization survive a hop or a pause? | [Continuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) |
+| **Prove** | What was approved, decided, and executed? | [Consent Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html), [Runtime Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html), [Mandate](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html), [Audit](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) |
+| **Analyze** | What is trusted, and what breaks if it fails? | [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html), [Security Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) |
+
+Two of these are easy to conflate and the spine keeps them apart:
+**delegate** creates new subordinate authority (a Child Mission, an
+attenuated token); **project** honors authority that already exists
+in another trust domain, creating none. A document may live under
+more than one verb: Cross-Organizational Delegation both delegates
+(the attenuation chain narrows authority) and projects (a relying
+party in another organization honors it). This table headlines the
+main mechanisms; the full verb-to-document map is one step away, in
+the catalog.
+
+### 2. Choose a binding
+
+The binding decides where the Mission control point lives. The
+bindings are peers: no production Mission deployment is known
+today, OAuth brings the most deployed substrate infrastructure, and
+Missions on it still require the changes its binding defines.
+Maturity labels are document design maturity, never deployment
+history.
+
+| Binding | Use it when | The boundary to know |
+|---|---|---|
+| [**OAuth AS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the published Internet-Draft) | Your Authorization Server can issue Mission-bound tokens | Portable structured authority on the token; the issuance profile to its OAuth companions |
+| [**Standalone MAS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) (Mission Authority Server) | Existing Authorization Servers cannot host Mission approval | Ordinary credentials are *joined* to Missions; high-consequence paths require Mission-bound issuance (the [Issuance Grant](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)) |
+| [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | AAuth's Person Server (the user-held control point) owns contextual governance | Native AAuth access semantics; authority expressed in AAuth's own access model |
+| [**UMA**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) / [**GNAP**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | Protocol research and evaluation | Experimental sketches, authored against the substrate contract |
+
+New bindings are authored against
+[Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
+and claim their capabilities through a Mission Substrate Statement.
+
+### 3. See the minimum package
+
+Each binding's minimum package is its adoption closure: itself plus
+every document the manifest's `adoption_requires` edges say it
+cannot be deployed without, generated here so the count can never
+drift from the manifest.
+
+<!-- generated:binding-packages:start -->
+
+| Binding | Minimum package |
+|---|---|
+| Mission-Bound Authorization for OAuth 2.0 | 1 document: itself alone |
+| Mission Authority Server | 4 documents: Mission Substrate Requirements + Mission-Bound Authorization for OAuth 2.0 + Mission Status and Lifecycle for OAuth 2.0 + Mission Authority Server |
+| Mission Context Binding for AAuth | 2 documents: Mission Substrate Requirements + Mission Context Binding for AAuth |
+| Mission-Bound Authorization for UMA 2.0 | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for UMA 2.0 |
+| Mission-Bound Authorization for GNAP | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for GNAP |
+
+<!-- generated:binding-packages:end -->
+
+This is adoption closure (what a binding is specified against), not
+deployment topology: the Standalone MAS package includes the OAuth
+binding's own text because its Statement cites it normatively, even
+though a MAS deployment runs no OAuth Authorization Server.
+Correcting an edge, if one turns out wrong, is a manifest question,
+not a README one.
+
+### 4. Go to the catalog
+
+[`DRAFTS.md`](DRAFTS.md) is the complete document catalog: the one
+link out from this path to everything else. Two of its tables are
+generated from `family-manifest.json`, the same source this page's
+minimum packages come from, so neither can say something the
+manifest does not: every document's manifest group (the axis
+DRAFTS.md's own section headings already use), and the Architecture's four
+cumulative reference stacks, Baseline Issuance through High-Assurance
+Agent, the same axis as its Mission Assurance Levels (their proof
+obligations stay in the Architecture itself; the generated table
+states only which documents reach each level). The Architecture's
+five *packages*, its own orthogonal decomposition, are deliberately
+not restated anywhere in this repository (see Repository use). Two
+easy-to-miss pieces are worth an early look regardless: the
+work-product commitment model (results carry integrity, not only
+actions: the OAuth binding's Integrity and Commitments section) and
+the swarm ladder (one agent to a fleet without new machinery: the
+Architecture's scaling treatment). For the story told in prose
+rather than protocol, the
+**[Mission Handbook](https://notes.karlmcguinness.com/mission-handbook/)**
+is the published narrative companion: the why before the wire.
+
+## The mechanics
+
 A client or a model may propose the Intent and candidate authority;
 no proposal is authoritative. The Mission control point (in the
 OAuth binding, the Mission Issuer) derives and bounds the Authority
@@ -183,105 +293,6 @@ information-flow leakage within approved authority is out of scope.
 These mechanisms occupy adjacent layers: Mission-Bound Authorization
 is designed to compose with them, not to replace them.
 
-## Find your path
-
-One path, four steps: choose a verb, choose a binding, see the
-minimum document package that binding needs, then go to the complete
-catalog for everything else. Nothing below duplicates anything
-above it.
-
-### 1. Choose a verb
-
-The family organizes along a verb spine: each verb answers one
-question and is owned by named documents. The verbs are a table of
-contents, not new machinery: each names a question an adopter
-already has and points at the documents that answer it. The
-[Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
-is the citable form of this view.
-
-| Verb | The question | Main mechanisms |
-|---|---|---|
-| **Propose** | What task is being requested? | [Intent Shaping](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html) (client-side, untrusted proposal) |
-| **Approve and Record** | Who approved what, at which control point, under what governance? | [The OAuth binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) and its peers (below); [Deferred Approval](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html); [Template](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) (consent once to a ceiling, instantiate at machine speed); one more |
-| **Govern** | How does the Mission change or end? | [Status](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) (pull), [Signals](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) (push), [Containment](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) (issuer-held monotonic narrowing); five more |
-| **Enforce Each Action** | May this exact action run now? | [Runtime contract](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html), [AuthZEN binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html), [Transaction Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html), [Capability Binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) |
-| **Run and Wind Down** | What happens across sessions, queues, and restarts? | [Harness](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html), [Orchestration](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) |
-| **Delegate** | Is new subordinate authority created? | [Child Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html), [Offline Attenuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html), [Cross-Organizational Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) |
-| **Project** | How is existing authority honored elsewhere? | [Cross-Domain Projection](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html), [Cross-Organizational Delegation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) |
-| **Continue** | How does authorization survive a hop or a pause? | [Continuation](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) |
-| **Prove** | What was approved, decided, and executed? | [Consent Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html), [Runtime Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html), [Mandate](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html), [Audit](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) |
-| **Analyze** | What is trusted, and what breaks if it fails? | [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html), [Security Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) |
-
-Two of these are easy to conflate and the spine keeps them apart:
-**delegate** creates new subordinate authority (a Child Mission, an
-attenuated token); **project** honors authority that already exists
-in another trust domain, creating none. A document may live under
-more than one verb: Cross-Organizational Delegation both delegates
-(the attenuation chain narrows authority) and projects (a relying
-party in another organization honors it). This table headlines the
-main mechanisms; the full verb-to-document map is one step away, in
-the catalog.
-
-### 2. Choose a binding
-
-The binding decides where the Mission control point lives. The
-bindings are peers: no production Mission deployment is known
-today, OAuth brings the most deployed substrate infrastructure, and
-Missions on it still require the changes its binding defines.
-Maturity labels are document design maturity, never deployment
-history.
-
-| Binding | Use it when | The boundary to know |
-|---|---|---|
-| [**OAuth AS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) (the published Internet-Draft) | Your Authorization Server can issue Mission-bound tokens | Portable structured authority on the token; the issuance profile to its OAuth companions |
-| [**Standalone MAS**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) (Mission Authority Server) | Existing Authorization Servers cannot host Mission approval | Ordinary credentials are *joined* to Missions; high-consequence paths require Mission-bound issuance (the [Issuance Grant](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)) |
-| [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | AAuth's Person Server (the user-held control point) owns contextual governance | Native AAuth access semantics; authority expressed in AAuth's own access model |
-| [**UMA**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) / [**GNAP**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | Protocol research and evaluation | Experimental sketches, authored against the substrate contract |
-
-New bindings are authored against
-[Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
-and claim their capabilities through a Mission Substrate Statement.
-
-### 3. See the minimum package
-
-Each binding's minimum package is its adoption closure: itself plus
-every document the manifest's `adoption_requires` edges say it
-cannot be deployed without, generated here so the count can never
-drift from the manifest.
-
-<!-- generated:binding-packages:start -->
-
-| Binding | Minimum package |
-|---|---|
-| Mission-Bound Authorization for OAuth 2.0 | 1 document: itself alone |
-| Mission Authority Server | 4 documents: Mission Substrate Requirements + Mission-Bound Authorization for OAuth 2.0 + Mission Status and Lifecycle for OAuth 2.0 + Mission Authority Server |
-| Mission Context Binding for AAuth | 2 documents: Mission Substrate Requirements + Mission Context Binding for AAuth |
-| Mission-Bound Authorization for UMA 2.0 | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for UMA 2.0 |
-| Mission-Bound Authorization for GNAP | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for GNAP |
-
-<!-- generated:binding-packages:end -->
-
-This is adoption closure (what a binding is specified against), not
-deployment topology: the Standalone MAS package includes the OAuth
-binding's own text because its Statement cites it normatively, even
-though a MAS deployment runs no OAuth Authorization Server.
-Correcting an edge, if one turns out wrong, is a manifest question,
-not a README one.
-
-### 4. Go to the catalog
-
-Every optional capability, the manifest's groups, and the
-Architecture's assurance levels and reference stacks are
-[`DRAFTS.md`](DRAFTS.md), the complete document catalog (two
-easy-to-miss pieces worth an early look there: the work-product
-commitment model, results carry integrity, not only actions, in the
-OAuth binding's Integrity and Commitments section, and the swarm
-ladder, one agent to a fleet without new machinery, in the
-Architecture's scaling treatment). For the story told in prose
-rather than protocol, the
-**[Mission Handbook](https://notes.karlmcguinness.com/mission-handbook/)**
-is the published narrative companion: the why before the wire.
-
 ## Running code
 
 The reference implementation under [`src/`](src/) (a pnpm monorepo)
@@ -303,11 +314,6 @@ timelines. Maturity words (**stable**, **experimental**, **sketch**,
 with informational documents shown as **guide**) are this
 repository's own labels, not IETF statuses.
 
-- [`DRAFTS.md`](DRAFTS.md) — the complete document catalog (all 41)
-- [`DEPENDENCIES.md`](DEPENDENCIES.md) — dependency status, inside and outside the family
-- [`conformance-manifest.json`](conformance-manifest.json) — requirement-level conformance coverage
-- [`family-manifest.json`](family-manifest.json) — the exhaustive machine-readable inventory
-
 ## Repository use
 
 Drafts build with the IETF
@@ -323,8 +329,17 @@ Validation:
 ```sh
 node scripts/check-family-manifest.mjs        # inventory, catalog, metadata (chains the Statement check)
 node scripts/check-conformance-manifest.mjs   # requirement rows against the spec texts
-node scripts/generate-drafts-index.mjs --check # DRAFTS.md index and README's binding-packages block, freshness
+node scripts/generate-drafts-index.mjs --check # DRAFTS.md's index and reference-stacks blocks, and README's binding-packages block, freshness
 ```
+
+Operational references, not the catalog (that is one link, Find your
+path's step 4, to `DRAFTS.md`, and it is not repeated as a link
+here): [`DEPENDENCIES.md`](DEPENDENCIES.md) (dependency status,
+inside and outside the family), [`conformance-manifest.json`](conformance-manifest.json)
+(requirement-level conformance coverage), and
+[`family-manifest.json`](family-manifest.json) (the exhaustive
+machine-readable inventory this page, `DRAFTS.md`'s generated
+tables, and the conformance ledger are all built from).
 
 Each manifest entry carries `verbs` (the spine position), a
 one-sentence `summary`, a `pull_when` adoption trigger, `maturity`,
@@ -341,16 +356,19 @@ freshness source modeled as explicit alternatives; the transcription
 is structurally validated in CI (fidelity to the Architecture's
 prose is an editorial obligation) and provisional until v0 proper
 passes its publication gate, and the Architecture's five *packages*,
-its own orthogonal decomposition, are not restated here.
-The checker validates the structure of all of it, regenerates
-nothing silently (the DRAFTS.md index and this README's Find-your-path
-"Minimum package" table are checked for freshness, never rewritten in
-CI), and holds this README to four rules: it links the catalog and
-dependency reports, every backticked draft token is a real manifest
-slug, every editor's-copy link targets one, and the generated
-binding-packages table matches what `BINDING_SLUGS` (the Mission
-Substrate Statement registry) and each binding's `adoption_requires`
-closure compute.
+its own orthogonal decomposition, are not restated anywhere in this
+repository.
+
+The checker regenerates nothing silently: DRAFTS.md's index and
+reference-stacks blocks, and this README's Find-your-path "Minimum
+package" table, are all checked for freshness against the manifest,
+never rewritten in CI. It holds this README to four rules: it links
+the catalog and dependency reports, every backticked draft token is
+a real manifest slug, every editor's-copy link targets one, and the
+generated binding-packages table matches what `BINDING_SLUGS` (the
+Mission Substrate Statement registry) and each binding's
+`adoption_requires` closure compute. DRAFTS.md's own two generated
+blocks are held to the matching freshness rule.
 
 Contributions: see [`CONTRIBUTING.md`](CONTRIBUTING.md);
 substantive design changes go issue-first.

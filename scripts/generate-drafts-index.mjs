@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// Generates two marker-delimited blocks from family-manifest.json: DRAFTS.md's
-// index table, and README.md's per-binding minimum-package table (#709: verbs
-// are the README's public front door, and the minimum document package a
-// reader sees after choosing a binding is generated so its counts cannot
-// drift from the manifest). Everything outside a file's markers is
-// hand-authored and never touched here.
+// Generates three marker-delimited blocks from family-manifest.json:
+// DRAFTS.md's document index, DRAFTS.md's reference-stacks (assurance-level)
+// table, and README.md's per-binding minimum-package table (#709: verbs are
+// the README's public front door, one link out to a catalog that itself
+// exposes the family's other adoption axes as generated, not hand-typed,
+// content). Everything outside a file's markers is hand-authored and never
+// touched here.
 //
 // Usage:
-//   node scripts/generate-drafts-index.mjs           rewrite both blocks in place
-//   node scripts/generate-drafts-index.mjs --check   exit 1 if either block is stale
+//   node scripts/generate-drafts-index.mjs           rewrite all three blocks in place
+//   node scripts/generate-drafts-index.mjs --check   exit 1 if any block is stale
 //
 // Dependency-free (Node core only). scripts/check-family-manifest.mjs chains
 // --check, so a stale block fails the family-manifest CI step.
@@ -30,6 +31,27 @@ export const END_MARKER = "<!-- generated:drafts-index:end -->";
 
 export const BINDING_PACKAGES_START = "<!-- generated:binding-packages:start -->";
 export const BINDING_PACKAGES_END = "<!-- generated:binding-packages:end -->";
+
+export const REFERENCE_STACKS_START = "<!-- generated:reference-stacks:start -->";
+export const REFERENCE_STACKS_END = "<!-- generated:reference-stacks:end -->";
+
+// DRAFTS.md's group section titles, in manifest `groups` order: the single
+// source of truth for both the generated index's "Group" column (below) and
+// scripts/check-family-manifest.mjs's check (o), which uses this same map to
+// find each group's "###" section in DRAFTS.md. One map, so a renamed section
+// cannot go stale in one file while the other still expects the old title.
+export const GROUP_SECTION_TITLES = {
+  "architecture": "Architecture",
+  "approval-time": "Approval time",
+  "lifecycle": "Lifecycle",
+  "runtime-enforcement": "Runtime enforcement",
+  "bindings-substrate": "The substrate and the bindings",
+  "agent-runtime": "Agent runtime",
+  "sub-agents": "Sub-agents",
+  "cross-domain-projection": "Cross-domain projection",
+  "proof-portability": "Proof and portability",
+  "security-model": "Security model",
+};
 
 // The family's peer bindings, in the README's display order: every manifest
 // slug that has published a Mission Substrate Statement capability table
@@ -67,19 +89,23 @@ export function escapeCell(value) {
   return String(value).replace(/\|/g, "\\|").replace(/\s*\r?\n\s*/g, " ");
 }
 
-// The generated block, markers included, in manifest order.
+// The generated block, markers included, in manifest order. The Group column
+// (#709 review, P2) is the same axis DRAFTS.md's "###" sections already
+// organize the prose catalog by, rendered here as data so the grouping shows
+// up in the generated table too, not only as an implicit heading structure.
 export function renderIndex(manifest) {
   const lines = [
     START_MARKER,
     "",
-    "| Document | Maturity | Verbs | Summary | Pull this in when |",
-    "|---|---|---|---|---|",
+    "| Document | Maturity | Verbs | Group | Summary | Pull this in when |",
+    "|---|---|---|---|---|---|",
   ];
   for (const d of manifest.drafts) {
     const maturity = maturityDisplay(d.maturity) ?? d.maturity;
     const verbs = (d.verbs || []).join(", ");
+    const group = GROUP_SECTION_TITLES[d.group] ?? d.group;
     lines.push(
-      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${maturity} | ${verbs} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} |`
+      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${maturity} | ${verbs} | ${escapeCell(group)} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} |`
     );
   }
   lines.push("", END_MARKER);
@@ -138,6 +164,84 @@ export function validateDraftsIndex(root = ROOT) {
   if (expected !== text) {
     return [
       "DRAFTS.md's generated index block is stale; run `node scripts/generate-drafts-index.mjs` to regenerate it",
+    ];
+  }
+  return [];
+}
+
+// Cumulative document set for a reference stack: its own `binding` or its
+// contained stack's cumulative set, plus its own `adds`, deduplicated in
+// order. Mirrors the manifest's own cumulative design
+// (scripts/check-family-manifest.mjs's check (g) validates the `contains`
+// chain has exactly one root and no cycle, which this relies on).
+function stackDocuments(manifest, stackName) {
+  const stack = manifest.reference_stacks[stackName];
+  const inherited = stack.contains ? stackDocuments(manifest, stack.contains) : [stack.binding];
+  return [...new Set([...inherited, ...(stack.adds || [])])];
+}
+
+// The generated block, markers included: the Architecture's four cumulative
+// reference stacks (#709 review, P2: the ruling's "assurance levels" axis),
+// each as a level name, its cumulative document list, and its summary,
+// generated from the manifest's `reference_stacks` object so the catalog
+// carries this axis as data rather than the README restating it in prose.
+export function renderReferenceStacks(manifest) {
+  const bySlug = new Map(manifest.drafts.map((d) => [d.slug, d]));
+  const stackNames = Object.keys(manifest.reference_stacks).filter((k) => !k.startsWith("$"));
+  const lines = [
+    REFERENCE_STACKS_START,
+    "",
+    "| Level | Cumulative documents | Summary |",
+    "|---|---|---|",
+  ];
+  for (const name of stackNames) {
+    const stack = manifest.reference_stacks[name];
+    const docs = stackDocuments(manifest, name);
+    const titles = docs.map((s) => escapeCell(bySlug.get(s).title)).join(" + ");
+    lines.push(`| ${escapeCell(stack.level)} | ${docs.length} document${docs.length === 1 ? "" : "s"}: ${titles} | ${escapeCell(stack.summary)} |`);
+  }
+  lines.push("", REFERENCE_STACKS_END);
+  return lines.join("\n");
+}
+
+// Splices a freshly rendered reference-stacks block into DRAFTS.md's text.
+export function spliceReferenceStacks(text, block) {
+  return spliceMarkedBlock(text, block, REFERENCE_STACKS_START, REFERENCE_STACKS_END, "DRAFTS.md");
+}
+
+// Returns [] when DRAFTS.md's generated reference-stacks block matches what
+// the manifest would produce, or a one-entry findings array when it does
+// not. Never writes.
+export function validateReferenceStacks(root = ROOT) {
+  const manifestPath = path.join(root, "family-manifest.json");
+  const draftsPath = path.join(root, "DRAFTS.md");
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch (e) {
+    return [`cannot read family-manifest.json: ${e.message}`];
+  }
+  let text;
+  try {
+    text = fs.readFileSync(draftsPath, "utf8");
+  } catch (e) {
+    return [`cannot read DRAFTS.md: ${e.message}`];
+  }
+  let block;
+  try {
+    block = renderReferenceStacks(manifest);
+  } catch (e) {
+    return [e.message];
+  }
+  let expected;
+  try {
+    expected = spliceReferenceStacks(text, block);
+  } catch (e) {
+    return [e.message];
+  }
+  if (expected !== text) {
+    return [
+      "DRAFTS.md's generated reference-stacks block is stale; run `node scripts/generate-drafts-index.mjs` to regenerate it",
     ];
   }
   return [];
@@ -246,25 +350,36 @@ export function validateBindingPackages(root = ROOT) {
 function main() {
   const check = process.argv.includes("--check");
   if (check) {
-    const findings = [...validateDraftsIndex(ROOT), ...validateBindingPackages(ROOT)];
+    const findings = [...validateDraftsIndex(ROOT), ...validateReferenceStacks(ROOT), ...validateBindingPackages(ROOT)];
     if (findings.length > 0) {
       for (const f of findings) console.error(`drafts-index check FAILED: ${f}`);
       process.exit(1);
     }
-    console.log("drafts-index check OK: DRAFTS.md's and README.md's generated blocks are current.");
+    console.log("drafts-index check OK: DRAFTS.md's index and reference-stacks blocks, and README.md's binding-packages block, are current.");
     process.exit(0);
   }
 
   const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, "utf8"));
 
-  const draftsText = fs.readFileSync(DRAFTS_PATH, "utf8");
-  const updatedDrafts = spliceIndex(draftsText, renderIndex(manifest));
-  if (updatedDrafts === draftsText) {
-    console.log(`drafts-index: DRAFTS.md already current (${manifest.drafts.length} rows).`);
+  let draftsText = fs.readFileSync(DRAFTS_PATH, "utf8");
+  const updatedIndex = spliceIndex(draftsText, renderIndex(manifest));
+  if (updatedIndex === draftsText) {
+    console.log(`drafts-index: DRAFTS.md's index already current (${manifest.drafts.length} rows).`);
   } else {
-    fs.writeFileSync(DRAFTS_PATH, updatedDrafts);
-    console.log(`drafts-index: rewrote DRAFTS.md's generated block (${manifest.drafts.length} rows).`);
+    draftsText = updatedIndex;
+    console.log(`drafts-index: rewrote DRAFTS.md's index block (${manifest.drafts.length} rows).`);
   }
+
+  const stackCount = Object.keys(manifest.reference_stacks).filter((k) => !k.startsWith("$")).length;
+  const updatedStacks = spliceReferenceStacks(draftsText, renderReferenceStacks(manifest));
+  if (updatedStacks === draftsText) {
+    console.log(`drafts-index: DRAFTS.md's reference-stacks block already current (${stackCount} stacks).`);
+  } else {
+    draftsText = updatedStacks;
+    console.log(`drafts-index: rewrote DRAFTS.md's reference-stacks block (${stackCount} stacks).`);
+  }
+
+  fs.writeFileSync(DRAFTS_PATH, draftsText);
 
   const readmeText = fs.readFileSync(README_PATH, "utf8");
   const updatedReadme = spliceBindingPackages(readmeText, renderBindingPackages(manifest));
