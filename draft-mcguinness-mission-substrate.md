@@ -1221,7 +1221,7 @@ reference to it; no change is ever made solely to move words.
 
 ## OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-oauth-digest: 5eaf4a16d279b899 -->
+<!-- assessed-oauth-digest: 97b1343168720b37 -->
 
 This section is this document's Mapping Assessment of the OAuth
 Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published
@@ -1303,7 +1303,7 @@ The capability table:
 | --- | --- | --- | --- | --- |
 | Lifecycle-Gated Authorization | supplied | always | State-gated issuance and every derivation gate | Outstanding credentials run to their own `exp`; the residual is bounded, not zero |
 | State-Observable | supplied | Status, introspection, or Signals companion active | Those surfaces | Staleness bounded by each surface's declared freshness |
-| Structured Authority | supplied | always | `authorization_details` with registered types and the Common Constraints | Semantics exist per registered type, not universally |
+| Structured Authority | supplied | always | `authorization_details` of AS-supported types, each type's own specification defining semantics (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints) | Semantics exist per supported type, not universally |
 | Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
 | Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
 | Authorized Context Correlation | supplied | the Delegation role active ({{I-D.draft-mcguinness-oauth-mission}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |

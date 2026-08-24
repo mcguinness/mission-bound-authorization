@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 41,
+ "count": 42,
  "drafts": [
   {
    "file": "draft-mcguinness-aauth-mission-expiry.md",
@@ -268,6 +268,7 @@
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-transaction-authorization",
@@ -1797,6 +1798,30 @@
    ]
   },
   {
+   "file": "draft-mcguinness-oauth-mission-resource-access.md",
+   "slug": "draft-mcguinness-oauth-mission-resource-access",
+   "title": "Mission Resource Access Profile for OAuth 2.0",
+   "category": "std",
+   "maturity": "stable",
+   "maintenance": "active",
+   "group": "bindings-substrate",
+   "verbs": [
+    "approve"
+   ],
+   "summary": "Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration.",
+   "pull_when": "The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain"
+   ]
+  },
+  {
    "file": "draft-mcguinness-oauth-mission-signals.md",
    "slug": "draft-mcguinness-oauth-mission-signals",
    "title": "Mission Lifecycle Signals for OAuth 2.0",
@@ -1973,6 +1998,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-template",

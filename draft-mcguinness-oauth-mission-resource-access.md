@@ -123,6 +123,21 @@ scope-projection rule and issuance algorithm. This document supplies
 intersection algebra, its scope-projection safety conditions, and its
 declaration under the issuance profile's transformation-capability map.
 
+# Status: A General-Purpose Type {#status}
+
+This document defines one `authorization_details` type a deployment of
+the issuance profile {{I-D.draft-mcguinness-oauth-mission}} MAY
+support; the issuance profile is complete, and type-agnostic, without
+it. A deployment adopts this document when it has no reason to define
+its own audience-specific type and wants `mission_resource_access`'s
+resource, action, constraint, and delegation vocabulary instead.
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Maturity: stable. Maintenance: active.
+Adopt when: The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.
+Requires: Mission-Bound Authorization for OAuth 2.0.
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
