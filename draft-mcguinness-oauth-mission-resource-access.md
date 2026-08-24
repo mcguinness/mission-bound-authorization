@@ -29,6 +29,7 @@ author:
 normative:
   RFC3339:
   RFC3986:
+  RFC6750:
   RFC8259:
   RFC8693:
   RFC8707:
@@ -215,12 +216,12 @@ a general-purpose, cross-resource authorization language. An entry is a
 
   - Because a `constraints` member narrows authority, a Resource Server
     that cannot enforce one MUST fail closed
-    ({{I-D.draft-mcguinness-oauth-mission}}).
+    ({{rs-enforcement}}).
   - To avoid that failure mode, the AS SHOULD emit for a given
     `resource` only `constraints` keys that the Resource Server serving
     it is known (by registration, deployment policy, or the resource's
     advertised `mission_constraints_supported`
-    ({{I-D.draft-mcguinness-oauth-mission}})) to understand and enforce.
+    ({{protected-resource-metadata}})) to understand and enforce.
 
 `delegation`:
 : OPTIONAL. An object. The delegation policy for this
@@ -476,7 +477,7 @@ rather than attempt to parse it: an authority proposal carrying
 one is refused at submission ({{I-D.draft-mcguinness-oauth-mission}}), and a
 Resource Server treats a malformed
 decimal value the same as a `constraints` key it cannot enforce
-({{I-D.draft-mcguinness-oauth-mission}}). Comparison and intersection over two such
+({{rs-enforcement}}). Comparison and intersection over two such
 decimal-string values MUST be computed as exact decimal arithmetic
 (for example, by scaling both values to integers by their fractional
 digit count and comparing the integers) and MUST NOT parse either
@@ -490,6 +491,50 @@ construction: `max_amount` carries its `amount` as a string containing
 a decimal number, paired with an ISO 4217 {{ISO4217}} `currency` code, and a
 future Common Constraint for a monetary value SHOULD reuse this shape
 rather than a JSON number.
+
+## Resource Server Enforcement {#rs-enforcement}
+
+{{I-D.draft-mcguinness-oauth-mission}} requires a Resource Server to
+enforce each applicable `authorization_details` entry according to
+that entry's own type specification, and to fail closed on an entry
+whose type it does not implement or cannot fully evaluate. This
+section states that specification for a `mission_resource_access`
+entry. A Resource Server:
+
+- MUST enforce an entry whose `resource` (under `resource_match`,
+  {{resource-access-type}}) matches the request, permitting only the
+  listed `actions` subject to `constraints`. Where more than one
+  applicable entry matches, entries are alternative grants of
+  authority, not conjunctive filters.
+- MUST treat an entry's `resource_match` value it does not recognize
+  as unenforceable and fail closed ({{resource-access-type}}).
+- MUST, when it matches a concrete request URI against a `prefix`
+  entry, apply the RFC 3986 {{RFC3986}} normalization {{subset}}
+  defines for containment, before the prefix comparison rather than
+  after, per the Resource Boundary Canonicalization analysis
+  ({{resource-boundary-canonicalization}}).
+- MUST fail closed on any `constraints` key it does not understand,
+  or understands but cannot enforce, in an applicable entry: refuse
+  the request (for example, a `403` with `insufficient_scope`
+  {{RFC6750}}, or the deployment's usual insufficient-authority
+  error) rather than grant access while ignoring the key.
+- MUST NOT reduce a `constraints` key to disclosure-only: an
+  unenforced key that narrows authority silently widens the grant if
+  treated as absent or advisory.
+
+## Protected Resource Metadata {#protected-resource-metadata}
+
+A protected resource MAY advertise, in its protected resource
+metadata {{RFC9728}}:
+
+`mission_constraints_supported`:
+: OPTIONAL. An array of strings: the `constraints` keys (Common
+  Constraints and deployment-defined names) the resource understands
+  and enforces ({{rs-enforcement}}). It gives the AS's duty to emit
+  only keys the serving resource is known to understand
+  ({{resource-access-type}}) a discovery surface, and lets a client
+  predict a fail-closed constraint mismatch before making the
+  request. When absent, that knowledge is established out of band.
 
 ## Delegate Eligibility {#delegate-eligibility}
 
@@ -703,27 +748,43 @@ rather than introduce a new entry type.
 
 # Conformance {#conformance}
 
-An implementation conforms to this document by supporting
+An implementation conforms to this document in one of two roles.
+
+An **Authorization Server** conforms by supporting
 `mission_resource_access` as one of the `authorization_details` types
-{{I-D.draft-mcguinness-oauth-mission}} names in its approved set. A
-conforming Authorization Server or Resource Server implements:
+{{I-D.draft-mcguinness-oauth-mission}} names in its approved set, and
+implements:
 
-- the type definition ({{resource-access-type}});
-- the subset and intersection algebra ({{subset}}, {{common-constraints}});
-- the delegate eligibility test ({{delegate-eligibility}}), where it
-  claims the issuance profile's Delegation capability; and
+- schema validation of a proposed or carried entry against the type
+  definition ({{resource-access-type}}); and
 - the Transformation Capabilities declaration
-  ({{transformation-capabilities}}).
+  ({{transformation-capabilities}}), stating which of narrowing,
+  delegation, and projection it claims for this type.
 
-An Authorization Server MAY additionally claim the Scope Projection
-capability: establishing, per entry and per target, the safety
-conditions of {{scope-projection}} before emitting `scope`. An
-implementation that does not claim it MUST NOT emit `scope` for a
-`mission_resource_access` entry under
-{{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, and
-instead omits `scope` or refuses issuance to a scope-only target,
-exactly as that document requires for any type without a declared
-projection.
+Beyond that floor, an Authorization Server implements, for each
+capability it declares as `true`:
+
+- **narrowing**: the subset and intersection algebra
+  ({{subset}}, {{common-constraints}});
+- **delegation**: the delegate eligibility test
+  ({{delegate-eligibility}}); and
+- **projection**: the three per-entry, per-target safety conditions
+  of {{scope-projection}} before emitting `scope`. An Authorization
+  Server that does not claim `projection` MUST NOT emit `scope` for a
+  `mission_resource_access` entry under
+  {{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, and
+  instead omits `scope` or refuses issuance to a scope-only target,
+  exactly as that document requires for any type without a declared
+  projection.
+
+A **Resource Server** conforms by implementing the enforcement duties
+of {{rs-enforcement}}: exact or prefix resource matching, action and
+action-family matching, and every carried `constraints` key, failing
+closed on a member, matching mode, or key it does not implement. A
+Resource Server does not implement narrowing, delegate eligibility,
+or the Transformation Capabilities declaration; those are the
+Authorization Server's, and their presence or absence does not bear
+on a Resource Server's conformance.
 
 # Security Considerations {#security-considerations}
 
@@ -757,7 +818,7 @@ specific to this type:
 A `prefix` entry ({{resource-access-type}}) draws an authority
 boundary in URI space. The AS's containment test ({{subset}}) and the
 Resource Server's request matching
-({{I-D.draft-mcguinness-oauth-mission}}) MUST apply the single RFC
+({{rs-enforcement}}) MUST apply the single RFC
 3986 {{RFC3986}} normalization defined in {{subset}}, so issuance and
 enforcement draw the same boundary. A matcher that normalizes
 differently from the party that derived the entry can admit a request
@@ -838,6 +899,17 @@ registry entry for it and requires no IANA action here. If a registry
 of authorization details types is established in the future, this type
 SHOULD be registered in it.
 
+## OAuth Protected Resource Metadata Registration {#oauth-protected-resource-metadata-registration}
+
+This document registers the following in the "OAuth Protected
+Resource Metadata" registry ({{RFC9728}}):
+
+- Metadata Name: `mission_constraints_supported`
+- Metadata Description: JSON array of the `constraints` keys the
+  protected resource understands and enforces.
+- Change Controller: IESG
+- Specification Document(s): this document, {{protected-resource-metadata}}
+
 ## Common Constraints Registry {#iana-common-constraints}
 
 This document establishes the "Mission Common Constraints" registry.
@@ -895,6 +967,18 @@ registry.
 
 -00
 
+- Review response (#637): relocated the Resource Server enforcement
+  duties (exact/prefix resource matching, action matching,
+  per-entry `constraints` enforcement) and the
+  `mission_constraints_supported` protected-resource metadata member
+  (definition and IANA registration) from the issuance profile, which
+  had continued to interpret this type's members directly in its
+  generic Resource Server contract. Split the Conformance section by
+  role (Authorization Server vs. Resource Server) so an RS is not
+  measured against issuer-only duties (subset/intersection, delegate
+  eligibility, Transformation Capabilities declaration) it has no
+  reason to implement. Adds this document's conformance-manifest
+  source pin and its own requirement rows.
 - Initial version: `mission_resource_access`, its resource and action
   matching, generic constraints, the Common Constraints registry, the
   delegation policy and delegate-matching rules, the subset and
