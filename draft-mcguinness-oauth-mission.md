@@ -2883,33 +2883,20 @@ standing as the claims source under these same rules
 - MUST validate the JWT per {{RFC9068}} and verify any
   sender-constraint binding (`cnf`).
 - MUST treat `authorization_details` as the authoritative expression
-  of authority and enforce the entries whose `resource` it serves,
-  permitting only the listed `actions` subject to `constraints`.
-  Where more than one carried entry names a `resource` it serves, a
-  request is permitted if at least one carried entry permits it:
-  entries are alternative grants of authority, not conjunctive
-  filters.
-- MUST, when it matches a concrete request URI against a `prefix`
-  entry ({{authorization-derivation}}), apply the same RFC 3986
-  {{RFC3986}} syntax-based normalization the AS uses for containment
-  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and MUST
-  apply it before the prefix comparison rather
-  than after. That normalization decodes only unreserved octets, so
-  reserved octets stay encoded: an encoded slash (`%2F`, equivalently
-  `%2f` since percent-encoding is hex-case-insensitive) remains
-  encoded and MUST NOT be treated as a path-segment separator when
-  matching. An intermediary that percent-decodes `%2F`, or a
-  downstream component that decodes and removes dot-segments after
-  the Resource Server's check (for example collapsing a decoded
-  `%2e%2e`), moves the enforced boundary, so a deployment MUST
-  prevent such rewriting or account for it in what it authorizes.
-- MUST fail closed on any `constraints` key it does not understand, or
-  understands but cannot enforce, in an entry whose `resource` it
-  serves: it MUST refuse the request (for example, a `403` with
+  of authority and enforce each applicable entry according to that
+  entry's own type specification (for `mission_resource_access`,
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Where more
+  than one carried entry applies, entries are alternative grants of
+  authority, not conjunctive filters, unless the entry's type states
+  otherwise.
+- MUST fail closed (refuse the request, for example a `403` with
   `insufficient_scope` {{RFC6750}}, or the deployment's usual
-  insufficient-authority error) rather than grant access while ignoring
-  the key.
-- MUST NOT reduce a constraint to disclosure-only.
+  insufficient-authority error) on any applicable entry whose type it
+  does not implement, or whose type-defined enforcement it cannot
+  complete (an unrecognized member, an unenforceable constraint, or an
+  unrecognized matching mode), rather than grant access on the
+  strength of an entry it cannot fully evaluate.
+- MUST NOT reduce any type-defined constraint to disclosure-only.
 - MUST NOT, when a token also carries `scope`, grant on the basis of a
   scope value any access broader than the corresponding
   `authorization_details` entry permits; in particular, `scope` MUST
@@ -2977,10 +2964,11 @@ requirement, Mission-aware; a deployment that delegates routes
 delegated Mission-bound traffic only to a Resource Server it knows to
 be Mission-aware in this sense.
 
-A `constraints` member narrows authority, so treating an
-unenforceable key as absent, or reducing it to disclosure-only, would
-silently widen the grant; that is why an unrecognized or
-unenforceable key fails closed. A Resource Server that holds only a
+A type-defined constraint narrows authority, so treating an
+unenforceable key or member as absent, or reducing it to
+disclosure-only, would silently widen the grant; that is why an
+entry whose type-defined enforcement a Resource Server cannot
+complete fails closed. A Resource Server that holds only a
 narrowed token MUST treat `mission.authority_hash` as an audit
 correlator, not an enforcement input, and MUST NOT treat it as a
 cryptographic proof that the carried entries are a subset of the
@@ -3037,8 +3025,8 @@ Server SHOULD therefore state which path it denies into, using the
   not meet the resource's requirements: a step-up, not a widening.
 
 `constraint_unrecognized`:
-: An applicable entry carries a `constraints` key the RS cannot
-  enforce, and the request fails closed.
+: An applicable entry carries a type-defined member or constraint
+  the RS cannot enforce, and the request fails closed.
 
 A value the client does not recognize is treated as
 `insufficient_authority`. The attribute's disclosure considerations
@@ -3607,11 +3595,13 @@ delegate: it re-scopes the agent's own authority downward.
 ## Delegation Constraints {#delegation-constraints}
 
 What may be delegated, how far, and to whom is governed per
-Authority Set entry by the entry's optional `delegation` member
-({{authorization-derivation}}). Because the policy lives in the
-entry, it is committed by `authority_hash` with the rest of the
-Authority Set and travels with the entries wherever they are carried,
-including across a cross-domain projection
+Authority Set entry by a type-defined delegation policy
+({{other-types}}) (for `mission_resource_access`, the `delegation`
+member, {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+Because the policy lives in the entry, it is committed by
+`authority_hash` with the rest of the Authority Set and travels with
+the entries wherever they are carried, including across a
+cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), needing no
 separate mechanism.
 
@@ -3958,14 +3948,10 @@ A protected resource MAY advertise, in its protected resource metadata
   ({{mission-claim}}) is rejected ({{rs-enforcement}}). When absent or
   `false`, the resource makes no such requirement.
 
-`mission_constraints_supported`:
-: OPTIONAL. An array of strings: the `constraints` keys (Common
-  Constraints and deployment-defined names) the resource understands
-  and enforces ({{rs-enforcement}}). It gives the AS's duty to emit
-  only keys the serving resource is known to understand
-  ({{authorization-derivation}}) a discovery surface, and lets a
-  client predict a fail-closed constraint mismatch before making the
-  request. When absent, that knowledge is established out of band.
+A type-defined `authorization_details` member may define its own
+constraint-discovery surface; `mission_resource_access`'s is defined
+by the Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 # Conformance {#conformance}
 
@@ -4831,12 +4817,6 @@ Metadata" registry ({{RFC9728}}):
 - Metadata Name: `mission_bound_authorization_required`
 - Metadata Description: Boolean indicating that the protected resource
   accepts only Mission-bound tokens.
-- Change Controller: IESG
-- Specification Document(s): this document, {{protected-resource-metadata}}
-
-- Metadata Name: `mission_constraints_supported`
-- Metadata Description: JSON array of the `constraints` keys the
-  protected resource understands and enforces.
 - Change Controller: IESG
 - Specification Document(s): this document, {{protected-resource-metadata}}
 
