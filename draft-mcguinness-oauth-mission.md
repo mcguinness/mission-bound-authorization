@@ -2085,13 +2085,14 @@ to computing an anchor and to comparing committed values:
   element sorting, so array order is significant. The AS MUST emit
   each array in a fixed, reproducible order; that order is part of
   the canonical form.
-- URI-valued members are compared byte-for-byte unless a member's
-  definition specifies a normalization. The only normalization this
-  document defines is the RFC 3986 {{RFC3986}} comparison of the
-  resource-containment test ({{subset}}), which applies to that
-  comparison alone: the default `resource` equality test of {{subset}}
-  remains an exact match, and anchor computation is always byte-exact
-  over the recorded values.
+- URI-valued members are compared byte-for-byte unless a member's own
+  type definition specifies a normalization; this document defines no
+  such normalization itself. Where a type defines one, as
+  `mission_resource_access` does for its `prefix`-match resource
+  containment test ({{I-D.draft-mcguinness-oauth-mission-resource-access}}),
+  it applies to that comparison alone: the default `resource` equality
+  test remains an exact match, and anchor computation is always
+  byte-exact over the recorded values regardless.
 
 Test vectors for the anchors are provided in {{test-vectors}}.
 
@@ -2891,7 +2892,8 @@ standing as the claims source under these same rules
 - MUST, when it matches a concrete request URI against a `prefix`
   entry ({{authorization-derivation}}), apply the same RFC 3986
   {{RFC3986}} syntax-based normalization the AS uses for containment
-  ({{subset}}), and MUST apply it before the prefix comparison rather
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and MUST
+  apply it before the prefix comparison rather
   than after. That normalization decodes only unreserved octets, so
   reserved octets stay encoded: an encoded slash (`%2F`, equivalently
   `%2f` since percent-encoding is hex-case-insensitive) remains
@@ -4331,73 +4333,11 @@ narrow authority bound, but do not eliminate, this exposure.
 
 Where
 the Resource Server or a composing runtime layer matches a concrete
-request URI against a `prefix` entry, the single-normalization rule
-of {{resource-boundary-canonicalization}} binds that match the same
-way.
-
-### Resource Boundary Canonicalization {#resource-boundary-canonicalization}
-
-A `prefix` entry ({{authorization-derivation}}) draws an authority
-boundary in URI space. The AS's containment test ({{subset}}) and the
-Resource Server's request matching ({{rs-enforcement}}) MUST apply the
-single RFC 3986 {{RFC3986}} normalization defined in {{subset}}, so
-issuance and enforcement draw the same boundary. A matcher that
-normalizes differently from the party that derived the entry can admit
-a request the Approver never authorized, or deny one it did.
-
-The
-normalization MUST run before the prefix comparison, never after, and
-the boundary MUST be evaluated on the same normalized form a
-downstream component will act on. The following vectors each turn on
-such a difference:
-
-- **Encoded slash (`%2F`).** A reserved octet, left encoded by this
-  normalization (which decodes only unreserved octets) and never a
-  path-segment separator when matching. An intermediary that decodes
-  it before the Resource Server enforces shifts the boundary; a
-  deployment MUST prevent that rewriting or account for it.
-- **Encoded dot (`%2e`, `%2e%2e`).** The `.` octet is unreserved, so
-  this normalization decodes it and then removes dot-segments. The
-  hazard is order: normalizing before the comparison collapses a
-  decoded `%2e%2e` out of the path and draws the boundary correctly,
-  while matching the raw string first and letting a downstream
-  component decode and collapse afterward can escape the prefix.
-- **Double or empty path segments.** An empty path and `/` denote the
-  same base ({{authorization-derivation}}); a matcher MUST NOT coalesce
-  `//` or trailing-slash differences of its own, since the {{subset}}
-  normalization does not.
-- **Default-port presence.** `https://a.example:443` and
-  `https://a.example` are one authority only after the default-port
-  removal {{subset}} performs; a matcher that skips it splits one
-  boundary into two.
-- **Unicode and IDNA host.** The {{subset}} normalization lowercases
-  the host but does not define Unicode to A-label (IDNA) conversion, so
-  a deployment that accepts non-ASCII hosts MUST ensure both sides
-  compare the same form.
-- **Percent-decoding order.** This normalization decodes only
-  unreserved octets and runs before comparison; decoding reserved
-  octets, or decoding after the comparison, changes which characters
-  count as separators and can move the boundary.
-
-These vectors make the rule concrete. For a `prefix` entry whose
-`resource` is `https://api.example/orders`, a concrete request URI
-matches as follows:
-
-| Request URI | Result | Why |
-| --- | --- | --- |
-| `https://api.example/orders` | ALLOW | The base itself |
-| `https://api.example/orders/123` | ALLOW | An extension at a path-segment boundary |
-| `https://API.EXAMPLE/orders/123` | ALLOW | Scheme and host are case-folded |
-| `https://api.example:443/orders/123` | ALLOW | The default port is removed |
-| `https://api.example/Orders/123` | DENY | The path is case-sensitive: `Orders` is not `orders` |
-| `https://api.example/orders%2F123` (equivalently `%2f`) | DENY | Hex digits normalize to `%2F`, which stays encoded and is not a separator: one segment `orders%2F123`, not an extension of `/orders` |
-| `https://api.example/ordersX` | DENY | The match extends only at a path-segment boundary, not within a segment |
-| `https://api.example/orders/%2e%2e/admin` | DENY | `%2e%2e` decodes to `..` and the dot-segment is removed, yielding `https://api.example/admin`, outside the prefix |
-{: title="Prefix matching for https://api.example/orders"}
-
-A deployment MAY agree out of band on the canonicalization profile its
-AS and Resource Servers apply; this document defines one rule
-({{subset}}), so no profile identifier is required for interoperation.
+request URI against a `prefix` entry, the single-normalization rule of
+the Mission Resource Access Profile's Resource Boundary
+Canonicalization analysis
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}) binds that
+match the same way, for a deployment that supports that type.
 
 ### Denial Detail Disclosure {#denial-disclosure}
 
@@ -5392,8 +5332,9 @@ resolve before interoperating.
 - Mission Resource Access Profile split (#637, #645, #698): the
   `mission_resource_access` type definition, its resource and action
   matching, generic constraints, the Common Constraints registry, the
-  delegation member and matching rules, and the subset and
-  intersection algebra relocated to the Mission Resource Access
+  delegation member and matching rules, the subset and
+  intersection algebra, and the Resource Boundary Canonicalization
+  security analysis relocated to the Mission Resource Access
   Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}});
   this document keeps type-agnostic commitment, the approved-set
   metadata requirement, and derivation gating
@@ -5424,7 +5365,8 @@ resolve before interoperating.
   home ({{mission-bound-tokens}} and {{rs-enforcement}} for
   `client_id`'s registered meaning, {{submission-via-par}} for the
   submission trust rule, {{introspection}} for the RFC 7662
-  deviation, {{resource-boundary-canonicalization}} for the
+  deviation, the (since relocated) Resource Boundary Canonicalization
+  section for the
   single-normalization rule, {{lifecycle}} for short-lifetime
   guidance). The rejected `client_id`-freezing narrative compressed
   to its design rationale; spec-archaeology sentences removed in
