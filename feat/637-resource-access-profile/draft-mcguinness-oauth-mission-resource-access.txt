@@ -77,21 +77,22 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Terminology
-   3.  The Mission Resource Access Type
-     3.1.  Subset Rule
-     3.2.  Common Constraints
-     3.3.  Delegate Eligibility
-     3.4.  Scope Projection
-     3.5.  Transformation Capabilities
-     3.6.  Modeling Tools and Function Calls
-   4.  Conformance
-   5.  Security Considerations
-   6.  Privacy Considerations
-   7.  IANA Considerations
-     7.1.  The Mission Resource Access Authorization Details Type
-     7.2.  Common Constraints Registry
-   8.  Document History
+   2.  Status: A General-Purpose Type
+   3.  Conventions and Terminology
+   4.  The Mission Resource Access Type
+     4.1.  Subset Rule
+     4.2.  Common Constraints
+     4.3.  Delegate Eligibility
+     4.4.  Scope Projection
+     4.5.  Transformation Capabilities
+     4.6.  Modeling Tools and Function Calls
+   5.  Conformance
+   6.  Security Considerations
+   7.  Privacy Considerations
+   8.  IANA Considerations
+     8.1.  The Mission Resource Access Authorization Details Type
+     8.2.  Common Constraints Registry
+   9.  Document History
    Acknowledgments
    References
      Normative References
@@ -133,7 +134,23 @@ Table of Contents
    safety conditions, and its declaration under the issuance profile's
    transformation-capability map.
 
-2.  Conventions and Terminology
+2.  Status: A General-Purpose Type
+
+   This document defines one authorization_details type a deployment of
+   the issuance profile [I-D.draft-mcguinness-oauth-mission] MAY
+   support; the issuance profile is complete, and type-agnostic, without
+   it.  A deployment adopts this document when it has no reason to
+   define its own audience-specific type and wants
+   mission_resource_access's resource, action, constraint, and
+   delegation vocabulary instead.
+
+   Maturity: stable.  Maintenance: active.  Adopt when: The OAuth
+   binding's supported authorization_details types include
+   mission_resource_access, or you need its concrete subset/delegation/
+   projection semantics.  Requires: Mission-Bound Authorization for
+   OAuth 2.0.
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -147,7 +164,7 @@ Table of Contents
    defined by [I-D.draft-mcguinness-oauth-mission] and used here with
    the same meaning.
 
-3.  The Mission Resource Access Type
+4.  The Mission Resource Access Type
 
    mission_resource_access is a [RFC9396] authorization_details type: a
    general-purpose, cross-resource authorization language.  An entry is
@@ -181,7 +198,7 @@ Table of Contents
       an entry whose resource_match value it does not recognize as
       unenforceable and fail closed
       ([I-D.draft-mcguinness-oauth-mission]).  Containment between
-      effective resource sets is compared as defined in Section 3.1.
+      effective resource sets is compared as defined in Section 4.1.
 
    actions:  REQUIRED.  An array of strings.  Permitted action values:
       each is an action identifier matching [A-Za-z0-9_.:-]+, or an
@@ -206,7 +223,7 @@ Table of Contents
 
    constraints:  OPTIONAL.  An object.  Machine-actionable per-resource
       bounds (for example, max_amount).  A member name defined as a
-      Common Constraint (Section 3.2) has shared semantics across
+      Common Constraint (Section 4.2) has shared semantics across
       deployments; any other name is deployment-defined.
 
       *  Because a constraints member narrows authority, a Resource
@@ -221,32 +238,32 @@ Table of Contents
          enforce.
 
    delegation:  OPTIONAL.  An object.  The delegation policy for this
-      entry (Section 3.3).  When absent, this entry's authority is non-
+      entry (Section 4.3).  When absent, this entry's authority is non-
       delegable: it MUST NOT appear in a delegated token.  When present,
       it has these members:
 
       max_depth:  REQUIRED.  An integer.  The maximum delegation depth
-         at which this entry's authority may be exercised (Section 3.3).
+         at which this entry's authority may be exercised (Section 4.3).
 
       allowed_delegates:  RECOMMENDED.  An array of objects.  The
          permitted delegates, each a may_act-style matcher
-         (Section 3.3): { "sub": "<client_id>" } for a specific
+         (Section 4.3): { "sub": "<client_id>" } for a specific
          delegate, or { "sub_profile": "<actor-type>" } for an actor-
          type class.  When absent, eligibility falls to the AS's
          delegation-authorization policy, which MUST be applied at every
-         exchange (Section 3.3); absence delegates the decision to
+         exchange (Section 4.3); absence delegates the decision to
          policy, it never grants blanket eligibility.  The member is
          RECOMMENDED so that eligibility is committed and rendered with
          the entry rather than left wholly to policy.
 
       A companion profile MAY define additional delegation members.
-      Such a member is policy, not authority (Section 3.3): a derived
+      Such a member is policy, not authority (Section 4.3): a derived
       entry's value for it MUST NOT be broader than the parent entry's,
       and a member the AS does not understand is carried unchanged.
 
    Example Authority Set (the read entry is delegable to depth 2 and
    bounded to a Q3 issuance window by the resource_issued_after and
-   resource_issued_before Common Constraints (Section 3.2); the write
+   resource_issued_before Common Constraints (Section 4.2); the write
    entry carries no delegation and so is non-delegable, because
    delegation is per entry):
 
@@ -270,7 +287,7 @@ Table of Contents
        } }
    ]
 
-3.1.  Subset Rule
+4.1.  Subset Rule
 
    [I-D.draft-mcguinness-oauth-mission] derives, narrows, and delegates
    a mission_resource_access entry only as a subset of a reference
@@ -282,7 +299,7 @@ Table of Contents
    when:
 
    1.  A's effective resource set is contained in B's (resource_match,
-       Section 3): when neither entry sets resource_match: "prefix",
+       Section 4): when neither entry sets resource_match: "prefix",
        A.resource equals B.resource; when B is a prefix entry, A
        (whether exact or prefix) is contained when A.resource equals
        B.resource or extends its path at a path-segment boundary; a
@@ -304,7 +321,7 @@ Table of Contents
 
        *  A's value MUST be no broader than B's under K's subset rule:
           the specification-defined rule when K is a Common Constraint
-          (Section 3.2), the deployment-defined comparison otherwise.
+          (Section 4.2), the deployment-defined comparison otherwise.
 
    Resource containment under a prefix reference is compared after RFC
    3986 [RFC3986] syntax-based normalization of both URIs: lowercase the
@@ -320,11 +337,11 @@ Table of Contents
    exact equality and a literal action by array membership.  Hierarchy
    is opt-in and closed to the two forms above: resource_match: "prefix"
    for resource containment and .* action families for action
-   containment (Section 3).  A deployment that uses neither retains the
+   containment (Section 4).  A deployment that uses neither retains the
    flat behavior unchanged.
 
    The delegation member is policy, not authority, and is not part of
-   this comparison (Section 3.3).  A derived entry's delegation, when
+   this comparison (Section 4.3).  A derived entry's delegation, when
    present, MUST NOT be broader than the parent entry's:
 
    *  its max_depth MUST be no greater than the parent entry's;
@@ -335,14 +352,14 @@ Table of Contents
    *  a derived entry MUST NOT introduce delegation where the parent
       entry has none.
 
-3.2.  Common Constraints
+4.2.  Common Constraints
 
-   A constraints member name (Section 3) is either a specification-
+   A constraints member name (Section 4) is either a specification-
    defined *Common Constraint* or a deployment-defined key.  Common
    Constraints give independently developed deployments one vocabulary
    they interpret, narrow, and compare identically; further Common
    Constraints are defined by specification under the naming convention
-   of Section 7.2.
+   of Section 8.2.
 
    A Common Constraint definition fixes:
 
@@ -350,7 +367,7 @@ Table of Contents
       rules.
 
    *  *Subset rule*: how a candidate value is judged no broader than a
-      reference value, used by the subset comparison of Section 3.1.
+      reference value, used by the subset comparison of Section 4.1.
 
    *  *Intersection rule*: how two values for the same key combine; the
       result MUST be no broader than either operand.
@@ -365,7 +382,7 @@ Table of Contents
    a candidate entry from a ceiling (a client's authority proposal
    narrowed to the Authority Set, or an Authority Set entry narrowed to
    a derived or delegated token, [I-D.draft-mcguinness-oauth-mission],
-   Section 3.3), a registered Common Constraint key present in the
+   Section 4.3), a registered Common Constraint key present in the
    ceiling entry that the AS does not implement narrowing for MUST NOT
    be dropped while the entry survives.  The AS MUST instead fail
    closed: refuse the whole derivation, or omit the entry from the
@@ -460,7 +477,7 @@ Table of Contents
    mail.example.com is within example.com and example.net is not.  A
    Common Constraint definition MUST fix its subset and intersection in
    value-space terms, so that independent deployments compute the same
-   result for the same values and the subset rule of Section 3.1 is
+   result for the same values and the subset rule of Section 4.1 is
    reproducible.
 
    A decimal-string value in a Common Constraint (max_amount's amount
@@ -490,7 +507,7 @@ Table of Contents
    a future Common Constraint for a monetary value SHOULD reuse this
    shape rather than a JSON number.
 
-3.3.  Delegate Eligibility
+4.3.  Delegate Eligibility
 
    [I-D.draft-mcguinness-oauth-mission] gates a delegated token's
    carried entries on the entry type's own delegation policy, evaluated
@@ -512,7 +529,7 @@ Table of Contents
        grant of eligibility.
 
    An entry failing any of these narrows out of the delegated token,
-   consistent with the subset rule (Section 3.1).  The delegation member
+   consistent with the subset rule (Section 4.1).  The delegation member
    is policy, not authority, and is not part of the subset comparison;
    surviving entries are carried with their delegation member intact so
    the next hop is evaluated the same way.
@@ -541,7 +558,7 @@ Table of Contents
    sub matcher it cannot resolve, is specified by the companion
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
-3.4.  Scope Projection
+4.4.  Scope Projection
 
    [I-D.draft-mcguinness-oauth-mission] states the semantic subset
    condition and issuance algorithm an Authorization Server applies
@@ -593,7 +610,7 @@ Table of Contents
    issuance to that target when it is scope-only and no other carried
    entry supplies a safe projection.
 
-3.5.  Transformation Capabilities
+4.5.  Transformation Capabilities
 
    [I-D.draft-mcguinness-oauth-mission] requires an Authorization Server
    to declare, for every AS-supported authorization_details type,
@@ -605,16 +622,16 @@ Table of Contents
    For mission_resource_access, an Authorization Server that implements
    this document in full declares:
 
-   narrowing: true  The subset and intersection algebra of Section 3.1
-      and Section 3.2 is fully defined, over every member this document
+   narrowing: true  The subset and intersection algebra of Section 4.1
+      and Section 4.2 is fully defined, over every member this document
       specifies.
 
-   delegation: true  The delegation policy of Section 3.3 is fully
+   delegation: true  The delegation policy of Section 4.3 is fully
       defined; an entry's delegation member states its own depth and
       eligibility bounds.
 
    projection: true  A safe scope projection is defined, and decidable
-      per entry, by Section 3.4; it is not unconditionally available for
+      per entry, by Section 4.4; it is not unconditionally available for
       every entry, and an Authorization Server MUST still apply that
       section's conditions per entry before emitting scope.
 
@@ -625,7 +642,7 @@ Table of Contents
    fallback then applies to scope projection for this type at that
    deployment, exactly as it would for an unsupported type.
 
-3.6.  Modeling Tools and Function Calls
+4.6.  Modeling Tools and Function Calls
 
    This section is non-normative guidance.  A "tool" an agent invokes,
    such as a Model Context Protocol (MCP) tool or a function call, is
@@ -648,7 +665,7 @@ Table of Contents
 
    *  constraints carry machine-actionable bounds on a tool's arguments,
       for example an amount ceiling or a recipient domain (the
-      max_amount and recipient_domain Common Constraints, Section 3.2).
+      max_amount and recipient_domain Common Constraints, Section 4.2).
       Like all constraints, they are committed by authority_hash and
       carried to the point of use, but they are evaluated against the
       concrete call arguments by a runtime enforcement layer, not at
@@ -672,7 +689,7 @@ Table of Contents
    ]
 
    Delegation to a sub-agent works unchanged: add a delegation member to
-   a tool entry (Section 3.3).  For example, an entry a sub-agent of
+   a tool entry (Section 4.3).  For example, an entry a sub-agent of
    type ai_agent may invoke at depth 1, narrowed to the read tool only:
 
    { "type": "mission_resource_access",
@@ -692,28 +709,28 @@ Table of Contents
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens], with object
    capability systems such as UCAN as prior art) is a richer primitive
    deferred to future work; it would extend the delegation and subset
-   model of this document (Section 3.3, Section 3.1) rather than
+   model of this document (Section 4.3, Section 4.1) rather than
    introduce a new entry type.
 
-4.  Conformance
+5.  Conformance
 
    An implementation conforms to this document by supporting
    mission_resource_access as one of the authorization_details types
    [I-D.draft-mcguinness-oauth-mission] names in its approved set.  A
    conforming Authorization Server or Resource Server implements:
 
-   *  the type definition (Section 3);
+   *  the type definition (Section 4);
 
-   *  the subset and intersection algebra (Section 3.1, Section 3.2);
+   *  the subset and intersection algebra (Section 4.1, Section 4.2);
 
-   *  the delegate eligibility test (Section 3.3), where it claims the
+   *  the delegate eligibility test (Section 4.3), where it claims the
       issuance profile's Delegation capability; and
 
-   *  the Transformation Capabilities declaration (Section 3.5).
+   *  the Transformation Capabilities declaration (Section 4.5).
 
    An Authorization Server MAY additionally claim the Scope Projection
    capability: establishing, per entry and per target, the safety
-   conditions of Section 3.4 before emitting scope.  An implementation
+   conditions of Section 4.4 before emitting scope.  An implementation
    that does not claim it MUST NOT emit scope for a
    mission_resource_access entry under
    [I-D.draft-mcguinness-oauth-mission]'s issuance algorithm, and
@@ -721,7 +738,7 @@ Table of Contents
    exactly as that document requires for any type without a declared
    projection.
 
-5.  Security Considerations
+6.  Security Considerations
 
    This document defines a subset relation, a delegation policy, and a
    scope-projection safety condition; it inherits
@@ -730,7 +747,7 @@ Table of Contents
    event, the integrity anchors, issuance gating).  Three risks are
    specific to this type:
 
-   *  *Comparison, not meaning.* Section 3.1 compares members, not
+   *  *Comparison, not meaning.* Section 4.1 compares members, not
       effects: a candidate that compares as no broader can still permit
       an effect the parent's purpose never contemplated.  This is a
       documented limit, not an omission
@@ -740,16 +757,16 @@ Table of Contents
       Resource Server or scope projection that treats an unrecognized
       constraints key as absent, or as disclosure-only, grants more than
       the entry authorizes; [I-D.draft-mcguinness-oauth-mission] and
-      Section 3.4 both require fail-closed handling instead.
+      Section 4.4 both require fail-closed handling instead.
 
    *  *A safe projection is per entry, not per type.* That
       mission_resource_access defines a projection relation
-      (Section 3.4) does not make every entry of the type safely
+      (Section 4.4) does not make every entry of the type safely
       projectable; an Authorization Server MUST evaluate the three
-      conditions of Section 3.4 for the specific entry and mapping in
+      conditions of Section 4.4 for the specific entry and mapping in
       force, not assume the type's general capability extends to it.
 
-6.  Privacy Considerations
+7.  Privacy Considerations
 
    This document defines no data element beyond what
    [I-D.draft-mcguinness-oauth-mission] already carries in
@@ -758,23 +775,23 @@ Table of Contents
    an entry are exactly as privacy-sensitive as the Authority Set that
    carries them.
 
-7.  IANA Considerations
+8.  IANA Considerations
 
-7.1.  The Mission Resource Access Authorization Details Type
+8.1.  The Mission Resource Access Authorization Details Type
 
    mission_resource_access is an authorization_details type per
-   [RFC9396] Section 2, defined by this document in Section 3.  RFC 9396
+   [RFC9396] Section 2, defined by this document in Section 4.  RFC 9396
    does not establish an IANA registry of authorization details types
    (type identifiers are interpreted by the Authorization Server), so
    this document creates no registry entry for it and requires no IANA
    action here.  If a registry of authorization details types is
    established in the future, this type SHOULD be registered in it.
 
-7.2.  Common Constraints Registry
+8.2.  Common Constraints Registry
 
    This document establishes the "Mission Common Constraints" registry.
    The registration policy is Specification Required [RFC8126].  A
-   Designated Expert reviews a submission for the discipline Section 3.2
+   Designated Expert reviews a submission for the discipline Section 4.2
    requires: a name matching ^[A-Za-z0-9_.:-]+$ not already registered,
    a JSON [RFC8259] value syntax precise enough for independent
    implementations to agree on, and a subset rule and an intersection
@@ -803,7 +820,7 @@ Table of Contents
    *  *Reference*: the specification defining the key.
 
    This document populates the registry with the Common Constraints it
-   defines (Section 3.2); the "Ref" column below is this document, at
+   defines (Section 4.2); the "Ref" column below is this document, at
    the section shown, for every row, and the full Subset Rule and
    Intersection Rule text is there, not restated in the table:
 
@@ -812,7 +829,7 @@ Table of Contents
    |                        |           |Intersection|          |       |
    +========================+===========+============+==========+=======+
    |max_amount              |Object:    |Same        |IETF      |Section|
-   |                        |amount     |currency,   |          |3.2    |
+   |                        |amount     |currency,   |          |4.2    |
    |                        |(decimal   |candidate <=|          |       |
    |                        |string),   |reference;  |          |       |
    |                        |currency   |intersection|          |       |
@@ -821,32 +838,32 @@ Table of Contents
    |                        |           |amount      |          |       |
    +------------------------+-----------+------------+----------+-------+
    |resource_issued_after   |String, RFC|Candidate >=|IETF      |Section|
-   |                        |3339 date- |reference;  |          |3.2    |
+   |                        |3339 date- |reference;  |          |4.2    |
    |                        |time       |intersection|          |       |
    |                        |           |is the later|          |       |
    |                        |           |instant     |          |       |
    +------------------------+-----------+------------+----------+-------+
    |resource_issued_before  |String, RFC|Candidate <=|IETF      |Section|
-   |                        |3339 date- |reference;  |          |3.2    |
+   |                        |3339 date- |reference;  |          |4.2    |
    |                        |time       |intersection|          |       |
    |                        |           |is the      |          |       |
    |                        |           |earlier     |          |       |
    |                        |           |instant     |          |       |
    +------------------------+-----------+------------+----------+-------+
    |tenant                  |String     |Equal;      |IETF      |Section|
-   |                        |           |intersection|          |3.2    |
+   |                        |           |intersection|          |4.2    |
    |                        |           |is the      |          |       |
    |                        |           |shared value|          |       |
    +------------------------+-----------+------------+----------+-------+
    |recipient_domain        |String, DNS|Equal or a  |IETF      |Section|
-   |                        |name       |subdomain;  |          |3.2    |
+   |                        |name       |subdomain;  |          |4.2    |
    |                        |           |intersection|          |       |
    |                        |           |is the      |          |       |
    |                        |           |narrower    |          |       |
    |                        |           |value       |          |       |
    +------------------------+-----------+------------+----------+-------+
    |time_window             |Object:    |Candidate   |IETF      |Section|
-   |                        |not_before,|window      |          |3.2    |
+   |                        |not_before,|window      |          |4.2    |
    |                        |not_after  |within      |          |       |
    |                        |(RFC 3339  |reference   |          |       |
    |                        |date-time) |window;     |          |       |
@@ -855,7 +872,7 @@ Table of Contents
    |                        |           |overlap     |          |       |
    +------------------------+-----------+------------+----------+-------+
    |data_classification     |Array of   |Candidate   |IETF      |Section|
-   |                        |strings    |array a     |          |3.2    |
+   |                        |strings    |array a     |          |4.2    |
    |                        |           |subset of   |          |       |
    |                        |           |reference   |          |       |
    |                        |           |array;      |          |       |
@@ -865,7 +882,7 @@ Table of Contents
    |                        |           |members     |          |       |
    +------------------------+-----------+------------+----------+-------+
    |allowed_tools           |Array of   |Candidate   |IETF      |Section|
-   |                        |strings    |array a     |          |3.2    |
+   |                        |strings    |array a     |          |4.2    |
    |                        |           |subset of   |          |       |
    |                        |           |reference   |          |       |
    |                        |           |array;      |          |       |
@@ -875,7 +892,7 @@ Table of Contents
    |                        |           |members     |          |       |
    +------------------------+-----------+------------+----------+-------+
    |requires_action_approval|Boolean    |Candidate   |IETF      |Section|
-   |                        |           |true or     |          |3.2    |
+   |                        |           |true or     |          |4.2    |
    |                        |           |equal to    |          |       |
    |                        |           |reference;  |          |       |
    |                        |           |intersection|          |       |
@@ -885,12 +902,12 @@ Table of Contents
 
                                   Table 1
 
-   Names are kept collision-free by the convention Section 3.2 already
+   Names are kept collision-free by the convention Section 4.2 already
    uses: a specification-defined name is coordinated through this
    registry, and any other name is either collision-resistant or remains
    deployment-defined and outside the registry.
 
-8.  Document History
+9.  Document History
 
    [[ To be removed from the final specification ]]
 

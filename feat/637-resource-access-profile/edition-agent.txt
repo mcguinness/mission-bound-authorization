@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-24T19:58:37Z
-Source repository commit: 58a68dc4fda315ecb29cad0c6d723cc65cf792d8
+Generated: 2026-08-24T20:17:21Z
+Source repository commit: a0e9ecb7974b803ccfad13e7e10772acf4db74fc
 Member count: 9
 
 Reading order:
@@ -552,14 +552,18 @@ Table of Contents
 
    The model's boundary is deliberate.  The family does not define:
 
-   *  *A new authority format, or a new grant protocol.* Rich
-      Authorization Requests [RFC9396] and kindred mechanisms already
-      fill the authority-expression role; the family leaves that to them
-      (Section 4).  The same restraint holds against GNAP and the
-      capability-system lineage (macaroons, Biscuit, UCAN, object-
-      capability narrowing): this family composes with deployed grant
-      protocols and attenuation primitives rather than introducing a
-      competing one of its own; the OAuth binding states the comparison
+   *  *A new grant protocol.* Rich Authorization Requests [RFC9396] and
+      kindred mechanisms already fill the authority-expression role; the
+      family leaves the grant exchange to them (Section 4) and defines
+      its own cross-resource authorization_details type only where
+      [RFC9396] leaves type semantics to the type, in the OAuth
+      binding's Mission Resource Access Profile
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]).  The same
+      restraint holds against GNAP and the capability-system lineage
+      (macaroons, Biscuit, UCAN, object-capability narrowing): this
+      family composes with deployed grant protocols and attenuation
+      primitives rather than introducing a competing one of its own; the
+      OAuth binding states the comparison
       ([I-D.draft-mcguinness-oauth-mission]).
 
    *  *A policy language.* The PDP evaluates the Mission's Authority
@@ -3519,79 +3523,91 @@ Table of Contents
 
    *The substrate and the bindings:*
 
-   +==============================+====================================+
-   | Document                     | Role                               |
-   +==============================+====================================+
-   | oauth-mission                | The OAuth binding, its OAuth       |
-   |                              | companions' issuance profile:      |
-   |                              | the OAuth realization of the       |
-   |                              | Mission, the approval event        |
-   |                              | and anchors, the mission           |
-   |                              | claim, the subset rule, state-     |
-   |                              | gated issuance.                    |
-   +------------------------------+------------------------------------+
-   | mission-authority-server     | The standalone Mission Issuer      |
-   |                              | and the PDP join of ordinary       |
-   |                              | credentials to Missions.           |
-   +------------------------------+------------------------------------+
-   | oauth-mission-issuance-grant | The issuance join: MAS-minted      |
-   |                              | grants an estate Authorization     |
-   |                              | Server redeems at its token        |
-   |                              | endpoint for Mission-bound,        |
-   |                              | state-gated tokens.                |
-   +------------------------------+------------------------------------+
-   | mission-aauth                | The AAuth Mission Context          |
-   |                              | binding: the Person Server as      |
-   |                              | controlling authority, the         |
-   |                              | exact-byte mission blob under      |
-   |                              | AAuth's s256 commitment,           |
-   |                              | native {approver, s256}            |
-   |                              | propagation, and active-state      |
-   |                              | gating on PS endpoints and the     |
-   |                              | PS-asserted and federated          |
-   |                              | paths.  It defines no OAuth        |
-   |                              | Authority Set or additional        |
-   |                              | AAuth wire members.                |
-   +------------------------------+------------------------------------+
-   | mission-uma                  | Experimental sketch.  The UMA      |
-   |                              | 2.0 binding: the pushed            |
-   |                              | Mission Intent rides claims        |
-   |                              | pushing, the resource owner's      |
-   |                              | decision fills UMA's               |
-   |                              | authorization assessment, the      |
-   |                              | RPT is the Mission-bound           |
-   |                              | credential, and the PCT is         |
-   |                              | continuity that is never           |
-   |                              | authority; the first binding       |
-   |                              | authored against the substrate     |
-   |                              | contract.                          |
-   +------------------------------+------------------------------------+
-   | mission-gnap                 | Experimental sketch.  The GNAP     |
-   |                              | binding: the Mission Intent        |
-   |                              | rides a registered grant           |
-   |                              | request member, interaction or     |
-   |                              | a companion-supplied standing      |
-   |                              | basis is the approval event,       |
-   |                              | grant modification splits into     |
-   |                              | in-Mission drawdown and            |
-   |                              | Approver-routed expansion, and     |
-   |                              | the continuation access token      |
-   |                              | is continuity that is never        |
-   |                              | authority; the second binding      |
-   |                              | authored against the substrate     |
-   |                              | contract.                          |
-   +------------------------------+------------------------------------+
-   | mission-substrate            | The binding-neutral kernel         |
-   |                              | contract: normative on any         |
-   |                              | further binding, conformed to      |
-   |                              | by the existing bindings           |
-   |                              | through their published            |
-   |                              | Substrate Statements, with         |
-   |                              | vocabulary ownership migrating     |
-   |                              | to it by touch.                    |
-   +------------------------------+------------------------------------+
+    +===============================+================================+
+    | Document                      | Role                           |
+    +===============================+================================+
+    | oauth-mission                 | The OAuth binding, its OAuth   |
+    |                               | companions' issuance profile:  |
+    |                               | the OAuth realization of the   |
+    |                               | Mission, the approval event    |
+    |                               | and anchors, the mission       |
+    |                               | claim, the subset rule, state- |
+    |                               | gated issuance.                |
+    +-------------------------------+--------------------------------+
+    | oauth-mission-resource-access | The Mission Resource Access    |
+    |                               | Profile: the                   |
+    |                               | mission_resource_access        |
+    |                               | authorization_details type,    |
+    |                               | its resource and action        |
+    |                               | matching, Common Constraints,  |
+    |                               | delegation policy, and subset/ |
+    |                               | intersection algebra, split    |
+    |                               | from the OAuth binding so RFC  |
+    |                               | 9396 typed semantics live with |
+    |                               | the type.                      |
+    +-------------------------------+--------------------------------+
+    | mission-authority-server      | The standalone Mission Issuer  |
+    |                               | and the PDP join of ordinary   |
+    |                               | credentials to Missions.       |
+    +-------------------------------+--------------------------------+
+    | oauth-mission-issuance-grant  | The issuance join: MAS-minted  |
+    |                               | grants an estate Authorization |
+    |                               | Server redeems at its token    |
+    |                               | endpoint for Mission-bound,    |
+    |                               | state-gated tokens.            |
+    +-------------------------------+--------------------------------+
+    | mission-aauth                 | The AAuth Mission Context      |
+    |                               | binding: the Person Server as  |
+    |                               | controlling authority, the     |
+    |                               | exact-byte mission blob under  |
+    |                               | AAuth's s256 commitment,       |
+    |                               | native {approver, s256}        |
+    |                               | propagation, and active-state  |
+    |                               | gating on PS endpoints and the |
+    |                               | PS-asserted and federated      |
+    |                               | paths.  It defines no OAuth    |
+    |                               | Authority Set or additional    |
+    |                               | AAuth wire members.            |
+    +-------------------------------+--------------------------------+
+    | mission-uma                   | Experimental sketch.  The UMA  |
+    |                               | 2.0 binding: the pushed        |
+    |                               | Mission Intent rides claims    |
+    |                               | pushing, the resource owner's  |
+    |                               | decision fills UMA's           |
+    |                               | authorization assessment, the  |
+    |                               | RPT is the Mission-bound       |
+    |                               | credential, and the PCT is     |
+    |                               | continuity that is never       |
+    |                               | authority; the first binding   |
+    |                               | authored against the substrate |
+    |                               | contract.                      |
+    +-------------------------------+--------------------------------+
+    | mission-gnap                  | Experimental sketch.  The GNAP |
+    |                               | binding: the Mission Intent    |
+    |                               | rides a registered grant       |
+    |                               | request member, interaction or |
+    |                               | a companion-supplied standing  |
+    |                               | basis is the approval event,   |
+    |                               | grant modification splits into |
+    |                               | in-Mission drawdown and        |
+    |                               | Approver-routed expansion, and |
+    |                               | the continuation access token  |
+    |                               | is continuity that is never    |
+    |                               | authority; the second binding  |
+    |                               | authored against the substrate |
+    |                               | contract.                      |
+    +-------------------------------+--------------------------------+
+    | mission-substrate             | The binding-neutral kernel     |
+    |                               | contract: normative on any     |
+    |                               | further binding, conformed to  |
+    |                               | by the existing bindings       |
+    |                               | through their published        |
+    |                               | Substrate Statements, with     |
+    |                               | vocabulary ownership migrating |
+    |                               | to it by touch.                |
+    +-------------------------------+--------------------------------+
 
-                                  Table 14
+                                 Table 14
 
    *Approval time:*
 
@@ -4155,6 +4171,12 @@ Table of Contents
               bound-authorization/draft-mcguinness-oauth-mission-
               progressive.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -4219,6 +4241,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Non-goal reworded (#637): "a new authority format, or a new grant
+      protocol" narrowed to "a new grant protocol," naming the OAuth
+      binding's Mission Resource Access Profile as the family's one
+      cross-resource authorization_details type, since RFC 9396 leaves
+      type semantics to the type and the family now defines one.
+      Document Map gains the profile's row under "The substrate and the
+      bindings."
 
    *  Editorial density pass on this Informational document: the
       aggregate-ceiling and artifact-plane (non-transitive work-product)
@@ -5808,90 +5838,92 @@ B.1.  OAuth Binding Mapping Assessment
 
    The capability table:
 
-   +=============+========+======================================+=====================+============+
-   |Capability   |Claim   |Activation                            |Scope and defining   |Limitations |
-   |             |        |                                      |sections             |            |
-   +=============+========+======================================+=====================+============+
-   |Lifecycle-   |supplied|always                                |State-gated issuance |Outstanding |
-   |Gated        |        |                                      |and every derivation |credentials |
-   |Authorization|        |                                      |gate                 |run to their|
-   |             |        |                                      |                     |own exp; the|
-   |             |        |                                      |                     |residual is |
-   |             |        |                                      |                     |bounded, not|
-   |             |        |                                      |                     |zero        |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |State-       |supplied|Status, introspection, or Signals     |Those surfaces       |Staleness   |
-   |Observable   |        |companion active                      |                     |bounded by  |
-   |             |        |                                      |                     |each        |
-   |             |        |                                      |                     |surface's   |
-   |             |        |                                      |                     |declared    |
-   |             |        |                                      |                     |freshness   |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Structured   |supplied|always                                |authorization_details|Semantics   |
-   |Authority    |        |                                      |with registered types|exist per   |
-   |             |        |                                      |and the Common       |registered  |
-   |             |        |                                      |Constraints          |type, not   |
-   |             |        |                                      |                     |universally |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Monotonic    |supplied|always                                |The subset rule over |Covered     |
-   |Derivation   |        |                                      |covered types at     |transitions |
-   |             |        |                                      |every derivation,    |are         |
-   |             |        |                                      |delegation, and      |attenuate; a|
-   |             |        |                                      |attenuation point    |cross-      |
-   |             |        |                                      |                     |vocabulary  |
-   |             |        |                                      |                     |transition  |
-   |             |        |                                      |                     |is          |
-   |             |        |                                      |                     |decide_anew,|
-   |             |        |                                      |                     |never silent|
-   |             |        |                                      |                     |attenuation |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Credential-  |supplied|always                                |The mission claim on |Fact        |
-   |Bound        |        |                                      |issued tokens        |semantics:  |
-   |             |        |                                      |                     |issuance    |
-   |             |        |                                      |                     |under the   |
-   |             |        |                                      |                     |Mission,    |
-   |             |        |                                      |                     |authority   |
-   |             |        |                                      |                     |derivation, |
-   |             |        |                                      |                     |lifecycle-  |
-   |             |        |                                      |                     |gated       |
-   |             |        |                                      |                     |issuance;   |
-   |             |        |                                      |                     |state-as-of |
-   |             |        |                                      |                     |only via the|
-   |             |        |                                      |                     |State-      |
-   |             |        |                                      |                     |Observable  |
-   |             |        |                                      |                     |surfaces    |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Authorized   |supplied|the Delegation role active            |The Token Exchange   |The base    |
-   |Context      |        |([I-D.draft-mcguinness-oauth-mission])|join at delegated    |grant       |
-   |Correlation  |        |                                      |issuance: the AS, as |binding at  |
-   |             |        |                                      |joining authority,   |issuance co-|
-   |             |        |                                      |joins the Mission and|establishes |
-   |             |        |                                      |Subject carried by   |its facts   |
-   |             |        |                                      |the Mission-bound    |and is not a|
-   |             |        |                                      |subject_token with   |join; cross-|
-   |             |        |                                      |the delegate identity|authority   |
-   |             |        |                                      |independently        |joins are   |
-   |             |        |                                      |established by the   |the Mission |
-   |             |        |                                      |actor_token or the   |Authority   |
-   |             |        |                                      |delegate's own client|Server's    |
-   |             |        |                                      |authentication,      |machinery,  |
-   |             |        |                                      |binding both to the  |not this    |
-   |             |        |                                      |newly issued         |binding's   |
-   |             |        |                                      |credential           |            |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Independently|supplied|Mandate, signed Status, or audit      |Anchor recomputation |Signature   |
-   |Verifiable   |        |companion active                      |and signed artifacts |verification|
-   |             |        |                                      |per those profiles   |never       |
-   |             |        |                                      |                     |establishes |
-   |             |        |                                      |                     |current     |
-   |             |        |                                      |                     |state       |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Portable     |supplied|Evidence, Mandate, or audit companion |Per those profiles   |The         |
-   |Evidence     |        |active                                |                     |governance  |
-   |             |        |                                      |                     |record is   |
-   |             |        |                                      |                     |otherwise   |
-   |             |        |                                      |                     |issuer-local|
-   +-------------+--------+--------------------------------------+---------------------+------------+
+   +=============+========+======================================+========================+============+
+   |Capability   |Claim   |Activation                            |Scope and defining      |Limitations |
+   |             |        |                                      |sections                |            |
+   +=============+========+======================================+========================+============+
+   |Lifecycle-   |supplied|always                                |State-gated issuance and|Outstanding |
+   |Gated        |        |                                      |every derivation gate   |credentials |
+   |Authorization|        |                                      |                        |run to their|
+   |             |        |                                      |                        |own exp; the|
+   |             |        |                                      |                        |residual is |
+   |             |        |                                      |                        |bounded, not|
+   |             |        |                                      |                        |zero        |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |State-       |supplied|Status, introspection, or Signals     |Those surfaces          |Staleness   |
+   |Observable   |        |companion active                      |                        |bounded by  |
+   |             |        |                                      |                        |each        |
+   |             |        |                                      |                        |surface's   |
+   |             |        |                                      |                        |declared    |
+   |             |        |                                      |                        |freshness   |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Structured   |supplied|always                                |authorization_details of|Semantics   |
+   |Authority    |        |                                      |AS-supported types, each|exist per   |
+   |             |        |                                      |type's own specification|supported   |
+   |             |        |                                      |defining semantics (for |type, not   |
+   |             |        |                                      |mission_resource_access,|universally |
+   |             |        |                                      |the Mission Resource    |            |
+   |             |        |                                      |Access Profile's Common |            |
+   |             |        |                                      |Constraints)            |            |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Monotonic    |supplied|always                                |The subset rule over    |Covered     |
+   |Derivation   |        |                                      |covered types at every  |transitions |
+   |             |        |                                      |derivation, delegation, |are         |
+   |             |        |                                      |and attenuation point   |attenuate; a|
+   |             |        |                                      |                        |cross-      |
+   |             |        |                                      |                        |vocabulary  |
+   |             |        |                                      |                        |transition  |
+   |             |        |                                      |                        |is          |
+   |             |        |                                      |                        |decide_anew,|
+   |             |        |                                      |                        |never silent|
+   |             |        |                                      |                        |attenuation |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Credential-  |supplied|always                                |The mission claim on    |Fact        |
+   |Bound        |        |                                      |issued tokens           |semantics:  |
+   |             |        |                                      |                        |issuance    |
+   |             |        |                                      |                        |under the   |
+   |             |        |                                      |                        |Mission,    |
+   |             |        |                                      |                        |authority   |
+   |             |        |                                      |                        |derivation, |
+   |             |        |                                      |                        |lifecycle-  |
+   |             |        |                                      |                        |gated       |
+   |             |        |                                      |                        |issuance;   |
+   |             |        |                                      |                        |state-as-of |
+   |             |        |                                      |                        |only via the|
+   |             |        |                                      |                        |State-      |
+   |             |        |                                      |                        |Observable  |
+   |             |        |                                      |                        |surfaces    |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Authorized   |supplied|the Delegation role active            |The Token Exchange join |The base    |
+   |Context      |        |([I-D.draft-mcguinness-oauth-mission])|at delegated issuance:  |grant       |
+   |Correlation  |        |                                      |the AS, as joining      |binding at  |
+   |             |        |                                      |authority, joins the    |issuance co-|
+   |             |        |                                      |Mission and Subject     |establishes |
+   |             |        |                                      |carried by the Mission- |its facts   |
+   |             |        |                                      |bound subject_token with|and is not a|
+   |             |        |                                      |the delegate identity   |join; cross-|
+   |             |        |                                      |independently           |authority   |
+   |             |        |                                      |established by the      |joins are   |
+   |             |        |                                      |actor_token or the      |the Mission |
+   |             |        |                                      |delegate's own client   |Authority   |
+   |             |        |                                      |authentication, binding |Server's    |
+   |             |        |                                      |both to the newly issued|machinery,  |
+   |             |        |                                      |credential              |not this    |
+   |             |        |                                      |                        |binding's   |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Independently|supplied|Mandate, signed Status, or audit      |Anchor recomputation and|Signature   |
+   |Verifiable   |        |companion active                      |signed artifacts per    |verification|
+   |             |        |                                      |those profiles          |never       |
+   |             |        |                                      |                        |establishes |
+   |             |        |                                      |                        |current     |
+   |             |        |                                      |                        |state       |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Portable     |supplied|Evidence, Mandate, or audit companion |Per those profiles      |The         |
+   |Evidence     |        |active                                |                        |governance  |
+   |             |        |                                      |                        |record is   |
+   |             |        |                                      |                        |otherwise   |
+   |             |        |                                      |                        |issuer-local|
+   +-------------+--------+--------------------------------------+------------------------+------------+
 
               Table 5: OAuth Mission binding capability table
 
@@ -6061,9 +6093,7 @@ Table of Contents
      4.4.  Submission Processing Order
    5.  Mission Authority
      5.1.  Subset Rule
-     5.2.  Common Constraints
-     5.3.  Other Authorization Details Types
-     5.4.  Modeling Tools and Function Calls
+     5.2.  Authorization Details Types
    6.  Mission Approval
      6.1.  Binding the Mission to the Grant
      6.2.  Single Accountable Approver
@@ -6075,9 +6105,10 @@ Table of Contents
      8.1.  Mission Identifier Format
      8.2.  Worked Example
    9.  Mission-Bound Access Tokens
-     9.1.  The Mission Claim
-     9.2.  Resource Server Enforcement
-     9.3.  Remediation Grains
+     9.1.  Scope Projection
+     9.2.  The Mission Claim
+     9.3.  Resource Server Enforcement
+     9.4.  Remediation Grains
    10. Mission Lifecycle and Gating
      10.1.  Issuance Gating
      10.2.  Revocation
@@ -6128,13 +6159,11 @@ Table of Contents
    20. IANA Considerations
      20.1.  OAuth Parameters Registration
      20.2.  OAuth Extensions Error Registration
-     20.3.  The Mission Resource Access Authorization Details Type
-     20.4.  JSON Web Token Claims Registration
-     20.5.  OAuth Token Introspection Response Registration
-     20.6.  OAuth Authorization Server Metadata Registration
-     20.7.  OAuth Protected Resource Metadata Registration
-     20.8.  Common Constraints Registry
-     20.9.  Mission Lifecycle States Registry
+     20.3.  JSON Web Token Claims Registration
+     20.4.  OAuth Token Introspection Response Registration
+     20.5.  OAuth Authorization Server Metadata Registration
+     20.6.  OAuth Protected Resource Metadata Registration
+     20.7.  Mission Lifecycle States Registry
    21. References
      21.1.  Normative References
      21.2.  Informative References
@@ -6832,30 +6861,35 @@ Table of Contents
    following table summarizes which party enforces each bound a Mission
    carries and what holds when that enforcer is absent:
 
-   +=================+=======================+=========================+
-   | Bound           | Enforced by           | When that enforcer is   |
-   |                 |                       | absent                  |
-   +=================+=======================+=========================+
-   | resource and    | any Resource Server   | a scope-only RS         |
-   | actions         | that enforces         | enforces only the       |
-   |                 | authorization_details | coarse scope            |
-   |                 | (Section 9.2)         | projection              |
-   |                 |                       | (Section 9.2)           |
-   +-----------------+-----------------------+-------------------------+
-   | per-entry       | a Resource Server     | a Mission-aware RS      |
-   | constraints     | that understands and  | fails closed; a scope-  |
-   |                 | enforces the key      | only RS does not        |
-   |                 | (Section 9.2)         | evaluate them           |
-   +-----------------+-----------------------+-------------------------+
-   | max_derivations | the issuer AS at each | never absent at the     |
-   |                 | derivation            | issuer; it does not     |
-   |                 | (Section 10)          | bound another domain's  |
-   |                 |                       | local minting (see the  |
-   |                 |                       | cross-domain            |
-   |                 |                       | companion)              |
-   +-----------------+-----------------------+-------------------------+
+   +=================+=======================+========================+
+   | Bound           | Enforced by           | When that enforcer is  |
+   |                 |                       | absent                 |
+   +=================+=======================+========================+
+   | resource and    | any Resource Server   | a scope-only RS is     |
+   | actions         | that enforces         | served only where the  |
+   |                 | authorization_details | AS established a safe  |
+   |                 | (Section 9.3)         | scope projection       |
+   |                 |                       | (Section 9.1); the AS  |
+   |                 |                       | refuses issuance to it |
+   |                 |                       | otherwise              |
+   +-----------------+-----------------------+------------------------+
+   | per-entry       | a Resource Server     | a Mission-aware RS     |
+   | constraints     | that understands and  | fails closed; a scope- |
+   |                 | enforces the key      | only RS is served only |
+   |                 | (Section 9.3)         | where the projection   |
+   |                 |                       | independently accounts |
+   |                 |                       | for the constraint     |
+   |                 |                       | (Section 9.1)          |
+   +-----------------+-----------------------+------------------------+
+   | max_derivations | the issuer AS at each | never absent at the    |
+   |                 | derivation            | issuer; it does not    |
+   |                 | (Section 10)          | bound another domain's |
+   |                 |                       | local minting (see the |
+   |                 |                       | cross-domain           |
+   |                 |                       | companion)             |
+   +-----------------+-----------------------+------------------------+
 
-                                  Table 1
+                                 Table 1
 
    Example Mission Intent:
 
@@ -7016,7 +7050,7 @@ Table of Contents
    (Section 5) and MUST NOT grant authority beyond what the Mission
    Intent yields.
 
-   Each submitted entry MUST be of a supported type (Section 5.3,
+   Each submitted entry MUST be of a supported type (Section 5.2,
    Section 14) and MUST validate against that type's documented
    definition; where a machine-readable JSON Schema for the type is
    advertised (Section 14) or established out of band, the entry MUST
@@ -7036,13 +7070,10 @@ Table of Contents
 
    When a proposal is present, the AS MUST derive each Authority Set
    entry as a subset (Section 5.1) of some proposed entry of the _same
-   type_: a mission_resource_access entry derives only from a
-   mission_resource_access proposal, under the subset rule of
-   Section 5.1; an entry of another AS-supported type derives only from
-   a same-type proposal, narrowed under that type's own subset rule
-   where it defines one, or carried through unchanged where it defines
-   none (Section 5.3).  No entry derives from a proposed entry of a
-   different type.
+   type_: an entry derives only from a same-type proposal, narrowed
+   under that type's own subset rule where it defines one, or carried
+   through unchanged where it defines none (Section 5.2).  No entry
+   derives from a proposed entry of a different type.
 
    goal and constraints then serve as rendering and bounding context
    over the proposed authority.  Each proposed entry that carries a
@@ -7245,10 +7276,10 @@ Table of Contents
 
    From the Mission Intent, and from the authority proposal where one
    was submitted (Section 4.2), the AS derives the *Authority Set*: one
-   or more [RFC9396] authorization_details entries of type
-   mission_resource_access (Section 20.3).  Derivation is mechanical.
-   It happens once, at the approval event, over the derivation policy
-   then in force, in one of two modes:
+   or more [RFC9396] authorization_details entries of an AS-supported
+   type (Section 5.2).  Derivation is mechanical.  It happens once, at
+   the approval event, over the derivation policy then in force, in one
+   of two modes:
 
    *  *Narrowing mode* (RECOMMENDED): the client submitted an authority
       proposal (Section 4.2), and the Authority Set is the proposal
@@ -7285,17 +7316,17 @@ Table of Contents
       not this mode.
 
    In both modes the AS MUST bound every derived entry by the Mission
-   Intent: each derived entry's resource MUST be one of the Intent's
-   resources values, and the derived authority MUST NOT exceed any
-   machine-actionable controls bound.  In both modes the AS MUST also
-   record the policy version in force as the Mission's policy_version:
-   an opaque audit correlator naming the policy a derivation ran under,
-   not a value whose policy travels.  Deriving authority generatively,
-   with model assistance over the structured inputs above, is not one of
-   this profile's modes: a deployment MAY implement it as a local-policy
-   extension, it is the least portable option, and the Intent bounds,
-   the prose boundary below, and the recording rule above all apply to
-   it unchanged.
+   Intent: each derived entry that carries a resource member MUST have
+   it among the Intent's resources values, and the derived authority
+   MUST NOT exceed any machine-actionable controls bound.  In both modes
+   the AS MUST also record the policy version in force as the Mission's
+   policy_version: an opaque audit correlator naming the policy a
+   derivation ran under, not a value whose policy travels.  Deriving
+   authority generatively, with model assistance over the structured
+   inputs above, is not one of this profile's modes: a deployment MAY
+   implement it as a local-policy extension, it is the least portable
+   option, and the Intent bounds, the prose boundary below, and the
+   recording rule above all apply to it unchanged.
 
    A resources entry the deployment does not recognize either causes
    refusal with invalid_authorization_details (Section 4.1) or is
@@ -7326,8 +7357,11 @@ Table of Contents
    boundary ([I-D.draft-mcguinness-mission-shaping]).
 
    A client-proposed constraint on an individual Authority Set entry
-   enters through the top-level authorization_details proposal: the
-   Common Constraints (Section 5.2), type-specific constraints, and the
+   enters through the top-level authorization_details proposal:
+   constraints a supported type's specification defines (for example,
+   the Common Constraints the Mission Resource Access Profile defines
+   for mission_resource_access,
+   [I-D.draft-mcguinness-oauth-mission-resource-access]), and the
    collision-resistant deployment extensions the AS understands
    (Section 13).  Authority is further bounded by the Intent's
    structured members (resources, expires_at, controls), by the template
@@ -7345,9 +7379,9 @@ Table of Contents
    or the same scope.  That locality is intended, not a gap.  A Mission
    Intent has no portable semantics: interoperability begins at the
    committed result, the derived Authority Set's structure and
-   vocabulary (Section 5, Section 5.2) and its integrity anchors
-   (Section 7.1), which a consumer in any domain interprets, enforces,
-   and audits identically.
+   vocabulary, as each supported type defines it (Section 5,
+   Section 5.2), and its integrity anchors (Section 7.1), which a
+   consumer in any domain interprets, enforces, and audits identically.
 
    A consumer enforces the derived Authority Set, never the Intent, and
    audit establishes what was derived, against intent_hash and
@@ -7370,102 +7404,22 @@ Table of Contents
    are unknown at approval, and avoids the over-broad enumeration a
    deployment would otherwise need in order to anticipate them.
 
-   A mission_resource_access entry is a [RFC9396] authorization_details
-   object with these members:
-
-   type:  REQUIRED.  A string. mission_resource_access.
-
-   resource:  REQUIRED.  A string.  The single protected resource the
-      entry applies to: an absolute URI identifying an OAuth protected
-      resource ([RFC8707]) or a Protected Resource ([RFC9728]), the same
-      kind of identifier as the [RFC8707] resource value.  Carrying it
-      per entry, which [RFC9396] permits, lets one token scope distinct
-      authority to distinct resources.  The token aud is derived from
-      the carried entries' resource values and is typically coarser
-      (Section 9).  Per [RFC9396] Section 3.2, the resource
-      authorization request parameter does not affect how the AS
-      processes authorization_details, and this member is distinct from
-      the [RFC9396] common locations field.
-
-   resource_match:  OPTIONAL.  A string: exact (the default, and the
-      behavior when the member is absent) or prefix.  Under exact the
-      entry applies to the resource URI alone.  Under prefix the entry
-      authorizes the resource itself and any URI beneath it at a path-
-      segment boundary (the resource followed by / and further path).  A
-      resource value under prefix MUST NOT carry a query or fragment
-      component; the AS refuses such an entry with
-      invalid_authorization_details.  For prefix purposes, a resource
-      with an empty path and one whose path is / denote the same base:
-      https://a.example and https://a.example/ authorize the same set.
-      These two values are the only ones defined; a consumer MUST treat
-      an entry whose resource_match value it does not recognize as
-      unenforceable and fail closed (Section 9.2).  Containment between
-      effective resource sets is compared as defined in Section 5.1.
-
-   actions:  REQUIRED.  An array of strings.  Permitted action values:
-      each is an action identifier matching [A-Za-z0-9_.:-]+, or an
-      action family (an identifier followed by .*).  An action family
-      authorizes every action whose dot-separated identifier extends the
-      family name at a segment boundary (invoices.* authorizes
-      invoices.read and invoices.q3.export, not invoicesx.read).
-
-      *  Like an OAuth scope, an action value carries meaning only at
-         the resource that defines it: a consumer enforces only the
-         actions it recognizes for that resource and honors no others,
-         so an unrecognized action is fail-closed by construction.
-
-      *  An AS SHOULD draw action identifiers from a namespace the
-         serving resource documents, so the set is interpretable cross-
-         vendor rather than ad hoc.
-
-      *  A consent rendering MUST present a family as the breadth it is:
-         all actions under the name, not one action.
-
-      *  An AS SHOULD treat deriving a family as high-risk breadth.
-
-   constraints:  OPTIONAL.  An object.  Machine-actionable per-resource
-      bounds (for example, max_amount).  A member name defined as a
-      Common Constraint (Section 5.2) has shared semantics across
-      deployments; any other name is deployment-defined.
-
-      *  Because a constraints member narrows authority, a Resource
-         Server that cannot enforce one MUST fail closed (Section 9.2).
-
-      *  To avoid that failure mode, the AS SHOULD emit for a given
-         resource only constraints keys that the Resource Server serving
-         it is known (by registration, deployment policy, or the
-         resource's advertised mission_constraints_supported
-         (Section 15)) to understand and enforce.
-
-   delegation:  OPTIONAL.  An object.  The delegation policy for this
-      entry (Section 12.3).  When absent, this entry's authority is non-
-      delegable: it MUST NOT appear in a delegated token.  When present,
-      it has these members:
-
-      max_depth:  REQUIRED.  An integer.  The maximum delegation depth
-         at which this entry's authority may be exercised
-         (Section 12.3).
-
-      allowed_delegates:  RECOMMENDED.  An array of objects.  The
-         permitted delegates, each a may_act-style matcher
-         (Section 12.3): { "sub": "<client_id>" } for a specific
-         delegate, or { "sub_profile": "<actor-type>" } for an actor-
-         type class.  When absent, eligibility falls to the AS's
-         delegation-authorization policy, which MUST be applied at every
-         exchange (Section 12.3); absence delegates the decision to
-         policy, it never grants blanket eligibility.  The member is
-         RECOMMENDED so that eligibility is committed and rendered with
-         the entry rather than left wholly to policy.
-
-      A companion profile of this document MAY define additional
-      delegation members.  Such a member is policy, not authority
-      (Section 12.3): a derived entry's value for it MUST NOT be broader
-      than the parent entry's, and a member the AS does not understand
-      is carried unchanged.
+   mission_resource_access is an [RFC9396] authorization_details type: a
+   cross-resource authorization language matching a resource exactly or
+   by prefix, an action namespace with wildcard families, generic per-
+   entry constraints (including the Common Constraints, Section 5.2),
+   and a delegation policy, together with the subset and intersection
+   algebra that compares two entries.  It is defined, in full, by the
+   Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]), a companion
+   of this document; the Authority Set MAY carry mission_resource_access
+   entries, or entries of any other AS-supported type, on the same type-
+   agnostic terms (Section 5.2).
 
    Example Authority Set (the read entry is delegable to depth 2 and
    bounded to a Q3 issuance window by the resource_issued_after and
-   resource_issued_before Common Constraints (Section 5.2); the write
+   resource_issued_before Common Constraints
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]); the write
    entry carries no delegation and so is non-delegable, because
    delegation is per entry):
 
@@ -7491,37 +7445,13 @@ Table of Contents
 
 5.1.  Subset Rule
 
-   When the AS narrows the Authority Set for a derived token, a derived
-   mission_resource_access entry A is a subset of a Mission entry B
-   when:
-
-   1.  A's effective resource set is contained in B's (resource_match,
-       Section 5): when neither entry sets resource_match: "prefix",
-       A.resource equals B.resource; when B is a prefix entry, A
-       (whether exact or prefix) is contained when A.resource equals
-       B.resource or extends its path at a path-segment boundary; a
-       prefix A is never contained in an exact B.
-
-   2.  Every A.actions value is within some B.actions value: a value is
-       within an equal value; a literal action is within a family whose
-       name it extends at a segment boundary (invoices.read is within
-       invoices.*); a family is within a reference family when its own
-       name extends the reference's name at a segment boundary
-       (invoices.q3.* is within invoices.*).  A family is never within a
-       literal action.
-
-   3.  For every key K in *B*.constraints:
-
-       *  K MUST also be present in A.constraints.  A key present in B
-          but absent from A is treated as the broadest possible value
-          and therefore fails this test.
-
-       *  A's value MUST be no broader than B's under K's subset rule:
-          the specification-defined rule when K is a Common Constraint
-          (Section 5.2), the deployment-defined comparison otherwise.
-
-   The AS MUST refuse to derive an entry that is not a subset of some
-   Mission Authority Set entry.
+   A derived authorization_details entry is a subset of a reference
+   entry when it is no broader under the subset relation the entry's own
+   type defines; Section 5.2 states the general rule and each supported
+   type defines its own relation (for mission_resource_access,
+   [I-D.draft-mcguinness-oauth-mission-resource-access]).  The AS MUST
+   refuse to derive an entry that is not a subset, under its type's
+   relation, of some Mission Authority Set entry.
 
    Authority under a Mission MUST NOT widen after the approval event: a
    request that exceeds the Authority Set on any dimension (a new
@@ -7531,35 +7461,6 @@ Table of Contents
    successor per the companion
    [I-D.draft-mcguinness-oauth-mission-expansion].
 
-   Resource containment under a prefix reference is compared after RFC
-   3986 [RFC3986] syntax-based normalization of both URIs: lowercase the
-   scheme and host, remove a default port, uppercase the hexadecimal
-   digits of any percent-encoding ([RFC3986] Section 2.1, so %2f and %2F
-   are equivalent), decode percent-encoded octets of unreserved
-   characters, and remove dot-segments.  This normalization applies to
-   comparison only, never to hashing: anchor computation (Section 7.1,
-   Section 7.2) remains byte-exact over the recorded values and is
-   untouched by this rule.
-
-   The default comparison is deliberately flat: resource matches by
-   exact equality and a literal action by array membership.  Hierarchy
-   is opt-in and closed to the two forms above: resource_match: "prefix"
-   for resource containment and .* action families for action
-   containment (Section 5).  A deployment that uses neither retains the
-   flat behavior unchanged.
-
-   The delegation member is policy, not authority, and is not part of
-   this comparison (Section 12.3).  A derived entry's delegation, when
-   present, MUST NOT be broader than the parent entry's:
-
-   *  its max_depth MUST be no greater than the parent entry's;
-
-   *  its allowed_delegates MUST be no wider than the parent entry's;
-      and
-
-   *  a derived entry MUST NOT introduce delegation where the parent
-      entry has none.
-
    The comparison is representational, not semantic.  A candidate that
    compares as no broader can still permit effects the parent's purpose
    never contemplated, because narrowing is judged over the entry's
@@ -7568,174 +7469,21 @@ Table of Contents
    unrecognized member, an incomparable value), the posture is
    conservative refusal, as each consuming rule of this document states.
 
-5.2.  Common Constraints
+5.2.  Authorization Details Types
 
-   A constraints member name (Section 5) is either a specification-
-   defined *Common Constraint* or a deployment-defined key.  Common
-   Constraints give independently developed deployments one vocabulary
-   they interpret, narrow, and compare identically; further Common
-   Constraints are defined by specification under the naming convention
-   of Section 20.8.
-
-   A Common Constraint definition fixes:
-
-   *  *Value syntax*: the JSON [RFC8259] value type and any additional
-      rules.
-
-   *  *Subset rule*: how a candidate value is judged no broader than a
-      reference value, used by the subset comparison of Section 5.1.
-
-   *  *Intersection rule*: how two values for the same key combine; the
-      result MUST be no broader than either operand.
-
-   A constraints member whose name is a specification-defined Common
-   Constraint is interpreted per its definition.  Any other member name
-   remains deployment-defined and is interpreted only within the issuing
-   deployment; a consumer that does not recognize it MUST fail closed
-   (Section 9.2).
-
-   The same duty binds the AS side of narrowing: whenever the AS derives
-   a candidate entry from a ceiling (a client's authority proposal
-   narrowed to the Authority Set (Section 4.2), or an Authority Set
-   entry narrowed to a derived or delegated token, Section 5,
-   Section 12.3), a registered Common Constraint key present in the
-   ceiling entry that the AS does not implement narrowing for MUST NOT
-   be dropped while the entry survives.  The AS MUST instead fail
-   closed: refuse the whole derivation, or omit the entry from the
-   result, exactly as an unrecognized resources value already may be;
-   the granted authorization_details echo reflects any such omission
-   (Section 5).  Carrying the entry forward with the key dropped would
-   widen effective authority past the ceiling exactly as an unenforced
-   key would at the Resource Server (Section 9.2).
-
-   This document defines the initial Common Constraints:
-
-   *  max_amount (object): a per-action ceiling on a monetary amount.
-      The value is an object with two members: amount (REQUIRED, a
-      string containing a decimal number) and currency (REQUIRED, an ISO
-      4217 [ISO4217] currency code).  Subset: no broader when the
-      currency values are equal and the candidate amount is less than or
-      equal to the reference amount, compared in decimal value space;
-      differing currencies fail the comparison (no conversion is
-      defined).  Intersection: when the currency values are equal, the
-      value with the smaller amount; differing currencies have no
-      intersection and the combination fails.
-
-   *  resource_issued_after (string, an RFC 3339 [RFC3339] date-time):
-      the action applies only to resources issued at or after this
-      instant.  Subset: no broader when greater than or equal to the
-      reference.  Intersection: the later instant.
-
-   *  resource_issued_before (string, an RFC 3339 [RFC3339] date-time):
-      the action applies only to resources issued at or before this
-      instant.  Subset: no broader when less than or equal to the
-      reference.  Intersection: the earlier instant.  The resource_
-      qualifier in both names marks that the window bounds resource
-      issuance, not token issuance.
-
-   *  tenant (string): the action applies only to resources of the named
-      tenant.  Subset: no broader when equal to the reference value.
-      Intersection: the common value when the two are equal; otherwise
-      there is no intersection and the combination fails.
-
-   *  recipient_domain (string, a DNS name): the action applies only to
-      recipients within the named domain.  Subset: no broader when equal
-      to the reference or a DNS subdomain of it.  Intersection: the
-      narrower value when one is equal to or a subdomain of the other;
-      otherwise there is no intersection and the combination fails.
-
-   *  time_window (object): the action may be exercised only within the
-      window, evaluated at the point of use (unlike
-      resource_issued_after and resource_issued_before, which bound
-      resource issuance, and unlike token exp, which bounds the
-      credential).  The value has two members, not_before and not_after
-      (each an RFC 3339 [RFC3339] date-time); at least one MUST be
-      present, and an absent member is unbounded on that side.  Subset:
-      no broader when the candidate window lies within the reference
-      window, an absent candidate bound counting as unbounded and
-      therefore broader than any present reference bound.  Intersection:
-      the overlap (the later not_before, the earlier not_after); an
-      empty overlap has no intersection and the combination fails.
-
-   *  data_classification (array of strings): the action applies only to
-      data whose classification label is among the named values.  Label
-      semantics are deployment- or registry-defined; the comparison is
-      not.  Subset: no broader when the candidate array's members are a
-      subset of the reference array's, compared as exact strings.
-      Intersection: the common members; an empty result has no
-      intersection and the combination fails.
-
-   *  allowed_tools (array of strings): the action may be exercised only
-      through a capability whose identifier is among the named values (a
-      tool or function identity, asserted at the point of use by the
-      enforcing component).  Subset: no broader when the candidate
-      array's members are a subset of the reference array's, compared as
-      exact strings.  Intersection: the common members; an empty result
-      has no intersection and the combination fails.
-
-   *  requires_action_approval (boolean): when true, each exercise of
-      the action requires a fresh, action-bound approval at the point of
-      use; the enforcing component MUST NOT permit the action on Mission
-      authority alone.  A value of false is equivalent to omitting the
-      member.  Subset: no broader when the candidate is true or equals
-      the reference (narrowing may add the requirement, never remove
-      it).  Intersection: the logical OR of the two values.
-
-   These comparisons are in value space, not lexical: max_amount amount
-   members are compared as the decimal numbers the strings contain, so
-   "500", "500.0", and "500.00" are equal; resource_issued_after and
-   resource_issued_before values are compared as the instants they
-   denote after normalization to UTC, so two RFC 3339 representations of
-   the same instant that differ only in timezone offset or trailing
-   subsecond zeros are equal; recipient_domain values are compared as
-   DNS names, case-insensitively and on whole labels, so
-   mail.example.com is within example.com and example.net is not.  A
-   Common Constraint definition MUST fix its subset and intersection in
-   value-space terms, so that independent deployments compute the same
-   result for the same values and the subset rule of Section 5.1 is
-   reproducible.
-
-   A decimal-string value in a Common Constraint (max_amount's amount
-   member, and any future Common Constraint with a decimal-valued
-   member) MUST match ^[0-9]+(\.[0-9]{1,18})?$: one or more decimal
-   digits, optionally followed by a single . and one to 18 further
-   decimal digits.  A leading - is out of scope for a ceiling value and
-   MUST be rejected.  A value of any other form, including scientific
-   notation ("1e300"), a sign, a thousands separator, or a non-numeric
-   token ("NaN", "Infinity"), is malformed, and a consumer MUST reject
-   it rather than attempt to parse it: an authority proposal carrying
-   one is refused at submission (Section 4.2), and a Resource Server
-   treats a malformed decimal value the same as a constraints key it
-   cannot enforce (Section 9.2).  Comparison and intersection over two
-   such decimal-string values MUST be computed as exact decimal
-   arithmetic (for example, by scaling both values to integers by their
-   fractional digit count and comparing the integers) and MUST NOT parse
-   either value into an IEEE 754 binary floating-point type: that
-   representation does not hold every value the grammar above admits
-   exactly and can compare or combine two values incorrectly.
-
-   A numeric constraint value MUST lie within the range JCS [RFC8785]
-   serializes exactly.  Monetary amounts avoid that hazard by
-   construction: max_amount carries its amount as a string containing a
-   decimal number, paired with an ISO 4217 [ISO4217] currency code, and
-   a future Common Constraint for a monetary value SHOULD reuse this
-   shape rather than a JSON number.
-
-5.3.  Other Authorization Details Types
-
-   mission_resource_access is the only type this document defines, but
-   the Authority Set MAY include other AS-supported [RFC9396]
-   authorization_details types when an audience consumes them.
-   ("Supported" here means the AS recognizes and documents the type: it
-   appears in authorization_details_types_supported or, where the AS
-   advertises the schema endpoint, as a key in its
+   The Authority Set MAY include any AS-supported [RFC9396]
+   authorization_details type an audience consumes; this document
+   defines no type itself.  ("Supported" here means the AS recognizes
+   and documents the type: it appears in
+   authorization_details_types_supported or, where the AS advertises the
+   schema endpoint, as a key in its
    authorization_details_types_metadata_endpoint response, then the
    source of truth for the supported set (Section 14).  RFC 9396
    establishes no IANA registry of type identifiers.)  The Mission
-   apparatus is type-agnostic toward such entries:
+   apparatus is type-agnostic toward every supported type:
 
-   *  they are committed by authority_hash and gated on Mission state
-      exactly as mission_resource_access entries are;
+   *  an entry is committed by authority_hash and gated on Mission state
+      the same way regardless of type;
 
    *  narrowing and delegation use the subset semantics the type defines
       (Section 5.1, Section 12.3).  A type whose subset and delegation
@@ -7753,29 +7501,44 @@ Table of Contents
    This lets policy-language profiles compose without this document
    defining them: for example, an entry carrying a Cedar policy set
    ([I-D.draft-cecchetti-oauth-rar-cedar]), or an analogous AuthZEN
-   policy entry, for an audience that evaluates it.  The AS derives such
-   an entry from the Mission Intent and bounds it by the Intent like any
-   other, but treats the carried policy largely opaquely; the Resource
-   Server or Policy Decision Point (PDP) evaluates it at request time.
+   policy entry, for an audience that evaluates it, alongside a general-
+   purpose type such as mission_resource_access
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  The AS
+   derives such an entry from the Mission Intent and bounds it by the
+   Intent like any other, but treats the carried policy largely
+   opaquely; the Resource Server or Policy Decision Point (PDP)
+   evaluates it at request time.
 
-   Stated as a limit: the subset rule is fully defined only over
-   mission_resource_access and its Common Constraints.  Authority
-   expressed in another type has whatever subset relation that type
-   defines, or none, and where it has none the entry is carried as
-   approved: never narrowed, delegated, or projected.  That boundary is
-   declared where the type is documented, not discovered at a refused
-   derivation: for every supported type, the AS MUST state, in the
-   deployment documentation that names the type as supported
-   (Section 14), whether it understands the type's subset relation and
-   whether it understands the type's delegation semantics; a type
-   documented without both is thereby declared carried-as-approved, non-
-   delegable and non-projectable while that documentation stands.  This
-   is a deployment-documentation obligation: no metadata member or
-   schema-endpoint field carries it, and no machine-readable per-type
-   capability map is defined here.  The narrowing guarantee is therefore
-   strongest while authority stays in mission_resource_access entries,
-   and weakens as expressiveness moves into opaque policy-language
-   entries.
+   Stated as a limit: the subset rule is fully defined only for a type
+   whose specification defines it.  Authority expressed in a type with
+   no defined subset relation is carried as approved: never narrowed,
+   delegated, or projected.  That boundary is declared per type, not
+   discovered at a refused derivation.  For every supported type, the AS
+   MUST declare three independent capabilities: whether it understands
+   the type's subset relation (narrowing), whether it understands the
+   type's delegation semantics (delegation), and whether it establishes
+   a safe scope projection for the type (Section 9.1) (projection);
+   understanding one establishes none of the others.  A type undeclared
+   on a capability is thereby carried-as-approved on it: non-delegable
+   if delegation is undeclared, non-projectable to scope if projection
+   is undeclared.  The AS satisfies this MUST through, in order of
+   preference: a mission_transformation_capabilities member in the
+   type's entry in the authorization_details_types_metadata_endpoint
+   response, where the AS advertises that endpoint (Section 14); an
+   equivalently-shaped member of its supported-type documentation; or,
+   where neither carrier is implemented, deployment documentation naming
+   the type as supported (Section 14) alone.  Deployment documentation
+   is always a sufficient carrier; a machine-readable carrier is
+   additive, not a replacement for it.  The narrowing guarantee is
+   therefore strongest for a type whose specification defines a subset
+   relation, such as mission_resource_access, and weakens as
+   expressiveness moves into opaque policy-language entries.
+
+   A mission_transformation_capabilities value is a JSON object with
+   three OPTIONAL boolean members, narrowing, delegation, and
+   projection; an absent member declares that capability undeclared by
+   this carrier, falling through to the next carrier in the preference
+   order above.
 
    Example (non-normative): an Authority Set with a Cedar policy entry
    for a finance audience that consumes Cedar, alongside a
@@ -7805,74 +7568,10 @@ Table of Contents
    domain grant.  Delegation controls on other entries, such as the
    mission_resource_access entry, apply to those entries only.
 
-5.4.  Modeling Tools and Function Calls
-
-   This section is non-normative guidance.  A "tool" an agent invokes,
-   such as a Model Context Protocol (MCP) tool or a function call, is
-   modeled as a mission_resource_access entry.  No separate entry type
-   is needed, and the rules above (derivation, subset, delegation,
-   authority_hash) apply unchanged.
-
-   The mapping is:
-
-   *  resource is the tool provider.  For an MCP tool it is the MCP
-      server's URL.  The MCP authorization model ([MCP]) makes the
-      server an OAuth 2.0 resource server, so this is the resource
-      identifier a token is audience-bound to.
-
-   *  actions are the tool names the task needs at that provider.
-      Authorizing a tool is authorizing its name as an action, which
-      lines up with MCP filtering its tool list by the caller's granted
-      authority and routing each tool call for authorization.
-
-   *  constraints carry machine-actionable bounds on a tool's arguments,
-      for example an amount ceiling or a recipient domain (the
-      max_amount and recipient_domain Common Constraints, Section 5.2).
-      Like all constraints, they are committed by authority_hash and
-      carried to the point of use, but they are evaluated against the
-      concrete call arguments by a runtime enforcement layer, not at
-      issuance (Section 17.3.1).
-
-   For example, a Mission authorized to read invoices and post small
-   adjustments through a finance MCP server, and to send messages
-   through a messaging MCP server, derives:
-
-   [
-     { "type": "mission_resource_access",
-       "resource": "https://finance.example.com/mcp",
-       "actions": ["query_invoices", "post_adjustment"],
-       "constraints": {
-         "max_amount": { "amount": "500.00", "currency": "USD" }
-       } },
-     { "type": "mission_resource_access",
-       "resource": "https://mail.example.com/mcp",
-       "actions": ["send_message"],
-       "constraints": { "recipient_domain": "example.com" } }
-   ]
-
-   Delegation to a sub-agent works unchanged: add a delegation member to
-   a tool entry (Section 12.3).  For example, an entry a sub-agent of
-   type ai_agent may invoke at depth 1, narrowed to the read tool only:
-
-   { "type": "mission_resource_access",
-     "resource": "https://finance.example.com/mcp",
-     "actions": ["query_invoices"],
-     "delegation": {
-       "max_depth": 1,
-       "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-     } }
-
-   What this profile does not provide for tools is a typed, attenuable
-   per-argument constraint grammar: narrowing one tool's argument schema
-   against another (for example, amount in a range, recipient in a
-   one_of set) as the grant is derived or delegated.  Argument bounds
-   here are the same flat, carried constraints used for any resource,
-   evaluated at runtime.  Structured per-argument attenuation
-   ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens], with object
-   capability systems such as UCAN as prior art) is a richer primitive
-   deferred to future work; it would extend the delegation and subset
-   model of this document (Section 12.3, Section 5.1) rather than
-   introduce a new entry type.
+   For example, invoking a Model Context Protocol tool or a function
+   call is modeled as a mission_resource_access entry with no separate
+   type; the mapping is specified in
+   [I-D.draft-mcguinness-oauth-mission-resource-access].
 
 6.  Mission Approval
 
@@ -8118,7 +7817,7 @@ Table of Contents
    Mission or allow it to expire.
 
    A client learns its mission_id from the mission claim's id on each
-   issued token (Section 9.1) or from the token response.  This document
+   issued token (Section 9.2) or from the token response.  This document
    defines mission_id as a token-endpoint response parameter: a string
    carrying the Mission Identifier, returned alongside the issued token.
    An AS SHOULD return it: the client is not expected to parse the
@@ -8345,10 +8044,11 @@ Table of Contents
    text: JCS serializes the parsed binary64 value deterministically and
    does not preserve a source lexeme's spelling or excess precision.  A
    profile whose values need exact decimal or large-integer semantics
-   carries them as strings or defines a stricter numeric domain, as
-   Common Constraints already does for constraint values (Section 5.2).
-   The security considerations of [RFC8785] apply to every JCS
-   computation.
+   carries them as strings or defines a stricter numeric domain, as the
+   Mission Resource Access Profile's Common Constraints already do for
+   constraint values
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  The security
+   considerations of [RFC8785] apply to every JCS computation.
 
    The algorithm prefix is the agility mechanism. sha-256 is mandatory
    to implement and the only algorithm this family defines.  A new
@@ -8393,7 +8093,7 @@ Table of Contents
    describe a signed artifact's own envelope, or identify a party in an
    {iss, sub} object, never the Mission.
 
-   Like the mission claim (Section 9.1), the record is open
+   Like the mission claim (Section 9.2), the record is open
    (Section 13): a companion profile of this document MAY record
    additional members set at creation using short names coordinated with
    it (for example, a lineage member linking the Mission to a
@@ -8439,7 +8139,7 @@ Table of Contents
       proposed_authority is present.  It is approval-time provenance,
       not enforcement input: like approval_basis, it is surfaced on the
       record and through introspection (Section 11) and is not carried
-      on the mission claim (Section 9.1).
+      on the mission claim (Section 9.2).
 
    submission_evidence:  OPTIONAL.  An array.  The verified Intent
       Submission Evidence facts (Section 4.3), one element per verified
@@ -8455,7 +8155,7 @@ Table of Contents
       (Section 7.2).
 
       Like approval_basis, it is provenance, not enforcement input, and
-      it is not carried on the mission claim (Section 9.1).  No
+      it is not carried on the mission claim (Section 9.2).  No
       integrity anchor commits it: its digests are record metadata whose
       trustworthiness is the trust in this immutable record, not an
       independently verifiable association between the Mission and the
@@ -8567,7 +8267,7 @@ Table of Contents
       (Section 7.1).  Neither anchor commits it, and it MUST NOT be
       added to either digest; a profile that commits the Mission Record
       itself covers it under that profile's own anchor.  The mission
-      claim MAY carry approval_basis.type (Section 9.1) as a wire
+      claim MAY carry approval_basis.type (Section 9.2) as a wire
       signal; it MUST NOT be relied on to grant or widen authority.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
@@ -8726,7 +8426,7 @@ Table of Contents
       authorization_details ([RFC9396]); this MAY be the full Authority
       Set or a narrowed subset (Section 5.1);
 
-   *  carries a mission claim (Section 9.1);
+   *  carries a mission claim (Section 9.2);
 
    *  sets sub to the AS-local sub the AS maps the Mission's Subject to
       (Section 6);
@@ -8862,19 +8562,11 @@ Table of Contents
    consumer MUST NOT treat their absence as an authentication downgrade.
 
    authorization_details is the authoritative expression of a Mission-
-   bound token's authority.  Any scope the token carries MUST be derived
-   from, and no broader than, the Authority Set. Specifically:
-
-   *  every scope value MUST correspond to authority already present in
-      authorization_details; and
-
-   *  a scope value MUST NOT convey authority, or relaxation of a
-      constraint, that the Authority Set does not grant.
-
-   Because scope is a coarse string list, it cannot carry the per-entry
-   constraints; it is a compatibility projection, never the
-   authoritative form of the Mission's authority.  The AS MUST NOT issue
-   a Mission-bound token whose scope exceeds the Authority Set.
+   bound token's authority.  A token MAY also carry scope, subject to
+   the Scope Projection rule of Section 9.1.  Because scope is a coarse
+   string list, it cannot carry the per-entry constraints; where it is
+   emitted at all, it is a compatibility projection, never the
+   authoritative form of the Mission's authority.
 
    A credential the Mission Issuer derives MUST have an exp that does
    not exceed the Mission's expires_at, so that no credential outlives
@@ -8899,7 +8591,60 @@ Table of Contents
    Narrowed, single-audience tokens (Section 5.1) are the mechanism that
    keeps gated and ungated authority from sharing one long-lived token.
 
-9.1.  The Mission Claim
+9.1.  Scope Projection
+
+   For every target audience, the AS MUST establish that the effective
+   rights the target's enforcement path grants from the projected scope,
+   together with every independently mandatory control on that path, are
+   a subset of the rights the token's applicable authorization_details
+   grant.  This is a semantic condition, not a structural one: it fails
+   for a constraints-free entry whose scope aggregates a broader action,
+   spans more resource instances or paths than the entry, carries rights
+   the target's local scope interpretation implies, or arises from the
+   union of several entries, exactly as it fails for a relaxed
+   constraint.
+
+   To emit scope for an entry, the AS:
+
+   1.  determines the target Resource Server or audience for the token;
+
+   2.  resolves a trusted, versioned scope-projection mapping for that
+       target, established through the target's protected resource
+       metadata (Section 15) or authenticated out-of-band configuration;
+
+   3.  establishes, under the subset condition above, that the complete
+       effective authorization the projected scope grants at that target
+       is no broader than the applicable carried entries;
+
+   4.  omits scope for an entry where the target's enforcement path
+       consumes authorization_details instead;
+
+   5.  MUST refuse issuance to a target that is scope-only when no safe
+       projection exists for the applicable entries: an issued token no
+       enforcement path can safely evaluate is not a usable credential;
+       and
+
+   6.  for a multi-audience token, establishes the condition
+       independently for each audience; a single-audience token
+       (Section 9) remains preferred.
+
+   Unknown scope semantics, unknown Resource Server enforcement
+   behavior, or an ambiguous or stale mapping all fail closed under step
+   5.  This rule applies to every issuance path that can emit scope on a
+   Mission-bound token: initial issuance, refresh, Token Exchange, and
+   any other derived-token path.
+
+   This is the type-agnostic form of the rule; a type's own
+   specification states when the mapping in step 3 is safe for that
+   type's entries (for mission_resource_access,
+   [I-D.draft-mcguinness-oauth-mission-resource-access]).
+
+   A runtime profile's own enforcement-scope declarations
+   ([I-D.draft-mcguinness-mission-runtime]) MAY reference the same
+   mapping for the paths it covers; it does not own the mapping, and
+   this rule does not depend on the runtime profile being deployed.
+
+9.2.  The Mission Claim
 
    The mission claim is a JSON object:
 
@@ -8913,7 +8658,7 @@ Table of Contents
 
    authority_hash:  REQUIRED.  A string.  The Mission's authority_hash,
       the commitment over the complete consented Authority Set
-      (Section 9.2).
+      (Section 9.3).
 
    expires_at:  OPTIONAL.  A string.  The Mission's expires_at
       (Section 8), in RFC 3339 [RFC3339] date-time form and named
@@ -8991,7 +8736,7 @@ Table of Contents
      }
    }
 
-9.2.  Resource Server Enforcement
+9.3.  Resource Server Enforcement
 
    A Resource Server enforces from the token alone; no call to the AS is
    required for the JWT carriage.  An opaque Mission-bound token is
@@ -9169,15 +8914,19 @@ Table of Contents
    are Section 17.3.3's.
 
    A Mission-unaware Resource Server that authorizes only from scope
-   still operates within the Mission at the coarse scope level, because
-   the AS derived and bounded that scope by the Authority Set
-   (Section 9); but it does not enforce the per-entry constraints, which
-   scope cannot carry.  A deployment that relies on those constraints
-   MUST route the protected operation through a Resource Server that
-   enforces authorization_details (or the runtime layer that evaluates
-   them).
+   operates within the Mission only to the extent the AS established a
+   safe projection for it at issuance (Section 9.1): the AS proved that
+   the projected scope's effective rights, together with every
+   independently mandatory control on that path, are no broader than the
+   applicable authorization_details.  Where no such projection exists
+   for an entry, the AS omits scope for it or refuses issuance to that
+   audience rather than emit a scope the Resource Server would over-
+   grant on (Section 9.1).  A deployment that needs constrained
+   authority enforced where no safe projection exists MUST route the
+   protected operation through a Resource Server that enforces
+   authorization_details (or the runtime layer that evaluates them).
 
-9.3.  Remediation Grains
+9.4.  Remediation Grains
 
    A denial is not the end of the exchange.  The family treats "how to
    ask again" as a graduated challenge assembled from independent
@@ -9188,7 +8937,7 @@ Table of Contents
    +==========================+======================+======================================+
    |Grain                     |Carriage              |Defined by                            |
    +==========================+======================+======================================+
-   |mission_denial            |WWW-Authenticate      |This document (Section 9.2)           |
+   |mission_denial            |WWW-Authenticate      |This document (Section 9.3)           |
    |                          |attribute             |                                      |
    +--------------------------+----------------------+--------------------------------------+
    |insufficient_authorization|WWW-Authenticate error|[I-D.draft-zehavi-oauth-rar-metadata] |
@@ -9221,7 +8970,7 @@ Table of Contents
    entries back on the standard authorization_details parameter
    (Section 4.2), where they derive under this document's ordinary rules
    (Section 5): of an advertised, schema-valid type (Section 14),
-   narrowed same-type (Section 5.1, Section 5.3) like any other
+   narrowed same-type (Section 5.1, Section 5.2) like any other
    proposal.  The loop closes natively: the remediation grain's output
    vocabulary is this document's input carriage, with no re-wrapping
    between them.
@@ -9263,7 +9012,7 @@ Table of Contents
 
    These three states are the mandatory core of the Mission lifecycle
    state space.  This profile owns that state space and establishes its
-   registry, the Mission Lifecycle States registry (Section 20.9); an
+   registry, the Mission Lifecycle States registry (Section 20.7); an
    OPTIONAL companion profile MAY register an additional state for a
    lifecycle it introduces (for example, a paused or a superseded
    state), but only active ever permits issuance.
@@ -9406,7 +9155,7 @@ Table of Contents
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
    Mission-bound access tokens.  When it does, the response for such a
    token carries, in addition to the standard members, a mission member:
-   id, issuer, and authority_hash (as in the mission claim, Section 9.1)
+   id, issuer, and authority_hash (as in the mission claim, Section 9.2)
    plus, when the responding AS is the Mission issuer, the current
    lifecycle state (string); when controls.max_derivations is in force,
    derivations_remaining (a number): the derivations left under the cap
@@ -9534,7 +9283,7 @@ Table of Contents
       active is true, its own identity in aud, and the sender-constraint
       binding cnf names, and MUST enforce the response's
       authorization_details under the same rules as the token-carried
-      form (Section 9.2), the fail-closed duties included.
+      form (Section 9.3), the fail-closed duties included.
 
    *  Introspection failure is refusal: a Resource Server that cannot
       obtain a valid introspection response for an opaque Mission-bound
@@ -9548,7 +9297,7 @@ Table of Contents
 11.5.  Examples
 
    While the Mission is active, the response is the standard [RFC7662]
-   body plus the mission member.  The canonical ERP token (Section 9.1),
+   body plus the mission member.  The canonical ERP token (Section 9.2),
    introspected at the issuer AS:
 
    {
@@ -9655,7 +9404,7 @@ Table of Contents
       Delegation MUST NOT add authority.
 
    *  *The Mission binding rides unchanged.* The delegated token carries
-      the same mission claim (Section 9.1), its id, issuer, and
+      the same mission claim (Section 9.2), its id, issuer, and
       authority_hash, so every actor in the chain operates under the one
       consented authority.
 
@@ -9705,7 +9454,7 @@ Table of Contents
 12.1.  Adopted Model: client_id Names the Requesting Client
 
    This profile keeps client_id's registered meaning, stated normatively
-   in Section 9 and enforced in Section 9.2: the OAuth client that
+   in Section 9 and enforced in Section 9.3: the OAuth client that
    requested the token, on every issued or derived token, a delegated
    one included.  Downstream delegates ride the act chain (Section 12),
    and the Mission's originally-approved agent remains recorded in the
@@ -9717,7 +9466,7 @@ Table of Contents
    with no error to surface the mismatch, and it buys no relaxation: it
    is safe only where every Resource Server already processes the act
    chain, the discipline a Mission-aware Resource Server owes anyway
-   (Section 9.2).  The routing rule of Section 9.2 is independent of
+   (Section 9.3).  The routing rule of Section 9.3 is independent of
    this choice: the mission claim's presence, not the binding choice, is
    what signals a token may carry an act chain a consumer needs to
    process, a Mission-unaware Resource Server cannot opt into that need,
@@ -9734,7 +9483,7 @@ Table of Contents
    delegate narrows only through a delegated exchange that names it in
    the act chain.  The result MUST be a subset (Section 5.1) of the
    presented token's authority, carries the same mission claim
-   (Section 9.1), and adds no act chain.  It is a derivation and is
+   (Section 9.2), and adds no act chain.  It is a derivation and is
    gated on the Mission being active (Section 10).  Because it names no
    actor, it does not delegate: it re-scopes the agent's own authority
    downward.
@@ -9763,48 +9512,20 @@ Table of Contents
    *Per-entry enforcement.* When the AS issues a token to a delegate
    (the actor that becomes the outermost act) at delegation depth d, it
    includes a Mission Authority Set entry in the delegated token's
-   authorization_details only if all of the following hold:
-
-   1.  the entry carries a delegation member (otherwise it is non-
-       delegable, which is the default);
-
-   2.  d is less than or equal to the entry's delegation.max_depth; and
-
-   3.  the delegate is permitted by delegation.allowed_delegates or,
-       when that member is absent, by the AS's delegation-authorization
-       policy, which the AS MUST apply at every exchange: an absent
-       matcher list is a decision deferred to policy, never a blanket
-       grant of eligibility.
-
-   An entry failing any of these narrows out of the delegated token,
-   consistent with the subset rule (Section 5.1).  The delegation member
-   is policy, not authority, and is not part of the subset comparison;
-   surviving entries are carried with their delegation member intact so
-   the next hop is evaluated the same way.
-
-   *Matching allowed_delegates.* Each entry is a matcher object modeled
-   on the RFC 8693 may_act actor object ([RFC8693] Section 4.4): where
-   may_act names a single party eligible to act on a token,
-   allowed_delegates is a per-Authority-Set-entry _list_ of such
-   matchers, generalized to actor-type classes.  A { "sub": ... }
-   matcher permits a specific delegate by client identifier; a {
-   "sub_profile": ... } matcher permits any actor of that type (for
-   example, ai_agent).  An actor's sub_profile MAY carry multiple space-
-   separated values; a { "sub_profile": ... } matcher is satisfied when
-   its value is among the actor's values.  A deployment can thus permit
-   a specific client, a class of actors, or both, and a delegate is
-   permitted if it matches any entry.
-
-   The AS MUST authenticate the delegate at the Token Exchange and
-   assert the actor's sub and sub_profile itself.  A self-asserted
-   sub_profile MUST NOT satisfy a matcher; otherwise a client could
-   claim any actor type to bypass the constraint.
-
-   A { "sub": ... } matcher is a client identifier in the issuing AS's
-   namespace and is not portable across a trust domain; how a Resource
-   AS evaluates conveyed matchers, failing closed and narrowing out any
-   sub matcher it cannot resolve, is specified by the companion
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   authorization_details only if the entry's type defines a delegation
+   policy for the entry and that policy, evaluated at depth d, permits
+   this delegate; an entry carrying no type-defined delegation policy is
+   non-delegable, the default.  The AS applies the policy's own
+   eligibility test at every exchange; where the policy leaves a matcher
+   unstated, the AS's delegation-authorization policy decides, and
+   absence is never a blanket grant.  An entry failing this test narrows
+   out of the delegated token, consistent with the subset rule
+   (Section 5.1); the delegation policy is not part of the subset
+   comparison itself, and a surviving entry carries it intact so the
+   next hop is evaluated the same way. mission_resource_access's own
+   delegation policy, the delegation member and its concrete depth and
+   matcher conditions, is defined by the Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    *Empty result.* If narrowing leaves no entries for the delegate, the
    AS MUST refuse with invalid_target ([RFC8693] Section 2.2.2) rather
@@ -9889,20 +9610,21 @@ Table of Contents
    remaining stable across revisions of this profile:
 
    *  the mission claim members id, issuer, and authority_hash
-      (Section 9.1);
+      (Section 9.2);
 
-   *  the mission_resource_access authorization details shape
-      (Section 5); and
+   *  the authorization_details carriage and its type-agnostic subset
+      discipline (Section 5.2, Section 5.1); and
 
    *  the act delegation chain (Section 12).
 
    The profile's extension points are each a declared seam rather than
    new machinery:
 
-   *  *Authority types.* The Authority Set is open to other AS-supported
-      authorization_details types (Section 5.3); the Mission apparatus
-      (commitment, gating, delegation) is type-agnostic toward them,
-      subject to the delegation and projection limits in Section 5.3.
+   *  *Authority types.* The Authority Set is open to any AS-supported
+      authorization_details type (Section 5.2); the Mission apparatus
+      (commitment, gating, delegation) is type-agnostic toward every
+      type, subject to the delegation and projection limits in
+      Section 5.2.
 
    *  *Intent Submission Evidence types.* The evidence array of the
       Submission envelope is open to evidence types defined by companion
@@ -9920,11 +9642,11 @@ Table of Contents
       and a collision-resistant typ, not by hashing the bare object, so
       the domain separation and issuer binding hold uniformly.  A
       mission descriptor embedded in such an object uses the mission
-      claim shape (Section 9.1), optionally extended with collision-
+      claim shape (Section 9.2), optionally extended with collision-
       resistantly named members (for example, an intent_hash for audit),
       and is never authority-bearing on its own.
 
-   *  *The mission claim.* It is an open object (Section 9.1):
+   *  *The mission claim.* It is an open object (Section 9.2):
       additional, collision-resistantly named members ride the mission
       binding (for example, a runtime decision reference, a delegation
       receipt, or an attestation reference), and consumers ignore
@@ -9933,7 +9655,7 @@ Table of Contents
    *  *Lifecycle state.* The lifecycle state space (Section 10) is open
       to additional states registered by companion profiles for
       lifecycles they introduce, in the Mission Lifecycle States
-      registry (Section 20.9).  The forward-compatibility rule in
+      registry (Section 20.7).  The forward-compatibility rule in
       Section 10 keeps this safe regardless: only active permits
       issuance, and a consumer treats every other state, recognized or
       not, as non-active.
@@ -9955,7 +9677,7 @@ Table of Contents
    value space and the mission claim rests on collision-resistant naming
    and the fail-safe rules above rather than on central registration;
    the lifecycle state space is additionally backed by the Mission
-   Lifecycle States registry (Section 20.9).  Section 13.1 states the
+   Lifecycle States registry (Section 20.7).  Section 13.1 states the
    general rule this section's extension points follow.
 
 13.1.  Namespace Taxonomy
@@ -9969,10 +9691,13 @@ Table of Contents
       it itself defines, and every further document that defines a value
       requests that value's registration, carrying any Internet-Draft
       reference as a publication dependency under the registry's policy.
-      Mission Common Constraints (Section 20.8) and Mission Lifecycle
-      States (Section 20.9) are this document's two; the Mission
-      Authority Server Metadata registry and the Mission Denial Reasons
-      registry are established where those namespaces are defined.
+      Mission Lifecycle States (Section 20.7) is this document's; the
+      Mission Common Constraints registry is established by the Mission
+      Resource Access Profile
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]); the
+      Mission Authority Server Metadata registry and the Mission Denial
+      Reasons registry are established where those namespaces are
+      defined.
 
    *  *Specification-defined.* A namespace with a defined fail-safe for
       unknown values and no demonstrated third-party extension demand
@@ -10011,30 +9736,33 @@ Table of Contents
    mission_bound_authorization_supported:  OPTIONAL boolean.  When true,
       the AS supports the core Mission Issuer surfaces of this profile
       (Section 16): the mission_intent authorization request parameter
-      through PAR (Section 4), derivation of mission_resource_access
-      authorization details (Section 5), Mission-bound access tokens
-      (Section 9), and the mission JWT claim (Section 9.1).  It asserts
-      Mission Issuer support only; it makes no claim about any Resource
-      Server, nor about the OPTIONAL capabilities (delegation,
-      introspection, cross-domain projection), which are discovered out
-      of band or by attempt (Section 16).
+      through PAR (Section 4), derivation of authorization_details
+      entries of its supported types (Section 5, Section 5.2), Mission-
+      bound access tokens (Section 9), and the mission JWT claim
+      (Section 9.2).  It asserts Mission Issuer support only; it makes
+      no claim about any Resource Server, nor about the OPTIONAL
+      capabilities (delegation, introspection, cross-domain projection),
+      which are discovered out of band or by attempt (Section 16).
 
-   An AS that advertises this profile MUST include
-   mission_resource_access in its authorization_details_types_supported
-   metadata ([RFC9396]): the standard type signal is the stable baseline
-   a Mission-aware client relies on, and this specification, not out-of-
-   band documentation, is the type's normative definition.  A client MAY
-   use the RFC 9396 client metadata authorization_details_types at
+   An AS that advertises this profile MUST include at least one AS-
+   supported type in its authorization_details_types_supported metadata
+   ([RFC9396]): the approved-set commitment a Mission-aware client
+   relies on.  Where mission_resource_access is among them, the Mission
+   Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]), not out-of-
+   band documentation, is that type's normative definition.  A client
+   MAY use the RFC 9396 client metadata authorization_details_types at
    registration to declare the types it understands.
 
-   The supported-type documentation behind this metadata also carries
-   each type's transformation boundary: whether the AS understands the
-   type's subset relation and delegation semantics (Section 5.3).  The
-   metadata itself carries only type identifiers ([RFC9396]), and the
-   optional schema endpoint defines no field for the boundary, so the
-   declaration is deployment documentation, not an interoperable
-   discovery surface; a client without access to that documentation
-   learns the boundary only by attempt.
+   Each supported type's transformation-capability declaration, whether
+   the AS understands the type's narrowing, delegation, and scope-
+   projection semantics, is required by Section 5.2.  Deployment
+   documentation naming the type as supported is always a sufficient
+   carrier for it; where the AS advertises the schema endpoint below, it
+   MAY additionally carry the declaration machine-readably as a
+   mission_transformation_capabilities member of the type's entry,
+   letting a client establish the boundary without an out-of-band
+   lookup.
 
    An advertised type, mission_resource_access included, appears in
    authorization requests only as a proposal subject to derivation
@@ -10069,9 +9797,11 @@ Table of Contents
    endpoint; the endpoint is defined by an individual draft without
    formal standing, and conformance to this document does not depend on
    it.  The stable baseline is [RFC9396]:
-   authorization_details_types_supported listing mission_resource_access
-   (a MUST for an advertising AS, above), with Section 20.3 the
-   normative definition of the type.
+   authorization_details_types_supported listing at least one AS-
+   supported type (a MUST for an advertising AS, above); where
+   mission_resource_access is among them, the Mission Resource Access
+   Profile ([I-D.draft-mcguinness-oauth-mission-resource-access]) is its
+   normative definition.
 
    Where the endpoint IS advertised: its response is a JSON object keyed
    by authorization_details type identifier, each value carrying, per
@@ -10082,10 +9812,11 @@ Table of Contents
    and authorization_details_types_supported, where the AS also
    advertises it, mirrors those keys and MUST NOT list a type absent
    from them; and the AS MUST publish, within that response, an entry
-   for mission_resource_access whose schema validates the object shape
-   Section 20.3 defines, including the Common Constraints structure
-   (Section 5.2), the published schema being that definition's machine-
-   readable form.
+   for every supported type whose schema validates that type's
+   documented object shape.  For mission_resource_access, that shape,
+   including the Common Constraints structure, is the Mission Resource
+   Access Profile's
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Where a deployment arranges Mission-bound authorization out of band
    rather than advertising mission_bound_authorization_supported, the
@@ -10104,13 +9835,13 @@ Table of Contents
 
    mission_bound_authorization_required:  OPTIONAL boolean.  When true,
       the protected resource accepts only Mission-bound tokens: a token
-      that lacks the mission claim (Section 9.1) is rejected
-      (Section 9.2).  When absent or false, the resource makes no such
+      that lacks the mission claim (Section 9.2) is rejected
+      (Section 9.3).  When absent or false, the resource makes no such
       requirement.
 
    mission_constraints_supported:  OPTIONAL.  An array of strings: the
       constraints keys (Common Constraints and deployment-defined names)
-      the resource understands and enforces (Section 9.2).  It gives the
+      the resource understands and enforces (Section 9.3).  It gives the
       AS's duty to emit only keys the serving resource is known to
       understand (Section 5) a discovery surface, and lets a client
       predict a fail-closed constraint mismatch before making the
@@ -10120,10 +9851,12 @@ Table of Contents
 
    The smallest useful conforming deployment is a Mission Issuer that
    derives in narrowing mode from the client's authority proposal
-   (Section 5), emits only the Common Constraints of Section 5.2, and
+   (Section 5), supports one AS-supported authorization_details type and
+   emits only that type's specification-defined vocabulary, and
    implements none of the OPTIONAL capabilities; a scope-only Resource
-   Server still operates at the coarse scope level (Section 9.2).  This
-   note names a starting point and creates no new conformance class.
+   Server is served only where the AS established a safe scope
+   projection for it (Section 9.1).  This note names a starting point
+   and creates no new conformance class.
 
    An implementation conforms in one of three roles.
 
@@ -10134,8 +9867,8 @@ Table of Contents
       PAR (Section 4.1), with the Intent Submission Evidence dispatch
       and refusal rules (Section 4.3);
 
-   *  derivation of mission_resource_access authorization details
-      (Section 5);
+   *  derivation of authorization_details entries of its supported types
+      (Section 5, Section 5.2);
 
    *  the approval event with its integrity anchors and recorded
       approval_basis (Section 6, Section 8);
@@ -10150,7 +9883,7 @@ Table of Contents
    *  gating of issuance on Mission state (Section 10).
 
    A *Mission-aware Resource Server* implements Resource Server
-   enforcement (Section 9.2), from the token's own claims or from its
+   enforcement (Section 9.3), from the token's own claims or from its
    active introspection response under the introspected consumption mode
    (Section 11.4).
 
@@ -10257,7 +9990,7 @@ Table of Contents
    authority_hash commits the full Authority Set, while a derived token
    may carry a narrowed subset, so a Resource Server cannot in general
    recompute it from the token alone.  Recomputation is optional, and
-   its rules live with the Resource Server's other duties (Section 9.2);
+   its rules live with the Resource Server's other duties (Section 9.3);
    a Resource Server that does not hold the full set treats
    authority_hash as a whole-Mission audit and correlation anchor
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) while enforcing
@@ -10292,7 +10025,7 @@ Table of Contents
    the token signature provisions the verifying party out of band, the
    Resource Server itself or a policy decision point holding a
    materialized view of the Mission record, and uses the recomputation
-   path of Section 9.2.
+   path of Section 9.3.
 
    What such verification buys depends on when the issuer is
    compromised.  A proof or retrieval response issued under the same
@@ -10303,7 +10036,7 @@ Table of Contents
    corruption of the record after an independently anchored approval
    commitment, and against post-approval signing-key compromise where
    the original commitment is pinned outside the issuer.  The pinning is
-   what makes the difference; the worked example in Section 9.2 lists
+   what makes the difference; the worked example in Section 9.3 lists
    what a deployment provisions to get it.
 
    intent_hash extends the same protection to the task itself: it
@@ -10367,7 +10100,7 @@ Table of Contents
    from its submission to obtain ungoverned tokens; the client-side face
    of this duty is stated in Section 14.  On the enforcement side, a
    Resource Server for such a resource rejects a token lacking the
-   mission claim (Section 9.2), and MAY advertise the requirement
+   mission claim (Section 9.3), and MAY advertise the requirement
    through mission_bound_authorization_required (Section 15).
 
 17.2.  Agent-Specific Threats
@@ -10490,7 +10223,7 @@ Table of Contents
 
    A prefix entry (Section 5) draws an authority boundary in URI space.
    The AS's containment test (Section 5.1) and the Resource Server's
-   request matching (Section 9.2) MUST apply the single RFC 3986
+   request matching (Section 9.3) MUST apply the single RFC 3986
    [RFC3986] normalization defined in Section 5.1, so issuance and
    enforcement draw the same boundary.  A matcher that normalizes
    differently from the party that derived the entry can admit a request
@@ -10588,7 +10321,7 @@ Table of Contents
 
 17.3.3.  Denial Detail Disclosure
 
-   The mission_denial attribute (Section 9.2) tells a caller which path
+   The mission_denial attribute (Section 9.3) tells a caller which path
    a denial leads into, and thereby reveals authorization shape:
    step_up_required confirms to the presenting party that the authority
    exists, where insufficient_authority denies its existence.
@@ -10667,7 +10400,7 @@ Table of Contents
    MUST NOT assume client_id carries it.  A deployment that delegates
    MUST route delegated Mission-bound traffic, including to logging and
    audit infrastructure, only through components that process the act
-   chain (Section 9.2), and SHOULD review any existing component that
+   chain (Section 9.3), and SHOULD review any existing component that
    authorizes or logs solely from client_id for this gap before exposing
    it to delegated Mission-bound tokens.
 
@@ -11015,7 +10748,7 @@ Table of Contents
    response's JSON extensibility rather than defining a new error code,
    so generic [RFC6749] error handling is undisturbed.  The
    mission_denial attribute rides the WWW-Authenticate scheme's
-   extensible auth-param space ([RFC6750], Section 9.2), for which no
+   extensible auth-param space ([RFC6750], Section 9.3), for which no
    IANA registry exists; no action is required for it.
 
 20.2.  OAuth Extensions Error Registration
@@ -11038,17 +10771,7 @@ Table of Contents
    endpoint carriage defined by a companion profile, in the token error
    response.
 
-20.3.  The Mission Resource Access Authorization Details Type
-
-   mission_resource_access is an authorization_details type per
-   [RFC9396] Section 2, defined by this document in Section 5.  RFC 9396
-   does not establish an IANA registry of authorization details types
-   (type identifiers are interpreted by the Authorization Server), so
-   this document creates no registry entry for it and requires no IANA
-   action here.  If a registry of authorization details types is
-   established in the future, this type SHOULD be registered in it.
-
-20.4.  JSON Web Token Claims Registration
+20.3.  JSON Web Token Claims Registration
 
    This document registers the following in the "JSON Web Token Claims"
    registry:
@@ -11062,9 +10785,9 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 9.1
+   *  Specification Document(s): this document, Section 9.2
 
-20.5.  OAuth Token Introspection Response Registration
+20.4.  OAuth Token Introspection Response Registration
 
    This document registers the following in the "OAuth Token
    Introspection Response" registry ([RFC7662]):
@@ -11072,7 +10795,7 @@ Table of Contents
    *  Name: mission
 
    *  Description: The Mission a token was derived under.  Same object
-      shape as the mission JWT claim (Section 9.1); a response from the
+      shape as the mission JWT claim (Section 9.2); a response from the
       Mission's issuer additionally carries a state member giving the
       current lifecycle state, where a derivation cap is in force a
       derivations_remaining member, and where the Mission records an
@@ -11082,7 +10805,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 11
 
-20.6.  OAuth Authorization Server Metadata Registration
+20.5.  OAuth Authorization Server Metadata Registration
 
    This document registers the following in the "OAuth Authorization
    Server Metadata" registry ([RFC8414]):
@@ -11096,7 +10819,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 14
 
-20.7.  OAuth Protected Resource Metadata Registration
+20.6.  OAuth Protected Resource Metadata Registration
 
    This document registers the following in the "OAuth Protected
    Resource Metadata" registry ([RFC9728]):
@@ -11119,127 +10842,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 15
 
-20.8.  Common Constraints Registry
-
-   This document establishes the "Mission Common Constraints" registry.
-   The registration policy is Specification Required [RFC8126].  A
-   Designated Expert reviews a submission for the discipline Section 5.2
-   requires: a name matching ^[A-Za-z0-9_.:-]+$ not already registered,
-   a JSON [RFC8259] value syntax precise enough for independent
-   implementations to agree on, and a subset rule and an intersection
-   rule both stated in value-space terms, with the intersection of any
-   two valid values never broader than either operand.  Registration
-   does not require IETF review or a Standards Track document; a
-   Specification Required reference that a Designated Expert can review
-   against these criteria suffices.
-
-   Each registration records:
-
-   *  *Key Name*: the constraints member name.
-
-   *  *Value Space*: the JSON value type and any additional syntax
-      rules.
-
-   *  *Subset Rule*: how a candidate value is judged no broader than a
-      reference value.
-
-   *  *Intersection Rule*: how two values for the key combine into a
-      result no broader than either operand.
-
-   *  *Change Controller*: IETF, or the registrant for any other
-      registration.
-
-   *  *Reference*: the specification defining the key.
-
-   This document populates the registry with the Common Constraints it
-   defines (Section 5.2); the "Ref" column below is this document, at
-   the section shown, for every row, and the full Subset Rule and
-   Intersection Rule text is there, not restated in the table:
-
-   +========================+===========+============+==========+=======+
-   |Key Name                |Value Space|Subset /    |Controller|Ref    |
-   |                        |           |Intersection|          |       |
-   +========================+===========+============+==========+=======+
-   |max_amount              |Object:    |Same        |IETF      |Section|
-   |                        |amount     |currency,   |          |5.2    |
-   |                        |(decimal   |candidate <=|          |       |
-   |                        |string),   |reference;  |          |       |
-   |                        |currency   |intersection|          |       |
-   |                        |(ISO 4217) |is the      |          |       |
-   |                        |           |smaller     |          |       |
-   |                        |           |amount      |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |resource_issued_after   |String, RFC|Candidate >=|IETF      |Section|
-   |                        |3339 date- |reference;  |          |5.2    |
-   |                        |time       |intersection|          |       |
-   |                        |           |is the later|          |       |
-   |                        |           |instant     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |resource_issued_before  |String, RFC|Candidate <=|IETF      |Section|
-   |                        |3339 date- |reference;  |          |5.2    |
-   |                        |time       |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |earlier     |          |       |
-   |                        |           |instant     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |tenant                  |String     |Equal;      |IETF      |Section|
-   |                        |           |intersection|          |5.2    |
-   |                        |           |is the      |          |       |
-   |                        |           |shared value|          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |recipient_domain        |String, DNS|Equal or a  |IETF      |Section|
-   |                        |name       |subdomain;  |          |5.2    |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |narrower    |          |       |
-   |                        |           |value       |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |time_window             |Object:    |Candidate   |IETF      |Section|
-   |                        |not_before,|window      |          |5.2    |
-   |                        |not_after  |within      |          |       |
-   |                        |(RFC 3339  |reference   |          |       |
-   |                        |date-time) |window;     |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |overlap     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |data_classification     |Array of   |Candidate   |IETF      |Section|
-   |                        |strings    |array a     |          |5.2    |
-   |                        |           |subset of   |          |       |
-   |                        |           |reference   |          |       |
-   |                        |           |array;      |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |common      |          |       |
-   |                        |           |members     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |allowed_tools           |Array of   |Candidate   |IETF      |Section|
-   |                        |strings    |array a     |          |5.2    |
-   |                        |           |subset of   |          |       |
-   |                        |           |reference   |          |       |
-   |                        |           |array;      |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |common      |          |       |
-   |                        |           |members     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |requires_action_approval|Boolean    |Candidate   |IETF      |Section|
-   |                        |           |true or     |          |5.2    |
-   |                        |           |equal to    |          |       |
-   |                        |           |reference;  |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |logical OR  |          |       |
-   +------------------------+-----------+------------+----------+-------+
-
-                                  Table 5
-
-   Names are kept collision-free by the convention Section 5.2 already
-   uses: a specification-defined name is coordinated through this
-   registry, and any other name is either collision-resistant or remains
-   deployment-defined and outside the registry.
-
-20.9.  Mission Lifecycle States Registry
+20.7.  Mission Lifecycle States Registry
 
    IANA is requested to create the "Mission Lifecycle States" registry.
    The registration policy is Specification Required [RFC8126].  A
@@ -11299,7 +10902,7 @@ Table of Contents
    |         |          |                    |            | 10        |
    +---------+----------+--------------------+------------+-----------+
 
-                                 Table 6
+                                 Table 5
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations, carrying its
@@ -11602,6 +11205,12 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -11866,7 +11475,7 @@ A.4.  Stage 3: The Resource Server Enforces
    enforces the authorization_details whose resource it serves,
    permitting invoices.read within the Q3 issuance window and journal-
    entries.write up to the max_amount ceiling of 500.00 USD
-   (Section 9.2).  It treats the mission claim as audit and correlation
+   (Section 9.3).  It treats the mission claim as audit and correlation
    context and makes no call to the AS.
 
    This is stateless enforcement from the token alone. journal-
@@ -12056,11 +11665,27 @@ Appendix C.  Document History
 
    -01
 
+   *  Mission Resource Access Profile split (#637, #645, #698): the
+      mission_resource_access type definition, its resource and action
+      matching, generic constraints, the Common Constraints registry,
+      the delegation member and matching rules, and the subset and
+      intersection algebra relocated to the Mission Resource Access
+      Profile ([I-D.draft-mcguinness-oauth-mission-resource-access]);
+      this document keeps type-agnostic commitment, the approved-set
+      metadata requirement, and derivation gating (Section 5,
+      Section 5.2, Section 14).  Adds the type-agnostic scope-projection
+      rule and issuance algorithm (Section 9.1) and the machine-readable
+      per-type transformation-capability declaration
+      (mission_transformation_capabilities, Section 5.2); sweeps every
+      scope-only claim that assumed a lossy projection was always
+      available (the Intent enforcement table, Resource Server
+      Enforcement, and the minimum-deployment note).
+
    *  Reader-program normative follow-ups: each supported
       authorization_details type's transformation boundary (subset
       relation and delegation semantics understood, or carried-as-
       approved) is declared in the deployment documentation that names
-      the type as supported (Section 5.3, Section 14); opaque Mission-
+      the type as supported (Section 5.2, Section 14); opaque Mission-
       bound tokens get a defined consumption mode, introspection
       REQUIRED as the claims carriage with active-only authority
       disclosure and fail-closed Resource Server duties (Section 11.4);
@@ -12071,7 +11696,7 @@ Appendix C.  Document History
 
    *  Editorial consolidation; no normative change: every removed
       sentence restates a rule that remains normatively stated at its
-      home (Section 9 and Section 9.2 for client_id's registered
+      home (Section 9 and Section 9.3 for client_id's registered
       meaning, Section 4.1 for the submission trust rule, Section 11 for
       the RFC 7662 deviation, Section 17.3.2 for the single-
       normalization rule, Section 10 for short-lifetime guidance).  The

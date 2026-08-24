@@ -1567,90 +1567,92 @@ B.1.  OAuth Binding Mapping Assessment
 
    The capability table:
 
-   +=============+========+======================================+=====================+============+
-   |Capability   |Claim   |Activation                            |Scope and defining   |Limitations |
-   |             |        |                                      |sections             |            |
-   +=============+========+======================================+=====================+============+
-   |Lifecycle-   |supplied|always                                |State-gated issuance |Outstanding |
-   |Gated        |        |                                      |and every derivation |credentials |
-   |Authorization|        |                                      |gate                 |run to their|
-   |             |        |                                      |                     |own exp; the|
-   |             |        |                                      |                     |residual is |
-   |             |        |                                      |                     |bounded, not|
-   |             |        |                                      |                     |zero        |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |State-       |supplied|Status, introspection, or Signals     |Those surfaces       |Staleness   |
-   |Observable   |        |companion active                      |                     |bounded by  |
-   |             |        |                                      |                     |each        |
-   |             |        |                                      |                     |surface's   |
-   |             |        |                                      |                     |declared    |
-   |             |        |                                      |                     |freshness   |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Structured   |supplied|always                                |authorization_details|Semantics   |
-   |Authority    |        |                                      |with registered types|exist per   |
-   |             |        |                                      |and the Common       |registered  |
-   |             |        |                                      |Constraints          |type, not   |
-   |             |        |                                      |                     |universally |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Monotonic    |supplied|always                                |The subset rule over |Covered     |
-   |Derivation   |        |                                      |covered types at     |transitions |
-   |             |        |                                      |every derivation,    |are         |
-   |             |        |                                      |delegation, and      |attenuate; a|
-   |             |        |                                      |attenuation point    |cross-      |
-   |             |        |                                      |                     |vocabulary  |
-   |             |        |                                      |                     |transition  |
-   |             |        |                                      |                     |is          |
-   |             |        |                                      |                     |decide_anew,|
-   |             |        |                                      |                     |never silent|
-   |             |        |                                      |                     |attenuation |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Credential-  |supplied|always                                |The mission claim on |Fact        |
-   |Bound        |        |                                      |issued tokens        |semantics:  |
-   |             |        |                                      |                     |issuance    |
-   |             |        |                                      |                     |under the   |
-   |             |        |                                      |                     |Mission,    |
-   |             |        |                                      |                     |authority   |
-   |             |        |                                      |                     |derivation, |
-   |             |        |                                      |                     |lifecycle-  |
-   |             |        |                                      |                     |gated       |
-   |             |        |                                      |                     |issuance;   |
-   |             |        |                                      |                     |state-as-of |
-   |             |        |                                      |                     |only via the|
-   |             |        |                                      |                     |State-      |
-   |             |        |                                      |                     |Observable  |
-   |             |        |                                      |                     |surfaces    |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Authorized   |supplied|the Delegation role active            |The Token Exchange   |The base    |
-   |Context      |        |([I-D.draft-mcguinness-oauth-mission])|join at delegated    |grant       |
-   |Correlation  |        |                                      |issuance: the AS, as |binding at  |
-   |             |        |                                      |joining authority,   |issuance co-|
-   |             |        |                                      |joins the Mission and|establishes |
-   |             |        |                                      |Subject carried by   |its facts   |
-   |             |        |                                      |the Mission-bound    |and is not a|
-   |             |        |                                      |subject_token with   |join; cross-|
-   |             |        |                                      |the delegate identity|authority   |
-   |             |        |                                      |independently        |joins are   |
-   |             |        |                                      |established by the   |the Mission |
-   |             |        |                                      |actor_token or the   |Authority   |
-   |             |        |                                      |delegate's own client|Server's    |
-   |             |        |                                      |authentication,      |machinery,  |
-   |             |        |                                      |binding both to the  |not this    |
-   |             |        |                                      |newly issued         |binding's   |
-   |             |        |                                      |credential           |            |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Independently|supplied|Mandate, signed Status, or audit      |Anchor recomputation |Signature   |
-   |Verifiable   |        |companion active                      |and signed artifacts |verification|
-   |             |        |                                      |per those profiles   |never       |
-   |             |        |                                      |                     |establishes |
-   |             |        |                                      |                     |current     |
-   |             |        |                                      |                     |state       |
-   +-------------+--------+--------------------------------------+---------------------+------------+
-   |Portable     |supplied|Evidence, Mandate, or audit companion |Per those profiles   |The         |
-   |Evidence     |        |active                                |                     |governance  |
-   |             |        |                                      |                     |record is   |
-   |             |        |                                      |                     |otherwise   |
-   |             |        |                                      |                     |issuer-local|
-   +-------------+--------+--------------------------------------+---------------------+------------+
+   +=============+========+======================================+========================+============+
+   |Capability   |Claim   |Activation                            |Scope and defining      |Limitations |
+   |             |        |                                      |sections                |            |
+   +=============+========+======================================+========================+============+
+   |Lifecycle-   |supplied|always                                |State-gated issuance and|Outstanding |
+   |Gated        |        |                                      |every derivation gate   |credentials |
+   |Authorization|        |                                      |                        |run to their|
+   |             |        |                                      |                        |own exp; the|
+   |             |        |                                      |                        |residual is |
+   |             |        |                                      |                        |bounded, not|
+   |             |        |                                      |                        |zero        |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |State-       |supplied|Status, introspection, or Signals     |Those surfaces          |Staleness   |
+   |Observable   |        |companion active                      |                        |bounded by  |
+   |             |        |                                      |                        |each        |
+   |             |        |                                      |                        |surface's   |
+   |             |        |                                      |                        |declared    |
+   |             |        |                                      |                        |freshness   |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Structured   |supplied|always                                |authorization_details of|Semantics   |
+   |Authority    |        |                                      |AS-supported types, each|exist per   |
+   |             |        |                                      |type's own specification|supported   |
+   |             |        |                                      |defining semantics (for |type, not   |
+   |             |        |                                      |mission_resource_access,|universally |
+   |             |        |                                      |the Mission Resource    |            |
+   |             |        |                                      |Access Profile's Common |            |
+   |             |        |                                      |Constraints)            |            |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Monotonic    |supplied|always                                |The subset rule over    |Covered     |
+   |Derivation   |        |                                      |covered types at every  |transitions |
+   |             |        |                                      |derivation, delegation, |are         |
+   |             |        |                                      |and attenuation point   |attenuate; a|
+   |             |        |                                      |                        |cross-      |
+   |             |        |                                      |                        |vocabulary  |
+   |             |        |                                      |                        |transition  |
+   |             |        |                                      |                        |is          |
+   |             |        |                                      |                        |decide_anew,|
+   |             |        |                                      |                        |never silent|
+   |             |        |                                      |                        |attenuation |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Credential-  |supplied|always                                |The mission claim on    |Fact        |
+   |Bound        |        |                                      |issued tokens           |semantics:  |
+   |             |        |                                      |                        |issuance    |
+   |             |        |                                      |                        |under the   |
+   |             |        |                                      |                        |Mission,    |
+   |             |        |                                      |                        |authority   |
+   |             |        |                                      |                        |derivation, |
+   |             |        |                                      |                        |lifecycle-  |
+   |             |        |                                      |                        |gated       |
+   |             |        |                                      |                        |issuance;   |
+   |             |        |                                      |                        |state-as-of |
+   |             |        |                                      |                        |only via the|
+   |             |        |                                      |                        |State-      |
+   |             |        |                                      |                        |Observable  |
+   |             |        |                                      |                        |surfaces    |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Authorized   |supplied|the Delegation role active            |The Token Exchange join |The base    |
+   |Context      |        |([I-D.draft-mcguinness-oauth-mission])|at delegated issuance:  |grant       |
+   |Correlation  |        |                                      |the AS, as joining      |binding at  |
+   |             |        |                                      |authority, joins the    |issuance co-|
+   |             |        |                                      |Mission and Subject     |establishes |
+   |             |        |                                      |carried by the Mission- |its facts   |
+   |             |        |                                      |bound subject_token with|and is not a|
+   |             |        |                                      |the delegate identity   |join; cross-|
+   |             |        |                                      |independently           |authority   |
+   |             |        |                                      |established by the      |joins are   |
+   |             |        |                                      |actor_token or the      |the Mission |
+   |             |        |                                      |delegate's own client   |Authority   |
+   |             |        |                                      |authentication, binding |Server's    |
+   |             |        |                                      |both to the newly issued|machinery,  |
+   |             |        |                                      |credential              |not this    |
+   |             |        |                                      |                        |binding's   |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Independently|supplied|Mandate, signed Status, or audit      |Anchor recomputation and|Signature   |
+   |Verifiable   |        |companion active                      |signed artifacts per    |verification|
+   |             |        |                                      |those profiles          |never       |
+   |             |        |                                      |                        |establishes |
+   |             |        |                                      |                        |current     |
+   |             |        |                                      |                        |state       |
+   +-------------+--------+--------------------------------------+------------------------+------------+
+   |Portable     |supplied|Evidence, Mandate, or audit companion |Per those profiles      |The         |
+   |Evidence     |        |active                                |                        |governance  |
+   |             |        |                                      |                        |record is   |
+   |             |        |                                      |                        |otherwise   |
+   |             |        |                                      |                        |issuer-local|
+   +-------------+--------+--------------------------------------+------------------------+------------+
 
               Table 5: OAuth Mission binding capability table
 

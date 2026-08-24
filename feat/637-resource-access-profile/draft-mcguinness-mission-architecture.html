@@ -1805,14 +1805,19 @@ integrity anchors, PDP permits, Child Missions, or portable evidence
 <p id="section-5-1">The model's boundary is deliberate. The family does not define:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5-2.1">
-          <p id="section-5-2.1.1"><strong>A new authority format, or a new grant protocol.</strong> Rich
+          <p id="section-5-2.1.1"><strong>A new grant protocol.</strong> Rich
 Authorization Requests <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> and kindred mechanisms already
-fill the authority-expression role; the family leaves that to them
-(<a href="#the-mission" class="auto internal xref">Section 4</a>). The same restraint holds against GNAP and the
-capability-system lineage (macaroons, Biscuit, UCAN,
-object-capability narrowing): this family composes with deployed
-grant protocols and attenuation primitives rather than introducing
-a competing one of its own; the OAuth binding states the comparison
+fill the authority-expression role; the family leaves the grant
+exchange to them (<a href="#the-mission" class="auto internal xref">Section 4</a>) and defines its own
+cross-resource <code>authorization_details</code> type only where <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
+leaves type semantics to the type, in the OAuth binding's Mission
+Resource Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). The same
+restraint holds against GNAP and the capability-system lineage
+(macaroons, Biscuit, UCAN, object-capability narrowing): this
+family composes with deployed grant protocols and attenuation
+primitives rather than introducing a competing one of its own; the
+OAuth binding states the comparison
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.2">
@@ -5154,6 +5159,12 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#section-17-3" clas
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
+              <code>oauth-mission-resource-access</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission Resource Access Profile: the <code>mission_resource_access</code> authorization_details type, its resource and action matching, Common Constraints, delegation policy, and subset/intersection algebra, split from the OAuth binding so RFC 9396 typed semantics live with the type.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
               <code>mission-authority-server</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">The standalone Mission Issuer and the PDP join of ordinary credentials to Missions.</td>
@@ -5740,6 +5751,10 @@ minimization and retention duties applying there.<a href="#section-19-3" class="
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
@@ -5795,7 +5810,15 @@ minimization and retention duties applying there.<a href="#section-19-3" class="
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Editorial density pass on this Informational document: the
+          <p id="appendix-A-2.1.1">Non-goal reworded (#637): "a new authority format, or a new grant
+protocol" narrowed to "a new grant protocol," naming the OAuth
+binding's Mission Resource Access Profile as the family's one
+cross-resource <code>authorization_details</code> type, since RFC 9396 leaves
+type semantics to the type and the family now defines one. Document
+Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Editorial density pass on this Informational document: the
 aggregate-ceiling and artifact-plane (non-transitive work-product)
 composition readings under <a href="#invariants" class="auto internal xref">Section 8</a> tightened to a summary
 sentence plus citation each, with their "not this summary, is the
@@ -5803,7 +5826,7 @@ normative text this passage tracks" deferral kept; several
 over-long paragraphs in <a href="#capability-envelope" class="auto internal xref">Section 4.1</a>, <a href="#validity-model" class="auto internal xref">Section 10.5</a>,
 <a href="#assurance-levels" class="auto internal xref">Section 13</a>, and <a href="#containment" class="auto internal xref">Section 15.1</a> split for one idea per
 paragraph and front-loaded openers. No normative content, anchor,
-or table row changed.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+or table row changed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
