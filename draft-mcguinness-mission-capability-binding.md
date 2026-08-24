@@ -303,12 +303,12 @@ Rules:
   applies them through this document's decision-time verification
   ({{capability-verification}}), over the per-capability comparison
   scope of {{capability-extraction}}. This document adds only the
-  wire representation and per-capability verification: such a
-  refusal is carried as `capability_drift`
-  ({{capability-drift-reason}}), with its boundary against
-  `out_of_authority` fixed by the AuthZEN binding's runtime denial
-  classification ({{I-D.draft-mcguinness-mission-authzen}}). It
-  defines no drift rule of its own.
+  wire representation and per-capability verification, carrying such
+  a refusal as `capability_drift` ({{capability-drift-reason}}) with
+  its boundary against `out_of_authority` fixed by the AuthZEN
+  binding's runtime denial classification
+  ({{I-D.draft-mcguinness-mission-authzen}}); it defines no drift
+  rule of its own.
 - Resource policy MAY refuse a catalog-sourced action whose
   `source_uri` or `executor` is outside the deployment's trusted
   set. Such a refusal is a Resource-policy condition, carried as
