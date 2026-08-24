@@ -7,16 +7,16 @@
     "content_sha256": "07ae206d4bcf900e38e214872d4e15e6327b90708ab4656fc34990c1817a4886"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "0d668b9b9a013bccf7d416d89b70c217eae1779c5b6618b54779add9815add45"
+    "revision": "9dbadb3898d79ea05ff628f2569ff8218bfeee08",
+    "content_sha256": "888cc973fe0ac930968994f82e56952f5220e738f609ff84473413873b658652"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
     "content_sha256": "7b6036a9b25391d2b46a48b1501531adf43d84c50b7d8eb78f656edb3faeb070"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "e75c5b60e7105b4b88abdb65dfbbace4f6322857",
-    "content_sha256": "0773b820921b658fdf4f8ce6990efeecd819fd571fd34ac42776042631398d8c"
+    "revision": "8337f81179998d21aec3875b4dcb847d418faf88",
+    "content_sha256": "0f56178f76109ac4cfc4987c0a2683793ea6fd712309bd3089c1abc75ed580a1"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "11e12adff962b5c2ba99b9d87dd0b86fa49ae059",
@@ -6260,6 +6260,100 @@
      "surface": "resource-operation"
     }
    ]
+  },
+  {
+   "id": "runtime.idempotency.claim-exact-enforcement-only",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "The Bounded-consistency enforcement profile MUST NOT be applied to the idempotency claim: an exactly-one-winner claim cannot degrade gracefully, the same reason the metering companion bars `exclusive` from Bounded consistency ({{I-D.draft-mcguinness-mission-metering}}).",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "the idempotency claim runs under the Exact enforcement profile only; a deployment never configures the Bounded-consistency profile for it even where that profile is used for consumption metering"
+   },
+   "level": "concurrency",
+   "coverage": "blocked",
+   "blocked_by": "#648",
+   "tests": [],
+   "notes": "No PDP-side idempotency claim store exists in this codebase (grep -rl idempotency src/services/pdp finds nothing): the claim mechanism this row governs is the transaction-assurance implementation #648 tracks, not a drop-in over the existing resource-side transaction store (src/services/mcp-payments/src/transaction.ts), which is Exact only by virtue of being single-process, not by a declared topology choice this row can observe. Blocked on #648's claim-store landing a PDP-side implementation to test against."
+  },
+  {
+   "id": "runtime.idempotency.exact-domain-unavailable-fail-closed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "A PDP or store that cannot reach its declared Exact domain MUST fail closed rather than issue a permit.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP unable to reach the store or replica set that realizes its declared Exact claim domain refuses rather than issuing a permit without the claim"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "blocked_by": "#648",
+   "tests": [],
+   "notes": "Same PDP-side claim store gap as runtime.idempotency.claim-exact-enforcement-only: there is no claim domain to be unreachable yet. Blocked on #648."
+  },
+  {
+   "id": "runtime.idempotency.ess-must-name-exact-claim-domain",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "The deployment MUST name the Exact claim domain per mediated action class or idempotency scope in its Enforcement Scope Statement ({{runtime-conformance}}), not as an enumeration of individual dynamic claims.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Enforcement Scope Statement names the Exact claim domain per mediated action class or idempotency scope, never as an enumeration of individual dynamic claims"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against (grep -rln \"Enforcement Scope Statement\" src finds only comments referencing the concept), the same gap runtime.conformance.no-claim-outside-declared-scope already records. Nothing to assert without fabricating the artifact this row presupposes; not specific to #648."
+  },
+  {
+   "id": "runtime.idempotency.reversible-write-pep-reserve-and-retain",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "The enforcing PEP or the resource MUST instead atomically reserve the (idempotency scope, `idempotency_key`) pair against a concurrent duplicate, and MUST retain the reserved-or-completed record for at least the retention posture the deployment publishes above for keys outside the high-consequence classes, so a duplicate arriving after the permit's own short validity window still resolves against the recorded key rather than executing again.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for a reversible consequential write electing the idempotency-key permit-lifetime control, the enforcing PEP or resource atomically reserves the key against a concurrent duplicate and retains the record for the declared non-high-consequence retention posture, so a duplicate presented after the permit's own short validity window still resolves against the recorded key instead of executing again"
+   },
+   "level": "concurrency",
+   "coverage": "blocked",
+   "blocked_by": "#648",
+   "tests": [],
+   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #648."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",

@@ -654,6 +654,11 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
   ({{rs-runtime-profile}});
 - the Mission state source and maximum staleness bound used for each
   action class ({{state-freshness}});
+- for the transaction-assurance tier's idempotency claim, the Exact
+  enforcement domain (a single serializing PDP, a shared linearizable
+  store, or structurally exact claim domains) named per mediated
+  action class or idempotency scope, not enumerated per dynamic claim
+  ({{idempotency}});
 - the PDP-unavailability posture per mediated action class: the
   maximum outage the deployment rides through on unexpired,
   unconsumed permits ({{failure-modes}}), and whether work suppressed
@@ -2128,14 +2133,35 @@ owns the lifecycle and prior result of a completed operation.
 - For every non-idempotent operation in the irreversible-action,
   external-commitment, and privileged-administration classes, the
   Operation Profile MUST therefore also define an idempotency key.
-- Before issuing a permit for a keyed action, the PDP MUST atomically
-  claim the pair (idempotency scope, `idempotency_key`) together with
-  the request's operation identity, a canonical projection a
-  decision-API binding defines
+- Before issuing a permit for a keyed action in the irreversible-action,
+  external-commitment, or privileged-administration classes, the PDP
+  MUST atomically claim the pair (idempotency scope, `idempotency_key`)
+  together with the request's operation identity, a canonical
+  projection a decision-API binding defines
   ({{I-D.draft-mcguinness-mission-authzen}}). The claim is a single
   linearizable operation: of two concurrent requests presenting the
   same scope and key, exactly one obtains the claim, and the other
   observes it.
+
+The claim's exactly-one-winner property has the same non-degradable
+shape as the metering companion's `exclusive` latch and reuses that
+companion's Topology framework ({{I-D.draft-mcguinness-mission-metering}}):
+
+- The idempotency claim MUST be enforced under the Exact enforcement
+  profile of the metering companion's Topology framework
+  ({{I-D.draft-mcguinness-mission-metering}}): a single serializing
+  PDP, a shared linearizable store, or claim domains that are
+  structurally exact by construction.
+- The Bounded-consistency enforcement profile MUST NOT be applied to
+  the idempotency claim: an exactly-one-winner claim cannot degrade
+  gracefully, the same reason the metering companion bars `exclusive`
+  from Bounded consistency ({{I-D.draft-mcguinness-mission-metering}}).
+- A PDP or store that cannot reach its declared Exact domain MUST fail
+  closed rather than issue a permit.
+- The deployment MUST name the Exact claim domain per mediated action
+  class or idempotency scope in its Enforcement Scope Statement
+  ({{runtime-conformance}}), not as an enumeration of individual
+  dynamic claims.
 
 **Evaluation retransmission (PDP)**:
 : For a re-presentation whose cache key is equal to the prior
@@ -2209,6 +2235,20 @@ operation as such, never re-execution under the consumed key.
   fresh claim. Outside those classes a deployment MAY scope the
   guarantee to the reconciliation window ({{evidence}}), and it MUST
   publish which posture applies.
+
+The PDP makes no claim for a reversible consequential write's
+idempotency-key control ({{permit-binding}}): that control is not one
+of the classes above. Narrowing the PDP claim to those classes does
+not narrow this guarantee; it moves the enforcement point. The
+enforcing PEP or the resource MUST instead atomically reserve the
+(idempotency scope, `idempotency_key`) pair against a concurrent
+duplicate, and MUST retain the reserved-or-completed record for at
+least the retention posture the deployment publishes above for keys
+outside the high-consequence classes, so a duplicate arriving after
+the permit's own short validity window still resolves against the
+recorded key rather than executing again. This is the same
+single-winner discipline as {{single-use-identifiers}}, applied to the
+key instead of the decision identifier.
 
 ## Execution Reverification {#execution-reverification}
 
