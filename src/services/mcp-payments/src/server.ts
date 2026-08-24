@@ -25,6 +25,8 @@ import {
   type EnforceResult,
   type InsufficientAuthorization,
   type LoadedView,
+  loadCheckedView,
+  type MissionReference,
   type Pep,
   type RequestSignals,
   type TokenFacts,
@@ -88,7 +90,7 @@ export const TOOLS: ToolDef[] = [
 export interface McpServerDeps {
   pep: Pep;
   payments: PaymentsStore;
-  loadView: (missionId: string) => LoadedView | undefined;
+  loadView: (ref: MissionReference) => LoadedView | undefined;
   jwks: { keys: Record<string, unknown>[] };
   issuer: string;
   serverCard: unknown;
@@ -556,7 +558,7 @@ export class McpPaymentsServer {
    * action is within the mission's authority are shown.
    */
   toolsList(token: TokenFacts): ToolDef[] {
-    const loaded = this.deps.loadView(token.mission.id);
+    const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     if (!loaded) return [];
     const granted = new Set(loaded.view.authority_set.flatMap((e) => e.actions));
     return TOOLS.filter((t) => granted.has(t.action));

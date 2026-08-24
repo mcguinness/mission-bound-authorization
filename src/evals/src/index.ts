@@ -15,6 +15,7 @@ import {
   Connectors,
   EvidenceStore,
   McpPaymentsServer,
+  type MissionReference,
   PaymentsStore,
   Pep,
   sourceDigestOf,
@@ -76,9 +77,15 @@ export interface HarnessDeps {
 /** @spec runtime#state-freshness: this harness's one declared state source. */
 const EVAL_FRESHNESS_SOURCE = "eval_harness";
 
-/** The harness's own loader: a synchronous live read of `deps.view`, freshness-stamped at this read (@spec runtime#state-freshness, Finding 1). */
-function loadHarnessView(view: MissionView, id: string) {
-  if (id !== view.id) return undefined;
+/**
+ * The harness's own loader: a synchronous live read of `deps.view`,
+ * freshness-stamped at this read (@spec runtime#state-freshness, Finding 1).
+ * Implements the canonical (issuer, id) tuple contract itself (@spec
+ * authority-server#reference-tuple, #685 review): an ordinary fixture keys
+ * on both, never `id` alone.
+ */
+function loadHarnessView(view: MissionView, ref: MissionReference) {
+  if (ref.id !== view.id || ref.issuer !== view.issuer) return undefined;
   return { view, freshness: { observed_at: new Date().toISOString(), source: EVAL_FRESHNESS_SOURCE } };
 }
 
@@ -93,7 +100,7 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     evidence,
     fga: deps.fga,
     modelId: deps.modelId,
-    loadView: (id) => loadHarnessView(deps.view, id),
+    loadView: (ref) => loadHarnessView(deps.view, ref),
     instanceEpoch: "epoch-eval",
     sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set([EVAL_FRESHNESS_SOURCE]),
@@ -102,7 +109,7 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
   const server = new McpPaymentsServer({
     pep,
     payments,
-    loadView: (id) => loadHarnessView(deps.view, id),
+    loadView: (ref) => loadHarnessView(deps.view, ref),
     jwks: { keys: [] },
     issuer: "https://as.test",
     serverCard: { name: "payments" },

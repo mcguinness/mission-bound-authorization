@@ -110,6 +110,8 @@ d("O-31 red-team replay (live OpenFGA)", () => {
       version: 1,
       authority_hash: "sha-256:evalhash",
       authority_set: EVAL_VIEW_AUTHORITY,
+      subject: { iss: "https://as.test", sub: "alice" },
+      client_id: "ap-agent",
     };
     deps = { fga: conn.fga, modelId: conn.modelId, view, seedStore };
   });

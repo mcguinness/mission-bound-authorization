@@ -198,6 +198,43 @@ export interface LoadedView {
   freshness: Freshness;
 }
 
+/**
+ * @spec authority-server#reference-tuple — the canonical (`issuer`,
+ * `mission_id`) pair a Mission reference is compared as, whether the source
+ * is a credential's own `mission` claim or a PEP-supplied Mission Join
+ * reference. `loadView` is keyed on this pair, not `id` alone, so a same-id
+ * collision under a different issuer is a load-time miss rather than
+ * something each call site must separately catch.
+ */
+export interface MissionReference {
+  id: string;
+  issuer: string;
+}
+
+/**
+ * @spec authority-server#reference-tuple — verifies the loader honored the
+ * canonical (issuer, id) key it was asked for, rather than trusting it: not
+ * every `loadView` implementation enforces this itself (a fixture matching
+ * on `id` alone is common in tests, and the negative-boundary tests for
+ * {@link Pep.enforceInner}'s own `mission_reference_conflict` check
+ * deliberately keep one). A consumer with no comparable use for that
+ * distinction — {@link Pep.reverifyList}, `McpPaymentsServer.toolsList` —
+ * MUST resolve `loadView` through this wrapper rather than calling it
+ * directly, so a same-id different-issuer collision is a plain miss for
+ * them too, never a silently consumed wrong Mission (#685 review). It is
+ * NOT used by `enforceInner`: that call site needs to tell "no Mission"
+ * apart from "wrong issuer" for its own `mission_reference_conflict`
+ * refusal, so it checks the issuer itself and reports the distinction.
+ */
+export function loadCheckedView(
+  loadView: (ref: MissionReference) => LoadedView | undefined,
+  ref: MissionReference,
+): LoadedView | undefined {
+  const loaded = loadView(ref);
+  if (!loaded || loaded.view.id !== ref.id || loaded.view.issuer !== ref.issuer) return undefined;
+  return loaded;
+}
+
 export interface PepDeps {
   payments: PaymentsStore;
   evidence: EvidenceStore;
@@ -207,9 +244,12 @@ export interface PepDeps {
    * The PDP's view of a mission plus the state source's own freshness
    * assertion (in a real deployment fetched from AS/Status). The loader
    * asserts `freshness`; the PEP only propagates it (@spec
-   * runtime#state-freshness).
+   * runtime#state-freshness). Keyed by the canonical (issuer, id) pair
+   * (@spec authority-server#reference-tuple): a loader MUST resolve only the
+   * Mission whose issuer matches the one supplied, returning `undefined` on
+   * a same-id different-issuer request rather than the wrong Mission.
    */
-  loadView: (missionId: string) => LoadedView | undefined;
+  loadView: (ref: MissionReference) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
   sourceDigest: string;
@@ -433,7 +473,7 @@ export class Pep {
       if (!matches) return this.refuse(token, "mission_reference_conflict", mapping.action);
     }
 
-    const loaded = this.deps.loadView(token.mission.id);
+    const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
     if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
     const { view, freshness } = loaded;
 
@@ -794,7 +834,7 @@ export class Pep {
    * `"requested"`), so no separate input needs to be threaded through.
    */
   reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
-    const loaded = this.deps.loadView(token.mission.id);
+    const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
     );
