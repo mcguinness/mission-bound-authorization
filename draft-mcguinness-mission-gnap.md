@@ -865,10 +865,10 @@ Mission Deployment Profile.
 An access token issued under a Mission names it through the
 `mission` object: the family members `id`, `issuer`, and
 `authority_hash` as the issuance profile defines them, and it SHOULD
-carry the record's `expires_at`, a bounding commitment with no
-liveness that the token's own expiry already sits inside
-({{gating}}). The object is delivered on
-three carriage surfaces:
+carry the record's `expires_at` as the issuance profile defines it
+({{I-D.draft-mcguinness-oauth-mission}}), a bounding commitment with
+no liveness that the token's own expiry already sits inside
+({{gating}}). The object is delivered on three carriage surfaces:
 
 - **Token-carried**: a deployment issuing structured tokens (for
   example the `jwt-signed` format of {{RFC9767}}) carries the

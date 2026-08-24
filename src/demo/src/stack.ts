@@ -31,6 +31,7 @@ import {
   type LoadedView,
   McpPaymentsServer,
   type MediatedToolResult,
+  type MissionReference,
   PaymentsStore,
   Pep,
   type PepDeps,
@@ -374,6 +375,8 @@ export async function composeStack(opts: {
       version: fresh.version,
       authority_hash: fresh.authority_hash,
       authority_set: fresh.authority_set,
+      subject: fresh.subject,
+      client_id: fresh.client_id,
       // The containment DELTA (not a filtered set), so the PDP distinguishes
       // never-approved (out_of_authority) from approved-then-contained
       // (authority_contained).
@@ -401,9 +404,9 @@ export async function composeStack(opts: {
   // synchronous with no caching layer, so this call's own wall-clock time is
   // the honest `observed_at` -- the loader asserts it, and the PEP only ever
   // propagates what it asserts, never re-stamping its own clock (Finding 1).
-  const loadView = (missionId: string): LoadedView | undefined => {
-    const view = viewFor(missionId);
-    if (!view) return undefined;
+  const loadView = (ref: MissionReference): LoadedView | undefined => {
+    const view = viewFor(ref.id);
+    if (!view || view.issuer !== ref.issuer) return undefined;
     return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
   };
 

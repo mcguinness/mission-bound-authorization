@@ -63,6 +63,8 @@ function view(actions: string[], overrides: Partial<MissionView["authority_set"]
     authority_set: actions.length
       ? [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, ...overrides }]
       : [],
+    subject: { iss: ISSUER, sub: "alice" },
+    client_id: "ap-agent",
   };
 }
 
@@ -79,8 +81,8 @@ function buildStack(missionView: MissionView, fga: Fga) {
   const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
-  const loadView = (id: string) =>
-    id === missionView.id
+  const loadView = (ref: { id: string; issuer: string }) =>
+    ref.id === missionView.id && ref.issuer === missionView.issuer
       ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({

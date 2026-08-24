@@ -1,6 +1,8 @@
 import { createHmac } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  type AuthorityNarrowingStepInput,
+  buildAuthorityNarrowingEvidence,
   buildOrchestrationEvidence,
   classifyOutcome,
   commitUnwindPlan,
@@ -11,6 +13,8 @@ import {
   isHighRiskUnknown,
   ORCHESTRATION_EVIDENCE_TYP,
   onMissionStateChange,
+  reEvaluateOnAuthorityNarrowing,
+  reEvaluateStepOnAuthorityNarrowing,
   requiresHumanReview,
   resolveCompensationAuthority,
   reverseDependencyOrder,
@@ -379,5 +383,144 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     ]);
     expect(terminal.terminal_state).toBe("compensation_incomplete");
     expect(terminal.incomplete_steps).toEqual(["b", "c"]);
+  });
+});
+
+describe("authority-narrowing behavior (@spec orchestration#authority-narrowing)", () => {
+  it("not_dispatched: still authorized proceeds untouched (no decision, no evidence, no dispatch)", () => {
+    const step: AuthorityNarrowingStepInput = {
+      step_id: "s1",
+      outcome: "not_dispatched",
+      in_flight_behavior: "cancel_if_possible",
+    };
+    const result = reEvaluateStepOnAuthorityNarrowing(step, () => true);
+    expect(result.still_authorized).toBe(true);
+    expect(result.orchestration_decision).toBeUndefined();
+    expect(result.requires_evidence).toBe(false);
+  });
+
+  it("not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)", () => {
+    const step: AuthorityNarrowingStepInput = {
+      step_id: "s1",
+      outcome: "not_dispatched",
+      in_flight_behavior: "cancel_if_possible",
+    };
+    const result = reEvaluateStepOnAuthorityNarrowing(step, () => false);
+    expect(result.still_authorized).toBe(false);
+    expect(result.orchestration_decision).toBe("suppress");
+    expect(result.requires_evidence).toBe(true);
+    // OrchestrationDecision's own type has no "dispatch" member (see
+    // evidence.ts): a denied not_dispatched step cannot be re-dispatched by
+    // this trigger, a compile-time guarantee this assertion pins at runtime.
+    expect(["suppress", "pause"]).toContain(result.orchestration_decision);
+  });
+
+  it("dispatched_not_committed: denied follows the step's EXISTING in_flight_behavior (re-gated, not additionally stopped)", () => {
+    const behaviors: Array<[AuthorityNarrowingStepInput["in_flight_behavior"], string]> = [
+      ["cancel_if_possible", "cancel"],
+      ["continue_to_safe_point", "continue_to_safe_point"],
+      ["wait_then_review", "human_review"],
+      ["human_review", "human_review"],
+    ];
+    for (const [in_flight_behavior, expected] of behaviors) {
+      const result = reEvaluateStepOnAuthorityNarrowing(
+        { step_id: "s1", outcome: "dispatched_not_committed", in_flight_behavior },
+        () => false,
+      );
+      expect(result.still_authorized).toBe(false);
+      expect(result.orchestration_decision).toBe(expected);
+      expect(result.requires_evidence).toBe(true);
+    }
+  });
+
+  it("dispatched_not_committed: still authorized proceeds (this trigger does not stop already-dispatched work by itself)", () => {
+    const result = reEvaluateStepOnAuthorityNarrowing(
+      {
+        step_id: "s1",
+        outcome: "dispatched_not_committed",
+        in_flight_behavior: "cancel_if_possible",
+      },
+      () => true,
+    );
+    expect(result.still_authorized).toBe(true);
+    expect(result.requires_evidence).toBe(false);
+  });
+
+  it("committed: MUST NOT be compensated merely because authority narrowed (resolver never consulted, no double-commit possible)", () => {
+    const resolver = vi.fn(() => false);
+    const result = reEvaluateStepOnAuthorityNarrowing(
+      { step_id: "s1", outcome: "committed", in_flight_behavior: "cancel_if_possible" },
+      resolver,
+    );
+    expect(resolver).not.toHaveBeenCalled();
+    expect(result.still_authorized).toBe(true);
+    expect(result.orchestration_decision).toBeUndefined();
+    expect(result.requires_evidence).toBe(false);
+  });
+
+  it("unknown: unaffected by this trigger (§ in-flight's own human-review rule already covers it; resolver never consulted)", () => {
+    const resolver = vi.fn(() => false);
+    const result = reEvaluateStepOnAuthorityNarrowing(
+      { step_id: "s1", outcome: "unknown", in_flight_behavior: "cancel_if_possible" },
+      resolver,
+    );
+    expect(resolver).not.toHaveBeenCalled();
+    expect(result.still_authorized).toBe(true);
+    expect(result.requires_evidence).toBe(false);
+  });
+
+  it("batch re-evaluation: each step is resolved independently, order and count preserved", () => {
+    const steps: AuthorityNarrowingStepInput[] = [
+      { step_id: "s1", outcome: "not_dispatched", in_flight_behavior: "cancel_if_possible" },
+      {
+        step_id: "s2",
+        outcome: "dispatched_not_committed",
+        in_flight_behavior: "wait_then_review",
+      },
+      { step_id: "s3", outcome: "committed", in_flight_behavior: "cancel_if_possible" },
+    ];
+    // Denies s1 and s2 only; s3 is never asked (committed short-circuits above).
+    const results = reEvaluateOnAuthorityNarrowing(steps, (s) => s.step_id === "s3");
+    expect(results.map((r) => r.step_id)).toEqual(["s1", "s2", "s3"]);
+    expect(results[0]?.still_authorized).toBe(false);
+    expect(results[0]?.orchestration_decision).toBe("suppress");
+    expect(results[1]?.still_authorized).toBe(false);
+    expect(results[1]?.orchestration_decision).toBe("human_review");
+    expect(results[2]?.still_authorized).toBe(true);
+    expect(results[2]?.requires_evidence).toBe(false);
+  });
+
+  it("evidence: step_id is REQUIRED on an authority-narrowing record (fail closed when absent)", () => {
+    expect(() =>
+      buildAuthorityNarrowingEvidence({
+        event_id: "orch_an_1",
+        mission: MISSION,
+        workflow_id: "wf_invoice_recon_2026q3",
+        step_id: "",
+        mission_state: "active",
+        state_source: "signal",
+        orchestration_decision: "suppress",
+        reason: "authority_narrowed",
+        occurred_at: "2026-11-02T10:00:00Z",
+      }),
+    ).toThrow();
+  });
+
+  it("evidence: a valid authority-narrowing record carries step_id, state_source signal, and mission_state active", () => {
+    const ev = buildAuthorityNarrowingEvidence({
+      event_id: "orch_an_2",
+      mission: MISSION,
+      workflow_id: "wf_invoice_recon_2026q3",
+      step_id: "s1",
+      mission_state: "active",
+      state_source: "signal",
+      orchestration_decision: "suppress",
+      reason: "authority_narrowed",
+      occurred_at: "2026-11-02T10:01:00Z",
+    });
+    expect(ev.step_id).toBe("s1");
+    expect(ev.state_source).toBe("signal");
+    expect(ev.mission_state).toBe("active");
+    expect(ev.orchestration_decision).toBe("suppress");
   });
 });

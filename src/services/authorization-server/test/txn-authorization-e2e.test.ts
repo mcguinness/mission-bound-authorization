@@ -302,9 +302,11 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     );
     // @spec runtime#state-freshness: a synchronous live read, freshness-
     // stamped at this read (Finding 1); "load_view" declared trusted below.
-    const loadView = (id: string) => {
-      const record = as.kernel.get(id);
-      if (!record) return undefined;
+    // Implements the canonical (issuer, id) tuple contract (@spec
+    // authority-server#reference-tuple, #685 review).
+    const loadView = (ref: { id: string; issuer: string }) => {
+      const record = as.kernel.get(ref.id);
+      if (!record || record.issuer !== ref.issuer) return undefined;
       const fresh = as.kernel.applyExpiry(record);
       const view: MissionView = {
         id: fresh.id,
@@ -313,6 +315,8 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
         version: fresh.version,
         authority_hash: fresh.authority_hash,
         authority_set: fresh.authority_set,
+        subject: fresh.subject,
+        client_id: fresh.client_id,
       };
       return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
     };

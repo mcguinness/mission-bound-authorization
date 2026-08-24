@@ -10,9 +10,14 @@ export {
   evaluate,
   type Decision,
   type DenialReason,
+  type EntitlementObservation,
+  type EntitlementResolver,
   type EvaluateOptions,
   type EvaluationRequest,
   type ActionApproval,
   type Freshness,
+  type OriginPrincipal,
+  type PrincipalMappingObservation,
+  type PrincipalMappingResolver,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";

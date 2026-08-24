@@ -172,3 +172,22 @@ export function buildOrchestrationEvidence(
 
   return rec;
 }
+
+/**
+ * @spec orchestration#authority-narrowing
+ *
+ * Build an Orchestration Evidence record for a step the authority-narrowing
+ * trigger denied. `step_id` is REQUIRED here (only OPTIONAL on the general
+ * record): without it the per-step behavior that trigger requires is not
+ * externally observable. Delegates to `buildOrchestrationEvidence` for every
+ * other rule.
+ */
+export function buildAuthorityNarrowingEvidence(
+  input: Omit<BuildOrchestrationEvidenceInput, "step_id"> & { step_id: string },
+  opts: { signEnvelope?: EnvelopeSigner } = {},
+): OrchestrationEvidence {
+  if (!input.step_id) {
+    throw new Error("authority-narrowing evidence REQUIRES step_id");
+  }
+  return buildOrchestrationEvidence(input, opts);
+}
