@@ -63,6 +63,13 @@
 //                                OAuth binding's own document) and every reader surface must be
 //                                free of it, modulo the adjectival followers and the explicit
 //                                allowlist in RETIRED_CORE_ALLOWLIST
+//   (u) binding packages      - README.md's "Find your path" generated "Minimum package" table
+//                                (#709: verbs are the README's public front door, one link to
+//                                the full catalog) is stale against the manifest, or
+//                                BINDING_SLUGS (scripts/generate-drafts-index.mjs, itself
+//                                derived from check-substrate-statements.mjs's Statement
+//                                registry, the family's definition of "binding") names a slug
+//                                that is not a family-manifest.json draft
 
 import fs from "node:fs";
 import path from "node:path";
@@ -71,7 +78,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
-import { maturityDisplay, validateDraftsIndex, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
+import { maturityDisplay, validateDraftsIndex, validateBindingPackages, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -543,9 +550,11 @@ function main() {
   }
 
   // (m) Curated README: two hand-offs and one naming rule. README.md is
-  // curated prose whose structure is deliberately not validated; what must
-  // hold is that it points at the catalog and the dependency report, and
-  // that any full draft name it quotes is a real family draft.
+  // curated prose whose structure is deliberately not validated (with one
+  // exception: the "Find your path" section's generated "Minimum package"
+  // table, checked for freshness by (u) below); what must
+  // hold here is that it points at the catalog and the dependency report,
+  // and that any full draft name it quotes is a real family draft.
   const readme = readFile(README_PATH, "README.md");
   for (const target of README_REQUIRED_LINKS) {
     const escaped = target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -874,6 +883,15 @@ function main() {
       );
     }
   }
+
+  // (u) Binding packages: README.md's "Find your path" generated "Minimum
+  // package" table must match what the manifest's adoption_requires closure
+  // computes for each binding (#709). This is the successor to the retired
+  // README adoption map's coverage: rather than a hand-authored table
+  // checked for placement, the reader-visible package is machine-generated
+  // and this check is a straight freshness comparison, the same shape as
+  // (l) for DRAFTS.md's index.
+  for (const e of validateBindingPackages(ROOT)) fail("binding-packages", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):
