@@ -813,7 +813,7 @@ The successor records a lineage link to the predecessor as a
 the successor's Mission record.
 
 The issuance profile's `mission` claim is an open object: additional
-members MAY appear alongside `id`, `issuer`, and `authority_hash`, each
+members MAY appear alongside `id` and `issuer`, each
 defined by the profile that introduces it, and a consumer MUST ignore
 members it does not understand and MUST NOT use any additional member
 to grant or widen authority ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -887,8 +887,6 @@ other token claims omitted):
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
@@ -1489,8 +1487,6 @@ token carries a `predecessor` member:
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }

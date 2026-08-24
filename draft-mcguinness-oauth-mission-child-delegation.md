@@ -244,8 +244,9 @@ A Child Mission is an ordinary Mission under the issuance profile with
 two additions: it is created under a parent grant rather than a
 first-party approval, and its record and tokens carry the `parent`
 member ({{parent-member}}). The child's own `authority_hash` remains
-the authority commitment for its tokens; the `parent` member is lineage
-and audit data only.
+the authority commitment on its record, on the same baseline terms as
+any Mission's ({{I-D.draft-mcguinness-oauth-mission}}); the `parent`
+member is lineage and audit data only.
 
 Where this document refers to "the issuance profile" without a section,
 it means {{I-D.draft-mcguinness-oauth-mission}} as a whole.
@@ -857,8 +858,6 @@ parent. The decoded child access token:
   "mission": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
@@ -872,10 +871,13 @@ parent. The decoded child access token:
 }
 ~~~
 
-`mission.id` is the Child Mission and `mission.authority_hash` commits
-the child Authority Set; the `parent` object is lineage, with `depth` 1
-for a child of a root Mission. The `cnf` key is the sub-agent's own
-({{child-client-identity}}).
+`mission.id` is the Child Mission, on the issuance profile's baseline
+`{id, issuer}` claim ({{I-D.draft-mcguinness-oauth-mission}}); the
+child's own `authority_hash`, which commits its Authority Set, is
+recorded on its Mission record and is not carried on the claim by
+default. The `parent` object is lineage, this profile's own member,
+with `depth` 1 for a child of a root Mission. The `cnf` key is the
+sub-agent's own ({{child-client-identity}}).
 
 ## Child Creation Denial Reasons {#denial-reasons}
 
@@ -973,7 +975,7 @@ the `mission` claim of tokens derived under the child:
 
 The `parent` member is lineage and audit data. It does not grant
 authority. The Child Mission's own `authority_hash` is the authority
-commitment for child tokens.
+commitment for the child, on its record.
 
 `parent.depth` counts upward from 1 across generations, while the parent
 entry's `children.max_child_depth` ({{fanout}}) is a per-entry ceiling
@@ -987,8 +989,6 @@ Example:
   "mission": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
