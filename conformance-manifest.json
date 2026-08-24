@@ -27,8 +27,8 @@
     "content_sha256": "94f27fb07357fba93989a05797d4798e0d662eeccdbbca2e549f217d8ce6af37"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
-    "content_sha256": "78d330c74a64280d52c3cd83bacf4007b08ad53dee20bb91a4b971c6ddfac1cf"
+    "revision": "1581059886639c75b883099f9b913a72ec3b0985",
+    "content_sha256": "431f29ef715c54f847fd9536e91ffc2981b90bc6f53671e813624771c44204b1"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "a914b3a4530cb25d50399448c43096afac40da48",
@@ -13904,7 +13904,7 @@
    "tests": [
     {
      "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (\u00a7 in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -14116,6 +14116,41 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "cross-domain.resource-as.client-id-identifies-redeemer",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST identify the redeeming destination client on the local token, per the destination's own credential conventions; where the local token is an RFC 9068-style JWT, that identifier is `client_id`, naming the party that authenticated at redemption in the Resource AS's own namespace ({{RFC8693}} Section 4.3, {{RFC9068}} Section 2.2). It MUST NOT be the Mission's approved agent from the originating domain, and the origin identity travels only via the Origin Principal profile's `mission.subject` ({{origin-principal}}), never as the local client identity.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS's minted local token identifies the redeeming destination client using the destination's own credential convention (client_id, for an RFC 9068-style JWT local token), never the ID-JAG grant's own client_id (the originating agent); origin identity is carried only via mission.subject under the Origin Principal profile"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec cross-domain#validation-at-resource-as (S-12): the local token's client_id identifies the redeeming destination client, never the origin agent",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "This RAS has no separate client-registration model (S-12): localClientId is a fixed config value stamped as client_id, distinct from both the ID-JAG grant's own client_id (the originating agent) and the DPoP presenter key. Both mapped tests assert client_id equals the destination's configured value and is neither the grant's client_id nor the presenter jkt."
   }
  ]
 }
