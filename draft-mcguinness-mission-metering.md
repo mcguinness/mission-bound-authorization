@@ -974,8 +974,6 @@ prior permit expires; the action is not parameter-bound, so no
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
-      "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"
     },
     "actor": { "client_id": "s6BhdRkqt3" },
