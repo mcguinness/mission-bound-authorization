@@ -174,7 +174,9 @@ Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") supports
 delegated Mission-bound tokens. It requires authority to narrow down
 the chain and records actor context. That is sufficient for many
-service-to-service and token-exchange cases. Agent harnesses introduce
+service-to-service and token-exchange cases.
+
+Agent harnesses introduce
 a related but distinct case: a parent agent starts a sub-agent or child
 worker with a durable task of its own. The child may have its own
 session, queue, tool handles, and runtime identity.
@@ -1037,24 +1039,34 @@ Where the deployment requires a human approval event for child
 creation ({{child-creation}}), that event meets the issuance
 profile's approval-event requirements in full, its human Approver is
 the record's `approver`, and `approval_basis.type` is `direct`:
-`consent_principal` is that Approver, `activation` is
-`{ approval_event_id }`, `activation_actor` equals
-`consent_principal`, and `root_commitment` is the child's own
-`authority_hash`, exactly as for an ordinary Mission.
+
+- `consent_principal` is that Approver;
+- `activation` is `{ approval_event_id }`;
+- `activation_actor` equals `consent_principal`; and
+- `root_commitment` is the child's own `authority_hash`, exactly as
+  for an ordinary Mission.
 
 Where creation is adjudicated by policy with no human interaction
 ({{child-client-identity}}), `approval_basis.type` is
-`policy_drawdown`: `consent_principal` is the Parent Mission's own
-`approver`, the accountable human standing behind the delegation that
-permits child creation ({{fanout}}); `activation_actor` is the
-requesting parent agent, the Parent Mission's `client_id`, distinct
-from `consent_principal`; and `root_commitment` is the entry's
-`child_creation_policy` reference where the entry carries one,
-otherwise the Parent Mission's own `authority_hash`, which commits
-the authorizing delegation entry. Either way `root_commitment` MUST
+`policy_drawdown`:
+
+- `consent_principal` is the Parent Mission's own
+  `approver`, the accountable human standing behind the delegation that
+  permits child creation ({{fanout}});
+- `activation_actor` is the
+  requesting parent agent, the Parent Mission's `client_id`, distinct
+  from `consent_principal`; and
+- `root_commitment` is the entry's
+  `child_creation_policy` reference where the entry carries one,
+  otherwise the Parent Mission's own `authority_hash`, which commits
+  the authorizing delegation entry.
+
+Either way `root_commitment` MUST
 reference a committed value: the anti-laundering guarantee that a
 `policy_drawdown` basis always traces to something the human's
-approval actually committed. Where the entry carries a
+approval actually committed.
+
+Where the entry carries a
 `child_creation_policy`, `activation` carries that policy's `id` and
 `version` and this creation's own delegation event identifier (above)
 as `activation_event_id`. Where it does not, the drawdown is against
@@ -1145,7 +1157,9 @@ attenuation rules above bound a child's authority, expiry, and
 delegation policy against the parent, but not its derivation count.
 `max_derivations` is a per-Mission local issuance counter. A Mission
 Issuer and a deployment MUST NOT treat it, at any single Mission, as
-an aggregate, concurrency, spend, or subtree bound. A Parent Mission's
+an aggregate, concurrency, spend, or subtree bound.
+
+A Parent Mission's
 own `max_derivations` caps derivation at the parent alone; it does not
 bound how many derivations the child subtree performs in aggregate,
 and a deep or wide subtree can derive far more than the parent's own
@@ -1153,7 +1167,9 @@ cap suggests. Where an approval interface displays `max_derivations`,
 or any per-Mission derivation control, as a limit on child creation,
 that interface MUST disclose the composed bound reachable through the
 subtree alongside it, so the Approver sees the real reachable surface
-rather than one Mission's local counter alone. Bounding the aggregate
+rather than one Mission's local counter alone.
+
+Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
 ({{I-D.draft-mcguinness-mission-metering}}). This warning is about the
@@ -1307,7 +1323,9 @@ There is no subtree-preserving path from fan-out to widening: a
 deployment that creates several Child Missions under a predecessor and
 later expands that predecessor pays for it by tearing down every
 non-terminal descendant and re-creating each one still needed under
-the successor. That cost is deliberate. A Child Mission's authority
+the successor. That cost is deliberate.
+
+A Child Mission's authority
 must always trace to a committed approval it was actually checked
 against: `parent.authority_hash` commits to the exact predecessor
 Authority Set the strict-subset check ran against
@@ -1369,7 +1387,9 @@ profile defines one child-specific terminal state:
   ({{cascade}}). It is distinct from `revoked` (the child itself was not
   revoked) and `expired` (the child's own expiry was not reached), so
   audit can tell a cascade-terminated child from a directly terminated
-  one. Following the issuance profile's forward-compatibility rule, a
+  one.
+
+  Following the issuance profile's forward-compatibility rule, a
   consumer treats `cascaded` as non-active, as it treats any state other
   than `active`. Mission Status
   ({{I-D.draft-mcguinness-oauth-mission-status}}) reports it among the
