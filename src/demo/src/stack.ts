@@ -304,6 +304,7 @@ export async function composeStack(opts: {
       signKid: rasTokenKey.kid,
       localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
       localTokenAudience: saasResource,
+      localClientId: TOPOLOGY.rasLocalClientId,
     });
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,

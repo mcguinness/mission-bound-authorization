@@ -675,16 +675,19 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   - MUST be sender-constrained ({{RFC7800}}), like the grant it
     derives from;
   - MUST NOT be issued as a bearer token; and
-  - sets `client_id` to the client that requested this local token,
-    the party that authenticated at redemption in the Resource AS's
-    own namespace, per {{RFC8693}} Section 4.3 and {{RFC9068}}
-    Section 2.2. It MUST NOT set `client_id` to the Mission's
-    approved agent from the originating domain. The approved agent is
-    not carried directly on this local token: it remains recoverable
-    at the originating AS from the Mission Record identified by
-    `mission.id` and `mission.issuer`. A Resource Server MAY impose
-    stronger actor-chain requirements but MUST NOT reinterpret
-    `client_id`.
+  - MUST identify the redeeming destination client on the local
+    token, per the destination's own credential conventions; where
+    the local token is an RFC 9068-style JWT, that identifier is
+    `client_id`, naming the party that authenticated at redemption in
+    the Resource AS's own namespace ({{RFC8693}} Section 4.3,
+    {{RFC9068}} Section 2.2). It MUST NOT be the Mission's approved
+    agent from the originating domain, and the origin identity
+    travels only via the Origin Principal profile's `mission.subject`
+    ({{origin-principal}}), never as the local client identity. The
+    approved agent remains recoverable at the originating AS from the
+    Mission Record identified by `mission.id` and `mission.issuer`. A
+    Resource Server MAY impose stronger actor-chain requirements but
+    MUST NOT reinterpret `client_id`.
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed. It MUST apply its own local
   authorization policy in addition: honoring a Mission does not
@@ -1575,3 +1578,9 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
   this document begins its delegation depth at 0" restated what the
   preceding, correctly conditioned sentence already said; the
   citation moved onto that sentence and the duplicate was dropped).
+- Restated the Resource AS's local-token client identification as a
+  property-level requirement (identify the redeeming destination
+  client per the destination's own credential conventions, naming
+  `client_id` as the RFC 9068 case) rather than naming `client_id`
+  directly, and cross-referenced the Origin Principal profile's
+  exclusive carriage of origin identity (S-12).

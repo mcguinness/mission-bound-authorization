@@ -23,6 +23,16 @@ export interface RasConfig {
   localTokenTtlSeconds?: number;
   /** Audience stamped on minted local tokens (the SaaS resource). */
   localTokenAudience?: string;
+  /**
+   * @spec cross-domain#validation-at-resource-as (S-12): the destination-local
+   * client_id stamped on every local token this RAS mints, identifying the
+   * redeeming client in the RAS's own namespace ({{RFC9068}} Section 2.2).
+   * This RAS has no separate client-registration model, so this value IS that
+   * registration. It MUST NOT be, or be derived from, the ID-JAG grant's own
+   * `client_id` claim: that claim names the acting client at the ORIGINATING
+   * AS, never the party the RAS authenticated at redemption.
+   */
+  localClientId: string;
   now?: () => Date;
 }
 
@@ -44,7 +54,9 @@ export class ResourceAuthorizationServer {
    * Redeem an ID-JAG (JWT-bearer grant). Validates typ, signature against the
    * trusted originating issuer, aud = this RAS, exp, sender-constraint (cnf.jkt
    * vs presenter), one-time jti, and iss == mission.issuer. Mints a local
-   * token preserving mission.id/issuer/authority_hash.
+   * token preserving mission.id/issuer/authority_hash and identifying the
+   * redeeming client as `client_id` (S-12; {{cross-domain#validation-at-resource-as}}),
+   * never the grant's own `client_id`, which names the originating agent.
    */
   async redeem(idJag: string, presenterJkt: string): Promise<{ access_token: string; expires_in: number }> {
     // Peek the issuer to select the trust anchor.
@@ -96,6 +108,12 @@ export class ResourceAuthorizationServer {
       mission,
       authorization_details: payload.authorization_details,
       cnf: { jkt: presenterJkt },
+      // @spec cross-domain#validation-at-resource-as (S-12): client_id names
+      // the redeeming destination client in THIS RAS's namespace. It is a
+      // fixed config value, never copied or derived from the grant's own
+      // client_id (payload.client_id), which names the originating agent and
+      // MUST NOT appear in this slot.
+      client_id: this.cfg.localClientId,
     })
       .setProtectedHeader({ alg: "ES256", kid: this.cfg.signKid, typ: "at+jwt" })
       .setSubject(String(payload.sub))

@@ -23,6 +23,9 @@ import { SaasMcpServer, SAAS_RESOURCE } from "../src/index.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
+// @spec cross-domain#validation-at-resource-as (S-12): the RAS's destination-local
+// client_id, distinct from the grant's own client_id ("ap-agent", the origin agent).
+const RAS_LOCAL_CLIENT_ID = "ledgercloud-ras-redeemer";
 const RESOURCE_TO_AS = (r: string) => (r === SAAS_RESOURCE ? RAS_ISS : AS_ISS);
 
 // Policy ceiling includes the SaaS resource with the journal-write action.
@@ -88,6 +91,7 @@ beforeAll(async () => {
     trustedIssuers: { [AS_ISS]: { keys: [asPub as never] } },
     signKey: rasKeys.privateKey,
     signKid: "ras-token",
+    localClientId: RAS_LOCAL_CLIENT_ID,
   });
   saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
 
@@ -120,6 +124,35 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(saas.journalEntries()).toHaveLength(1);
     expect(saas.journalEntries()[0]?.mission_id).toBe(mission.id);
+  });
+
+  it("@spec cross-domain#validation-at-resource-as (S-12): the local token's client_id identifies the redeeming destination client, never the origin agent", async () => {
+    const mission = approve(6);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: mission.id,
+      targetAs: RAS_ISS,
+      clientId: "ap-agent",
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+    const { access_token } = await ras.redeem(grant, agentJkt);
+    const local = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+
+    // Positive: the destination's own registration, per the RAS's own
+    // conventions (an RFC 9068-style JWT local token -> client_id).
+    expect(local.client_id).toBe(RAS_LOCAL_CLIENT_ID);
+
+    // Negative: never the grant's client_id (the origin agent), and not a
+    // value derived from the presenter key -- origin identity travels only
+    // via the Origin Principal members, never as the local client identity.
+    expect(local.client_id).not.toBe("ap-agent");
+    expect(local.client_id).not.toContain(agentJkt);
+    expect(local.client_id).not.toBe(agentJkt);
+
+    // The mission anchors are unaffected by this: client_id and mission.* are
+    // independent fields on one mint call.
+    expect(local.mission.id).toBe(mission.id);
+    expect(local.mission.issuer).toBe(AS_ISS);
   });
 
   it("a replayed ID-JAG is rejected at the RAS (one-time jti)", async () => {
