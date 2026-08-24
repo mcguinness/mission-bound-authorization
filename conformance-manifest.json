@@ -7629,9 +7629,40 @@
     "normative": "a PEP-placed origin-principal mapping is conveyed as a structured, integrity-protected observation the PDP verifies; a failed, missing, ambiguous, or stale mapping or entitlement result denies principal_mapping_failed"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Cross-Domain is a disabled conditional for the Runtime-Enforced Baseline (notes/adoption-plan.md); profiles is empty for this cross-domain-only row even though the surrounding pdp-request rows are baseline."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping resolver returns undefined (missing/ambiguous/disabled mapping): denies principal_mapping_failed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping resolved but stale beyond its OWN valid_until: denies principal_mapping_failed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping valid, entitlement resolver returns undefined: denies principal_mapping_failed, but the mapping WAS established so principal_mapping evidence is still attached (Refusal Record binding)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping valid, entitlement entitled but stale beyond entitlementStalenessBoundSeconds: denies principal_mapping_failed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > profile claimed, everything valid: permits, and the permit carries a complete principal_mapping evidence object",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial (#539 stage A): the shared failure classification this row's observation.normative also states -- a failed, missing, ambiguous, or stale mapping or entitlement result denies principal_mapping_failed, and the permit/refusal binds the principal_mapping evidence object once the mapping is established -- is covered, PDP-authoritative (the profile's default placement: EvaluateOptions.principalMapping/.entitlement, injected resolver contracts, the same idiom as Fga). This row's own quoted MUST clause is the OTHER deployment configuration (mapping placed at the PEP, conveyed as a structured, integrity-protected observation the PDP verifies): that placement is not implemented, so it is not claimed tested. Cross-Domain is a disabled conditional for the Runtime-Enforced Baseline (notes/adoption-plan.md); profiles is empty for this cross-domain-only row even though the surrounding pdp-request rows are baseline."
   },
   {
    "id": "authzen.pdp-request.subject-shape-and-issuer-presence",
@@ -7652,8 +7683,22 @@
     "normative": "subject.type defaults to user unless the deployment profiles another value, subject.id is the token's authenticated sub, and subject.properties.iss is REQUIRED when known, carrying the issuer that authenticated the Subject so a sub is disambiguated across issuers; a PEP that cannot establish the issuer omits it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#pdp-request (subject.properties.iss) -- populated from the verified TokenFacts.iss (this resource's own issuer), regardless of whether the profile is claimed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#pdp-request (subject.properties.iss) -- 'a PEP that cannot establish the Subject's issuer omits it': TokenFacts.iss absent means subject.properties is absent too, never a fabricated value",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial (#539 stage A): subject.properties.iss presence-when-known and omission-when-unknown are both tested (services/mcp-payments/src/pep.ts and src/server.ts's TokenFacts.iss, populated from the resource's own verified issuer). subject.type's default-to-user behavior is untested: this PEP never sets subject.type at all, relying on the wire-level AuthZEN default, which these tests do not separately assert."
   },
   {
    "id": "authzen.clock-skew.leeway-bounded-and-published",
@@ -7857,8 +7902,22 @@
     "normative": "context.mission.subject is OPTIONAL in general and REQUIRED for a request claiming the cross-domain Origin Principal profile; the PEP populates it only from a verified source, never from an unverified request value"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#context-mission -- context.mission.subject is populated from the verified TokenFacts, never from an unverified request value",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#context-mission -- a token with no mission.subject (the profile not claimed) omits context.mission.subject entirely, never a synthesized empty object",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial (#539 stage A): the mcp-payments PEP envelope-construction path is covered -- populated only from verified TokenFacts, omitted entirely (never a synthesized empty object) when the profile is not claimed. Not claimed tested/closed: the controlling review disposition ties this row to origin-principal-mapping-required and requires both to stay open until the Cross-Org grant and ID-JAG RAS entry paths are repaired in the same wave (stage 2); both still drop mission.subject today."
   },
   {
    "id": "authzen.context-actor.provenance-not-in-act-chain",
@@ -12770,8 +12829,28 @@
     "normative": "the principal_mapping extension member's origin, local, policy, observed_at, and valid_until sub-members are all REQUIRED whenever the member is present; the origin/local references follow this document's protected-reference privacy rule"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping (#686 review) -- an entitlement-caused principal_mapping_failed DENIAL still retains principal_mapping (protected references), since the mapping itself was established before entitlement failed",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > a request NOT claiming the profile never carries principal_mapping on its retained Decision Evidence",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#539/#686 review: the PDP's decision context carries the composed mapping (permit or a later-step denial past the mapping check); the PEP's evidence.record() now copies it onto the retained Decision Evidence, replacing the raw {iss, sub} pairs with protected references (computeAnchor, typ mission-origin-subject) before persisting. Never a partial object: present with all five sub-members, or absent entirely for a request not claiming the profile."
   },
   {
    "id": "evidence.conformance.producer-bar",
@@ -13034,8 +13113,16 @@
     "normative": "where the cross-domain Origin Principal profile is in use, retained records should carry the principal_mapping extension with a protected subject reference rather than a raw identity, unless the raw identity is necessary for the stated audit purpose; a deployment using the deterministic-digest form of protected reference must disclose that it is dictionary-attackable correlation infrastructure, not concealment"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#539/#686 review: the protected-reference half is tested (the deterministic-digest form; raw {iss, sub} confirmed absent from the serialized record). The MUST-disclose-the-limitation half is not machine-tested; it is satisfied by source documentation at the point a deployment would read it (services/mcp-payments/src/evidence.ts's principal_mapping field doc, packages/mission-core/src/anchors.ts's MISSION_ORIGIN_SUBJECT_TYP doc), not verified here."
   },
   {
    "id": "evidence.privacy.pep-should-supply-digest-only-for-pii-parameters",

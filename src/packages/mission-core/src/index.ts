@@ -7,6 +7,7 @@ export {
   intentHash,
   MISSION_CREATION_FINGERPRINT_TYP,
   MISSION_INTENT_EVIDENCE_TYP,
+  MISSION_ORIGIN_SUBJECT_TYP,
   MISSION_TEMPLATE_TYP,
   PROPOSED_AUTHORITY_TYP,
   proposalHash,
@@ -75,6 +76,13 @@ export {
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";
+export type {
+  EntitlementObservation,
+  EntitlementResolver,
+  OriginPrincipal,
+  PrincipalMappingObservation,
+  PrincipalMappingResolver,
+} from "./origin-principal.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {
   ACCEPT_TXN_CHALLENGE_HEADER,

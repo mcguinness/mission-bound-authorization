@@ -9,7 +9,17 @@
  */
 
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
-import { AUTHORITY_ENTRY_TYP, compareAmounts, computeAnchor, isValidAmount } from "@mission/core";
+import {
+  AUTHORITY_ENTRY_TYP,
+  compareAmounts,
+  computeAnchor,
+  type EntitlementObservation,
+  type EntitlementResolver,
+  isValidAmount,
+  type OriginPrincipal,
+  type PrincipalMappingObservation,
+  type PrincipalMappingResolver,
+} from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
@@ -20,6 +30,8 @@ import {
   type MissionView,
   policyViewId,
 } from "./policy-view.js";
+
+export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
 /**
  * @spec runtime#classification — the high-consequence classes (a closed
@@ -67,7 +79,20 @@ export interface Freshness {
 }
 
 export interface EvaluationRequest {
-  subject: { id: string; type?: string };
+  subject: {
+    id: string;
+    type?: string;
+    /**
+     * @spec authzen#pdp-request rule 10 — `subject.properties.iss` describes
+     * the authenticated destination-local token subject's home issuer,
+     * consulted only for a request claiming the cross-domain Origin
+     * Principal profile (`context.mission.subject` present). Absent there,
+     * the PDP cannot represent an issuer-qualified local subject and denies
+     * `principal_mapping_failed`, never falls back to a bare `sub`
+     * comparison.
+     */
+    properties?: { iss?: string };
+  };
   /**
    * Fine-grained target object (Resource-policy only), NOT the entry match.
    * `vendor_ids`, when present, names the FULL collection a bound bulk read
@@ -81,7 +106,20 @@ export interface EvaluationRequest {
   action: { name: string };
   context: {
     audience: string; // matched against the approved entry's resource
-    mission: { id: string; issuer: string; authority_hash: string; policy_view_id?: string };
+    mission: {
+      id: string;
+      issuer: string;
+      authority_hash: string;
+      policy_view_id?: string;
+      /**
+       * @spec cross-domain#mission-subject, authzen#pdp-request rule 10 —
+       * the immutable origin principal, REQUIRED for a request claiming the
+       * cross-domain Origin Principal profile and OPTIONAL otherwise. The
+       * PEP populates it only from a verified token or delegation chain,
+       * never from an unverified request value (@spec authzen#context-mission).
+       */
+      subject?: OriginPrincipal;
+    };
     actor?: ContextActor;
     freshness?: Freshness;
     parameter_digest?: string;
@@ -109,7 +147,17 @@ export type DenialReason =
   | "actor_invalid"
   | "constraint_exceeded"
   | "action_approval_required"
-  | "unsupported_authorization_type";
+  | "unsupported_authorization_type"
+  /**
+   * @spec cross-domain#dual-axis, authzen#pdp-request rule 10 — the
+   * cross-domain Origin Principal profile's registered extension reason: a
+   * failed, missing, ambiguous, or stale mapping from `context.mission.subject`
+   * to the authenticated local subject, or a failed, missing, or stale
+   * current-entitlement result for the mapped principal. One reason covers
+   * every sub-cause of either step; the profile does not distinguish them at
+   * the enforcement point.
+   */
+  | "principal_mapping_failed";
 
 export interface Decision {
   decision: boolean;
@@ -147,6 +195,32 @@ export interface EvaluateOptions {
    * through on the negative age it produces.
    */
   freshnessSkewToleranceSeconds?: number;
+  /**
+   * @spec cross-domain#origin-principal-mapping, authzen#pdp-request rule 10
+   * — resolves `context.mission.subject` to a destination-local mapping for
+   * a request claiming the cross-domain Origin Principal profile ("The PDP
+   * is authoritative for the mapping in the default placement"). Absent,
+   * the same fail-closed-on-unconfigured idiom as `allowedFreshnessSources`
+   * applies: every request claiming the profile denies `principal_mapping_failed`;
+   * a deployment not claiming the profile never sets `context.mission.subject`,
+   * so it is unaffected either way.
+   */
+  principalMapping?: PrincipalMappingResolver;
+  /**
+   * @spec cross-domain#dual-axis — resolves current entitlement for the
+   * mapped local principal. Absent fails closed the same way as a missing
+   * `principalMapping`.
+   */
+  entitlement?: EntitlementResolver;
+  /**
+   * @spec cross-domain#dual-axis: "a deployment claiming this profile MUST
+   * declare the source and maximum staleness of local principal entitlement,
+   * separately from its Mission-state freshness declaration." Seconds;
+   * deliberately its own option, never collapsed into `stalenessBoundSeconds`
+   * (Mission-state freshness) or the mapping's own `valid_until`. Absent
+   * fails every cross-domain-profile request closed.
+   */
+  entitlementStalenessBoundSeconds?: number;
 }
 
 let decisionCounter = 0;
@@ -176,6 +250,13 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
   const decisionId = newDecisionId();
+  // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
+  // — set once step 4a below validates the mapping (before entitlement lookup,
+  // so it is present on an entitlement-caused principal_mapping_failed denial
+  // too, per "recorded on Decision Evidence and Refusal Records"). Declared
+  // here, ahead of `base`, so every earlier `deny()` (steps 1-3) closes over
+  // the same binding without a temporal-dead-zone reference.
+  let principalMapping: PrincipalMappingObservation | undefined;
   // @spec authzen#response-context: `evaluation_id` is the profile's own
   // REQUIRED correlation identifier (ARAP's `evaluation_id`), additive
   // alongside the pre-existing `decision_id` deployment metadata (still load-
@@ -187,6 +268,17 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     evaluation_id: decisionId,
     policy_view_id: pvid,
     ...(actionClass ? { action_class: actionClass, class_source: "deployment" } : {}),
+    ...(principalMapping
+      ? {
+          principal_mapping: {
+            origin: req.context.mission.subject,
+            local: principalMapping.local,
+            policy: principalMapping.policy,
+            observed_at: principalMapping.observed_at,
+            valid_until: principalMapping.valid_until,
+          },
+        }
+      : {}),
     ...extra,
   });
   // @spec authzen#response-context: `reason` is the profile's own response
@@ -221,11 +313,10 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // through as if no staleness bound applied. Below the high-consequence
   // floor the draft treats token-lifetime expiry as itself a conforming
   // state source, so an absent member there is not by itself a refusal.
+  const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
   if (req.context.freshness) {
     const observedAtMs = Date.parse(req.context.freshness.observed_at);
     const ageMs = now().getTime() - observedAtMs;
-    const skewToleranceMs =
-      (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
     const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
     // A malformed timestamp (non-finite), one dated far enough in the future
     // to be fabricated rather than ordinary clock drift, or a source outside
@@ -253,6 +344,89 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     } catch {
       return deny("actor_invalid");
     }
+  }
+
+  // 4a. Cross-domain Origin Principal dual-axis mapping and entitlement
+  // (@spec cross-domain#dual-axis, authzen#pdp-request rule 10). Applies
+  // only to a request claiming the profile (`context.mission.subject`
+  // present); a deployment not claiming it is completely unaffected, this
+  // block never partially runs. Runs before the authority-entry match: WHO
+  // the mapped local principal is gates WHAT they can do, not the reverse.
+  if (req.context.mission.subject) {
+    const origin: OriginPrincipal = req.context.mission.subject;
+    const localIss = req.subject.properties?.iss;
+
+    // @spec cross-domain#origin-principal-mapping — "The PDP is
+    // authoritative for the mapping in the default placement." A missing
+    // resolver, a missing/ambiguous/disabled mapping (`resolve` returns
+    // undefined), a mapping stale beyond its OWN `valid_until`, or a mapped
+    // local principal that does not equal the authenticated request subject
+    // (rule 10's `require mapped_subject == (subject.properties.iss,
+    // subject.id)`) are all "a failed ... result" at this step: one
+    // classification, no bypass on any sub-cause. A network/store failure
+    // inside the resolver is the SAME kind of failed result, not a distinct
+    // authorization outcome or an unclassified transport exception (#686
+    // review): caught here and normalized to the identical denial, so it
+    // takes the ordinary evidence path rather than escaping evaluate().
+    let mappingResult: PrincipalMappingObservation | undefined;
+    try {
+      mappingResult = await opts.principalMapping?.resolve({ origin, audience: req.context.audience });
+    } catch {
+      mappingResult = undefined;
+    }
+    // The explicit undefined check (rather than folding it into
+    // `mappingEstablished` below) is also what lets TypeScript narrow
+    // `mappingResult` for every use after this point.
+    if (mappingResult === undefined) return deny("principal_mapping_failed");
+    const validUntilMs = Date.parse(mappingResult.valid_until);
+    const mappingEstablished =
+      Number.isFinite(validUntilMs) &&
+      now().getTime() <= validUntilMs &&
+      localIss !== undefined &&
+      mappingResult.local.iss === localIss &&
+      mappingResult.local.sub === req.subject.id;
+    if (!mappingEstablished) return deny("principal_mapping_failed");
+    // Bound to `base()` from here on: a subsequent denial at any later step
+    // (including the entitlement check just below) still carries the
+    // principal_mapping evidence object, since the mapping itself is fully
+    // established at this point.
+    principalMapping = mappingResult;
+
+    // @spec cross-domain#dual-axis — "Mission-state freshness and
+    // entitlement freshness are separate declarations and MUST NOT be
+    // collapsed into one timestamp": entitlement is resolved and
+    // freshness-checked against its OWN declared bound, never
+    // `stalenessBoundSeconds`. A missing resolver, a missing entitlement
+    // result, `entitled !== true`, or entitlement staler than the bound each
+    // deny the same way ("entitlement staleness beyond the declared bound
+    // denies likewise"). The same skew floor step 3 applies to
+    // `context.freshness` applies here too (@spec runtime#state-freshness,
+    // GAP 3, #612): a bare `age <= bound` check alone lets a future-dated
+    // `observed_at` produce a negative age that trivially satisfies any
+    // bound, so a future timestamp must be rejected on its own, not merely
+    // relied on to eventually exceed the bound.
+    // A throwing entitlement resolver is likewise a failed result, not a
+    // transport exception (#686 review): caught and normalized the same way
+    // as a throwing mapping resolver, above.
+    const entitlementBoundS = opts.entitlementStalenessBoundSeconds;
+    let entitlement: EntitlementObservation | undefined;
+    if (entitlementBoundS !== undefined) {
+      try {
+        entitlement = await opts.entitlement?.resolve({ local: mappingResult.local, audience: req.context.audience });
+      } catch {
+        entitlement = undefined;
+      }
+    }
+    const observedAtMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
+    const entitlementAgeMs = now().getTime() - observedAtMs;
+    const entitlementCurrent =
+      entitlementBoundS !== undefined &&
+      entitlement !== undefined &&
+      entitlement.entitled === true &&
+      Number.isFinite(observedAtMs) &&
+      entitlementAgeMs >= -skewToleranceMs &&
+      entitlementAgeMs <= entitlementBoundS * 1000;
+    if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 
   // 5. Authority entry match: the approved entry's resource is matched
