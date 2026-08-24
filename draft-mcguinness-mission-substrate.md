@@ -1221,7 +1221,7 @@ reference to it; no change is ever made solely to move words.
 
 ## OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-oauth-digest: 313518555ceb0962 -->
+<!-- assessed-oauth-digest: ccf3741c8df00b20 -->
 
 This section is this document's Mapping Assessment of the OAuth
 Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published

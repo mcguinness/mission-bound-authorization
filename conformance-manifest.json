@@ -19,8 +19,8 @@
     "content_sha256": "ca8165d37d409dd5c90073920271830ffb2e707d4d304f9c3f215016d201aedf"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "340ca0dcefc217c044f0d81e5eefa679e8c42507",
-    "content_sha256": "e37336ef57faff85e6864b890e514c25dc03ae63b528b9249ed2765b675b565e"
+    "revision": "5bc18d90242e2db127ba4ff704edbfeb229f5a2b",
+    "content_sha256": "ccf3741c8df00b20a941a273ef1f756ef836cfe1a9e6cb54630c0c83e5a6ad45"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
@@ -39,16 +39,16 @@
     "content_sha256": "31d4c8938fd34632ed3cce445b5af953cb365487cf65923cf3feb45d8ea253dd"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "5c12717f3cad29785f2f6797c5bcd1fcf15cae89",
-    "content_sha256": "9668a310b3ce3338e277921bc8967a82c87a7bf0324c6802cf6593fc663c7e1b"
+    "revision": "2be3bda0d2b9fc8bd8dc32168a76af29233c6cbe",
+    "content_sha256": "e62416b9102516c0614871f1faeca024d678774c315801cd2d7b3d7428f1177a"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
     "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "5b6a7b5ce09a4acde29976966292075cf424f76e",
-    "content_sha256": "313518555ceb0962e1907e8ebe814b2b7b53fb4ca2d7cacf6d99482cdead85ca"
+    "revision": "5bc18d90242e2db127ba4ff704edbfeb229f5a2b",
+    "content_sha256": "bf13c3700de61044503eeb25c0f0018726dcfa7a7d75b8a52449570cd8fc21c8"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "8bec3f3837a990065d6bf78dc72bb2de1f77d95d",
@@ -510,6 +510,127 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation."
+  },
+  {
+   "id": "core.approval-basis.adjudication-direct-human",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "Where `adjudication` is present for `direct`, `kind` MUST be `human` unless `governance_record` is `true`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a directly approved Mission populates approval_basis.adjudication, kind is human, naming no principal beyond consent_principal, unless governance_record is true, in which case kind instead follows the Approval Governance Record override"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human."
+  },
+  {
+   "id": "core.approval-basis.adjudication-standing-consent-policy",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "Where a companion profile defining a standing-consent `type` populates `adjudication`, `kind` MUST be `policy`, naming the identity and version of the policy or workflow that adjudicated the instance",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a standing-consent Mission populates approval_basis.adjudication, kind is policy, naming the deciding policy or workflow's identity and version, never the activation_actor that triggered the instance"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version)."
+  },
+  {
+   "id": "core.approval-basis.adjudication-governance-record-override",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "When `true`, `kind` MUST equal the record's accountable assertion's own `kind`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "whenever adjudication.governance_record is true, kind is derived from the Approval Governance Record's own accountable assertion (human or policy) rather than from approval_basis.type, so a direct Mission governed by a policy-kind assertion under the recency exception reports kind: policy, never a value that names the record itself"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id."
+  },
+  {
+   "id": "core.approval-basis.adjudication-no-flatten",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "a governed decision still names its mechanism, and the record supplies the fuller assertion set behind it, including any multi-assertion set, never flattened into it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a multi-assertion Approval Governance Record is referenced by governance_record: true plus this Mission's own approval_event_id, never collapsed into one principal or one flattened value on the Mission record"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews."
+  },
+  {
+   "id": "core.approval-basis.discriminator-unknown-value-rule",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "a consumer MUST NOT infer or fabricate the human, policy, or Approval Governance Record standing behind it, and MUST refuse only a profile operation that itself requires recognized adjudication semantics to proceed",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an unrecognized approval_basis.type or adjudication.kind is preserved unchanged as opaque provenance on an otherwise valid Mission record; it does not by itself invalidate or deactivate the Mission, unlike an unrecognized Mission Lifecycle state, and a consumer refuses only the specific profile operation that needs recognized adjudication semantics"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type carries the same citation and is not touched here; scoped to the two fields the review named."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",
