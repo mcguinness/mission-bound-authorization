@@ -392,22 +392,41 @@ this matrix and the `@spec` tags to the affected code and tests.
   code actually speaks on the wire), and this entry is the disclosed record
   that the split is deliberate, not drift.
 
+  Verified, not inferred: the published `1.29.0` tarball's own
+  `dist/esm/types.js` sets `LATEST_PROTOCOL_VERSION = '2025-11-25'`
+  (`SUPPORTED_PROTOCOL_VERSIONS` back through `2024-10-07`; no `2026-07-28`
+  anywhere), confirming the "2025-11-25 wire track" label above rather than
+  assuming it from the historical spike report's pairing.
+
   Compatibility check against the two named deltas, scoped to what this
   implementation actually does with MCP (`tools/list`/`tools/call` over an
   in-memory transport and a real StreamableHTTP transport,
   `services/mcp-payments/src/{mcp-transport,mcp-http-transport}.ts`):
-  authorization here already runs per-request, not off session state --
-  DPoP proof-of-possession is verified per call from the `Authorization:
-  DPoP`/`DPoP` headers, and the Mission credential rides `_meta` on each
-  `tools/call` (`_meta["com.karlmcguinness.mission/reference"]`, sharing the
-  namespace analysis in `notes/external-pins.json`'s `MCP-META` entry),
-  never inferred from a prior request over the same connection or from
-  `initialize`-time negotiation. Nothing this implementation's PEP relies on
-  for authorization would need to change under the statelessness delta. What
-  would change on an actual 2026-07-28 upgrade, and is out of scope here:
-  the SDK's own transport-level handshake and message shapes (the
-  `initialize`/`notifications/initialized` exchange the 1.29.0 SDK still
-  performs; the new required per-request `_meta.io.modelcontextprotocol/*`
+  read both files' request handlers directly. In `mcp-transport.ts`, the
+  `ListToolsRequestSchema` and `CallToolRequestSchema` handlers each call
+  `paymentsServer.validateCredential` fresh from that request's own
+  `params._meta`, with no cache keyed by connection or session between
+  calls. In `mcp-http-transport.ts`, `authenticate()` runs "for EVERY HTTP
+  request before dispatch" (its own doc comment; `initialize`, `tools/list`,
+  and `tools/call` are all gated) and calls
+  `paymentsServer.validateCredential(accessToken, {proof, htu, htm})` fresh
+  per request from the `Authorization: DPoP`/`DPoP` headers, storing the
+  result only on that request's own `req.auth`, never in a session-keyed
+  store; the `StreamableHTTPServerTransport` does mint an SDK-level
+  `Mcp-Session-Id` (2025-11-25 track), but authorization itself does not
+  read or key off it. The Mission credential rides `_meta` on each
+  `tools/call` the same way (`_meta["com.karlmcguinness.mission/reference"]`,
+  sharing the namespace analysis in `notes/external-pins.json`'s `MCP-META`
+  entry). So this implementation's authorization path already matches
+  2026-07-28's statelessness rule in substance (never inferring context from
+  a prior request over the same connection), even though it runs on an SDK
+  that does not yet speak the 2026-07-28 wire. Nothing this implementation's
+  PEP relies on for authorization would need to change under the
+  statelessness delta. What would change on an actual 2026-07-28 upgrade,
+  and is out of scope here: the SDK's own transport-level handshake and
+  message shapes (the `initialize`/`notifications/initialized` exchange the
+  1.29.0 SDK still performs per the confirmed `LATEST_PROTOCOL_VERSION`
+  above; the new required per-request `_meta.io.modelcontextprotocol/*`
   fields; `resultType` on results; `server/discover`), none of which this
   matrix's `@spec` tags or tests assert against today, so none of them are
   a broken claim: they are unimplemented protocol surface, not a failed one.
