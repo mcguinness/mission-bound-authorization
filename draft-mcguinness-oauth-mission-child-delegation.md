@@ -598,7 +598,7 @@ Interactive:
   the issuance profile's own approval ceremony via a Pushed
   Authorization Request {{RFC9126}}
   ({{I-D.draft-mcguinness-oauth-mission}}), after which the child grant
-  reference is returned. This interactive path is retained.
+  reference is returned.
 
 The child grant reference conveyed at completion is the child-bound JWT
 authorization grant of {{child-client-identity}}, never a child token.
