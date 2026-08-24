@@ -304,6 +304,11 @@ export async function composeStack(opts: {
       signKid: rasTokenKey.kid,
       localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
       localTokenAudience: saasResource,
+      // @spec cross-domain#validation-at-resource-as (S-12): no client is
+      // known at boot (the demo agent's DPoP key is generated per session,
+      // exhibit.ts); it is onboarded via ras.registerClient() once that key
+      // exists, before any cross-domain redemption is attempted.
+      registeredClients: {},
     });
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,

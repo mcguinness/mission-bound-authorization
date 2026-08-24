@@ -1613,6 +1613,10 @@ async function main() {
     "The agent carries the mission across domains: an ID-JAG grant is redeemed at the LedgerCloud RAS, then a journal entry is posted.",
     "the RAS mints a local SaaS token, the post succeeds, and a second redemption of the same grant is rejected (single-use).",
   );
+  hop("LedgerCloud admin", "RAS", "client onboarded (out-of-band registration)", "config/admin action, in-process");
+  as.ras.registerClient(issued.dpopJkt, TOPOLOGY.rasLocalClientId);
+  note(`@spec cross-domain#validation-at-resource-as (S-12): the destination registers the agent's DPoP key as a known local client BEFORE any redemption; this registration IS the RAS's client authentication, independent of anything the origin AS asserts on the grant.`);
+
   hop("AS", "Agent", "ID-JAG grant issued", "in-process");
   const grant = await as.issueCrossDomainGrant(missionId, issued.dpopJkt);
   block("ID-JAG grant — protected header", decodeHeader(grant.grant));

@@ -27,8 +27,8 @@
     "content_sha256": "94f27fb07357fba93989a05797d4798e0d662eeccdbbca2e549f217d8ce6af37"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
-    "content_sha256": "8fd63b493b5f611ad4da8f5b8ab7648c9647b2fd7d248b2346d02785ed0f627d"
+    "revision": "701d93cdeae224a61855c5c95c69c10267782e03",
+    "content_sha256": "63d641fe90b00622d0253096a524e7ba1b7da041ae045050c89d0f2737a7c3af"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "a914b3a4530cb25d50399448c43096afac40da48",
@@ -14069,7 +14069,7 @@
    "tests": [
     {
      "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (\u00a7 in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -14283,6 +14283,74 @@
    "tests": []
   },
   {
+   "id": "cross-domain.resource-as.authenticates-redeeming-client",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST authenticate the redeeming client at redemption, by whatever mechanism its own token endpoint uses for client authentication, and MUST refuse with `invalid_client` a request whose client authentication fails or whose presented credential does not resolve to a client it recognizes. The cross-domain grant's sender-constraint ({{grant-at-boundary}}) proves only that the presenter holds the grant's bound key; it is not, by itself, client authentication at the Resource AS's own token endpoint and MUST NOT be treated as satisfying this requirement.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS authenticates the redeeming client at redemption by its own mechanism (here, a jkt-keyed client registration distinct from the grant's sender-constraint) and refuses invalid_client on an unrecognized presenter key; a valid, sender-constrained cross-domain grant is not by itself sufficient client authentication"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec cross-domain#validation-at-resource-as (S-12): a valid, sender-constrained origin grant is not enough on its own; an unregistered presenter key is invalid_client",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "src/services/ras: RasConfig.registeredClients is a jkt -> client_id table (this RAS's own client registration); redeem() looks up the proven presenter jkt after sender-constraint verification and before jti consumption, throwing RasError(\"invalid_client\", ...) on a miss. registerClient() onboards a client whose key is generated after RAS construction (this demo's per-session DPoP keys)."
+  },
+  {
+   "id": "cross-domain.resource-as.client-id-identifies-redeemer",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST identify, per the destination's own credential conventions, the client identity established by the authentication above; where the local token is an RFC 9068-style JWT, that identifier is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section 2.2). It MUST NOT be the Mission's approved agent from the originating domain, and the cross-domain grant's own `client_id` claim ({{cross-domain-grant}}) MUST NOT be reinterpreted as this local identifier under any profile. Where the Origin Principal profile is claimed, that approved agent's origin principal is instead conveyed to the local token through `mission.subject` ({{origin-principal}}); otherwise the approved agent remains recoverable only at the originating AS from the Mission Record identified by `mission.id` and `mission.issuer`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS's minted local token identifies, as client_id (for an RFC 9068-style JWT local token), the client identity its own redemption-time authentication established, never the ID-JAG grant's own client_id (the originating agent) and never a value derived only from the presenter key without a matching registration; distinct registered destination clients each receive their own identifier"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec cross-domain#validation-at-resource-as (S-12): the local token's client_id identifies the redeeming destination client, never the origin agent",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec cross-domain#validation-at-resource-as (S-12): two distinct registered destination clients each receive their own client_id, never the other's or the origin's",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "This RAS's client_id is minted only from a matched entry in its own jkt-keyed registration (RasConfig.registeredClients / registerClient()), never a config constant and never the grant's own client_id or the presenter key alone. The two-client mcp-saas test proves neither registered client's key nor identifier leaks onto the other's minted token.",
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",

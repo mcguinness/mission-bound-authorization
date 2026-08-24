@@ -33,6 +33,7 @@
     "maxApprovalAgeSeconds": 300
   },
   "devServiceToken": "dev-service-token",
+  "rasLocalClientId": "ledgercloud-ras-redeemer",
   "keys": {
     "asToken": { "kid": "as-token", "alg": "RS256" },
     "asStatus": { "kid": "as-status", "alg": "ES256" },

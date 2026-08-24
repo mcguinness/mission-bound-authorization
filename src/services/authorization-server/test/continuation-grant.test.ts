@@ -25,7 +25,7 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
@@ -350,6 +350,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
+      registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
     });
 
     // Redeem the continuation ID-JAG (JWT-bearer grant), sender-constrained to
@@ -367,6 +368,14 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(Array.isArray(local.authorization_details)).toBe(true);
     expect(local.mission.id).toBe(missionId); // mission anchors preserved
     expect(local.mission.issuer).toBe(ISSUER); // originating AS unchanged
+
+    // @spec cross-domain#validation-at-resource-as (S-12): client_id identifies
+    // the redeeming destination client (this RAS's own registration), never the
+    // grant's own client_id (the originating actor, "ap-agent") or the
+    // presenter key.
+    expect(local.client_id).toBe(TOPOLOGY.rasLocalClientId);
+    expect(local.client_id).not.toBe("ap-agent");
+    expect(local.client_id).not.toBe(agentJkt);
 
     // A replay of the same ID-JAG is refused at the RAS (one-time jti).
     await expect(ras.redeem(idJag, agentJkt)).rejects.toMatchObject({ code: "invalid_grant" });
@@ -392,6 +401,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       trustedIssuers: {},
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
+      registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
     });
     const profiles = ras.metadata().authorization_grant_profiles_supported as string[];
     expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag");
@@ -600,6 +610,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
+      registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
     });
     const { expires_in } = await ras.redeem(idJag, agentJkt);
     expect(expires_in).toBeGreaterThan(0);

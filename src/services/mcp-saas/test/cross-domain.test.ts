@@ -23,6 +23,12 @@ import { SaasMcpServer, SAAS_RESOURCE } from "../src/index.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
+// @spec cross-domain#validation-at-resource-as (S-12): the RAS's own client
+// registration, distinct from the grant's own client_id ("ap-agent", the
+// origin agent). Two distinct destination clients so a test can prove
+// neither's key nor identifier leaks onto the other's minted token.
+const RAS_LOCAL_CLIENT_ID = "ledgercloud-ras-redeemer";
+const RAS_LOCAL_CLIENT_ID_2 = "ledgercloud-ras-second-client";
 const RESOURCE_TO_AS = (r: string) => (r === SAAS_RESOURCE ? RAS_ISS : AS_ISS);
 
 // Policy ceiling includes the SaaS resource with the journal-write action.
@@ -44,6 +50,8 @@ let rasKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let saas: SaasMcpServer;
 let agentKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let agentJkt: string;
+let secondAgentKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
+let secondAgentJkt: string;
 
 const intent = () =>
   validateMissionIntent(
@@ -81,6 +89,13 @@ beforeAll(async () => {
   const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
   kernel = new MissionKernel({ issuer: AS_ISS, policy: POLICY as never, statusKey: asKeys.privateKey, statusKid: "as-status" });
 
+  // Two distinct destination-local clients, registered at the RAS by key
+  // BEFORE any redemption (S-12: this IS the RAS's own client authentication).
+  agentKeys = await generateKeyPair("ES256", { extractable: true });
+  agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
+  secondAgentKeys = await generateKeyPair("ES256", { extractable: true });
+  secondAgentJkt = await calculateJwkThumbprint(await exportJWK(secondAgentKeys.publicKey));
+
   rasKeys = await generateKeyPair("ES256", { extractable: true });
   const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: "ras-token", alg: "ES256" };
   ras = new ResourceAuthorizationServer({
@@ -88,11 +103,12 @@ beforeAll(async () => {
     trustedIssuers: { [AS_ISS]: { keys: [asPub as never] } },
     signKey: rasKeys.privateKey,
     signKid: "ras-token",
+    registeredClients: {
+      [agentJkt]: RAS_LOCAL_CLIENT_ID,
+      [secondAgentJkt]: RAS_LOCAL_CLIENT_ID_2,
+    },
   });
   saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
-
-  agentKeys = await generateKeyPair("ES256", { extractable: true });
-  agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
 });
 
 describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
@@ -120,6 +136,88 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(saas.journalEntries()).toHaveLength(1);
     expect(saas.journalEntries()[0]?.mission_id).toBe(mission.id);
+  });
+
+  it("@spec cross-domain#validation-at-resource-as (S-12): the local token's client_id identifies the redeeming destination client, never the origin agent", async () => {
+    const mission = approve(6);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: mission.id,
+      targetAs: RAS_ISS,
+      clientId: "ap-agent",
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+    const { access_token } = await ras.redeem(grant, agentJkt);
+    const local = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+
+    // Positive: the destination's own registration, per the RAS's own
+    // conventions (an RFC 9068-style JWT local token -> client_id).
+    expect(local.client_id).toBe(RAS_LOCAL_CLIENT_ID);
+
+    // Negative: never the grant's client_id (the origin agent), and not a
+    // value derived from the presenter key: origin identity travels only
+    // via the Origin Principal members, never as the local client identity.
+    expect(local.client_id).not.toBe("ap-agent");
+    expect(local.client_id).not.toContain(agentJkt);
+    expect(local.client_id).not.toBe(agentJkt);
+
+    // The mission anchors are unaffected by this: client_id and mission.* are
+    // independent fields on one mint call.
+    expect(local.mission.id).toBe(mission.id);
+    expect(local.mission.issuer).toBe(AS_ISS);
+  });
+
+  it("@spec cross-domain#validation-at-resource-as (S-12): a valid, sender-constrained origin grant is not enough on its own; an unregistered presenter key is invalid_client", async () => {
+    // A fresh key the RAS never registered. The origin AS is perfectly
+    // willing to issue a valid grant sender-constrained to it: origin-side
+    // validity says nothing about whether the destination recognizes the
+    // presenter as one of its own clients.
+    const unregisteredKeys = await generateKeyPair("ES256", { extractable: true });
+    const unregisteredJkt = await calculateJwkThumbprint(await exportJWK(unregisteredKeys.publicKey));
+
+    const mission = approve(7);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: mission.id,
+      targetAs: RAS_ISS,
+      clientId: "ap-agent",
+      cnfJkt: unregisteredJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+
+    // Sender-constraint passes (the presenter holds the grant's own bound
+    // key); redemption still fails because the RAS does not recognize this
+    // key as belonging to any of its registered clients.
+    await expect(ras.redeem(grant, unregisteredJkt)).rejects.toMatchObject({ code: "invalid_client" });
+  });
+
+  it("@spec cross-domain#validation-at-resource-as (S-12): two distinct registered destination clients each receive their own client_id, never the other's or the origin's", async () => {
+    const missionA = approve(8);
+    const { grant: grantA } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: missionA.id,
+      targetAs: RAS_ISS,
+      clientId: "ap-agent",
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+    const missionB = approve(9);
+    const { grant: grantB } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: missionB.id,
+      targetAs: RAS_ISS,
+      clientId: "ap-agent",
+      cnfJkt: secondAgentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+
+    const { access_token: tokenA } = await ras.redeem(grantA, agentJkt);
+    const { access_token: tokenB } = await ras.redeem(grantB, secondAgentJkt);
+    const localA = JSON.parse(Buffer.from(tokenA.split(".")[1] as string, "base64url").toString());
+    const localB = JSON.parse(Buffer.from(tokenB.split(".")[1] as string, "base64url").toString());
+
+    expect(localA.client_id).toBe(RAS_LOCAL_CLIENT_ID);
+    expect(localB.client_id).toBe(RAS_LOCAL_CLIENT_ID_2);
+    expect(localA.client_id).not.toBe(localB.client_id);
+    expect(localA.client_id).not.toBe("ap-agent");
+    expect(localB.client_id).not.toBe("ap-agent");
   });
 
   it("a replayed ID-JAG is rejected at the RAS (one-time jti)", async () => {

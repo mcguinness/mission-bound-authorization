@@ -23,11 +23,26 @@ export interface RasConfig {
   localTokenTtlSeconds?: number;
   /** Audience stamped on minted local tokens (the SaaS resource). */
   localTokenAudience?: string;
+  /**
+   * @spec cross-domain#validation-at-resource-as (S-12): this RAS's own
+   * client registration, seeded at construction and keyed by the client's
+   * DPoP public-key JWK thumbprint (`jkt`). A key-bound registration IS
+   * client authentication here (the same shape as private_key_jwt or
+   * DPoP-bound client credentials): redemption authenticates the
+   * presenting client by looking up its proven `jkt` in this table and
+   * refuses `invalid_client` on an unrecognized key, then mints the
+   * matched value as `client_id`. It is never copied or derived from the
+   * ID-JAG grant's own `client_id` claim, which names the acting client at
+   * the ORIGINATING AS, nor from the presenter key alone without a
+   * matching registration. A client whose key is generated after this RAS
+   * is constructed is onboarded via {@link ResourceAuthorizationServer.registerClient}.
+   */
+  registeredClients?: Record<string, string>;
   now?: () => Date;
 }
 
 export class RasError extends Error {
-  constructor(readonly code: "invalid_grant", message: string) {
+  constructor(readonly code: "invalid_grant" | "invalid_client", message: string) {
     super(message);
   }
 }
@@ -35,16 +50,35 @@ export class RasError extends Error {
 export class ResourceAuthorizationServer {
   readonly db: Database;
   private now: () => Date;
+  private readonly registeredClients: Map<string, string>;
   constructor(private readonly cfg: RasConfig) {
     this.db = openStore(redemptionSchema("jag_redemptions"));
     this.now = cfg.now ?? (() => new Date());
+    this.registeredClients = new Map(Object.entries(cfg.registeredClients ?? {}));
+  }
+
+  /**
+   * @spec cross-domain#validation-at-resource-as (S-12): onboard a
+   * destination-local client's key after construction, for a client whose
+   * key is generated later (e.g. per-session DPoP key material). This IS
+   * the RAS's client-registration surface; only a `jkt` registered here
+   * (at construction or by this call) authenticates at redemption.
+   */
+  registerClient(jkt: string, clientId: string): void {
+    this.registeredClients.set(jkt, clientId);
   }
 
   /**
    * Redeem an ID-JAG (JWT-bearer grant). Validates typ, signature against the
    * trusted originating issuer, aud = this RAS, exp, sender-constraint (cnf.jkt
-   * vs presenter), one-time jti, and iss == mission.issuer. Mints a local
-   * token preserving mission.id/issuer/authority_hash.
+   * vs presenter), one-time jti, and iss == mission.issuer. Separately
+   * authenticates the redeeming client against this RAS's own registration
+   * (S-12; {{cross-domain#validation-at-resource-as}}), refusing
+   * `invalid_client` on an unrecognized presenter key: the grant's
+   * sender-constraint alone does NOT establish this. Mints a local token
+   * preserving mission.id/issuer/authority_hash and identifying the
+   * authenticated client as `client_id`, never the grant's own `client_id`,
+   * which names the originating agent.
    */
   async redeem(idJag: string, presenterJkt: string): Promise<{ access_token: string; expires_in: number }> {
     // Peek the issuer to select the trust anchor.
@@ -75,10 +109,26 @@ export class ResourceAuthorizationServer {
     // @spec: the signer MUST be the Mission issuer named by mission.issuer.
     if (mission.issuer !== issuer) throw new RasError("invalid_grant", "grant iss != mission.issuer");
 
-    // Sender-constraint (cnf.jkt) verified against the presenting client.
+    // Sender-constraint (cnf.jkt) verified against the presenting client:
+    // proves the presenter holds the grant's OWN bound key. This is grant
+    // validity, not client authentication (S-12; see the lookup below).
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new RasError("invalid_grant", "grant not sender-constrained");
     if (cnf.jkt !== presenterJkt) throw new RasError("invalid_grant", "presenter key mismatch");
+
+    // @spec cross-domain#validation-at-resource-as (S-12): authenticate the
+    // redeeming client against THIS RAS's own registration, independent of
+    // anything the origin AS asserted (the grant's client_id claim names
+    // the originating agent and is never consulted here). A valid,
+    // sender-constrained grant is not enough on its own: the presenter key
+    // must resolve to a client this RAS recognizes, or redemption fails
+    // invalid_client rather than minting a token for an unauthenticated
+    // party. Checked before jti consumption so an unrecognized presenter
+    // does not burn the grant's one-time use.
+    const localClientId = this.registeredClients.get(presenterJkt);
+    if (!localClientId) {
+      throw new RasError("invalid_client", "unrecognized redeeming client");
+    }
 
     // One-time use (jti). Replay -> invalid_grant.
     const jti = payload.jti as string;
@@ -96,6 +146,12 @@ export class ResourceAuthorizationServer {
       mission,
       authorization_details: payload.authorization_details,
       cnf: { jkt: presenterJkt },
+      // @spec cross-domain#validation-at-resource-as (S-12): client_id names
+      // the client identity the registration lookup above authenticated,
+      // never copied or derived from the grant's own client_id
+      // (payload.client_id), which names the originating agent and MUST
+      // NOT appear in this slot.
+      client_id: localClientId,
     })
       .setProtectedHeader({ alg: "ES256", kid: this.cfg.signKid, typ: "at+jwt" })
       .setSubject(String(payload.sub))

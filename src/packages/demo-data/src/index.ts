@@ -184,6 +184,13 @@ export interface Topology {
     maxApprovalAgeSeconds: number;
   };
   devServiceToken: string;
+  /**
+   * @spec cross-domain#validation-at-resource-as (S-12) — the destination-local
+   * client_id the RAS stamps on every local token it mints, identifying the
+   * redeeming client in the RAS's own namespace. The RAS has no separate
+   * client-registration model; this is that registration's one entry.
+   */
+  rasLocalClientId: string;
   keys: {
     asToken: TopologyKey;
     asStatus: TopologyKey;
@@ -268,6 +275,7 @@ function loadTopology(): Topology {
       maxApprovalAgeSeconds: reqNumber(file, ttls, "maxApprovalAgeSeconds", "ttls"),
     },
     devServiceToken: reqString(file, root, "devServiceToken", "topology"),
+    rasLocalClientId: reqString(file, root, "rasLocalClientId", "topology"),
     keys: {
       asToken: reqKey(file, keys, "asToken", "keys"),
       asStatus: reqKey(file, keys, "asStatus", "keys"),
