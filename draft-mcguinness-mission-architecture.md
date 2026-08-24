@@ -592,14 +592,18 @@ current consumption, and action sequencing are decision-time facts,
 evaluated later by runtime policy, metering, or action-bound
 (transaction) approval; core does not require them to be re-rendered
 to the original Approver, though action-bound approval may re-render
-exactly that. The lifecycle control gates new derivation from the
-envelope; a credential already materialized under it keeps running
-to its own bound. The two halves compose but do not substitute: an
-envelope real at approval time can still admit, at decision time, an
-effect the Approver never saw rendered in that form. Attribution
-shares the grain limit: proving which concurrent task item produced
-a permitted action needs a verified cross-link no family carrier
-supplies today ({{binding-properties}}).
+exactly that.
+
+The lifecycle control gates new derivation from the envelope; a
+credential already materialized under it keeps running to its own
+bound ({{kill-switch-composition}}). The two halves compose but do
+not substitute: an envelope real at approval time can still admit, at
+decision time, an effect the Approver never saw rendered in that
+form.
+
+Attribution shares the grain limit: proving which concurrent task
+item produced a permitted action needs a verified cross-link no
+family carrier supplies today ({{binding-properties}}).
 
 The levers share one strategy: they convert semantic risk into
 structural signals. A policy decision point is never asked to judge
@@ -1162,35 +1166,33 @@ containment require a structured-authority capability and are not
 baseline AAuth Mission Context properties.
 
 Read on the artifact plane, the same invariants forbid authority from
-riding a work product an agent produces: no authority is acquired by
-information propagation alone, and a work product crossing into a
-Mission is input that the receiving Mission re-evaluates under its own
-Authority Set. This is a reading of the invariants above, not an eighth
-invariant; carrying that boundary through non-transitive
-Mission-to-Mission handoff is the Mission Work Products companion's
-role ({{I-D.draft-mcguinness-oauth-mission-work-products}}). The OAuth binding
-states that rule in its "Authority Does Not Propagate With
-Information" section ({{I-D.draft-mcguinness-oauth-mission}}); that
-section, not this summary, is the normative text this passage tracks.
+riding a work product: crossing into a Mission, it is input the
+receiving Mission re-evaluates under its own Authority Set, never a
+source of authority itself. This is a reading of the invariants
+above, not an eighth invariant, carried through non-transitive
+Mission-to-Mission handoff by the Mission Work Products companion
+({{I-D.draft-mcguinness-oauth-mission-work-products}}). The OAuth
+binding states the rule normatively in its "Authority Does Not
+Propagate With Information" section
+({{I-D.draft-mcguinness-oauth-mission}}); that section, not this
+summary, is the normative text this passage tracks.
 
 Read under composition, the invariants bound one Mission's own
-Authority Set; they do not by themselves bound the aggregate surface a
-delegation tree, a cross-domain hop, or a chain of child generations
-reaches together. Delegation depth resets at each cross-domain hop and
-at each child generation, and a child's own derivation cap is
-independent of its parent's, so the authorized surface a body of work
-can reach can exceed what any single approval appears to bound. This
-is again a reading of the invariants above, not an eighth invariant;
-disclosing the composed bound at the consent surface is the
-cross-domain and child-delegation profiles' role
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
-{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and bounding
-aggregate consumption is the metering profile's
-({{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
-states the same
-composition property in its "Composition and the Effective Ceiling"
-section ({{I-D.draft-mcguinness-oauth-mission}}); that section, not
-this summary, is the normative text this passage tracks.
+Authority Set, not the aggregate surface a delegation tree, a
+cross-domain hop, or a chain of child generations reaches together:
+depth resets at each hop and generation independently of its parent,
+so the authorized surface a body of work can reach can exceed what
+any single approval appears to bound. This is again a reading of the
+invariants above, not an eighth invariant; disclosing the composed
+bound at the consent surface is the cross-domain and child-delegation
+profiles' role, and bounding aggregate consumption is the metering
+profile's ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+{{I-D.draft-mcguinness-oauth-mission-child-delegation}},
+{{I-D.draft-mcguinness-mission-metering}}). The OAuth binding states
+the same composition property in its "Composition and the Effective
+Ceiling" section ({{I-D.draft-mcguinness-oauth-mission}}); that
+section, not this summary, is the normative text this passage
+tracks.
 
 ## The Ontology Contract {#ontology-contract}
 
@@ -1828,21 +1830,25 @@ every applicable horizon to be open, and no horizon substitutes for
 another.
 
 The horizons also give the deployment its freshness dial, and the
-TTL-only end of that dial is a first-class posture, not a fallback.
-A deployment that relies on lifetimes alone verifies with local
+TTL-only end of that dial is a first-class posture, not a fallback. A
+deployment that relies on lifetimes alone verifies with local
 cryptography and a clock: no state source, no freshness discipline,
 no availability coupling, and a worst-case exposure equal to the
 lifetime by construction. Where every fresh credential crosses a
 Mission-state decision point, this realizes the **lifecycle-gated**
 capability with reliance bounded by credential lifetime alone
-({{I-D.draft-mcguinness-mission-substrate}}). It is not a property of
-every access mode: AAuth's PS-asserted and federated paths have that
-gate, while its direct modes do not. That posture is the right choice at action grain, where an artifact
-lives seconds to minutes and a revocation landing inside its window
-has no observation point that could reach the artifact before its
-own expiry does, and for short missions; the family's own
-short-lived artifacts (the permit, the cross-domain grant, the Join
-Assertion) already sit at this end. What a lifetime cannot do is
+({{I-D.draft-mcguinness-mission-substrate}}); it is not a property of
+every access mode, since AAuth's PS-asserted and federated paths have
+that gate while its direct modes do not.
+
+TTL-only is the right choice at action grain, where an artifact lives
+seconds to minutes and a revocation landing inside its window has no
+observation point that could reach the artifact before its own
+expiry does, and for short missions; the family's own short-lived
+artifacts (the permit, the cross-domain grant, the Join Assertion)
+already sit at this end.
+
+What a lifetime cannot do is
 suspend, complete, or kill now, which is the task-grain residue the
 Mission's state carries and which the **state-observable** capability
 reaches: an authenticated freshness source with a stated staleness
@@ -1850,17 +1856,18 @@ bound, a named substrate capability a binding MAY provide beyond the
 kernel's bounded-reliance floor
 ({{I-D.draft-mcguinness-mission-substrate}}),
 and the one runtime enforcement requires
-({{I-D.draft-mcguinness-mission-runtime}}). The two ends are one
-mechanism seen from opposite sides: a lifetime relocates the freshness
-check from the verification path to the issuance path, so every
-re-issuance is the policy re-check, which is the family's
-gates-new-derivation-only rule in its other reading. A deployment
-states where it sits on the dial through its bounded-revocation
-claim ({{assurance-claims-axis}}): a TTL-only posture claims the
-lifetime as its bound only for paths whose re-issuance is gated, with
-no state-observable overlay. The
-runtime profile prices each position, source by source, in its state
-and freshness section ({{I-D.draft-mcguinness-mission-runtime}}).
+({{I-D.draft-mcguinness-mission-runtime}}).
+
+The two ends are one mechanism seen from opposite sides: a lifetime
+relocates the freshness check from the verification path to the
+issuance path, so every re-issuance is the policy re-check, which is
+the family's gates-new-derivation-only rule in its other reading. A
+deployment states where it sits on the dial through its
+bounded-revocation claim ({{assurance-claims-axis}}): a TTL-only
+posture claims the lifetime as its bound only for paths whose
+re-issuance is gated, with no state-observable overlay. The runtime
+profile prices each position, source by source, in its state and
+freshness section ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## The Binding Checklist {#binding-checklist}
 
@@ -2341,14 +2348,16 @@ them on two different axes. The levels below are **adoption
 bundles**: which documents a deployment runs, in the order
 deployments build, named so a deployment, a procurement, or a review
 can cite one bundle. They are guidance, never a conformance class or
-an earned label. What a deployment proves is the orthogonal claims
-axis ({{assurance-claims-axis}}): scoped, named claims whose proof
+an earned label.
+
+What a deployment proves is the orthogonal claims axis
+({{assurance-claims-axis}}): scoped, named claims whose proof
 obligations existing profiles fix, listed in the Deployment Profile
-beside the residuals each leaves. Because the family's strongest
-properties are deployment properties, not protocol properties
-(complete PEP placement, a trusted freshness source, and credential
-custody are things a deployment does, not things a token proves),
-the claims, never a level name, are what a relying party compares.
+beside the residuals each leaves. The claims, never a level name, are
+what a relying party compares, because the family's strongest
+properties are deployment properties, not protocol properties:
+complete PEP placement, a trusted freshness source, and credential
+custody are things a deployment does, not things a token proves.
 
 The levels build on one another: a deployment adopts recording and
 governing the approved task (Baseline Issuance), then per-action
@@ -3027,17 +3036,21 @@ mediated actions within the staleness bound ({{validity-model}}),
 but it terminates no process and closes no network path. The
 converse holds too: killing a workload leaves the Mission `active`
 and its authority derivable to a replacement instance unless the
-Mission is also revoked. Capability kill claims one of two properties,
-and which one tracks the deployment's assurance level
+Mission is also revoked.
+
+Capability kill claims one of two properties, and which one tracks
+the deployment's assurance level
 ({{I-D.draft-mcguinness-oauth-mission-containment}}): at Baseline
 Issuance, a new-derivation kill, gating derivations minted after the
 transition and propagating to Child Missions justified by the
 contained entry, while a cross-domain grant already redeemed or an
 offline attenuation root already minted before the transition keeps
 its own bounded lifetime, exactly as the credential-kill row's
-residual does; at Runtime-Enforced and above, an action-time kill that
-additionally reaches a token issued before the transition, bounded by
-the state source's staleness plus the permit and execution windows.
+residual does; at Runtime-Enforced and above, an action-time kill
+that additionally reaches a token issued before the transition,
+bounded by the state source's staleness plus the permit and
+execution windows.
+
 A deployment's incident runbook names which of these controls exist,
 who may pull each, and which capability-kill property its own
 assurance level claims.
@@ -3368,6 +3381,20 @@ minimization and retention duties applying there.
 This document makes no IANA request.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Editorial density pass on this Informational document: the
+  aggregate-ceiling and artifact-plane (non-transitive work-product)
+  composition readings under {{invariants}} tightened to a summary
+  sentence plus citation each, with their "not this summary, is the
+  normative text this passage tracks" deferral kept; several
+  over-long paragraphs in {{capability-envelope}}, {{validity-model}},
+  {{assurance-levels}}, and {{containment}} split for one idea per
+  paragraph and front-loaded openers. No normative content, anchor,
+  or table row changed.
 
 # Acknowledgments
 {:numbered="false"}
