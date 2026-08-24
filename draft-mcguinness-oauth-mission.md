@@ -989,8 +989,8 @@ carries and what holds when that enforcer is absent:
 
 | Bound | Enforced by | When that enforcer is absent |
 |---|---|---|
-| `resource` and `actions` | any Resource Server that enforces `authorization_details` ({{rs-enforcement}}) | a scope-only RS is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
-| per-entry `constraints` | a Resource Server that understands and enforces the key ({{rs-enforcement}}) | a Mission-aware RS fails closed; a scope-only RS is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
+| `resource` and `actions` | any Resource Server that enforces `mission_resource_access` per its type specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a scope-only RS is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
+| per-entry `constraints` | a Resource Server that understands and enforces the key, per that type's specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a Mission-aware RS fails closed; a scope-only RS is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
 | `max_derivations` | the issuer AS at each derivation ({{lifecycle}}) | never absent at the issuer; it does not bound another domain's local minting (see the cross-domain companion) |
 
 Example Mission Intent:
@@ -5313,9 +5313,14 @@ resolve before interoperating.
   `mission_resource_access` type definition, its resource and action
   matching, generic constraints, the Common Constraints registry, the
   delegation member and matching rules, the subset and
-  intersection algebra, and the Resource Boundary Canonicalization
-  security analysis relocated to the Mission Resource Access
-  Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}});
+  intersection algebra, the Resource Server's enforcement duties for
+  this type's `resource`/`actions`/`constraints` members (including
+  the `prefix`-match normalization rule) and the
+  `mission_constraints_supported` protected-resource metadata member
+  (definition and IANA registration), and the Resource Boundary
+  Canonicalization security analysis relocated to the Mission
+  Resource Access Profile
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}});
   this document keeps type-agnostic commitment, the approved-set
   metadata requirement, and derivation gating
   ({{authorization-derivation}}, {{other-types}}, {{discovery}}).
