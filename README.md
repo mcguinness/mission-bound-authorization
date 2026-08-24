@@ -247,7 +247,7 @@ deployment is known today on any binding. The remaining
 documents are design exploration and independently selectable
 companion work with declared dependencies (runtime, lifecycle,
 evidence, and cross-domain profiles on their own timelines), not a
-request to standardize a 41-document suite. Anything beyond that
+request to standardize a 42-document suite. Anything beyond that
 chartering surface enters
 scope only as the community pulls it.
 
