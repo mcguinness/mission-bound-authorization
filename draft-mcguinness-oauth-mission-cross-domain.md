@@ -1159,19 +1159,22 @@ lifetimes and a frequent re-lease cadence
 ({{cross-domain-grant}}), so containment takes effect on the Mission's
 next lease rather than waiting out a long-lived grant.
 
-This posture bounds a single issuer-mediated hop: the projection grant
-and the local tokens it seeds. Status and Signals are optional
-tightening, because those caps already contain the exposure. Mission
-Cross-Organizational Delegation for OAuth 2.0
+This posture bounds a single issuer-mediated hop: the only required
+control is the bounded credential lifetime, the 300-second grant cap
+({{cross-domain-grant}}) and the Resource AS's short local-token
+lifetimes; no state query is required. Status and Signals are optional
+tightening beyond that minimum. Mission Cross-Organizational
+Delegation for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) governs
 a different case: a recursive, holder-mediated chain with no issuer
 mediation past the root mint, and not governed by this profile's caps.
 For a Chain Presentation redeemed at a Resource AS, that document's
-Destination Verification requires the Mission be active from a
-locally available state source within the declared freshness bound
-(step 9), mandatory where this profile leaves the equivalent check
-opt-in. Which check applies follows from the artifact a Resource AS
-redeems, a cross-domain grant or a Chain Presentation (registered
+minimum required check differs: its Destination Verification step 9
+establishes the Mission is active from a locally available state
+source within the declared freshness bound, mandatory where this
+profile requires no state query at all. Which check applies follows
+from the artifact a Resource AS redeems, a cross-domain grant or a
+Chain Presentation (registered
 `application/mission-delegation-chain+json`), not from the deployment;
 an ordinary local access token minted on either path does not carry
 its provenance in its type.

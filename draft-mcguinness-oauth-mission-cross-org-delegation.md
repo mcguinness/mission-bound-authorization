@@ -672,18 +672,20 @@ cross-organizational surface.
   for a synchronous origin dependency; the bound is declared and
   exceeded state fails closed ({{trust-model}}).
 
-This mandatory check answers a different exposure than Mission
-Cross-Domain Projection for OAuth 2.0's lease
+This profile's minimum required check is step 9 of {{verification}}:
+establish that the Mission is active from a locally available state
+source within the declared freshness bound.  It answers a different
+exposure than Mission Cross-Domain Projection for OAuth 2.0's lease
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}): a recursive
 chain with no issuer mediation past the root mint, not a single
 issuer-mediated hop already bounded by a grant and local-token
 lifetime.  For a cross-domain grant redeemed at the same Resource AS,
-that document's Cross-Domain Revocation Latency leaves the equivalent
-check opt-in, because its own caps already contain that hop's
-exposure.  A Resource AS accepting both artifact types applies
-whichever check the artifact redeemed there requires; an ordinary
-local access token minted on either path does not carry its
-provenance in its type.
+that document's minimum required control differs: the bounded
+credential lifetime, its 300-second grant cap and short local-token
+lifetimes, with no state query required there.  A Resource AS
+accepting both artifact types applies whichever minimum the artifact
+redeemed there requires; an ordinary local access token minted on
+either path does not carry its provenance in its type.
 
 # Privacy Considerations
 
