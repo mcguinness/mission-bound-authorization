@@ -28,7 +28,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC3339:
   RFC6749:
   RFC6838:
   RFC7515:
