@@ -240,11 +240,13 @@ issuer.
 the Mission record it governs
 ({{I-D.draft-mcguinness-oauth-mission}}). The record never appears on
 tokens or in any protocol message; it is issuer-retained
-control-plane state. Where this record exists, the governed
-Mission's `approval_basis.adjudication.kind` is `agr`
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"),
-naming this record as the decision basis rather than flattening its
-assertion set into a single principal.
+control-plane state. Where the governed Mission populates
+`approval_basis.adjudication`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping") and
+this record exists, `adjudication.governance_record` is `true` and
+`kind` equals this record's accountable assertion's own mechanism,
+never a value that names this record itself, and never a flattening
+of its assertion set into a single principal.
 
 # The Approval Governance Record {#record}
 
