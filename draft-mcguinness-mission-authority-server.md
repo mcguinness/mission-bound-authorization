@@ -289,11 +289,13 @@ one place that holds the approved task, its lifecycle, and its
 authority, independent of which system issued a given token; a
 central MAS can be that place, and can remain the long-term
 architecture even after some Authorization Servers become
-Mission-aware. For deployments that want Mission-bound tokens on a
-particular AS later, the path is smooth: the record, anchors, and
-lifecycle a MAS operates are the issuance profile's own, so moving
-issuance into that AS carries them over unchanged, while the MAS
-continues to govern the rest of the estate.
+Mission-aware.
+
+For deployments that want Mission-bound tokens on a particular AS
+later, the path is smooth: the record, anchors, and lifecycle a MAS
+operates are the issuance profile's own, so moving issuance into
+that AS carries them over unchanged, while the MAS continues to
+govern the rest of the estate.
 
 ## Applicability
 
@@ -538,11 +540,12 @@ hashing semantics apply unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
 authority, and it is a submission member, not a Submission-envelope
 member ({{native-carriage}}): the MAS MUST remove it before applying
-the envelope validation above. The issuance profile's intake refusals for a
-proposed entry map to `invalid_authority` here. A Mission created
-from a submission carrying a proposal records `proposed_authority`
-and `proposal_hash` as the issuance profile's Mission record defines
-them.
+the envelope validation above.
+
+The issuance profile's intake refusals for a proposed entry map to
+`invalid_authority` here. A Mission created from a submission
+carrying a proposal records `proposed_authority` and `proposal_hash`
+as the issuance profile's Mission record defines them.
 
 A MAS has no derivation event: no token is issued under the Mission,
 so `controls.max_derivations` binds nothing here (a MAS
@@ -1174,11 +1177,12 @@ Mission-derived `authorization_details`, so it cannot identify its
 Mission. The PEP names the Mission explicitly, and the PDP joins the
 credential to it before evaluating the action. The join is this
 profile's load-bearing mechanism: it is what a permit "under this
-Mission" rests on when no cryptographic binding exists. This section
-defines the baseline mapping join; the Mission Join Assertion
-({{join-assertion}}) is the enterprise-mode join built on it. The
-Enterprise profile runs two modes: Mission-bound credentials carry
-the high-consequence classes, and Join Assertions carry the
+Mission" rests on when no cryptographic binding exists.
+
+This section defines the baseline mapping join; the Mission Join
+Assertion ({{join-assertion}}) is the enterprise-mode join built on
+it. The Enterprise profile runs two modes: Mission-bound credentials
+carry the high-consequence classes, and Join Assertions carry the
 externally joined governed paths outside those classes
 ({{enterprise-profile}}).
 
@@ -1192,6 +1196,7 @@ A path claiming the Enterprise profile's high-consequence credential
 property MUST use Mission-bound issuance: an acting credential
 satisfying the mission-credential-bound composition of the Mission
 Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).
+
 A deployment without it still claims the runtime and join
 capabilities its paths actually have, and states the difference in
 its Mission Deployment Profile; no `residual_risks` entry buys the
@@ -1391,12 +1396,13 @@ routes the request to a Mission for the join to verify. The Mission
 Join verifies the referenced Mission and its subject and client
 relationship and supplies the authoritative state and anchors; in the
 baseline same-party case neither the carriage nor the join proves
-that this particular request was created under that Mission. Who
-attached the value is what strengthens attribution: a trusted harness
-attaching it from its recorded Mission binding
+that this particular request was created under that Mission.
+
+Who attached the value is what strengthens attribution: a trusted
+harness attaching it from its recorded Mission binding
 ({{I-D.draft-mcguinness-mission-harness}}) attests more than the
-agent naming its own Mission, the deployment's Enforcement Scope
-Statement records which party attaches it, and grading what an
+agent naming its own Mission, and the deployment's Enforcement Scope
+Statement records which party attaches it. Grading what an
 established join proves is the join-assurance concern, not this
 channel's.
 
@@ -1489,14 +1495,16 @@ semantics of {{reference-tuple}} unchanged. The value object is
 closed the same way as the HTTP field: a receiver MUST reject
 duplicate JSON member names at parse time, a member other than
 `mission_id` and `issuer`, a non-string member value, and the
-propagation key appearing more than once in `_meta`. Unknown `_meta` keys are
-extensible metadata an ordinary MCP server may ignore; a server that
-silently ignores this key is not a conforming Mission PEP. Where a
-tool is governed as Mission-required, absent negotiated or configured
-propagation support the call MUST be refused, never run as ordinary
-ungoverned execution. A future MCP extension or capability mechanism
-may supersede this carriage; the tuple's semantics stay this
-section's.
+propagation key appearing more than once in `_meta`. Unknown `_meta`
+keys are extensible metadata an ordinary MCP server may ignore; a
+server that silently ignores this key is not a conforming Mission
+PEP.
+
+Where a tool is governed as Mission-required, absent negotiated or
+configured propagation support the call MUST be refused, never run
+as ordinary ungoverned execution. A future MCP extension or
+capability mechanism may supersede this carriage; the tuple's
+semantics stay this section's.
 
 ## Verification and Conflict {#reference-verification}
 
@@ -1520,9 +1528,10 @@ section's.
   `mission_mismatch` ({{mission-join}}): `mission_mismatch` stays the
   subject-or-client join failure, and `mission_reference_conflict` is
   reference sources naming different Missions or an unusable
-  reference. A PEP that establishes the conflict before any
-  evaluation surfaces the same reason as a coordinated pre-decision
-  refusal, recorded as a Refusal Record with this `denial_reason`
+  reference.
+- A PEP that establishes the conflict before any evaluation surfaces
+  the same reason as a coordinated pre-decision refusal, recorded as
+  a Refusal Record with this `denial_reason`
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}); an evaluating
   PDP surfaces it as the AuthZEN denial reason above. One reason, two
   surfacings, never a silent resolution.
@@ -1772,13 +1781,13 @@ them. The mode provides the contextual-governance kernel,
 State-Observable, and Structured Authority capabilities, but it does
 not claim that an unchanged Authorization Server's credential was
 issued under the Mission or that its issuance was lifecycle-gated.
+
 Credential-Bound correlation and action-time lifecycle gating compose
-through the runtime join and PEP coverage, within the conditional scope
-declared by {{mission-substrate}}. Among the Mission Assurance Levels
-this is the Runtime-Enforced level reached
-through the MAS binding, which provides no Mission-bound credential
-and no issuance gating
-({{I-D.draft-mcguinness-mission-architecture}}).
+through the runtime join and PEP coverage, within the conditional
+scope declared by {{mission-substrate}}. Among the Mission Assurance
+Levels this is the Runtime-Enforced level reached through the MAS
+binding, which provides no Mission-bound credential and no issuance
+gating ({{I-D.draft-mcguinness-mission-architecture}}).
 
 A deployment claiming this profile MUST state, alongside its
 Enforcement Scope Statement:
@@ -1862,16 +1871,19 @@ approval, the record, and the lifecycle remain here.
 The conformance floor ({{conformance}}) makes a MAS deployable. This
 profile is the operating profile for a MAS used as an estate's
 Mission control plane: it turns the floor's SHOULDs and OPTIONALs
-into the guarantees an enterprise deployment needs. A deployment
-claims the Enterprise Mission Authority Profile over a declared
-coverage set: the Authorization Server, resource, and action-class
-paths the claim names. The estate-level obligations below hold
-deployment-wide; the per-path credential, join, and runtime
-obligations hold for every path in the set; a path outside the set
-is explicitly unclaimed, and never inherits the profile from the
-deployment's name. The profile is the Runtime-Enforced level of the
-Mission Assurance Levels under the MAS binding, with the obligations
-below ({{I-D.draft-mcguinness-mission-architecture}}).
+into the guarantees an enterprise deployment needs.
+
+A deployment claims the Enterprise Mission Authority Profile over a
+declared coverage set: the Authorization Server, resource, and
+action-class paths the claim names. The estate-level obligations
+below hold deployment-wide; the per-path credential, join, and
+runtime obligations hold for every path in the set; a path outside
+the set is explicitly unclaimed, and never inherits the profile from
+the deployment's name.
+
+The profile is the Runtime-Enforced level of the Mission Assurance
+Levels under the MAS binding, with the obligations below
+({{I-D.draft-mcguinness-mission-architecture}}).
 
 - **Status and lifecycle.** The MAS MUST serve the Mission Status
   operation and the Mission Lifecycle endpoint with signed responses
@@ -1900,21 +1912,25 @@ below ({{I-D.draft-mcguinness-mission-architecture}}).
   credential-mission-bound equivalence plus presenter-key-bound
   possession, end to end; a Join Assertion does not satisfy it, and
   absence denies rather than falling back to a mapping or asserted
-  join. Where the Mission Issuance Grant
-  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) is the
-  issuance path for such a class, the grant MUST carry `cnf` and
-  redemption MUST produce an access token sender-constrained to that
-  same key: the issuance upgrade opens no bearer interval between
-  grant and action, and this profile defines no rotation exception. Mission-bound issuance restores the
-  issuance gate; it does not replace this profile's runtime
-  active-freshness check for these classes. Issuance also does not
-  prove that a particular work item was supposed to run under the
-  selected Mission when a client legitimately holds credentials for
-  several Missions: work-item attribution stays with the reference
-  propagation channel and the `work-item-bound` property. The
-  Enterprise claim is made per covered Authorization Server,
-  resource, and action path; a mixed estate's weaker paths never
-  inherit it from the deployment's name.
+  join.
+  - Where the Mission Issuance Grant
+    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) is the
+    issuance path for such a class, the grant MUST carry `cnf` and
+    redemption MUST produce an access token sender-constrained to
+    that same key: the issuance upgrade opens no bearer interval
+    between grant and action, and this profile defines no rotation
+    exception.
+  - Mission-bound issuance restores the issuance gate; it does not
+    replace this profile's runtime active-freshness check for these
+    classes.
+  - Issuance also does not prove that a particular work item was
+    supposed to run under the selected Mission when a client
+    legitimately holds credentials for several Missions: work-item
+    attribution stays with the reference propagation channel and the
+    `work-item-bound` property.
+  - The Enterprise claim is made per covered Authorization Server,
+    resource, and action path; a mixed estate's weaker paths never
+    inherit it from the deployment's name.
 - **Instance-bound joins.** Where the acting credential carries a
   client-instance identity
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), a
@@ -2342,7 +2358,9 @@ keystore (an HSM or equivalent KMS-grade custody) with dual-controlled
 generation. A MAS SHOULD sign high-volume surfaces (status, Join
 Assertions) and long-lived artifacts (Mandates, Issuance Grants) under
 distinct `kid`s in one `jwks_uri`, so custody can differ by blast
-radius. The introspection credential the MAS holds at the estate AS
+radius.
+
+The introspection credential the MAS holds at the estate AS
 ({{join-assertion-request}}) is secret material of the same tier: its
 compromise forges joins
 ({{I-D.draft-mcguinness-mission-security-model}}).
