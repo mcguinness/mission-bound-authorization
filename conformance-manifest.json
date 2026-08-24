@@ -39,8 +39,8 @@
     "content_sha256": "31d4c8938fd34632ed3cce445b5af953cb365487cf65923cf3feb45d8ea253dd"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "5c12717f3cad29785f2f6797c5bcd1fcf15cae89",
-    "content_sha256": "9668a310b3ce3338e277921bc8967a82c87a7bf0324c6802cf6593fc663c7e1b"
+    "revision": "2be3bda0d2b9fc8bd8dc32168a76af29233c6cbe",
+    "content_sha256": "e62416b9102516c0614871f1faeca024d678774c315801cd2d7b3d7428f1177a"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
@@ -510,6 +510,103 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation."
+  },
+  {
+   "id": "core.approval-basis.adjudication-direct-human",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "For `direct`, `adjudication.kind` MUST be `human`, unless an Approval Governance Record is recorded for this approval event, in which case it MUST be `agr`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a directly approved Mission's approval_basis.adjudication.kind is human, naming no principal beyond consent_principal, unless an Approval Governance Record is recorded for the approval event, in which case it is agr"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701); no implementation yet emits approval_basis.adjudication. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human."
+  },
+  {
+   "id": "core.approval-basis.adjudication-standing-consent-policy",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "A companion profile defining a standing-consent `type` MUST set `adjudication.kind` to `policy`, naming the identity and version of the policy or workflow that adjudicated the instance",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a standing-consent Mission's approval_basis.adjudication.kind is policy, naming the deciding policy or workflow's identity and version, never the activation_actor that triggered the instance"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701); demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator. template.md and child-delegation.md do not yet emit adjudication; this row tracks the issuance profile's requirement pending companion propagation."
+  },
+  {
+   "id": "core.approval-basis.adjudication-agr-override",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "unless an Approval Governance Record is recorded, in which case it MUST be `agr`; it MUST NOT flatten a policy's or an Approval Governance Record's assertion set into a single principal member",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "whenever an Approval Governance Record is recorded for the approval event, adjudication.kind is agr regardless of the approval_basis type, and no implementation collapses a policy's or an AGR's assertion set into one principal member"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701); no implementation yet emits approval_basis.adjudication or records Approval Governance Records."
+  },
+  {
+   "id": "core.approval-basis.adjudication-agr-no-collapse",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "carries the decision, including any multi-assertion set, which this document does not flatten into a single principal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an agr-kind adjudication carries no members beyond kind; a multi-assertion Approval Governance Record is referenced by approval_event_id, never collapsed into one principal on the Mission record"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 review."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",
