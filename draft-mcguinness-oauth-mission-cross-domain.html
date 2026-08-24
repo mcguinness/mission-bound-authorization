@@ -1296,7 +1296,10 @@ of the issuance profile are unaffected by this document.<a href="#section-abstra
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
-            <p id="section-toc.1-1.21.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.21.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.22">
+            <p id="section-toc.1-1.22.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -2598,14 +2601,19 @@ deployment that needs a global bound on delegation depth across domains
 constrains it out of band, through the resource-to-AS mapping and each
 Resource AS's local policy (<a href="#pre-established-trust" class="auto internal xref">Section 8</a>); this profile
 bounds delegation depth only within a single domain.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
-<p id="section-16.3-2">Because the reset is per domain, projecting one Mission into M
-Resource AS domains multiplies the reachable depth: the aggregate
-composed bound is up to N times M, not N, even though the Approver saw
-only the per-domain N at consent. A deployment <span class="bcp14">SHOULD</span> disclose the
-composed bound, <code>max_depth</code> times the number of domains a Mission may
-be projected to, at the consent surface, not the per-domain <code>max_depth</code>
-alone, so the approval reflects what the projection can actually reach
-in aggregate.<a href="#section-16.3-2" class="pilcrow">¶</a></p>
+<p id="section-16.3-2">Because the reset is per domain, projecting a Mission's entries into
+multiple Resource AS domains multiplies the reachable depth beyond
+any single per-domain <code>max_depth</code> an Approver saw at consent. Where
+an approval interface displays a per-domain <code>max_depth</code> as a limit on
+delegation depth, that interface <span class="bcp14">MUST</span> also disclose the composed
+bound reachable across every distinct Resource AS domain a projected
+entry may reach: the sum, per domain, of the <code>max_depth</code> applicable
+there, or, where a deployment does not track per-domain composition,
+a conservative sum using the largest applicable <code>max_depth</code> for each
+domain. Domains are counted by distinct Resource AS, from the
+resource-to-AS mapping fixed at consent (<a href="#pre-established-trust" class="auto internal xref">Section 8</a>),
+never by resource count: several resources mapped to the same
+Resource AS do not each add a domain to the count.<a href="#section-16.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3121,8 +3129,30 @@ exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
 </div>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="document-history">
 <section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">-01<a href="#appendix-B-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-3.1">
+          <p id="appendix-B-3.1.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
+<span class="bcp14">SHOULD</span> to a conditional, interface-addressed <span class="bcp14">MUST</span>, mirroring the
+child delegation profile's <code>max_derivations</code> disclosure pattern,
+and corrected the composed-bound arithmetic: the disclosed bound is
+the sum of each distinct Resource AS domain's applicable
+<code>max_depth</code> (or a conservative per-domain maximum), not one
+per-domain <code>max_depth</code> times a flat domain count, and domains are
+counted by distinct Resource AS from the resource-to-AS mapping,
+never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 8</a>).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

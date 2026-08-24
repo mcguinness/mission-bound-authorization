@@ -1573,12 +1573,12 @@ Context, and the overlay stays outside that commitment (<a href="#overlay" class
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">required when a consumer claims the Runtime-Enforced property</td>
             <td class="text-left" rowspan="1" colspan="1">Consumed only for the Runtime-Enforced property: a consumer that checks a fresh, authenticated state source at or near action time denies contained capability whether or not its credential predates the transition; a consumer that never consults such a source gets Baseline only (<a href="#containment-properties" class="auto internal xref">Section 12</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">required when derivation issues Mission-bound tokens</td>
             <td class="text-left" rowspan="1" colspan="1">Consumed where derivation issues Mission-bound tokens; a token issued before the transition is the same residual that revocation carries, bounded by its own <code>exp</code> and the deployment's freshness rules (<a href="#derivation-gating" class="auto internal xref">Section 10</a>)</td>
           </tr>
           <tr>

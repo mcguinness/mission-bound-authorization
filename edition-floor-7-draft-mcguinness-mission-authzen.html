@@ -1917,9 +1917,13 @@ for a non-idempotent action in the high-consequence classes
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it identifies one intended
 execution of one normalized request, so a legitimate re-execution
 mints a new key. <span class="bcp14">REQUIRED</span> where the Operation Profile defines one for
-the action. The PDP atomically claims the pair (idempotency scope,
-<code>idempotency_key</code>) together with the request's operation identity
-(<a href="#projections" class="auto internal xref">Section 6.11</a>) before issuing a permit
+the action. For a key in the irreversible-action, external-commitment,
+or privileged-administration classes, the PDP atomically claims the
+pair (idempotency scope, <code>idempotency_key</code>) together with the
+request's operation identity (<a href="#projections" class="auto internal xref">Section 6.11</a>) before issuing a
+permit (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); for a reversible
+consequential write's key, the PDP makes no claim, and the enforcing
+PEP or resource deduplicates instead
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The claim resolves per
 the runtime profile's idempotency claim-state table: while the
 claim is unresolved, a matching key and operation identity is a

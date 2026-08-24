@@ -1577,12 +1577,12 @@ dependency of <a href="#harness-evidence" class="auto internal xref">Section 16<
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">required when the binding provides Mission-bound credentials</td>
             <td class="text-left" rowspan="1" colspan="1">The Mission-bound credentials the harness holds or mediates, with their sender-constraint custody, when the binding in use provides them; under a binding without them, the harness binds governed work items to the externally established Mission reference of the runtime profile's Mission binding establishment step (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the custody duties of <a href="#cached-access" class="auto internal xref">Section 11</a> apply to whatever acting credentials the deployment uses</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">required when an Authority Set is conveyed to the harness</td>
             <td class="text-left" rowspan="1" colspan="1">Consumed where the harness scopes the tool catalog and schemas to the Mission's Authority Set (<a href="#mediated-egress" class="auto internal xref">Section 6</a>), records <code>authority_hash</code> on the Mission binding when known (<a href="#mission-binding" class="auto internal xref">Section 7</a>), and, on continuation across supersession, proceeds only for the actions the successor's Authority Set authorizes (<a href="#supersession-continuity" class="auto internal xref">Section 14.2</a>)</td>
           </tr>
           <tr>

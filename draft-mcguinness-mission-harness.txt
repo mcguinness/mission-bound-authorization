@@ -305,13 +305,13 @@ Table of Contents
    |             |           |(Section 8,                              |
    |             |           |[I-D.draft-mcguinness-mission-runtime])  |
    +-------------+-----------+-----------------------------------------+
-   |Credential-  |conditional|The Mission-bound credentials the harness|
-   |Bound        |           |holds or mediates, with their sender-    |
-   |             |           |constraint custody, when the binding in  |
-   |             |           |use provides them; under a binding       |
-   |             |           |without them, the harness binds governed |
-   |             |           |work items to the externally established |
-   |             |           |Mission reference of the runtime         |
+   |Credential-  |required   |The Mission-bound credentials the harness|
+   |Bound        |when the   |holds or mediates, with their sender-    |
+   |             |binding    |constraint custody, when the binding in  |
+   |             |provides   |use provides them; under a binding       |
+   |             |Mission-   |without them, the harness binds governed |
+   |             |bound      |work items to the externally established |
+   |             |credentials|Mission reference of the runtime         |
    |             |           |profile's Mission binding establishment  |
    |             |           |step                                     |
    |             |           |([I-D.draft-mcguinness-mission-runtime]),|
@@ -319,12 +319,12 @@ Table of Contents
    |             |           |apply to whatever acting credentials the |
    |             |           |deployment uses                          |
    +-------------+-----------+-----------------------------------------+
-   |Structured   |conditional|Consumed where the harness scopes the    |
-   |Authority    |           |tool catalog and schemas to the Mission's|
-   |             |           |Authority Set (Section 6), records       |
-   |             |           |authority_hash on the Mission binding    |
-   |             |           |when known (Section 7), and, on          |
-   |             |           |continuation across supersession,        |
+   |Structured   |required   |Consumed where the harness scopes the    |
+   |Authority    |when an    |tool catalog and schemas to the Mission's|
+   |             |Authority  |Authority Set (Section 6), records       |
+   |             |Set is     |authority_hash on the Mission binding    |
+   |             |conveyed to|when known (Section 7), and, on          |
+   |             |the harness|continuation across supersession,        |
    |             |           |proceeds only for the actions the        |
    |             |           |successor's Authority Set authorizes     |
    |             |           |(Section 14.2)                           |

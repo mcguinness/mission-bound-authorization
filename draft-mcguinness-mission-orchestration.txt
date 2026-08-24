@@ -84,7 +84,8 @@ Table of Contents
      7.1.  Unwind Plan Integrity
      7.2.  Worked Unwind Plan
    8.  State-Change Behavior
-     8.1.  Trigger Sources
+     8.1.  Authority-Narrowing Behavior
+     8.2.  Trigger Sources
    9.  In-Flight Requests
      9.1.  Cancellation Attempt
    10. Compensation
@@ -107,6 +108,7 @@ Table of Contents
    18. References
      18.1.  Normative References
      18.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -127,7 +129,9 @@ Table of Contents
    unwind plan for each consequential step.  When Mission state becomes
    non-active or cannot be established, the orchestrator stops new
    governed work and executes the plan: cancel, compensate, suppress,
-   pause, or hand off to human review.
+   pause, or hand off to human review.  When effective authority narrows
+   while the Mission stays active, the orchestrator re-gates each
+   pending step against the narrowed authority instead (Section 8.1).
 
    The boundary with the harness profile
    ([I-D.draft-mcguinness-mission-harness]) is the question each
@@ -150,7 +154,8 @@ Table of Contents
    Evidence (when compensation links runtime evidence); Mission-Bound
    Authorization for OAuth 2.0 (when the OAuth binding is the
    substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status
-   polling is the trigger source).
+   polling is the trigger source); Mission Lifecycle Signals for OAuth
+   2.0 (when Signals is the authority-change trigger source).
 
 3.  Conventions and Terminology
 
@@ -267,77 +272,79 @@ Table of Contents
 
    It consumes these optional capabilities:
 
-   +==================+=============+=================================+
-   | Capability       | Consumption | Scope of consumption            |
-   +==================+=============+=================================+
-   | Lifecycle-Gated  | required    | When the orchestrator learns a  |
-   | Authorization    |             | Mission is no longer active, or |
-   |                  |             | cannot establish active state   |
-   |                  |             | within the deployment's         |
-   |                  |             | staleness bound, it stops       |
-   |                  |             | dispatching new governed steps, |
-   |                  |             | suppresses or pauses queued     |
-   |                  |             | work, and evaluates in-flight   |
-   |                  |             | steps; post-completion behavior |
-   |                  |             | runs only on an established     |
-   |                  |             | non-active state (Section 8)    |
-   +------------------+-------------+---------------------------------+
-   | State-Observable | required    | The orchestration profile MUST  |
-   |                  |             | define the source of Mission    |
-   |                  |             | state used by the orchestrator  |
-   |                  |             | and a staleness bound per       |
-   |                  |             | action class, calibrated        |
-   |                  |             | against the runtime profile's   |
-   |                  |             | non-normative freshness table   |
-   |                  |             | (Section 4.1)                   |
-   +------------------+-------------+---------------------------------+
-   | Structured       | conditional | Consumed only for a successor's |
-   | Authority        |             | or remedial Mission's own       |
-   |                  |             | Authority Set: a                |
-   |                  |             | separate_mission compensation   |
-   |                  |             | basis requires a distinct       |
-   |                  |             | active Mission whose Authority  |
-   |                  |             | Set is scoped to compensation   |
-   |                  |             | actions for the terminated      |
-   |                  |             | Mission's committed steps, and  |
-   |                  |             | a resource_policy basis lies    |
-   |                  |             | outside Mission authority       |
-   |                  |             | entirely (Section 10.1)         |
-   +------------------+-------------+---------------------------------+
-   | Monotonic        | not         | The orchestrator derives no     |
-   | Derivation       | consumed    | authority; a superseded         |
-   |                  |             | Mission's continued work        |
-   |                  |             | proceeds through a fresh        |
-   |                  |             | derivation from the successor's |
-   |                  |             | grant, not by rebinding the     |
-   |                  |             | predecessor's authority         |
-   |                  |             | (Section 8)                     |
-   +------------------+-------------+---------------------------------+
-   | Credential-Bound | not         | The runtime profile still       |
-   |                  | consumed    | governs each consequential      |
-   |                  |             | action at the last controllable |
-   |                  |             | boundary (Section 13); under a  |
-   |                  |             | resource_policy compensation    |
-   |                  |             | basis the orchestrator presents |
-   |                  |             | no Mission-bound credential     |
-   |                  |             | (Section 10.1)                  |
-   +------------------+-------------+---------------------------------+
-   | Independently    | not         | The orchestrator establishes    |
-   | Verifiable       | consumed    | Mission state through its       |
-   |                  |             | declared trigger sources        |
-   |                  |             | (Section 8.1); it verifies no   |
-   |                  |             | Mission property offline        |
-   +------------------+-------------+---------------------------------+
-   | Portable         | not         | This document produces          |
-   | Evidence         | consumed    | Orchestration Evidence of its   |
-   |                  |             | own, under the record integrity |
-   |                  |             | and retention requirements      |
-   |                  |             | imported from the runtime       |
-   |                  |             | profile (Section 12,            |
-   |                  |             | Section 12.1)                   |
-   +------------------+-------------+---------------------------------+
+   +==================+==============+=================================+
+   | Capability       | Consumption  | Scope of consumption            |
+   +==================+==============+=================================+
+   | Lifecycle-Gated  | required     | When the orchestrator learns a  |
+   | Authorization    |              | Mission is no longer active,    |
+   |                  |              | or cannot establish active      |
+   |                  |              | state within the deployment's   |
+   |                  |              | staleness bound, it stops       |
+   |                  |              | dispatching new governed        |
+   |                  |              | steps, suppresses or pauses     |
+   |                  |              | queued work, and evaluates in-  |
+   |                  |              | flight steps; post-completion   |
+   |                  |              | behavior runs only on an        |
+   |                  |              | established non-active state    |
+   |                  |              | (Section 8)                     |
+   +------------------+--------------+---------------------------------+
+   | State-Observable | required     | The orchestration profile MUST  |
+   |                  |              | define the source of Mission    |
+   |                  |              | state used by the orchestrator  |
+   |                  |              | and a staleness bound per       |
+   |                  |              | action class, calibrated        |
+   |                  |              | against the runtime profile's   |
+   |                  |              | non-normative freshness table   |
+   |                  |              | (Section 4.1)                   |
+   +------------------+--------------+---------------------------------+
+   | Structured       | required     | Consumed only for a             |
+   | Authority        | when a       | successor's or remedial         |
+   |                  | compensation | Mission's own Authority Set: a  |
+   |                  | basis draws  | separate_mission compensation   |
+   |                  | on a         | basis requires a distinct       |
+   |                  | successor's  | active Mission whose Authority  |
+   |                  | or remedial  | Set is scoped to compensation   |
+   |                  | Mission's    | actions for the terminated      |
+   |                  | own          | Mission's committed steps, and  |
+   |                  | Authority    | a resource_policy basis lies    |
+   |                  | Set          | outside Mission authority       |
+   |                  |              | entirely (Section 10.1)         |
+   +------------------+--------------+---------------------------------+
+   | Monotonic        | not consumed | The orchestrator derives no     |
+   | Derivation       |              | authority; a superseded         |
+   |                  |              | Mission's continued work        |
+   |                  |              | proceeds through a fresh        |
+   |                  |              | derivation from the             |
+   |                  |              | successor's grant, not by       |
+   |                  |              | rebinding the predecessor's     |
+   |                  |              | authority (Section 8)           |
+   +------------------+--------------+---------------------------------+
+   | Credential-Bound | not consumed | The runtime profile still       |
+   |                  |              | governs each consequential      |
+   |                  |              | action at the last              |
+   |                  |              | controllable boundary           |
+   |                  |              | (Section 13); under a           |
+   |                  |              | resource_policy compensation    |
+   |                  |              | basis the orchestrator          |
+   |                  |              | presents no Mission-bound       |
+   |                  |              | credential (Section 10.1)       |
+   +------------------+--------------+---------------------------------+
+   | Independently    | not consumed | The orchestrator establishes    |
+   | Verifiable       |              | Mission state through its       |
+   |                  |              | declared trigger sources        |
+   |                  |              | (Section 8.2); it verifies no   |
+   |                  |              | Mission property offline        |
+   +------------------+--------------+---------------------------------+
+   | Portable         | not consumed | This document produces          |
+   | Evidence         |              | Orchestration Evidence of its   |
+   |                  |              | own, under the record           |
+   |                  |              | integrity and retention         |
+   |                  |              | requirements imported from the  |
+   |                  |              | runtime profile (Section 12,    |
+   |                  |              | Section 12.1)                   |
+   +------------------+--------------+---------------------------------+
 
-          Table 1: Orchestration profile capability consumption
+           Table 1: Orchestration profile capability consumption
 
    The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
    version's reference host (a normative reference for its concrete
@@ -627,7 +634,53 @@ Table of Contents
    successor carries its own Authority Set
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-8.1.  Trigger Sources
+8.1.  Authority-Narrowing Behavior
+
+   A third trigger is independent of the non-active and staleness
+   sequences above: a mission.lifecycle-change event carries
+   authority_changed true at unchanged state
+   ([I-D.draft-mcguinness-oauth-mission-signals]).  The Mission stays
+   active; the narrowing is scoped to the entries it affects, not to the
+   Mission as a whole.
+
+   On this trigger the orchestrator MUST rematerialize its Effective
+   Authority Set for the Mission through the Mission Status operation,
+   per the Signals rematerialization rule
+   ([I-D.draft-mcguinness-oauth-mission-signals]), then re-evaluate each
+   pending step's concrete resource and action against the
+   rematerialized set.  The unwind plan records only the step, the
+   Mission, and behavioral classifications (Section 7), no authority
+   binding, so the orchestrator MUST resolve a step's authority basis
+   one of two ways: a fresh PDP evaluation of the step's concrete
+   resource and action ([I-D.draft-mcguinness-mission-runtime]), or a
+   comparison of the step's recorded authorizing_entry or entry_digest
+   ([I-D.draft-mcguinness-mission-runtime-evidence]) against the
+   rematerialized set.
+
+   The re-evaluation outcome follows the step's in-flight class
+   (Section 9) for three of its four classes:
+
+   *  a not_dispatched step the re-evaluation now denies MUST be
+      suppressed or paused;
+
+   *  a dispatched_not_committed step the re-evaluation now denies MUST
+      follow its unwind plan's existing in_flight_behavior (Section 7):
+      this trigger re-gates already-dispatched work, it does not
+      additionally stop it; and
+
+   *  a committed step MUST NOT be compensated merely because authority
+      narrowed after it committed (Section 10).
+
+   An unknown step is unaffected by this trigger: Section 9's own rule
+   already requires human review for it.
+
+   A step the re-evaluation still permits proceeds.  The orchestrator
+   MUST emit Orchestration Evidence under Section 12 for every step this
+   trigger denies, naming the step in step_id, with state_source signal,
+   mission_state active, and orchestration_decision set from the mapping
+   already defined there.
+
+8.2.  Trigger Sources
 
    An orchestrator can learn of Mission state change from:
 
@@ -798,7 +851,8 @@ Table of Contents
 
    workflow_id:  REQUIRED.  The workflow or task graph identifier.
 
-   step_id:  OPTIONAL.  The step affected.
+   step_id:  OPTIONAL, and REQUIRED when the record reports a re-
+      evaluation under Section 8.1.  The step affected.
 
    mission_state:  REQUIRED.  The state observed.
 
@@ -807,7 +861,7 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-harness]): status, signal,
       runtime_decision, harness, operator, or a deployment-defined
       source.  This profile does not define its own; a trigger source
-      from Section 8.1 maps to the corresponding value (a harness stop
+      from Section 8.2 maps to the corresponding value (a harness stop
       decision to harness, an operator action to operator).
 
    orchestration_decision:  REQUIRED.  One of suppress, pause, cancel,
@@ -1086,6 +1140,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              signals.html>.
+
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -1131,11 +1191,23 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-signals]
-              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-
-              signals.html>.
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Authority-Narrowing Behavior (Section 8.1): a third State-Change
+      Behavior trigger, independent of the non-active and staleness
+      sequences, for a mission.lifecycle-change event's generic
+      authority_changed true at unchanged state.  The orchestrator
+      rematerializes its Effective Authority Set and re-evaluates each
+      pending step's concrete resource/action, resolved by a fresh PDP
+      evaluation or the step's Decision Evidence authorizing_entry/
+      entry_digest; a denied not_dispatched step is suppressed or
+      paused, a denied dispatched_not_committed step follows its
+      existing in_flight_behavior, and a committed step is never
+      compensated on narrowing alone. step_id is REQUIRED on
+      Orchestration Evidence reporting this trigger.  Signals promoted
+      from an informative to a normative reference (#670).
 
 Acknowledgments
 

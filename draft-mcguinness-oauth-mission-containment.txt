@@ -307,73 +307,82 @@ Table of Contents
 
    It consumes these optional capabilities:
 
-   +==================+=============+=================================+
-   | Capability       | Consumption | Scope of consumption            |
-   +==================+=============+=================================+
-   | Structured       | required    | The Effective Authority Set is  |
-   | Authority        |             | what every derivation,          |
-   |                  |             | delegation, projection, and     |
-   |                  |             | attenuation root is gated on    |
-   |                  |             | after a contain transition      |
-   |                  |             | (Section 10); a contained       |
-   |                  |             | capability names an approved    |
-   |                  |             | Authority Set entry or its      |
-   |                  |             | actions (Section 7)             |
-   +------------------+-------------+---------------------------------+
-   | Monotonic        | required    | Scoped to removal-only          |
-   | Derivation       |             | narrowing: a contain transition |
-   |                  |             | only adds contained capability, |
-   |                  |             | so monotonicity is trivially    |
-   |                  |             | decidable, set union over       |
-   |                  |             | entries, with no per-constraint |
-   |                  |             | comparator (Section 7.1,        |
-   |                  |             | Section 8)                      |
-   +------------------+-------------+---------------------------------+
-   | Lifecycle-Gated  | required    | The Baseline property is what a |
-   | Authorization    |             | lifecycle-gated substrate       |
-   |                  |             | provides: no derivation,        |
-   |                  |             | delegation, projection, or      |
-   |                  |             | attenuation root minted after   |
-   |                  |             | the transition carries          |
-   |                  |             | contained capability            |
-   |                  |             | (Section 12)                    |
-   +------------------+-------------+---------------------------------+
-   | State-Observable | conditional | Consumed only for the Runtime-  |
-   |                  |             | Enforced property: a consumer   |
-   |                  |             | that checks a fresh,            |
-   |                  |             | authenticated state source at   |
-   |                  |             | or near action time denies      |
-   |                  |             | contained capability whether or |
-   |                  |             | not its credential predates the |
-   |                  |             | transition; a consumer that     |
-   |                  |             | never consults such a source    |
-   |                  |             | gets Baseline only (Section 12) |
-   +------------------+-------------+---------------------------------+
-   | Credential-Bound | conditional | Consumed where derivation       |
-   |                  |             | issues Mission-bound tokens; a  |
-   |                  |             | token issued before the         |
-   |                  |             | transition is the same residual |
-   |                  |             | that revocation carries,        |
-   |                  |             | bounded by its own exp and the  |
-   |                  |             | deployment's freshness rules    |
-   |                  |             | (Section 10)                    |
-   +------------------+-------------+---------------------------------+
-   | Independently    | not         | This document defines no        |
-   | Verifiable       | consumed    | offline verification artifact   |
-   |                  |             | or trust-anchor discovery; its  |
-   |                  |             | evidence objects are the        |
-   |                  |             | Mission Issuer's own audit      |
-   |                  |             | material (Section 18)           |
-   +------------------+-------------+---------------------------------+
-   | Portable         | not         | This document produces audit    |
-   | Evidence         | consumed    | material of its own, the        |
-   |                  |             | Containment Evidence object and |
-   |                  |             | the Protected Event Receipt,    |
-   |                  |             | and registers their canonical   |
-   |                  |             | bytes and type identifiers      |
-   |                  |             | itself (Section 18.2,           |
-   |                  |             | Section 19)                     |
-   +------------------+-------------+---------------------------------+
+   +==================+==================+============================+
+   | Capability       | Consumption      | Scope of consumption       |
+   +==================+==================+============================+
+   | Structured       | required         | The Effective Authority    |
+   | Authority        |                  | Set is what every          |
+   |                  |                  | derivation, delegation,    |
+   |                  |                  | projection, and            |
+   |                  |                  | attenuation root is gated  |
+   |                  |                  | on after a contain         |
+   |                  |                  | transition (Section 10); a |
+   |                  |                  | contained capability names |
+   |                  |                  | an approved Authority Set  |
+   |                  |                  | entry or its actions       |
+   |                  |                  | (Section 7)                |
+   +------------------+------------------+----------------------------+
+   | Monotonic        | required         | Scoped to removal-only     |
+   | Derivation       |                  | narrowing: a contain       |
+   |                  |                  | transition only adds       |
+   |                  |                  | contained capability, so   |
+   |                  |                  | monotonicity is trivially  |
+   |                  |                  | decidable, set union over  |
+   |                  |                  | entries, with no per-      |
+   |                  |                  | constraint comparator      |
+   |                  |                  | (Section 7.1, Section 8)   |
+   +------------------+------------------+----------------------------+
+   | Lifecycle-Gated  | required         | The Baseline property is   |
+   | Authorization    |                  | what a lifecycle-gated     |
+   |                  |                  | substrate provides: no     |
+   |                  |                  | derivation, delegation,    |
+   |                  |                  | projection, or attenuation |
+   |                  |                  | root minted after the      |
+   |                  |                  | transition carries         |
+   |                  |                  | contained capability       |
+   |                  |                  | (Section 12)               |
+   +------------------+------------------+----------------------------+
+   | State-Observable | required when a  | Consumed only for the      |
+   |                  | consumer claims  | Runtime-Enforced property: |
+   |                  | the Runtime-     | a consumer that checks a   |
+   |                  | Enforced         | fresh, authenticated state |
+   |                  | property         | source at or near action   |
+   |                  |                  | time denies contained      |
+   |                  |                  | capability whether or not  |
+   |                  |                  | its credential predates    |
+   |                  |                  | the transition; a consumer |
+   |                  |                  | that never consults such a |
+   |                  |                  | source gets Baseline only  |
+   |                  |                  | (Section 12)               |
+   +------------------+------------------+----------------------------+
+   | Credential-Bound | required when    | Consumed where derivation  |
+   |                  | derivation       | issues Mission-bound       |
+   |                  | issues Mission-  | tokens; a token issued     |
+   |                  | bound tokens     | before the transition is   |
+   |                  |                  | the same residual that     |
+   |                  |                  | revocation carries,        |
+   |                  |                  | bounded by its own exp and |
+   |                  |                  | the deployment's freshness |
+   |                  |                  | rules (Section 10)         |
+   +------------------+------------------+----------------------------+
+   | Independently    | not consumed     | This document defines no   |
+   | Verifiable       |                  | offline verification       |
+   |                  |                  | artifact or trust-anchor   |
+   |                  |                  | discovery; its evidence    |
+   |                  |                  | objects are the Mission    |
+   |                  |                  | Issuer's own audit         |
+   |                  |                  | material (Section 18)      |
+   +------------------+------------------+----------------------------+
+   | Portable         | not consumed     | This document produces     |
+   | Evidence         |                  | audit material of its own, |
+   |                  |                  | the Containment Evidence   |
+   |                  |                  | object and the Protected   |
+   |                  |                  | Event Receipt, and         |
+   |                  |                  | registers their canonical  |
+   |                  |                  | bytes and type identifiers |
+   |                  |                  | itself (Section 18.2,      |
+   |                  |                  | Section 19)                |
+   +------------------+------------------+----------------------------+
 
            Table 1: Containment profile capability consumption
 

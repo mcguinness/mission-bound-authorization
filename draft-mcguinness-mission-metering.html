@@ -1261,10 +1261,13 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1586,7 +1589,7 @@ value, and it commits the bounds like any other Intent member
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">required when a call class or an exclusive selector is drawn from the Authority Set's identifiers</td>
             <td class="text-left" rowspan="1" colspan="1">Two consumers. A <code>call_class</code> value <span class="bcp14">SHOULD</span> be drawn from the <code>actions</code> identifiers of the entry's <code>mission_resource_access</code>, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable (<a href="#bounds" class="auto internal xref">Section 6</a>). The <code>exclusive</code> control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, <code>resource</code> by equality and the invoked action by membership in <code>actions</code>, per group and per Mission; selector semantics are owned by this document (<a href="#bounds" class="auto internal xref">Section 6</a>, <a href="#exclusivity" class="auto internal xref">Section 8</a>)</td>
           </tr>
           <tr>
@@ -2310,12 +2313,18 @@ non-idempotent action class.<a href="#section-11.1.2-2.4.1" class="pilcrow">¶</
 conflict is audited, never adjudicated by the intake.<a href="#section-11.1.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-11.1.2-3">The operational consequence: a lossy evidence channel accumulates
+<p id="section-11.1.2-3">A containment overlay's contain transition
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>) is not settlement
+evidence: an open reservation or duration lease still settles under
+the evidence states above, unaffected by contain, and contain narrows
+only forward draw, a new reservation or a lease renewal, through the
+ordinary permit check against the narrowed Effective Authority Set.<a href="#section-11.1.2-3" class="pilcrow">¶</a></p>
+<p id="section-11.1.2-4">The operational consequence: a lossy evidence channel accumulates
 reservations against <code>max_budget</code> and <code>max_calls</code> until the Mission
 starves on <code>quota_exceeded</code>, a self-inflicted denial of service. A
 deployment <span class="bcp14">SHOULD</span> run orphaned-evidence reconciliation on a published
 cadence sized to its evidence-channel loss rate; the reconciliation
-window it publishes is how long leaked budget stays leaked.<a href="#section-11.1.2-3" class="pilcrow">¶</a></p>
+window it publishes is how long leaked budget stays leaked.<a href="#section-11.1.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lease-renewal">
@@ -2615,6 +2624,10 @@ evidence companion's extension conventions
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC7942">[RFC7942]</dt>
       <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
@@ -2624,17 +2637,36 @@ evidence companion's extension conventions
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">One informative cross-reference in Settlement by Evidence State
+(<a href="#settlement-states" class="auto internal xref">Section 11.1.2</a>): a containment overlay's contain transition
+is not settlement evidence. An open reservation or duration lease
+still settles unchanged under the existing evidence-state rules, and
+contain narrows only forward draw, a new reservation or a lease
+renewal, through the ordinary permit check against the narrowed
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization work and
-defines its experimental consumption-metering layer.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization work and
+defines its experimental consumption-metering layer.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

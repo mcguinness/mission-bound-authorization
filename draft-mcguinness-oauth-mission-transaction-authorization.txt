@@ -857,13 +857,13 @@ Table of Contents
    |                |           |gate to the issuance profile's        |
    |                |           |([I-D.draft-mcguinness-oauth-mission])|
    +----------------+-----------+--------------------------------------+
-   |Structured      |consumed   |The challenge and token's             |
+   |Structured      |required   |The challenge and token's             |
    |Authority       |           |authorization_details entry is        |
    |                |           |evaluated against the verified        |
    |                |           |Authority Set under the subset rule   |
    |                |           |(Section 6 step 3)                    |
    +----------------+-----------+--------------------------------------+
-   |State-Observable|consumed   |Offline verification observes current |
+   |State-Observable|required   |Offline verification observes current |
    |                |           |Mission state within its declared     |
    |                |           |freshness bound (Section 8);          |
    |                |           |establishing that state is the runtime|

@@ -265,11 +265,13 @@ Table of Contents
    |Authorization|           |is the freshness check of Section 5.3, not a    |
    |             |           |gate this document performs                     |
    +-------------+-----------+------------------------------------------------+
-   |State-       |consumed   |Consumed whenever reliance requires a currently |
-   |Observable   |           |active Mission (Section 7 step 7);              |
-   |             |           |state_at_issuance never substitutes, and the    |
-   |             |           |stale class of Section 7.1 applies until current|
-   |             |           |state is obtained                               |
+   |State-       |required   |Consumed whenever reliance requires a currently |
+   |Observable   |when       |active Mission (Section 7 step 7);              |
+   |             |reliance   |state_at_issuance never substitutes, and the    |
+   |             |requires a |stale class of Section 7.1 applies until current|
+   |             |currently  |state is obtained                               |
+   |             |active     |                                                |
+   |             |Mission    |                                                |
    +-------------+-----------+------------------------------------------------+
    |Monotonic    |not        |A Mandate narrows nothing; a rail's vertical    |
    |Derivation   |consumed   |derivation (Section 8.2) is that rail's own     |
