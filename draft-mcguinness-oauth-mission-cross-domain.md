@@ -1201,7 +1201,7 @@ of the re-mint, rather than trust in the minting domain's assertion
 of them, MAY require issuer-signed hop receipts
 ({{I-D.draft-mcguinness-oauth-actor-receipts}}).
 
-## Per-Domain Delegation Depth
+## Per-Domain Delegation Depth {#per-domain-delegation-depth}
 
 Because the cross-domain grant carries no `act` chain
 ({{cross-domain-grant}}), a Resource AS that issues delegated tokens of
@@ -1221,14 +1221,19 @@ constrains it out of band, through the resource-to-AS mapping and each
 Resource AS's local policy ({{pre-established-trust}}); this profile
 bounds delegation depth only within a single domain.
 
-Because the reset is per domain, projecting one Mission into M
-Resource AS domains multiplies the reachable depth: the aggregate
-composed bound is up to N times M, not N, even though the Approver saw
-only the per-domain N at consent. A deployment SHOULD disclose the
-composed bound, `max_depth` times the number of domains a Mission may
-be projected to, at the consent surface, not the per-domain `max_depth`
-alone, so the approval reflects what the projection can actually reach
-in aggregate.
+Because the reset is per domain, projecting a Mission's entries into
+multiple Resource AS domains multiplies the reachable depth beyond
+any single per-domain `max_depth` an Approver saw at consent. Where
+an approval interface displays a per-domain `max_depth` as a limit on
+delegation depth, that interface MUST also disclose the composed
+bound reachable across every distinct Resource AS domain a projected
+entry may reach: the sum, per domain, of the `max_depth` applicable
+there, or, where a deployment does not track per-domain composition,
+a conservative sum using the largest applicable `max_depth` for each
+domain. Domains are counted by distinct Resource AS, from the
+resource-to-AS mapping fixed at consent ({{pre-established-trust}}),
+never by resource count: several resources mapped to the same
+Resource AS do not each add a domain to the count.
 
 # Privacy Considerations
 
@@ -1527,3 +1532,19 @@ inside the partner domain. The lifetime shrinks at every hop and never
 exceeds the Mission's `expires_at`. The ID-JAG carried identity
 *between* trust domains; the Transaction Token carried context
 *within* one. The Mission bound both.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+-01
+
+- Reshaped Per-Domain Delegation Depth's disclosure from a flat
+  SHOULD to a conditional, interface-addressed MUST, mirroring the
+  child delegation profile's `max_derivations` disclosure pattern,
+  and corrected the composed-bound arithmetic: the disclosed bound is
+  the sum of each distinct Resource AS domain's applicable
+  `max_depth` (or a conservative per-domain maximum), not one
+  per-domain `max_depth` times a flat domain count, and domains are
+  counted by distinct Resource AS from the resource-to-AS mapping,
+  never by resource count ({{pre-established-trust}}).
