@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             23 August 2026
-Expires: 24 February 2027
+Intended status: Experimental                             24 August 2026
+Expires: 25 February 2027
 
 
                 Mission-Bound Authorization for UMA 2.0
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -215,8 +215,7 @@ Table of Contents
 
    Maturity: sketch.  Maintenance: lab-best-effort.  Adopt when:
    Evaluating a UMA 2.0 deployment only.  Requires: Mission Substrate
-   Requirements.  Also requires, conditionally: Mission Issuance Grant
-   for OAuth 2.0 (when the expires_at member is adopted).
+   Requirements.
 
 3.  Conventions and Terminology
 
@@ -638,10 +637,9 @@ Table of Contents
    An RPT issued under a Mission names it through the mission claim: the
    family members id, issuer, and authority_hash as the issuance profile
    defines them, and it SHOULD carry the expires_at member as the
-   issuance-grant profile defines it
-   ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), a bounding
-   commitment with no liveness.  The claim is delivered on one of two
-   carriage surfaces:
+   issuance profile defines it ([I-D.draft-mcguinness-oauth-mission]), a
+   bounding commitment with no liveness.  The claim is delivered on one
+   of two carriage surfaces:
 
    *  *Token-carried*: a deployment issuing JWT-format RPTs carries the
       claim in the token per the issuance profile.
@@ -1201,12 +1199,6 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
-              McGuinness, K., "Mission Issuance Grant for OAuth 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-issuance-
-              grant.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

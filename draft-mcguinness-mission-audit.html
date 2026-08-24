@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 24 February 2027</td>
+<td class="center">Expires 25 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-audit-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-23" class="published">23 August 2026</time>
+<time datetime="2026-08-24" class="published">24 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-24">24 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1274,10 +1274,13 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1591,13 +1594,20 @@ member.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 <p id="section-6.3-1">Each registrable evidence type fixes the exact bytes that are hashed,
 the media type carried in <code>payload-preimage-content-type</code>, the
 operational <code>typ</code> its retained form carries (none where the retained
-object is unsigned), and the producer authoritative for it. A producer
-<span class="bcp14">MUST</span> commit to the canonical bytes named here. A relying party <span class="bcp14">MUST</span>
-verify the producer is authoritative for the type
-(<a href="#registration-policy" class="auto internal xref">Section 6.4</a>) before treating a record as part of the
-Mission's feed. The table is a normative catalog of evidence types,
-not a registry: a row registers nothing, and its identifier is
-defined, and registered where it is, by the profile the row cites.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+object is unsigned), and the producer authoritative for it: an
+evidence-type registration. This document is that registration,
+normatively, only for the four evidence types it itself defines
+(<a href="#iana" class="auto internal xref">Section 15</a>); a producer of one of those types <span class="bcp14">MUST</span> commit to the
+canonical bytes fixed there. For every other row, the cited profile
+is that registration: committing to its canonical bytes is that
+profile's own conformance duty, imposed there, and this document
+neither restates it nor requires consulting that profile's text to
+satisfy it. This table is an informative catalog of every row's
+properties, consulted only where the citing profile is adopted. A
+relying party <span class="bcp14">MUST</span> verify, from the producer this table records for
+a record's type, that the record's <code>iss</code> is that producer
+(<a href="#registration-policy" class="auto internal xref">Section 6.4</a>) before treating the record as part of the
+Mission's feed; a row registers nothing on its own.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1936,15 +1946,16 @@ protected header (<a href="#hash-commitment" class="auto internal xref">Section 
 to <code>application/mission-approval-record+json</code> and keeps a digest of one
 evidence type from being read as another.<a href="#section-6.3-10" class="pilcrow">¶</a></p>
 <p id="section-6.3-11">Each companion-defined row binds only a deployment that produces that
-evidence, so the reference is consulted only where the profile is
-adopted. A row whose defining profile is Experimental (the Discovery
-Evidence, Containment evidence, Protected event receipt, and Work
-Product Binding rows) stays on that profile's maturity: its reference
-is a conditional normative down-reference, binding only a deployment
-that produces that row's evidence, and a deployment not running an
-Experimental profile omits its rows. A deployment that does not run
-the Signals profile commits lifecycle transitions as the transition
-object (<a href="#transition-object" class="auto internal xref">Section 6.3.1</a>) instead of the Signals SET.<a href="#section-6.3-11" class="pilcrow">¶</a></p>
+evidence, so the citation is consulted only where the profile is
+adopted. The Discovery Evidence, Containment evidence, Protected
+event receipt, and Work Product Binding rows cite profiles at
+Experimental maturity; the reference classification convention's
+maturity bound keeps this document's citation to each informative,
+and each cited profile places the registration duty on its own
+adopters. A deployment not running one of those profiles omits its
+rows. A deployment that does not run the Signals profile commits
+lifecycle transitions as the transition object
+(<a href="#transition-object" class="auto internal xref">Section 6.3.1</a>) instead of the Signals SET.<a href="#section-6.3-11" class="pilcrow">¶</a></p>
 <p id="section-6.3-12">A Child Evidence record registers on the Parent Mission's feed: the
 <code>sub</code> is the parent's (<a href="#feed" class="auto internal xref">Section 8</a>), its producer is the <code>issuer</code>, and
 the child Mission's <code>id</code> inside the evidence makes the delegation
@@ -3101,22 +3112,26 @@ runtime evidence companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>);<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.5">
-          <p id="section-15-5.5.1">the Harness Evidence and Egress Evidence type identifiers by the
-harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-15-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.5.1">the Discovery Evidence media type by the discovery profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>);<a href="#section-15-5.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.6">
-          <p id="section-15-5.6.1">the Containment Evidence and Protected Event Receipt type
-identifiers by the containment profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>);<a href="#section-15-5.6.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.6.1">the Harness Evidence and Egress Evidence type identifiers by the
+harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-15-5.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.7">
-          <p id="section-15-5.7.1">the Work Product Binding media type by the work-products profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>); and<a href="#section-15-5.7.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.7.1">the Containment Evidence and Protected Event Receipt type
+identifiers by the containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>);<a href="#section-15-5.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.8">
-          <p id="section-15-5.8.1">the Signals SET media type <code>application/secevent+jwt</code> by RFC 8417,
+          <p id="section-15-5.8.1">the Work Product Binding media type by the work-products profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>); and<a href="#section-15-5.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.9">
+          <p id="section-15-5.9.1">the Signals SET media type <code>application/secevent+jwt</code> by RFC 8417,
 which the Signals profile carries the event in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-15-5.8.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-15-5.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-15-6">The Signed Statement and Receipt media types are the transparency
@@ -3142,10 +3157,6 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
 <dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
@@ -3175,17 +3186,9 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -3244,6 +3247,10 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
@@ -3256,6 +3263,10 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
@@ -3263,6 +3274,10 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
 <dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8610">[RFC8610]</dt>
       <dd>
@@ -3273,18 +3288,45 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">The Discovery Evidence, Containment evidence, Protected event
+receipt, and Work Product Binding front-matter references moved
+from normative to informative, meeting the reference
+classification convention's maturity bound (a Standards-Track
+draft never lists an Experimental draft as normative). The Evidence
+Types normative rule narrowed to this document's own four evidence
+types (<a href="#iana" class="auto internal xref">Section 15</a>); for every other row, committing to canonical
+bytes is the cited profile's own conformance duty, never restated
+or required to be consulted here, and relying-party producer
+verification consumes only the producer identifier this table
+records. Containment's Portable Evidence forward-pointer corrected
+to match: Containment registers its own evidence media types.
+Discovery Evidence gained a self-hosted canonical-bytes definition
+and IANA media-type registration in its own profile, closing the
+one gap this document's citation had left undefined (#662).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 work and profiles the SCITT architecture to make Mission evidence
-transparent and independently verifiable.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+transparent and independently verifiable.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

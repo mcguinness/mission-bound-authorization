@@ -1061,7 +1061,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 24 February 2027</td>
+<td class="center">Expires 25 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1074,12 +1074,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-child-delegation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-23" class="published">23 August 2026</time>
+<time datetime="2026-08-24" class="published">24 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-24">24 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1136,7 +1136,7 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1889,7 +1889,7 @@ Issuer runs the deployment's existing front-channel approval event,
 the issuance profile's own approval ceremony via a Pushed
 Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), after which the child grant
-reference is returned. This interactive path is retained.<a href="#section-6.4-2.6.1" class="pilcrow">¶</a></p>
+reference is returned.<a href="#section-6.4-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2615,7 +2615,13 @@ subtree alongside it, so the Approver sees the real reachable surface
 rather than one Mission's local counter alone. Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). This warning is about the
+child-subtree axis specifically; the continuation profile separately
+counts derivations within a single Mission's own continued grants,
+where a delegated refresh-token family's successive refreshes are one
+derivation, not one per refresh
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section
+"Authorization Continuity and the Mission").<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3665,6 +3671,10 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
 <dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
         <dd>

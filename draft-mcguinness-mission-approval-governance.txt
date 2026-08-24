@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          23 August 2026
-Expires: 24 February 2027
+Intended status: Standards Track                          24 August 2026
+Expires: 25 February 2027
 
 
                       Mission Approval Governance
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -355,7 +355,15 @@ Table of Contents
       approval it claims to govern or it does not commit.  A policy-
       authority Approver satisfies this with a policy assertion carrying
       its provenance chain, subject to the high-risk-class restriction
-      of Section 8.
+      of Section 8.  A Mission rooted in a named standing-consent
+      approval_basis ([I-D.draft-mcguinness-oauth-mission]) satisfies
+      this rule through that record instead of a contributing assertion:
+      consent_principal (equal to approver), root_commitment, and
+      approved_at, already fixed at the approval event and immutable,
+      stand in place of a matching assertion, subject to the same high-
+      risk-class restriction.  No assertion is fabricated in the name of
+      the activating policy or the requesting actor to stand in for a
+      fresh human decision that did not occur.
 
    *  An assertion that fails authentication, event binding, or policy
       authorization MUST NOT contribute to the evaluation and MUST NOT
@@ -461,6 +469,13 @@ Table of Contents
    human, unless a committed, class-named exception under this section
    admits kind: policy for that class.
 
+   The same default binds a Mission whose accountable-approver rule is
+   satisfied through its own approval_basis record rather than an
+   assertion (Section 6): recording an AGR for such a Mission carrying
+   one of the four classes requires a committed, class-named exception
+   under this section; absent it, the record MUST NOT be created and, by
+   Section 7, the Mission MUST NOT be created active.
+
    Approval Governance is an optional extension (Section 2); the rules
    of this section are a conservative default of that profile, not a
    family-wide guarantee, and a deployment that records no Approval
@@ -556,7 +571,10 @@ Table of Contents
       events, and are never presented as co-approvals.
 
    *  The consent evidence approver MUST equal the principal of the
-      record's accountable assertion (Section 6).
+      record's accountable assertion (Section 6); for a standing-consent
+      Mission whose accountable-approver rule is satisfied by
+      approval_basis rather than an assertion, it MUST equal
+      approval_basis.consent_principal instead.
 
    *  approval_authority, when present, MUST equal approval_policy.id;
       approval_policy_version, when present, MUST equal
@@ -591,13 +609,28 @@ Table of Contents
    stays off protocol messages and out of enforcement projections,
    matching the issuance profile's control-plane discipline.
 
-   Section 8 bounds only the AGR policy assertion path.  The issuance
-   profile's standing-consent authority bases and their related
-   provenance carry no equivalent human-approval instant and trace only
-   through a consent principal and a commitment; that gap is a distinct,
-   tracked concern outside this document's assertions, for the issuance
-   profile or whichever companion defines those standing-consent types
-   to close.
+   Section 8 bounds the AGR policy assertion path and, by extension, a
+   standing-consent Mission whose approval_basis record stands in for
+   that assertion (Section 6).  The issuance profile's standing-consent
+   authority bases carry their own human-approval instant, in
+   approval_basis.approved_at, traced through consent_principal and a
+   commitment ([I-D.draft-mcguinness-oauth-mission]); the template
+   profile's template basis and the progressive profile's
+   ceiling_drawdown basis both populate it, and each profile declares
+   its own maximum age against it: review_cadence for template, the
+   ceiling review cadence for progressive
+   ([I-D.draft-mcguinness-oauth-mission-template],
+   [I-D.draft-mcguinness-oauth-mission-progressive]).  The two recency
+   paths are therefore analogous, each bounding staleness against a
+   retained human-approval instant, but distinct in what they gate: this
+   section's ceiling governs whether the issuer may count a policy
+   assertion, or activate a Mission whose approval_basis stands in for
+   one, at evaluation; a profile's own maximum age governs whether the
+   dispatch or drawdown may happen at all, independent of whether an AGR
+   is ever recorded.  A standing-consent Mission's accountable-approver
+   rule is satisfied by approval_basis itself (Section 6), never by
+   fabricating a policy assertion in its place; the high-risk-class
+   default of this section still binds that record directly.
 
 13.  Mission Evidence
 
@@ -886,6 +919,17 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-progressive]
+              McGuinness, K., "Mission Progressive Authorization for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              progressive.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
 
    [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
               Rich Authorization Requests", RFC 9396,

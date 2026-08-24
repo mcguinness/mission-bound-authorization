@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          23 August 2026
-Expires: 24 February 2027
+Intended status: Standards Track                          24 August 2026
+Expires: 25 February 2027
 
 
                   Mission Issuance Grant for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -287,22 +287,14 @@ Table of Contents
 
 5.1.  The expires_at Claim Member
 
-   This profile adds one member to the mission claim object on the
-   credentials it governs, ahead of the issuance profile's revision:
-
-   expires_at:  A string.  An RFC 3339 [RFC3339] date-time mirroring the
-      Mission record's expires_at, spelled identically per the issuance
-      profile's record-fact naming rule.
-
-   The member is a bounding and audit commitment and carries no
-   liveness: expiry says nothing about revocation, and only active
-   permits reliance.  It gives a consumer what a token's own exp cannot:
-   the Mission's remaining horizon for planning, a deterministic ceiling
-   enforceable on offline validation paths (the value is immutable, so a
-   credential-carried copy is always safe), and a check that issuance
-   respected the lifetime cap (Section 7).  A consumer that does not
-   recognize the member ignores it.  A Mission Issuer under any binding
-   MAY include the member with these semantics.
+   The issuance profile defines expires_at as a REQUIRED Mission Record
+   member and an OPTIONAL member of the mission claim it mirrors
+   ([I-D.draft-mcguinness-oauth-mission]).  This profile elevates the
+   claim mirror to REQUIRED for the credentials it governs: the mission
+   object (Section 5) is REQUIRED and extended with expires_at.  The
+   Lifetime rule (Section 7) depends on that elevation: no token issued
+   under the grant may expire later than the mission object's
+   expires_at.
 
 6.  Obtaining a Grant
 
@@ -981,10 +973,6 @@ Table of Contents
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
-
-   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
-              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
-              <https://www.rfc-editor.org/rfc/rfc3339>.
 
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          23 August 2026
-Expires: 24 February 2027
+Intended status: Standards Track                          24 August 2026
+Expires: 25 February 2027
 
 
                        Mission Audit Transparency
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -107,6 +107,7 @@ Table of Contents
    16. References
      16.1.  Normative References
      16.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -384,13 +385,20 @@ Table of Contents
    Each registrable evidence type fixes the exact bytes that are hashed,
    the media type carried in payload-preimage-content-type, the
    operational typ its retained form carries (none where the retained
-   object is unsigned), and the producer authoritative for it.  A
-   producer MUST commit to the canonical bytes named here.  A relying
-   party MUST verify the producer is authoritative for the type
-   (Section 6.4) before treating a record as part of the Mission's feed.
-   The table is a normative catalog of evidence types, not a registry: a
-   row registers nothing, and its identifier is defined, and registered
-   where it is, by the profile the row cites.
+   object is unsigned), and the producer authoritative for it: an
+   evidence-type registration.  This document is that registration,
+   normatively, only for the four evidence types it itself defines
+   (Section 15); a producer of one of those types MUST commit to the
+   canonical bytes fixed there.  For every other row, the cited profile
+   is that registration: committing to its canonical bytes is that
+   profile's own conformance duty, imposed there, and this document
+   neither restates it nor requires consulting that profile's text to
+   satisfy it.  This table is an informative catalog of every row's
+   properties, consulted only where the citing profile is adopted.  A
+   relying party MUST verify, from the producer this table records for a
+   record's type, that the record's iss is that producer (Section 6.4)
+   before treating the record as part of the Mission's feed; a row
+   registers nothing on its own.
 
    +===========+=================+===============+===============+=========+
    |Evidence   |Canonical bytes  |payload-       |Operational typ|Producer |
@@ -615,15 +623,16 @@ Table of Contents
    and keeps a digest of one evidence type from being read as another.
 
    Each companion-defined row binds only a deployment that produces that
-   evidence, so the reference is consulted only where the profile is
-   adopted.  A row whose defining profile is Experimental (the Discovery
-   Evidence, Containment evidence, Protected event receipt, and Work
-   Product Binding rows) stays on that profile's maturity: its reference
-   is a conditional normative down-reference, binding only a deployment
-   that produces that row's evidence, and a deployment not running an
-   Experimental profile omits its rows.  A deployment that does not run
-   the Signals profile commits lifecycle transitions as the transition
-   object (Section 6.3.1) instead of the Signals SET.
+   evidence, so the citation is consulted only where the profile is
+   adopted.  The Discovery Evidence, Containment evidence, Protected
+   event receipt, and Work Product Binding rows cite profiles at
+   Experimental maturity; the reference classification convention's
+   maturity bound keeps this document's citation to each informative,
+   and each cited profile places the registration duty on its own
+   adopters.  A deployment not running one of those profiles omits its
+   rows.  A deployment that does not run the Signals profile commits
+   lifecycle transitions as the transition object (Section 6.3.1)
+   instead of the Signals SET.
 
    A Child Evidence record registers on the Parent Mission's feed: the
    sub is the parent's (Section 8), its producer is the issuer, and the
@@ -1615,6 +1624,9 @@ Table of Contents
    *  the Child Evidence type identifier by the child-delegation profile
       ([I-D.draft-mcguinness-oauth-mission-child-delegation]);
 
+   *  the Discovery Evidence media type by the discovery profile
+      ([I-D.draft-mcguinness-mission-discovery]);
+
    *  the Harness Evidence and Egress Evidence type identifiers by the
       harness profile ([I-D.draft-mcguinness-mission-harness]);
 
@@ -1648,11 +1660,6 @@ Table of Contents
               McGuinness, K., "Mission Approval Governance", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-approval-governance.html>.
-
-   [I-D.draft-mcguinness-mission-discovery]
-              McGuinness, K., "Mission Open-World Discovery", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-discovery.html>.
 
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
@@ -1691,21 +1698,11 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-containment]
-              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-containment.html>.
-
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-work-products]
-              McGuinness, K., "Mission Work Products", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-work-products.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1771,6 +1768,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-authority-server.html>.
 
+   [I-D.draft-mcguinness-mission-discovery]
+              McGuinness, K., "Mission Open-World Discovery", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-discovery.html>.
+
    [I-D.draft-mcguinness-mission-orchestration]
               McGuinness, K., "Mission Orchestration and Unwinding",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -1787,6 +1789,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-shaping.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1797,11 +1804,37 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-template.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-work-products]
+              McGuinness, K., "Mission Work Products", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-work-products.html>.
+
    [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
               Definition Language (CDDL): A Notational Convention to
               Express Concise Binary Object Representation (CBOR) and
               JSON Data Structures", RFC 8610, DOI 10.17487/RFC8610,
               June 2019, <https://www.rfc-editor.org/rfc/rfc8610>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  The Discovery Evidence, Containment evidence, Protected event
+      receipt, and Work Product Binding front-matter references moved
+      from normative to informative, meeting the reference
+      classification convention's maturity bound (a Standards-Track
+      draft never lists an Experimental draft as normative).  The
+      Evidence Types normative rule narrowed to this document's own four
+      evidence types (Section 15); for every other row, committing to
+      canonical bytes is the cited profile's own conformance duty, never
+      restated or required to be consulted here, and relying-party
+      producer verification consumes only the producer identifier this
+      table records.  Containment's Portable Evidence forward-pointer
+      corrected to match: Containment registers its own evidence media
+      types.  Discovery Evidence gained a self-hosted canonical-bytes
+      definition and IANA media-type registration in its own profile,
+      closing the one gap this document's citation had left undefined
+      (#662).
 
 Acknowledgments
 

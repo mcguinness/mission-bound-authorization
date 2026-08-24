@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 24 February 2027</td>
+<td class="center">Expires 25 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-template-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-23" class="published">23 August 2026</time>
+<time datetime="2026-08-24" class="published">24 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-24">24 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1139,7 +1139,7 @@ it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1301,7 +1301,7 @@ issuance-profile Mission Issuer (<span>[<a href="#I-D.draft-mcguinness-oauth-mis
 Nothing here places a new requirement back on the issuance profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
-Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0.<a href="#section-2-3" class="pilcrow">¶</a></p>
+Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0; Mission Expansion for OAuth 2.0.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship">
@@ -1322,21 +1322,26 @@ issuance profile defines them.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The runtime enforcement profile <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>
 is a normative dependency for its action classes, which the
 prohibited-class rule tests against (<a href="#prohibited-classes" class="auto internal xref">Section 8</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
-<p id="section-3-3">Progressive authorization
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>) and expansion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) are informative
-siblings. Progressive removes the per-expansion human from a consented
+<p id="section-3-3">The expansion profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>
+is also a normative dependency: Dispatch adopts its creation
+idempotency apparatus (the operation fingerprint, the durable
+reservation, revalidation, and recovery-as-delivery) by reference,
+under its own <code>op: dispatch</code> fingerprint value, rather than restating
+it (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">Progressive authorization
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>) is an informative
+sibling. Progressive removes the per-expansion human from a consented
 authority ceiling on a single evolving Mission; this document removes
 the per-dispatch human from a consented template that mints many
 independent Missions. Both concentrate one considered human consent to
 a ceiling in place of many hurried consents, and both hold the
 high-consequence classes back for a human. Where progressive draws a
 successor within one chain, a template dispatches independent
-instances.<a href="#section-3-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-3-4">
-        <dt id="section-3-4.1">Terminology disambiguation:</dt>
-        <dd style="margin-left: 1.5em" id="section-3-4.2">
-          <p id="section-3-4.2.1">The Consent Evidence profile
+instances.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-5">
+        <dt id="section-3-5.1">Terminology disambiguation:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-5.2">
+          <p id="section-3-5.2.1">The Consent Evidence profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) already uses
 <code>template_id</code> and <code>template_version</code> to name a <strong>disclosure-rendering
 template</strong>, the presentation template a Consent Disclosure object was
@@ -1347,7 +1352,7 @@ disclosure. The two never share a member. Where this document commits
 a Mission Template's disclosure under Consent Evidence, that
 disclosure carries the Consent Evidence profile's <code>template_id</code> and
 <code>template_version</code> for its own rendering template, which are unrelated
-to the Mission Template being disclosed.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+to the Mission Template being disclosed.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1773,15 +1778,79 @@ than applying an undisclosed fourth clamp; and<a href="#section-7-4.7.2.4.1" cla
           </ul>
 </li>
       </ol>
-<p id="section-7-5">A Dispatch <span class="bcp14">MUST</span> be idempotent per dispatch event identifier. The
-Dispatcher supplies a dispatch event identifier with the request; a
-repeated request bearing an identifier the Mission Issuer has already
-committed returns the Mission it already committed, and instantiates no
-second Mission. This makes retry safe at machine speed and keeps
-<code>max_active</code> and <code>dispatch_rate</code> accounting exact. The dispatch event
-identifier is this grant's realization of the creation idempotency
-the expansion profile defines for the family's Mission-creating token
-exchanges (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-5">A Dispatch <span class="bcp14">MUST</span> be idempotent per <code>dispatch_event_id</code>. The Dispatcher
+supplies a <code>dispatch_event_id</code> with the request, adopting the
+expansion profile's creation idempotency apparatus by reference
+under its own domain-separating <code>op</code> value, <code>dispatch</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Creation
+Idempotency").<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">The identifier and reservation key are <code>(authenticated client,
+dispatch_event_id)</code>, the Dispatcher being the authenticated client of
+<a href="#grant-type" class="auto internal xref">Section 7.2</a>. In the operation fingerprint, <code>op</code> is <code>dispatch</code>;
+<code>iss</code> and <code>client</code> are as the expansion profile defines them;
+<code>source</code> is this Dispatch's <code>template_id</code>, since a Dispatch has no
+source Mission or <code>subject_token</code> to resolve one from; <code>cnf</code> is the
+Dispatcher's verified presenter confirmation, the DPoP proof key's
+<code>jkt</code> or the mTLS certificate's <code>x5t#S256</code>; <code>intent</code> and <code>evidence</code>
+are the parsed <code>mission_intent</code> Submission envelope's members
+(<a href="#grant-type" class="auto internal xref">Section 7.2</a>); <code>proposal</code> is the parsed <code>authorization_details</code>
+array, when present. <code>actor</code>, <code>child_actor</code>, <code>requested_token_type</code>,
+and <code>cross_check</code> are absent: a Dispatch carries no acting-agent
+token, no child actor, no token-exchange requested token type, and no
+predecessor or parent cross-check to compare against a resolved
+source. A dispatch-specific parameter affecting derivation, approval,
+output, or side effects extends the fingerprint the same way an
+extension parameter would under the expansion profile's own rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
+operation fingerprint").<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-7">The reservation, its <code>(client, dispatch_event_id)</code> uniqueness, and
+the fingerprint-comparison outcomes on a repeated presentation are
+the expansion profile's, applied by reference: same fingerprint and
+completed, recover it; same fingerprint and reserved or pending,
+return the same in-progress result; different fingerprint, refuse
+with <code>invalid_request</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
+durable reservation"). The reservation and the dispatched Mission's
+identifier <span class="bcp14">MUST</span> be committed atomically with instance derivation and
+<code>max_active</code>/<code>dispatch_rate</code> accounting. Evidence emission is not
+part of that same atomic commit: the Mission Issuer atomically
+commits the evidence record, or a durable outbox entry for it, with
+Mission creation, and delivers or publishes it idempotently
+afterward, since external emission cannot generally participate in
+the datastore transaction.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<p id="section-7-8">A revalidated retry's obligations depend on whether the original
+operation already committed creation. For a <strong>completed</strong> operation,
+the Mission Issuer <span class="bcp14">MUST</span> verify the recorded template identity,
+<code>template_version</code>, and fingerprint; the requester's continued
+membership in <code>allowed_dispatchers</code> and possession of the recorded
+<code>cnf</code>; and that the created Mission remains <code>active</code>, before
+recovering it. Current template applicability, including whether the
+checked <code>template_version</code> is still in force, is NOT re-evaluated for
+a completed operation: a template's own lifecycle already governs
+retirement, which stops further dispatch but does not terminate a
+Mission already dispatched (<a href="#template-lifecycle" class="auto internal xref">Section 5.2</a>), so recovery of
+that Mission <span class="bcp14">MUST</span> survive later retirement of the template version
+that created it. For a <strong>reserved or pending</strong> operation, which has
+not yet committed creation, the Mission Issuer instead revalidates
+the retry exactly as a fresh Dispatch: current <code>allowed_dispatchers</code>
+membership, possession of <code>cnf</code>, and current template applicability
+all apply, since no Mission yet exists for the retry to recover
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section
+"Revalidation and lookup order").<a href="#section-7-8" class="pilcrow">¶</a></p>
+<p id="section-7-9">Recovery is delivery of the already-dispatched Mission, never a
+second instantiation and never a second count against <code>max_active</code> or
+<code>dispatch_rate</code>. A retry recovered while the original access token
+remains valid returns that token; a retry recovered after it has
+expired is answered by minting a fresh access token for the same,
+still-<code>active</code> instance, an ordinary delivery event that repeats no
+creation accounting, exactly as the expansion profile's recovery
+defines for an expired delivery credential
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Recovery
+is delivery"). Tombstone retention follows the expansion profile's
+rule, against the deployment's published retry horizon
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Tombstone
+retention"). This makes retry safe at machine speed and keeps
+<code>max_active</code> and <code>dispatch_rate</code> accounting exact.<a href="#section-7-9" class="pilcrow">¶</a></p>
 <div id="template-member">
 <section id="section-7.1">
         <h3 id="name-the-template-lineage-member">
@@ -1956,14 +2025,36 @@ predicate, the exfiltration leg
           <p id="section-8-2.3.1">cross-domain authority.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">This is the prohibited set the progressive profile holds back from
-policy adjudication (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>),
-applied here to dispatch. To make the rule testable, a deployment <span class="bcp14">MUST</span>
-publish in the Mission Deployment Profile a mapping from its action
-identifiers to the runtime profile's action classes
+<p id="section-8-3">Progressive holds back this same set from its own policy adjudication
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), applied here to
+dispatch. To make the rule testable, a deployment <span class="bcp14">MUST</span> publish in the
+Mission Deployment Profile a mapping from its action identifiers to
+the runtime profile's action classes
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or an equivalent declared
 classification.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">The deployment's configured dispatch-prohibited action set <span class="bcp14">MUST</span> cover
+<p id="section-8-4">The issuance profile's fourth high-risk class, a consumption bound
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), is not on this list: it is
+the containment mechanism a dispatched instance draws down under, not
+a hazard dispatch amplifies. The template's <code>approval_basis</code> already
+carries the trace the issuance profile's approval-authentication floor
+requires for that class, through <code>consent_principal</code> and
+<code>approved_at</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>); a deployment recording Consent Evidence
+renders the bound at the same surface under the metering profile's
+consent-integrity rule (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">Where a deployment adopts Approval Governance
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) and records a
+Governance Record for a dispatched instance, the template's
+<code>approval_basis</code> satisfies that profile's accountable-approver rule
+directly, through the same <code>consent_principal</code>, <code>root_commitment</code>,
+and <code>approved_at</code> this document already requires: no assertion is
+fabricated in the name of the Dispatcher or the Dispatch Policy to
+stand in for a fresh human decision that did not occur. Approval
+Governance's own high-risk-class default still binds that record: a
+dispatched instance carrying a consumption bound activates only where
+a committed, class-named exception admits it; absent the exception,
+the Mission fails to activate under that profile's atomic-commitment
+rule.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">The deployment's configured dispatch-prohibited action set <span class="bcp14">MUST</span> cover
 every action the published mapping classifies as irreversible,
 external-commitment, or privileged-administration, as satisfying the
 runtime profile's external-communication predicate
@@ -1971,14 +2062,14 @@ runtime profile's external-communication predicate
 configured set narrower than the mapping is nonconformant: it lets a
 Dispatch confer a class the deployment's own mapping already
 identifies as prohibited, which is exactly the outcome this section
-forbids.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">A Dispatch that would grant a prohibited class is refused with
+forbids.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">A Dispatch that would grant a prohibited class is refused with
 <code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 9</a>). Unlike the
 progressive profile, which falls back to a fresh human approval in
 band, a Dispatch has no interactive surface to escalate on: the human
 path is an ordinary Mission created through a fresh approval
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), requested out of band. The
-Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class.<a href="#section-8-5" class="pilcrow">¶</a></p>
+Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class.<a href="#section-8-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-reasons">
@@ -2208,8 +2299,11 @@ and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
 (<a href="#denial-reasons" class="auto internal xref">Section 9</a>);<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.5">
-          <p id="section-14-2.5.1">make every Dispatch idempotent per dispatch event identifier
-(<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.5.1">make every Dispatch idempotent per <code>dispatch_event_id</code>, adopting the
+expansion profile's creation idempotency apparatus by reference
+under <code>op: dispatch</code>, with the <code>(client, dispatch_event_id)</code>
+reservation, fingerprint, revalidation, and delivery-as-recovery
+bindings of <a href="#dispatch" class="auto internal xref">Section 7</a>;<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.6">
           <p id="section-14-2.6.1">answer a Dispatch in one authenticated back-channel round trip, using
@@ -2269,33 +2363,58 @@ it <span class="bcp14">MUST NOT</span> use to grant authority (<a href="#templat
 <code>urn:ietf:params:oauth</code> arc by implementations of this document in
 advance of registration completing; this document is the specification
 that names and defines it.<a href="#section-15-3" class="pilcrow">¶</a></p>
-<p id="section-15-4">Beyond that registration, this document requests no further IANA
-action. Following the restraint of the sibling profiles:<a href="#section-15-4" class="pilcrow">¶</a></p>
+<p id="section-15-4">This document also registers one parameter in the "OAuth Parameters"
+registry:<a href="#section-15-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15-5.1">
-          <p id="section-15-5.1.1"><code>template_hash</code> is a Mission integrity anchor whose <code>typ</code>,
-<code>mission-template</code>, follows the issuance profile's collision-resistant
-<code>typ</code> convention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and requires
-no registration;<a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.1.1">Name: <code>dispatch_event_id</code><a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.2">
-          <p id="section-15-5.2.1">the <code>template</code> member of the <code>mission</code> claim (<a href="#template-member" class="auto internal xref">Section 7.1</a>) is
-carried inside the already-open <code>mission</code> claim and needs no separate
-registration;<a href="#section-15-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.2.1">Parameter Usage Location: token request<a href="#section-15-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.3">
-          <p id="section-15-5.3.1"><code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code> are
+          <p id="section-15-5.3.1">Change Controller: IETF<a href="#section-15-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.4">
+          <p id="section-15-5.4.1">Reference: this document, <a href="#grant-type" class="auto internal xref">Section 7.2</a>, <a href="#dispatch" class="auto internal xref">Section 7</a><a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-15-6"><code>dispatch_event_id</code> is a distinct name from the expansion profile's
+<code>creation_request_id</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>),
+even though it plays the identifier-and-reservation-key role that
+parameter's registration defines: it is already load-bearing as the
+<code>template</code> lineage member's field and in <code>approval_basis.activation</code>
+(<a href="#dispatch" class="auto internal xref">Section 7</a>), and in the Dispatch grant-type parameter list
+(<a href="#grant-type" class="auto internal xref">Section 7.2</a>), so this document keeps the name rather than
+reusing the expansion profile's own registered parameter under
+<code>op: dispatch</code>.<a href="#section-15-6" class="pilcrow">¶</a></p>
+<p id="section-15-7">Beyond these two registrations, this document requests no further
+IANA action. Following the restraint of the sibling profiles:<a href="#section-15-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-8.1">
+          <p id="section-15-8.1.1"><code>template_hash</code> is a Mission integrity anchor whose <code>typ</code>,
+<code>mission-template</code>, follows the issuance profile's collision-resistant
+<code>typ</code> convention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and requires
+no registration;<a href="#section-15-8.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-8.2">
+          <p id="section-15-8.2.1">the <code>template</code> member of the <code>mission</code> claim (<a href="#template-member" class="auto internal xref">Section 7.1</a>) is
+carried inside the already-open <code>mission</code> claim and needs no separate
+registration;<a href="#section-15-8.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-8.3">
+          <p id="section-15-8.3.1"><code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code> are
 requested as registrations in the expansion profile's
 Mission Denial Reasons registry
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), each with its
 semantics as defined in this document and Reference this document;
-and<a href="#section-15-5.3.1" class="pilcrow">¶</a></p>
+and<a href="#section-15-8.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-15-5.4">
-          <p id="section-15-5.4.1">the Mission Template's type identifier,
+        <li class="normal" id="section-15-8.4">
+          <p id="section-15-8.4.1">the Mission Template's type identifier,
 <code>application/mission-template+json</code>, is used by local agreement
 pending registration; an audit or transparency profile registers the
-object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
+object by that value.<a href="#section-15-8.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2323,6 +2442,10 @@ object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -2348,9 +2471,17 @@ object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 <a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
@@ -2363,10 +2494,6 @@ object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
       <dd>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          23 August 2026
-Expires: 24 February 2027
+Intended status: Standards Track                          24 August 2026
+Expires: 25 February 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -560,7 +560,7 @@ Table of Contents
       channel approval event, the issuance profile's own approval
       ceremony via a Pushed Authorization Request [RFC9126]
       ([I-D.draft-mcguinness-oauth-mission]), after which the child
-      grant reference is returned.  This interactive path is retained.
+      grant reference is returned.
 
    The child grant reference conveyed at completion is the child-bound
    JWT authorization grant of Section 6.1, never a child token.
@@ -1098,7 +1098,13 @@ Table of Contents
    real reachable surface rather than one Mission's local counter alone.
    Bounding the aggregate across a subtree is the role of consumption
    metering, not this profile's attenuation rules
-   ([I-D.draft-mcguinness-mission-metering]).
+   ([I-D.draft-mcguinness-mission-metering]).  This warning is about the
+   child-subtree axis specifically; the continuation profile separately
+   counts derivations within a single Mission's own continued grants,
+   where a delegated refresh-token family's successive refreshes are one
+   derivation, not one per refresh
+   ([I-D.draft-mcguinness-oauth-mission-continuation],
+   Section "Authorization Continuity and the Mission").
 
 9.  Fan-Out Controls
 
@@ -1931,6 +1937,12 @@ Table of Contents
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-containment.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-continuation]
+              McGuinness, K., "Mission Continuation: Authorization
+              Continuity for Mission-Bound Authorization", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-continuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-issuance-grant]
               McGuinness, K., "Mission Issuance Grant for OAuth 2.0",

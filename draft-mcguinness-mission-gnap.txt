@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             23 August 2026
-Expires: 24 February 2027
+Intended status: Experimental                             24 August 2026
+Expires: 25 February 2027
 
 
                   Mission-Bound Authorization for GNAP
@@ -65,7 +65,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -769,9 +769,10 @@ Table of Contents
    An access token issued under a Mission names it through the mission
    object: the family members id, issuer, and authority_hash as the
    issuance profile defines them, and it SHOULD carry the record's
-   expires_at, a bounding commitment with no liveness that the token's
-   own expiry already sits inside (Section 10.1).  The object is
-   delivered on three carriage surfaces:
+   expires_at as the issuance profile defines it
+   ([I-D.draft-mcguinness-oauth-mission]), a bounding commitment with no
+   liveness that the token's own expiry already sits inside
+   (Section 10.1).  The object is delivered on three carriage surfaces:
 
    *  *Token-carried*: a deployment issuing structured tokens (for
       example the jwt-signed format of [RFC9767]) carries the issuance

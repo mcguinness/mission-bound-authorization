@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            23 August 2026
-Expires: 24 February 2027
+Intended status: Informational                            24 August 2026
+Expires: 25 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -906,7 +906,8 @@ Table of Contents
    *Revocation is possession-independent*:  A Mission ends by a state
       change at its issuer, not by finding and destroying credentials;
       outstanding credentials meet the issuance gate, the runtime re-
-      check, or their own expiry, whichever comes first (Section 10.5).
+      check, or their own expiry, whichever comes first (Section 10.5;
+      [I-D.draft-mcguinness-oauth-mission-status]).
 
    *Attribution is carried, never inferred*:  Each role in the actor
       chain travels in its own construct, and the evidence layer records

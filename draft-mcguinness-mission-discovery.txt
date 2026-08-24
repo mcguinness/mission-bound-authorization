@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             23 August 2026
-Expires: 24 February 2027
+Intended status: Experimental                             24 August 2026
+Expires: 25 February 2027
 
 
                       Mission Open-World Discovery
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 February 2027.
+   This Internet-Draft will expire on 25 February 2027.
 
 Copyright Notice
 
@@ -88,13 +88,17 @@ Table of Contents
    8.  The Lying Resource
    9.  Injection-Driven Discovery
    10. Discovery Evidence
+     10.1.  Canonical Bytes
    11. Conformance
    12. Security Considerations
    13. Privacy Considerations
    14. IANA Considerations
+     14.1.  Media Type Registration
+       14.1.1.  Discovery Evidence Media Type
    15. References
      15.1.  Normative References
      15.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -592,18 +596,20 @@ Table of Contents
 
    adjudicated_at:  REQUIRED.  An RFC 3339 [RFC3339] date-time.
 
-   The adjudicator signs the object under the suite's evidence
-   conventions: a JWS whose protected header carries alg, a kid
-   resolvable in the Mission Issuer's published key material, and a typ
-   of mission-discovery-evidence+json (a local-use identifier pending
-   registration; the value omits the application/ prefix, as JWS typ
-   values do).  The signature is what identifies the adjudicator, so the
-   object carries no member for it.  The payload's canonical bytes are
-   its JCS canonicalization [RFC8785].  It is registrable in a
-   transparency log on the Mission's feed
-   ([I-D.draft-mcguinness-mission-audit]), and its members make an
-   encounter reproducible: what was met, what it claimed, what was
-   sought, what was drawn against, and under what taint.
+   The Discovery Adjudicator, always the Mission Issuer (Section 3), is
+   the authoritative producer of Discovery Evidence and signs the object
+   under the suite's evidence conventions: a JWS whose protected header
+   carries alg, a kid resolvable in the Mission Issuer's published key
+   material, and a typ of mission-discovery-evidence+json, naming the
+   application/mission-discovery-evidence+json media type (Section 10.1)
+   with the application/ prefix omitted, as JWS typ values do [RFC7515].
+   The signature is what identifies the adjudicator, so the object
+   carries no member for it.  The payload's canonical bytes are its JCS
+   canonicalization [RFC8785].  It is registrable in a transparency log
+   on the Mission's feed ([I-D.draft-mcguinness-mission-audit]), and its
+   members make an encounter reproducible: what was met, what it
+   claimed, what was sought, what was drawn against, and under what
+   taint.
 
    An illustrative bound encounter (this Mission is not the one from the
    OAuth binding's walkthrough):
@@ -638,6 +644,12 @@ Table of Contents
    protected event.  Neither field alone determines the event: this
    document defines the outcome and the evidence it produces, not the
    policy that consumes them into a containment trigger.
+
+10.1.  Canonical Bytes
+
+   A Discovery Evidence object's canonical bytes are its JCS [RFC8785]
+   canonicalization, and its type identifier is application/mission-
+   discovery-evidence+json, registered by this document (Section 14).
 
 11.  Conformance
 
@@ -721,8 +733,54 @@ Table of Contents
 
 14.  IANA Considerations
 
-   This document makes no IANA request.  The evidence type identifier of
-   Section 10 is local-use pending registration.
+   This document registers one media type per [RFC6838].
+
+14.1.  Media Type Registration
+
+14.1.1.  Discovery Evidence Media Type
+
+   *  Type name: application
+
+   *  Subtype name: mission-discovery-evidence+json
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; JSON encoded in UTF-8
+
+   *  Security considerations: see Section 12
+
+   *  Interoperability considerations: see this document
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: Mission open-world
+      discovery deployments
+
+   *  Fragment identifier considerations: same as for application/json
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): .json
+
+      -  Macintosh file type code(s): TEXT
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
 
 15.  References
 
@@ -762,6 +820,15 @@ Table of Contents
    [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
@@ -843,6 +910,17 @@ Table of Contents
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Discovery Evidence gained a self-hosted Canonical Bytes subsection
+      and a full IANA media-type registration for application/mission-
+      discovery-evidence+json, with the Mission Issuer stated as its
+      explicit authoritative producer.  The operational typ now names
+      that registered media type, prefix omitted, dropping the prior
+      pending-registration language (#662).
 
 Acknowledgments
 
