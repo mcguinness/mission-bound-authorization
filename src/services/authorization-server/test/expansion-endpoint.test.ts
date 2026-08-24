@@ -235,7 +235,7 @@ async function expandViaExchange(
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     mission_intent: intentJson(goal, actions),
     authorization_details: JSON.stringify(authority(actions)),
-    // @spec expansion#creation-request-id — REQUIRED on every initiation.
+    // @spec expansion#creation-idempotency — REQUIRED on every initiation.
     creation_request_id: creationRequestId ?? crypto.randomUUID(),
   });
 }
@@ -276,7 +276,7 @@ afterAll(() => {
   asServer?.close();
 });
 
-describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand)", () => {
+describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#verification-order)", () => {
   it("a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
     const before = as.kernel.get(pred.missionId);

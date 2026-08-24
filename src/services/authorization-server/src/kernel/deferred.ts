@@ -118,7 +118,7 @@ export class DeferralStore {
         "requested authority exceeds the active Mission; use Expansion to widen",
       );
     }
-    // @spec expansion#creation-request-id (deferred mode, shared rule) — the
+    // @spec expansion#creation-idempotency (deferred mode, shared rule) — the
     // dedup key is CLIENT-SCOPED: the same semantic request from two different
     // clients MUST open two deferrals (per-client scoping prevents cross-client
     // interference and replay). The previous {m, r} key omitted the client.
@@ -298,7 +298,7 @@ export class ExpansionDeferralError extends Error {
  */
 export class ExpansionDeferralStore {
   readonly db: Database;
-  /** @spec expansion#creation-request-id — completion marks the reservation
+  /** @spec expansion#creation-idempotency — completion marks the reservation
    *  completed ATOMICALLY with successor creation. Instances over the same
    *  kernel share the table, so this internal instance needs no wiring. */
   private readonly creationIdempotency: CreationIdempotencyStore;
@@ -330,7 +330,7 @@ export class ExpansionDeferralStore {
     clientId: string;
     jkt: string;
     /**
-     * @spec expansion#creation-request-id — the REQUIRED creation identifier
+     * @spec expansion#creation-idempotency — the REQUIRED creation identifier
      * (the wire handler always passes it; optional here so kernel-level unit
      * use stays valid). Part of the dedup key: distinct identifiers are
      * distinct creation operations and open distinct deferrals.
@@ -535,7 +535,7 @@ export class ExpansionDeferralStore {
     };
     const intent = recorded.i;
     const approver = JSON.parse(row.approver_json as string) as { iss: string; sub: string };
-    // @spec expansion#creation-request-id — the successor INSERT and the
+    // @spec expansion#creation-idempotency — the successor INSERT and the
     // idempotency-reservation completion commit in ONE kernel-db transaction
     // (createExpansion's insertRecord nests as a savepoint), so a lost response
     // after this commit is recovered by an initiation retry finding the

@@ -28,7 +28,7 @@ export interface MintTransactionTokenInput {
   jti: string;
   /** Epoch seconds; the caller computes the min() bound. */
   expS: number;
-  /** The verified effective subject: the Mission's subject or origin principal. */
+  /** The verified effective subject, destination-local (never the origin principal). */
   subject: string;
   /** The client authenticated at the transaction endpoint. */
   clientId: string;

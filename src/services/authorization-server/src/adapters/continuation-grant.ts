@@ -607,7 +607,7 @@ export async function handleAsyncDelegationExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order (adopted) — the lookup runs AFTER
+  // @spec expansion#creation-revalidation (adopted) — the lookup runs AFTER
   // client authentication and possession (the acting-key re-binding) but BEFORE
   // the Mission lifecycle gate and the derivation gate below: the retry worth
   // recovering is exactly the one whose first attempt consumed the single
@@ -1267,7 +1267,7 @@ async function mintMissionAccessToken(
  * invalid_request), mapped onto the exchange's error surface.
  */
 /**
- * @spec expansion#creation-request-id (child-delegation cites it) — read the
+ * @spec expansion#creation-idempotency (child-delegation cites it) — read the
  * REQUIRED `creation_request_id`: the client-generated identifier of ONE
  * Mission-creation operation across all completion modes. Missing or malformed
  * -> invalid_request. Syntax: bounded ASCII (max 255 octets); opaque to the AS
@@ -1323,7 +1323,7 @@ export async function handleChildCreationExchange(
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
 
-  // @spec child-delegation#creation-request-id — REQUIRED on every child
+  // @spec child-delegation#creation-idempotency — REQUIRED on every child
   // creation, in every completion mode (missing -> invalid_request).
   const creationRequestId = readCreationRequestId(params);
 
@@ -1408,7 +1408,7 @@ export async function handleChildCreationExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // @spec expansion#creation-revalidation — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the parent
   // lifecycle gate (inside createChildMission): the recoverable retry is exactly
   // the one whose source Mission changed state when the first attempt succeeded.
@@ -1512,7 +1512,7 @@ export async function handleChildCreationExchange(
 }
 
 /**
- * @spec child-delegation#creation-request-id — recover a repeated child
+ * @spec child-delegation#creation-idempotency — recover a repeated child
  * creation. A matching identifier NEVER bypasses verification: the fingerprint
  * MUST match (the fingerprint binds the resolved source Mission, the acting
  * actor, and every semantic input, so any divergence refuses), and the
@@ -1639,7 +1639,7 @@ export async function handleExpansionExchange(
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
 
-  // @spec expansion#creation-request-id — REQUIRED on every expansion
+  // @spec expansion#creation-idempotency — REQUIRED on every expansion
   // initiation, in every completion mode: initiation is mode-agnostic (the
   // client cannot know in advance whether the request defers or goes
   // interactive; missing -> invalid_request).
@@ -1711,7 +1711,7 @@ export async function handleExpansionExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // @spec expansion#creation-revalidation — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the
   // predecessor lifecycle gate below: the recoverable retry is exactly the one
   // whose predecessor moved to `superseded` when the first attempt succeeded;
@@ -1748,7 +1748,7 @@ export async function handleExpansionExchange(
     return;
   }
 
-  // Step 5: widening check. @spec expansion#nothing-to-expand — a NON-WIDENING
+  // Step 5: widening check. @spec expansion#verification-order — a NON-WIDENING
   // request (the derived requested authority is a subset of the predecessor's
   // own effective Authority Set) is REFUSED: there is nothing to expand, and
   // ordinary token derivation already serves it (an expansion response must
@@ -1789,7 +1789,7 @@ export async function handleExpansionExchange(
     }
     throw e;
   }
-  // @spec expansion#creation-request-id — reserve the operation at deferred
+  // @spec expansion#creation-idempotency — reserve the operation at deferred
   // INITIATION (state `reserved`; the deferral handle is the recorded delivery
   // continuation). A repetition of the same (client, creation_request_id)
   // returns the SAME deferral, never a second ceremony. A concurrent duplicate
@@ -1911,7 +1911,7 @@ async function pollDeferredExpansion(
     jkt,
   );
   if (minted) {
-    // @spec expansion#creation-request-id — attach the delivery artifact to the
+    // @spec expansion#creation-idempotency — attach the delivery artifact to the
     // completed operation (redeem() already marked it completed atomically with
     // successor creation): an initiation retry returns this token while it is
     // valid, and re-mints for the SAME successor once it expires.
@@ -1930,7 +1930,7 @@ async function pollDeferredExpansion(
 }
 
 /**
- * @spec expansion#creation-request-id — recover a repeated expansion
+ * @spec expansion#creation-idempotency — recover a repeated expansion
  * initiation. Same contract as {@link recoverChildCreation}: fingerprint match
  * + proof of the RECORDED confirmation key are REQUIRED (a matching identifier
  * never bypasses possession); recovery is DELIVERY, never re-creation.

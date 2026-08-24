@@ -415,7 +415,7 @@ export interface BuiltAs {
    */
   expansionDeferrals: ExpansionDeferralStore;
   /**
-   * @spec expansion#creation-request-id — the creation-idempotency store
+   * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
   creationIdempotency: CreationIdempotencyStore;
@@ -722,7 +722,7 @@ export async function buildAuthorizationServer(opts: {
   // no-op on the D27 :memory: baseline). A recurring dispatcher with
   // multi-process claiming is issue #641.
   kernel.drainExpansionOutbox();
-  // @spec expansion#creation-request-id — the creation-idempotency store over
+  // @spec expansion#creation-idempotency — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).
   const creationIdempotency = new CreationIdempotencyStore(kernel);
