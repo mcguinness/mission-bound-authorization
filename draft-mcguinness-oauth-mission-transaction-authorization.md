@@ -223,7 +223,9 @@ Mission Runtime's action-bound approval
 binding, a maximum age, a fresh decision, and atomic consumption. What
 neither defines is the portable wire workflow that carries an
 approval across a trust boundary to a resource that must enforce
-locally. This document supplies that workflow as a profile of the
+locally.
+
+This document supplies that workflow as a profile of the
 OAuth transaction authorization challenge
 {{I-D.draft-rosomakho-oauth-txn-challenge}}. The profile keeps that
 protocol's challenge type, request and response parameters,
@@ -266,6 +268,7 @@ evolves. It reuses, without restating, the upstream challenge type,
 parameters, endpoint, and polling states, and the Mission's own
 `mission` claim, `requires_action_approval`, `parameter_digest`, and
 `act` delegation chain exactly as those documents define them.
+
 Action-bound approval within a single trust domain, which needs only
 the runtime profile, is the stable path; deploy this profile for
 evaluation rather than as a stable interface. This document is
@@ -537,7 +540,9 @@ A TAS MAY restrict which `subject_token` issuers and subject
 namespaces it accepts. Whether an accepted issuer shares this
 Authorization Server's subject namespace is configured trust policy,
 never inferred from request data. For a same-namespace issuer the
-verified `sub` is the destination-local subject, unchanged. For every
+verified `sub` is the destination-local subject, unchanged.
+
+For every
 accepted foreign namespace the TAS MUST apply an injective,
 issuer-qualified mapping from the pair (`iss`, `sub`) into its own
 namespace and use the mapped value. A missing, ambiguous, stale, or
@@ -724,12 +729,18 @@ the irreversible effect, or atomically with it where the operation
 store supports that transaction. If the consumption store is
 unavailable, the resource MUST fail closed for this profile.
 
-`txn` identifies the resource transaction and is the atomic
-consumption key; challenge `jti` identifies one admission into a
-workflow; `transaction_authorization_id` (or the ARAP task handle
-backing it) identifies one pending workflow; token `jti` identifies
-one issuance from that workflow, not the one execution; and the
-Operation Profile's idempotency key identifies one effect. At most
+Five identifiers play distinct roles along this chain:
+
+- `txn` identifies the resource transaction and is the atomic
+  consumption key;
+- challenge `jti` identifies one admission into a workflow;
+- `transaction_authorization_id` (or the ARAP task handle backing it)
+  identifies one pending workflow;
+- token `jti` identifies one issuance from that workflow, not the one
+  execution; and
+- the Operation Profile's idempotency key identifies one effect.
+
+At most
 one authorization result exists per transaction instance, across
 every workflow that references it: repeated polling after a decision
 returns the same token or result stably, and the mint gate is
@@ -740,7 +751,9 @@ return that result and MUST NOT mint a second token under a
 different `jti`. A second workflow admitted for the same `txn`, a
 reissued challenge for one uncompleted operation, therefore
 converges on the first result or refuses; it never yields a second
-live token. An ambiguous retry looks up the
+live token.
+
+An ambiguous retry looks up the
 prior result along this chain, from `txn` and token `jti` to the
 workflow to the idempotency key, and the resource returns
 `duplicate_suppressed` as the runtime profile defines it
@@ -1009,7 +1022,9 @@ flow itself requires, in three layers. {{transaction-invariants}}
 states the invariants that make the flow safe on any substrate.
 {{carrier-requirements}} states the slots a protocol binding MUST
 provide to carry them. {{oauth-discharge}} names this document's own
-discharge of each slot. A binding that cannot provide a slot does not
+discharge of each slot.
+
+A binding that cannot provide a slot does not
 host this profile: absence is fail-closed, and there is no partial
 hosting.
 

@@ -422,7 +422,9 @@ before treating the record as that type ({{registration-policy}}).
 
 A registrable evidence type is named at up to three layers, and the
 layers are distinct identifiers with distinct purposes, not spellings
-of one string. The media type, or local-use type identifier,
+of one string.
+
+The media type, or local-use type identifier,
 identifies the retained representation: the payload schema for a
 `+json` object, the compact artifact itself for a `+jwt`, `+sd-jwt`,
 or SET form. The protected `typ` of an operational signature
@@ -434,7 +436,9 @@ Evidence's `mission-consent-evidence+jws` names the JWS over the
 `payload-preimage-content-type` identifies the media type of the
 preimage committed at the transparency boundary; the exact bytes are
 what the canonical-bytes column fixes ({{evidence-types}},
-{{hash-commitment}}). The evidence-type table fixes each type's
+{{hash-commitment}}).
+
+The evidence-type table fixes each type's
 operational `typ` explicitly; the identifiers are not derivable from
 one another in every case, and a consumer checks the identifier of
 the layer it is verifying. A new type that fixes an operational
@@ -456,12 +460,16 @@ verification independent of the producer is neither of these but the
 Transparency Service's Receipt and inclusion proof, under a service
 key trusted and retained separately: they add registration and
 inclusion at a committed time and remove reliance on the producer's
-live records ({{receipts}}). Operator independence, or the
+live records ({{receipts}}).
+
+Operator independence, or the
 second-service control of {{limits}}, is what carries the
 cross-domain claim; verification still requires the producer and
 service trust anchors, the Receipt, and the retrievable evidence, and
 proves neither that a record is true nor that a feed is complete
-({{verification-failures}}). The anti-cross-use rule above depends on
+({{verification-failures}}).
+
+The anti-cross-use rule above depends on
 keeping the identifiers' roles and checks distinct, not their string
 values: the runtime evidence rows deliberately carry the same media
 type string as operational `typ` and as
@@ -479,12 +487,16 @@ object is unsigned), and the producer authoritative for it: an
 evidence-type registration. This document is that registration,
 normatively, only for the four evidence types it itself defines
 ({{iana}}); a producer of one of those types MUST commit to the
-canonical bytes fixed there. For every other row, the cited profile
+canonical bytes fixed there.
+
+For every other row, the cited profile
 is that registration: committing to its canonical bytes is that
 profile's own conformance duty, imposed there, and this document
 neither restates it nor requires consulting that profile's text to
 satisfy it. This table is an informative catalog of every row's
-properties, consulted only where the citing profile is adopted. A
+properties, consulted only where the citing profile is adopted.
+
+A
 relying party MUST verify, from the producer this table records for
 a record's type, that the record's `iss` is that producer
 ({{registration-policy}}) before treating the record as part of the
@@ -1008,7 +1020,9 @@ deployment-published key sets the runtime profile and its runtime
 evidence companion require ({{I-D.draft-mcguinness-mission-runtime}},
 {{I-D.draft-mcguinness-mission-runtime-evidence}}); the harness
 profile requires the same publication of a harness or egress gate that
-registers its evidence ({{I-D.draft-mcguinness-mission-harness}}). A Work Product Binding projects onto the producer rule rather than
+registers its evidence ({{I-D.draft-mcguinness-mission-harness}}).
+
+A Work Product Binding projects onto the producer rule rather than
 meeting it literally
 ({{I-D.draft-mcguinness-oauth-mission-work-products}}). Its evidence
 producer is the `mediator` principal that signed the inner binding;
@@ -1623,6 +1637,12 @@ rather than registering a new identifier.
   Discovery Evidence gained a self-hosted canonical-bytes definition
   and IANA media-type registration in its own profile, closing the
   one gap this document's citation had left undefined (#662).
+- Editorial density pass: split several overlong paragraphs in the
+  Mission Evidence Base (the evidence-type naming-layers discussion)
+  and in Registration Policy and Authoritative Producers, for
+  scannability. No wording changed and no BCP-14 keyword sentence
+  moved outside its section; the Evidence Types table and the
+  Verification Failures integrity-vs-audit split were left untouched.
 
 # Acknowledgments
 {:numbered="false"}

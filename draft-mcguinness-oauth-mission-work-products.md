@@ -367,8 +367,7 @@ Execution-time evidence answers "what was done": it is action-scoped
 and recorded against the Mission at each continued hop. Work provenance
 answers "under what approved work did this artifact come into
 existence": it is artifact-scoped and attributed to the Producing
-Mission. The two
-sit beside each other. Evidence ties an action back to the Mission that
+Mission. Evidence ties an action back to the Mission that
 took it; provenance ties an artifact back to the Mission that produced
 it. Neither answers what a reader of the artifact may do; that remains
 the Receiving Mission's Authority Set to decide ({{handoff}}).
@@ -626,7 +625,9 @@ does not prove that the claimed production happened. A compromised
 `harness`-role mediator ({{binding-object}}) can attach and sign a
 Work Product Provenance object attributing a fabricated or malicious
 artifact to a legitimate active Mission, and the binding verifies
-exactly as a faithful one would. Detection is conditional, not
+exactly as a faithful one would.
+
+Detection is conditional, not
 assured. Where the binding is registered as Mission evidence
 ({{I-D.draft-mcguinness-mission-audit}}) and a deployment separately
 retains independently produced Decision and Execution Evidence under
@@ -638,7 +639,9 @@ general guarantee: Work Product Binding registration is optional
 universal, and a work product's creation need not correspond
 one-to-one to a consequential action with evidence of its own.
 Without an independent witness to production, a compromised mediator
-can produce a forgery no correlation rule catches. Transparency
+can produce a forgery no correlation rule catches.
+
+Transparency
 registration makes a false claim permanent and attributable once
 made; it does not make the claim detectable, and it does not make a
 dishonest mediator honest. Routing the mediator role through the
@@ -661,13 +664,17 @@ coordination threat
 ({{I-D.draft-mcguinness-mission-security-model}}).
 
 Bounding that aggregate is anticipated defense-in-depth, deferred to
-later companions and not specified here: an issuer-assigned or
-deployment-assigned classification of a shared-state effect; a
-communications and audience envelope for what an agent may write and who
-may read it; lineage-keyed aggregate bounds across a provenance chain;
-and quarantine of a work product with blocking of its consumers when the
-Producing Mission is compromised. This document specifies none of them
-now.
+later companions and not specified here:
+
+- an issuer-assigned or deployment-assigned classification of a
+  shared-state effect;
+- a communications and audience envelope for what an agent may write
+  and who may read it;
+- lineage-keyed aggregate bounds across a provenance chain; and
+- quarantine of a work product with blocking of its consumers when the
+  Producing Mission is compromised.
+
+This document specifies none of them now.
 
 # Privacy Considerations {#privacy-considerations}
 

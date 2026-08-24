@@ -171,9 +171,10 @@ issuance profile and an identity-continuity transport, not a change
 to either. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never continues a Mission
 across a transport is fully conformant to that profile and is
-unaffected by this document. It defines no new token type, grant
-type, or endpoint of its own. No Standards-Track document depends on
-this one.
+unaffected by this document.
+
+It defines no new token type, grant type, or endpoint of its own. No
+Standards-Track document depends on this one.
 
 A Mission Issuer claims conformance to this document only when it
 continues a Mission across an Identity Continuation, async
@@ -291,7 +292,9 @@ ceiling. A continuation that issues a distinct new grant (for example, an
 Identity Continuation hop that mints a new audience-scoped credential)
 counts as one derivation; the successive refreshes of a single async
 delegation family ({{transport-async}}) are one delegation and do not
-each count again. This counts derivations within one Mission; it does
+each count again.
+
+This counts derivations within one Mission; it does
 not bound how many derivations a subtree of Child Missions performs in
 aggregate, which the child delegation profile's own local, per-Mission
 `max_derivations` warning addresses
@@ -370,7 +373,9 @@ Mission's Authority Set; the family's absolute maximum delegation lifetime
 MUST equal the Mission's `expires_at`; and the family MUST be invalidated
 when the Mission reaches a terminal state, reusing that draft's
 family-revocation and reuse-detection rules with the Mission lifecycle as
-the trigger. This is the "scheduled continuation roots in durable
+the trigger.
+
+This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
 against `max_derivations` ({{authorization-continuity}}).
@@ -473,7 +478,9 @@ native and needs no new transport. The `(approver, s256)` mission
 reference is a handle that grants nothing, and the Person Server's
 state-gated, one-hour auth-token issuance and federation is the
 continuation point, with revocation latency bounded by the auth-token
-lifetime. The cross-workload transports of this profile have no AAuth
+lifetime.
+
+The cross-workload transports of this profile have no AAuth
 substrate (AAuth has no token exchange, no `act` chain, and no ID-JAG),
 and AAuth declines cross-hop authority carry-forward by design: a chained
 hop is a fresh decision at its own decision point. AAuth-native
