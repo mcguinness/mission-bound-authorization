@@ -140,17 +140,19 @@ Table of Contents
    center of the negotiation.  How the authorization server assesses a
    request, what the resource owner approved, in what bounds, with what
    durable record, under what lifecycle: all of it is unspecified policy
-   behind the grant endpoint.  The Mission model of
-   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") is a
-   specification of exactly that interior: a durable Mission record
-   created by an explicit approval event, integrity anchors committing
-   the approved task and its derived authority, a lifecycle whose only-
-   active rule gates issuance, and evidence surfaces built on the
-   record.  The issuance profile's own Relationship to GNAP names this
-   document's premise: the Mission model is the OAuth-native
-   instantiation of a binding-neutral contextual-governance kernel, and
-   a deployment that starts from GNAP admits a candidate binding onto
-   that substrate.  This document is that binding.
+   behind the grant endpoint.
+
+   The Mission model of [I-D.draft-mcguinness-oauth-mission] (the
+   "issuance profile") is a specification of exactly that interior: a
+   durable Mission record created by an explicit approval event,
+   integrity anchors committing the approved task and its derived
+   authority, a lifecycle whose only-active rule gates issuance, and
+   evidence surfaces built on the record.  The issuance profile's own
+   Relationship to GNAP names this document's premise: the Mission model
+   is the OAuth-native instantiation of a binding-neutral contextual-
+   governance kernel, and a deployment that starts from GNAP admits a
+   candidate binding onto that substrate.  This document is that
+   binding.
 
    Four mechanics the OAuth binding assembles from parts are native
    here.  The grant request is delivered by direct post by construction,
@@ -159,10 +161,11 @@ Table of Contents
    native access rights, the intake role Rich Authorization Requests
    play (Section 7 defines their projection into the family's Authority
    Set), and every request is signed with the client instance's key, so
-   the proposal is cryptographically attributable.  Asynchronous
-   approval is the _pending_ grant state with continuation under the
-   server's declared wait interval, the surface the OAuth binding
-   reaches through the Mission Deferred Approval companion
+   the proposal is cryptographically attributable.
+
+   Asynchronous approval is the _pending_ grant state with continuation
+   under the server's declared wait interval, the surface the OAuth
+   binding reaches through the Mission Deferred Approval companion
    ([I-D.draft-mcguinness-oauth-mission-approval]) over an unratified
    substrate.  And the resource server's contract with the Mission
    Issuer is standardized by [RFC9767] rather than assembled per
@@ -208,13 +211,14 @@ Table of Contents
    GNAP's grant request is mutable by design: [RFC9635] lets a client
    modify a grant while it is _approved_ or _pending_. The kernel
    requires the Approved Context to be immutable
-   ([I-D.draft-mcguinness-mission-substrate]).  This binding resolves
-   the tension with one split: a modification within the approved
-   Authority Set is a drawdown the authorization server may adjudicate
-   by policy, and a modification beyond it is an expansion that MUST
-   return to the Approver and, on approval, yields a successor Mission
-   (Section 11.3).  The grant is the negotiation surface; the Mission
-   record, never the grant, is the approved value.
+   ([I-D.draft-mcguinness-mission-substrate]).
+
+   This binding resolves the tension with one split: a modification
+   within the approved Authority Set is a drawdown the authorization
+   server may adjudicate by policy, and a modification beyond it is an
+   expansion that MUST return to the Approver and, on approval, yields a
+   successor Mission (Section 11.3).  The grant is the negotiation
+   surface; the Mission record, never the grant, is the approved value.
 
 1.2.  Applicability
 
@@ -392,13 +396,11 @@ Table of Contents
    request's signature attributes the submission to the client
    instance's key; attribution confers no authority.
 
-   The access rights of the grant request's access token requests are
-   this binding's authority proposal, replacing the issuance profile's
-   PAR-only carriage rule.  GNAP rights are not an OAuth
-   authorization_details array: Section 7 defines the normative
-   projection that resolves, normalizes, and aggregates them before the
-   issuance profile's recording and hashing semantics apply (a proposal,
-   never authority; the Intent itself carries no authority members).
+   The grant request's access rights are this binding's authority
+   proposal, replacing the issuance profile's PAR-only carriage rule:
+   Section 7 projects them into the issuance profile's recording and
+   hashing rules, and the proposal itself carries no authority
+   ([I-D.draft-mcguinness-oauth-mission]).
 
    A Mission-Bound GNAP Client Instance MUST carry the Mission Intent on
    the first grant request it makes under a prospective Mission, and the
@@ -577,11 +579,12 @@ Table of Contents
    AS) and client_id the client instance's instance identifier where the
    authorization server registers one, or a stable approval-time
    identifier it derives from the instance's key where none is
-   registered.  That value is the Actor identity; token presenter keys
-   are credential bindings recorded separately (Section 15.4).
-   expires_at is REQUIRED, in RFC 3339 [RFC3339] date-time form; when
-   the proposal's Intent carries none, the authorization server MUST set
-   one by policy.
+   registered.
+
+   That value is the Actor identity; token presenter keys are credential
+   bindings recorded separately (Section 15.4). expires_at is REQUIRED,
+   in RFC 3339 [RFC3339] date-time form; when the proposal's Intent
+   carries none, the authorization server MUST set one by policy.
 
    Like the UMA binding and unlike the AAuth binding, this substrate
    carries no wire-native mission artifact to commit.  The record is
@@ -686,12 +689,13 @@ Table of Contents
    credentials under the Mission (an initial grant response, a
    continuation response, a modifying request's response, or a token
    rotation), regardless of the number of tokens the response carries;
-   an operation that issues none counts zero.  Where the Intent's
-   controls.max_derivations is present, the authorization server MUST
-   refuse the derivation that would exceed it, per the issuance
-   profile's count-and-gate rule.  An access token issued under a
-   Mission MUST NOT expire later than the Mission's expires_at, so no
-   credential outlives the Mission.
+   an operation that issues none counts zero.
+
+   Where the Intent's controls.max_derivations is present, the
+   authorization server MUST refuse the derivation that would exceed it,
+   per the issuance profile's count-and-gate rule.  An access token
+   issued under a Mission MUST NOT expire later than the Mission's
+   expires_at, so no credential outlives the Mission.
 
    Where the deployment adopts Mission Containment
    ([I-D.draft-mcguinness-oauth-mission-containment]), the authorization
@@ -723,11 +727,12 @@ Table of Contents
    with every other member omitted.  Where no minimum was named, an
    otherwise valid token reports active: true with the filtered,
    possibly empty, access array: the resource server then holds no
-   disclosed authority to permit. mission.state continues to report
-   active because containment narrows authority without changing Mission
-   state.  The staleness bound is the introspection caching the
-   deployment permits, which the deployment MUST state; with caching
-   disabled the bound is effectively zero.
+   disclosed authority to permit.
+
+   mission.state continues to report active because containment narrows
+   authority without changing Mission state.  The staleness bound is the
+   introspection caching the deployment permits, which the deployment
+   MUST state; with caching disabled the bound is effectively zero.
 
    A deployment whose tokens are structured formats validated without
    introspection loses that source, and MUST either cap token lifetime

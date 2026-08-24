@@ -1727,21 +1727,22 @@ Encountered Resource object matches an existing entry, its <code>origin</code>
 within the entry's <code>resource</code> and its declaration digest equal to
 the one recorded for that binding, is not a new encounter: no
 adjudication runs, no drawdown is spent, and the runtime layer
-enforces as usual. An encounter whose declaration digest differs
-from the recorded one is a new encounter for any authority not yet
-bound, and a drift signal for what is. A deployment <span class="bcp14">SHOULD</span>
-re-adjudicate a bound resource whose declaration changed before
-further use in a consequential class. The capability-source rules
-already refuse drifted catalog capabilities at the PDP
-(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1-2">The taint floor (<a href="#injection-discovery" class="auto internal xref">Section 9</a>) is applied only at binding.
+enforces as usual.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">A deployment <span class="bcp14">SHOULD</span> re-adjudicate a bound resource whose declaration
+changed before further use in a consequential class. An encounter
+whose declaration digest differs from the recorded one is a new
+encounter for any authority not yet bound, and a drift signal for
+what is. The capability-source rules already refuse drifted catalog
+capabilities at the PDP
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1-3">The taint floor (<a href="#injection-discovery" class="auto internal xref">Section 9</a>) is applied only at binding.
 A binding created while the session was untainted remains usable after
 the session becomes tainted: the floor gates new egress-capable
 bindings, not the use of authority already bound. A web-reading agent
 is tainted for much of its life, so how taint scopes to sub-sessions
 or decays over time is an open issue this document does not settle; it
 is left to the harness profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1823,11 +1824,11 @@ progressive profile's prohibited set requires and this profile
 inherits unchanged
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). The
 irreversible, external-commitment, and privileged-administration
-classes are likewise never policy's to bind on any encounter. In an
-untainted session, policy may bind up to that floor. Taint removes
-every remaining class from policy's reach: under the first rule
-above, no encounter binds by policy and every binding routes to a
-human.<a href="#section-9-4" class="pilcrow">¶</a></p>
+classes are likewise never policy's to bind on any encounter.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">In an untainted session, policy may bind up to that floor. Taint
+removes every remaining class from policy's reach: under the first
+rule above, no encounter binds by policy and every binding routes to
+a human.<a href="#section-9-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discovery-evidence">

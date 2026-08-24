@@ -1389,12 +1389,12 @@ carries a new Mission Intent in an <span>[<a href="#RFC8693" class="cite xref">R
 predecessor's Mission-bound access token, leading to a fresh approval
 event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) with its own
 integrity anchors and Mission record. The successor's
-authority comes only from that approval. This document adds exactly
-three things on top of the issuance profile: a way to bind an expansion
-request to the predecessor it expands; a <code>predecessor</code> lineage member
-on the resulting Mission; and a terminal <code>superseded</code> predecessor state
-with the reconciliation rules that keep concurrent expansions
-consistent.<a href="#section-1-3" class="pilcrow">¶</a></p>
+authority comes only from that approval.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document adds exactly three things on top of the issuance
+profile: a way to bind an expansion request to the predecessor it
+expands; a <code>predecessor</code> lineage member on the resulting Mission; and
+a terminal <code>superseded</code> predecessor state with the reconciliation
+rules that keep concurrent expansions consistent.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <div id="optional-status">
 <section id="section-1.1">
         <h3 id="name-status-an-optional-extensio">
@@ -1848,23 +1848,23 @@ references the work it continues, since the successor's authority comes
 only from the fresh consent in any case; and the Subject or an
 administrator acts on the predecessor at the management plane
 regardless, whose standing is the authenticated principal, never a
-token's possession (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The
-possession proof gates the proposal channel (who may put an expansion
-wearing this predecessor's name in front of the Approver, and who may
-trigger the atomic supersession), never the authority: no proof failure
-can widen anything.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
-<p id="section-5.2-5">The Mission Issuer <span class="bcp14">MUST</span> record each expansion presentation and count it
+token's possession (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+<p id="section-5.2-5">The possession proof gates the proposal channel (who may put an
+expansion wearing this predecessor's name in front of the Approver, and
+who may trigger the atomic supersession), never the authority: no proof
+failure can widen anything.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<p id="section-5.2-6">The Mission Issuer <span class="bcp14">MUST</span> record each expansion presentation and count it
 toward the deployment's anomaly detection, and the per-predecessor rate
 limit (<a href="#policy-probing" class="auto internal xref">Section 16.7</a>) applies unconditionally. Because the
 <code>subject_token</code> is a short-lived, sender-constrained access token rather
 than a reusable refresh credential, presenting it for expansion carries
 no refresh rotation or replay-detection interaction: it is consumed only
-to resolve and bind the predecessor, never to refresh.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
-<p id="section-5.2-6">Because expansion binds to the predecessor's Mission-bound access token,
+to resolve and bind the predecessor, never to refresh.<a href="#section-5.2-6" class="pilcrow">¶</a></p>
+<p id="section-5.2-7">Because expansion binds to the predecessor's Mission-bound access token,
 it needs no opaque expansion ticket or other new bearer: the predecessor
 is identified and authorized by a credential the client already holds
 and can prove possession of, and a client cannot name an arbitrary
-predecessor.<a href="#section-5.2-6" class="pilcrow">¶</a></p>
+predecessor.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="predecessor-active">
@@ -2104,17 +2104,18 @@ against the successor: the successor's Authority Set is freshly
 derived, not inherited by reference, so a child's creation-time subset
 check does not carry forward
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
-"Cascade Revocation"). The re-creation above is paid for per child: a
-fresh assertion conveyed to the child actor that held the terminated
-child, and an interval in which that child actor's outstanding tokens
-under the terminated child run to the earlier of their own <code>exp</code> and
-the runtime staleness bound, where the runtime enforcement layer is
-deployed, while the replacement is delivered
+"Cascade Revocation").<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+<p id="section-6.3-5">The re-creation above is paid for per child: a fresh assertion
+conveyed to the child actor that held the terminated child, and an
+interval in which that child actor's outstanding tokens under the
+terminated child run to the earlier of their own <code>exp</code> and the runtime
+staleness bound, where the runtime enforcement layer is deployed,
+while the replacement is delivered
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
 "Cascade Failure"). Where a deployment provides the notice recommended
 above, the expansion consent event is where this price is rendered;
 that consent event is the only point in this profile at which a human
-can witness the cascade before it happens.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+can witness the cascade before it happens.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="successor-expiry">

@@ -356,16 +356,19 @@ Table of Contents
    does not control; Identity Continuation
    ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) and async
    delegation ([I-D.draft-zhu-oauth-async-delegation]) are the intra-
-   domain transports.  What the profile adds over this document is the
-   Mission binding common to every transport: a continuation handle
-   grants nothing, each continued grant derives a subset of the
-   Mission's authority and re-passes its active gate, so continuity is
-   never authority.  This document remains complete on its own: an
-   issuer MAY project a Mission cross-domain without adopting the
-   continuation profile, and a partner Resource AS honors the projected
-   authority and resolves an audience-local subject exactly as specified
-   here.  Projection stays single-hop (Section 5) regardless of how many
-   intra-domain hops continue the Mission on either side.
+   domain transports.
+
+   What the profile adds over this document is the Mission binding
+   common to every transport: a continuation handle grants nothing, each
+   continued grant derives a subset of the Mission's authority and re-
+   passes its active gate, so continuity is never authority.
+
+   This document remains complete on its own: an issuer MAY project a
+   Mission cross-domain without adopting the continuation profile, and a
+   partner Resource AS honors the projected authority and resolves an
+   audience-local subject exactly as specified here.  Projection stays
+   single-hop (Section 5) regardless of how many intra-domain hops
+   continue the Mission on either side.
 
 8.  Pre-Established Trust
 
@@ -773,17 +776,20 @@ Table of Contents
       originating Mission Record, and the invariant is VALUE equality of
       the closed object: the member survives re-signing and re-
       serialization at every hop and projection, so byte comparison of a
-      serialization is not the test.  It is identity provenance and a
-      constraint input; it MUST NOT grant or widen authority.  A generic
-      Mission consumer ignores it under the issuance profile's open-
-      claim rule; a consumer claiming this profile MUST verify it or
-      fail closed.  No display name, email, organization, role, group,
-      entitlement, or assurance member is permitted in the object: those
-      change independently and would turn the invariant into stale
-      identity state.  The sub value MUST be an opaque pseudonymous
-      identifier and MUST NOT carry directly identifying attributes; an
-      opaque persistent identifier remains sensitive correlation data,
-      personal data even when opaque, subject to the disclosure rules of
+      serialization is not the test.
+
+      It is identity provenance and a constraint input; it MUST NOT
+      grant or widen authority.  A generic Mission consumer ignores it
+      under the issuance profile's open-claim rule; a consumer claiming
+      this profile MUST verify it or fail closed.
+
+      No display name, email, organization, role, group, entitlement, or
+      assurance member is permitted in the object: those change
+      independently and would turn the invariant into stale identity
+      state.  The sub value MUST be an opaque pseudonymous identifier
+      and MUST NOT carry directly identifying attributes; an opaque
+      persistent identifier remains sensitive correlation data, personal
+      data even when opaque, subject to the disclosure rules of
       Section 11.6.
 
    The closed {iss, sub} shape suffices only when that pair is globally
@@ -823,19 +829,20 @@ Table of Contents
    independently selects an account.
 
    The identifier's linkability is fixed at Mission creation, because
-   the invariant forbids per-destination substitution afterward.  Two
-   properties are available, chosen at the record.  The default is an
-   origin-sector pseudonym with cross-destination Mission correlation:
-   the record subject is the home issuer's pseudonym for the Mission
-   Issuer's sector, the same value is deliberately disclosed to every
-   destination the Mission reaches, and it remains correlatable across
-   this Subject's Missions while staying unlinkable to the Subject's
-   other relationships.  The RECOMMENDED stronger option, where
-   destination mapping infrastructure supports it, is a per-Mission
-   subject pseudonym established by the home issuer at record creation:
-   participants correlate within one Mission only, and destination
-   entitlement resolution goes through the governed mapping of
-   Section 11.3.  A deployment declares which property it provides;
+   the invariant forbids per-destination substitution afterward.
+
+   Two properties are available, chosen at the record.  The default is
+   an origin-sector pseudonym with cross-destination Mission
+   correlation: the record subject is the home issuer's pseudonym for
+   the Mission Issuer's sector, the same value is deliberately disclosed
+   to every destination the Mission reaches, and it remains correlatable
+   across this Subject's Missions while staying unlinkable to the
+   Subject's other relationships.  The RECOMMENDED stronger option,
+   where destination mapping infrastructure supports it, is a per-
+   Mission subject pseudonym established by the home issuer at record
+   creation: participants correlate within one Mission only, and
+   destination entitlement resolution goes through the governed mapping
+   of Section 11.3.  A deployment declares which property it provides;
    onward disclosure beyond the audiences Mission policy and privacy
    policy permit requires authorization; and a destination-pairwise
    value is not constructible under the invariance rule.
@@ -899,17 +906,19 @@ Table of Contents
    delegated set, and an approval or mapping record never bypasses
    current policy.  A role or relationship granted through an access-
    request workflow is governance state observed on a fresh decision,
-   never a bearer bypass.  A deployment claiming this profile MUST
-   declare the source and maximum staleness of local principal
-   entitlement, separately from its Mission-state freshness declaration;
-   when current entitlement cannot be established within the declared
-   bound, the decision fails closed.  Under a runtime binding that
-   classifies denials, a failed, missing, ambiguous, or stale mapping or
-   entitlement step carries the principal_mapping_failed extension
-   denial reason, which this profile registers per that binding's
-   extension rule.  This is the profile's conformance bar: deployments
-   not claiming it keep the issuance profile's lifetime-bounded
-   baseline.
+   never a bearer bypass.
+
+   A deployment claiming this profile MUST declare the source and
+   maximum staleness of local principal entitlement, separately from its
+   Mission-state freshness declaration; when current entitlement cannot
+   be established within the declared bound, the decision fails closed.
+   Under a runtime binding that classifies denials, a failed, missing,
+   ambiguous, or stale mapping or entitlement step carries the
+   principal_mapping_failed extension denial reason, which this profile
+   registers per that binding's extension rule.
+
+   This is the profile's conformance bar: deployments not claiming it
+   keep the issuance profile's lifetime-bounded baseline.
 
 11.6.  Disclosure and Evidence
 
@@ -919,8 +928,9 @@ Table of Contents
    introspection responder, the issuer or a Resource AS, MUST disclose
    it only to a caller holding an explicit origin_principal disclosure
    privilege under the issuance profile's caller authorization and
-   minimization rules ([I-D.draft-mcguinness-oauth-mission]).  The
-   runtime evidence companion defines the composed principal_mapping
+   minimization rules ([I-D.draft-mcguinness-oauth-mission]).
+
+   The runtime evidence companion defines the composed principal_mapping
    evidence object and the protected subject-reference rule for retained
    records ([I-D.draft-mcguinness-mission-runtime-evidence]); a
    deployment claiming both composes them, keeping raw identifiers out
@@ -1129,10 +1139,12 @@ Table of Contents
    When a Mission is revoked at the originating AS, that AS can stop
    issuing new cross-domain grants, but it cannot revoke a token a
    Resource AS has already minted in another domain: that token remains
-   valid until its own expiry.  Cross-domain revocation latency is
-   therefore the downstream token lifetime.  The grant lifetime is the
-   state lease the partner domain runs on: the longest a Resource AS may
-   treat Mission state established at issuance as current
+   valid until its own expiry.
+
+   Cross-domain revocation latency is therefore the downstream token
+   lifetime.  The grant lifetime is the state lease the partner domain
+   runs on: the longest a Resource AS may treat Mission state
+   established at issuance as current
    ([I-D.draft-mcguinness-mission-runtime]).
 
    The issuance profile's token introspection closes the revocation gap
@@ -1185,14 +1197,20 @@ Table of Contents
    The cross-domain grant is the highest-authority credential in the
    chain and the only one that crosses a trust boundary.  The
    requirements of Section 9 and Section 10 follow from that position:
-   issuer trust is established by local policy or metadata, never
-   inferred from a signed assertion's own mission.issuer; the grant is
-   sender-constrained and one-time-use, because the underlying grant
-   profile provides no replay backstop of its own; and everything the
-   Resource AS honors is bounded by the audience-scoped entries the
-   grant conveyed, interpreted fail-closed.  Downstream of the issuer,
-   authority_hash is an audit and correlation anchor, not a recomputable
-   proof: its integrity rests on the signature chain (Section 10).
+
+   *  issuer trust is established by local policy or metadata, never
+      inferred from a signed assertion's own mission.issuer;
+
+   *  the grant is sender-constrained and one-time-use, because the
+      underlying grant profile provides no replay backstop of its own;
+      and
+
+   *  everything the Resource AS honors is bounded by the audience-
+      scoped entries the grant conveyed, interpreted fail-closed.
+
+   Downstream of the issuer, authority_hash is an audit and correlation
+   anchor, not a recomputable proof: its integrity rests on the
+   signature chain (Section 10).
 
    One companion mechanism composes here beyond the trust publication
    methods of Section 8: a consumer that needs independently verifiable
@@ -1205,21 +1223,19 @@ Table of Contents
 
    Because the cross-domain grant carries no act chain (Section 9), a
    Resource AS that issues delegated tokens of its own begins its
-   delegation depth at 0.  This local depth is distinct from an
-   attenuation chain's global del_depth, which is monotonic across every
-   hop and organizational boundary
+   delegation depth at 0 (Section 10).  This local depth is distinct
+   from an attenuation chain's global del_depth, which is monotonic
+   across every hop and organizational boundary
    ([I-D.draft-mcguinness-oauth-mission-cross-org-delegation]):
    projection-local depth starts after chain verification, and a
-   projected token cannot re-enter a chain.  A Resource AS of this
-   document begins its delegation depth at 0 (Section 10).  An entry's
-   max_depth ceiling is therefore enforced per domain, not globally
-   across the projection: a Mission delegable to depth N at the
-   originating AS may be delegated a further N hops inside each Resource
-   AS domain that honors it.  A deployment that needs a global bound on
-   delegation depth across domains constrains it out of band, through
-   the resource-to-AS mapping and each Resource AS's local policy
-   (Section 8); this profile bounds delegation depth only within a
-   single domain.
+   projected token cannot re-enter a chain.  An entry's max_depth
+   ceiling is therefore enforced per domain, not globally across the
+   projection: a Mission delegable to depth N at the originating AS may
+   be delegated a further N hops inside each Resource AS domain that
+   honors it.  A deployment that needs a global bound on delegation
+   depth across domains constrains it out of band, through the resource-
+   to-AS mapping and each Resource AS's local policy (Section 8); this
+   profile bounds delegation depth only within a single domain.
 
    Because the reset is per domain, projecting a Mission's entries into
    multiple Resource AS domains multiplies the reachable depth beyond
@@ -1737,6 +1753,13 @@ Appendix B.  Document History
       max_depth times a flat domain count, and domains are counted by
       distinct Resource AS from the resource-to-AS mapping, never by
       resource count (Section 8).
+
+   *  Editorial density pass: split several overlong paragraphs (no
+      BCP-14 keyword sentence changed) and merged a duplicated sentence
+      in Per-Domain Delegation Depth (the unconditional "a Resource AS
+      of this document begins its delegation depth at 0" restated what
+      the preceding, correctly conditioned sentence already said; the
+      citation moved onto that sentence and the duplicate was dropped).
 
 Author's Address
 

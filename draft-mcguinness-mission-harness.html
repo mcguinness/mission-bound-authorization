@@ -1360,16 +1360,18 @@ handoffs, background scheduling, retries, and sub-agent fan-out.<a href="#sectio
 survive after the Mission that justified it is revoked. A cached tool
 connection can remain usable after the business condition that
 authorized it ends. A child agent can keep running after its parent
-Mission is suspended. This profile defines what a harness must do to
+Mission is suspended.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This profile defines what a harness must do to
 avoid treating recoverable runtime state as authorization. That is one
 of the harness's two duties; the other is establishing the mediated
 execution environment, in which work in a mediated action class has no
-path that bypasses the enforcement point (<a href="#mediated-egress" class="auto internal xref">Section 6</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">Two ledgers coexist by design, and neither mirrors the other. The
+path that bypasses the enforcement point (<a href="#mediated-egress" class="auto internal xref">Section 6</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Two ledgers coexist by design, and neither mirrors the other. The
 harness or its workflow engine keeps the execution ledger: task
 graphs, retry queues, event histories, progress. The Mission Issuer
 keeps the authorization ledger: the approved task, its lifecycle, and
-what each decision permitted. They are separated because they sit in
+what each decision permitted.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">They are separated because they sit in
 different trust domains: the execution ledger lives with the
 component this profile assumes compromisable, and a kill switch
 cannot live inside the thing it kills. The only shared key is the
@@ -1377,7 +1379,7 @@ Mission Binding's reference (<a href="#mission-binding" class="auto internal xre
 this profile places on a harness is a consume-and-gate check at a
 boundary the engine already has, never a copy of Mission state into
 engine state or of engine state into the Mission record
-(<a href="#engine-mapping" class="auto internal xref">Appendix A</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+(<a href="#engine-mapping" class="auto internal xref">Appendix A</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="doc-status">
@@ -1706,12 +1708,13 @@ mediated, the statement <span class="bcp14">MAY</span> name the destination set 
 reach, so the published claim and the enforced allowlist are the same
 object. An egress on a channel the statement does not mark mediated,
 or to a destination outside a named set, <span class="bcp14">MUST</span> be refused and recorded
-(<a href="#egress-evidence" class="auto internal xref">Section 16.2</a>). The gate applies the same fail-closed Mission
+(<a href="#egress-evidence" class="auto internal xref">Section 16.2</a>).<a href="#section-6-10" class="pilcrow">¶</a></p>
+<p id="section-6-11">The gate applies the same fail-closed Mission
 state rule as the resume checks (<a href="#resume-checks" class="auto internal xref">Section 8</a>): work whose
 Mission is not active does not egress. An in-process gate mediates the
 agent's egress interface and supports no containment claim. The gate
 is not the session-taint rule: the taint duties of <a href="#session-taint" class="auto internal xref">Section 15</a>
-apply independently of the channel and destination check.<a href="#section-6-10" class="pilcrow">¶</a></p>
+apply independently of the channel and destination check.<a href="#section-6-11" class="pilcrow">¶</a></p>
 <div id="destination-matching">
 <section id="section-6.1">
         <h3 id="name-destination-set-matching">
@@ -2904,7 +2907,8 @@ transparency feed (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="c
 canonical bytes are the record's JCS canonicalization under the
 imported evidence conventions. Its type identifier is
 <code>application/mission-harness-evidence+json</code> (a local-use identifier
-pending registration). A harness that registers its evidence
+pending registration).<a href="#section-16-7" class="pilcrow">¶</a></p>
+<p id="section-16-8">A harness that registers its evidence
 publishes its signing key in the deployment key set alongside the
 PEP key the runtime profile requires, so a relying party can verify
 the harness as the record's authoritative producer. Harness and
@@ -2912,15 +2916,15 @@ egress evidence emitters satisfy the runtime profile's agent-isolated
 evidence-emission condition only where the Enforcement Scope
 Statement names them, and their emission paths, in its declaration
 of the condition (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); carrying
-this evidence implies nothing about that isolation.<a href="#section-16-7" class="pilcrow">¶</a></p>
-<p id="section-16-8">That key follows the issuance profile's retired-key rule, extended
+this evidence implies nothing about that isolation.<a href="#section-16-8" class="pilcrow">¶</a></p>
+<p id="section-16-9">That key follows the issuance profile's retired-key rule, extended
 to this artifact's retention bound
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): a retired
 harness signing key <span class="bcp14">MUST</span> remain resolvable in the published key set
 for at least the evidence retention window. For a key identified as
 compromised, verification of harness evidence is governed by the
 evidence companion's complete compromise-boundary rule
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-16-8" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-16-9" class="pilcrow">¶</a></p>
 <div id="harness-evidence-object">
 <section id="section-16.1">
         <h3 id="name-harness-evidence-object">

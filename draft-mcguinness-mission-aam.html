@@ -1378,22 +1378,22 @@ names are capitalized as <span>[<a href="#AAM" class="cite xref">AAM</a>]</span>
         <h3 id="name-agent-identity-broker">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-agent-identity-broker" class="section-name selfRef">Agent Identity Broker</a>
         </h3>
-<p id="section-4.1-1">AAM's broker exchanges a service's broad identity for a task-scoped
-credential inside an established capability ceiling. The family
-splits that exchange by consequence class. The mission-dispatch
-grant re-issues a clipped, low-consequence instance from a consented
-Template in one round trip with no human in the loop; a prohibited
-class (irreversible, external-commitment, privileged-administration,
+<p id="section-4.1-1">The family realizes AAM's exchange of a service's broad identity for
+a task-scoped, ceiling-bound credential by splitting it into two
+paths by consequence class. The mission-dispatch grant re-issues a
+clipped, low-consequence instance from a consented Template in one
+round trip with no human in the loop; a prohibited class
+(irreversible, external-commitment, privileged-administration,
 external-communication, or cross-domain capability) is never
 dispatched, and instead requires an ordinary Mission approval, a
 fresh human decision recorded as a <code>direct</code> approval basis. Both
 kinds of Mission ride the same continuation transports across a
 disconnected run (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>):
 a rotated, sender-constrained refresh-token family whose absolute
-lifetime is clamped to the Mission expiry. The credential is
-task-scoped and sender-constrained in exactly AAM's sense; the split
-adds the property that the machine-speed path structurally cannot
-mint the high-consequence credential.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+lifetime is clamped to the Mission expiry.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The credential is task-scoped and sender-constrained in exactly
+AAM's sense; the split adds the property that the machine-speed path
+structurally cannot mint the high-consequence credential.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="access-engine">
@@ -1401,10 +1401,10 @@ mint the high-consequence credential.<a href="#section-4.1-1" class="pilcrow">¶
         <h3 id="name-task-scoped-access-engine">
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-task-scoped-access-engine" class="section-name selfRef">Task-Scoped Access Engine</a>
         </h3>
-<p id="section-4.2-1">AAM's engine decides per action against the task's ceiling. The
-realization is a stateless Policy Decision Point evaluating, on
-every consequential action, a per-check view of the Mission: the
-consented Authority Set intersected with the containment delta
+<p id="section-4.2-1">The realization of AAM's per-action, ceiling-bound decision engine
+is a stateless Policy Decision Point evaluating, on every
+consequential action, a per-check view of the Mission: the consented
+Authority Set intersected with the containment delta
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). No standing grant state
 is provisioned into the decision engine; the view is assembled per
 check, so a containment that landed between two checks is visible to
@@ -1431,7 +1431,7 @@ in-process gate mediates the honest path and contains nothing.<a href="#section-
         <h3 id="name-trust-ratchet">
 <a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-trust-ratchet" class="section-name selfRef">Trust Ratchet</a>
         </h3>
-<p id="section-4.4-1">AAM ratchets trust downward on signal. The realization is Mission
+<p id="section-4.4-1">The realization of AAM's downward trust ratchet is Mission
 Containment (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>): a
 trusted source signs a protected event to the issuer, the issuer
 narrows the effective Authority Set deterministically under its
@@ -1449,18 +1449,18 @@ named.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
         <h3 id="name-task-template-and-capabilit">
 <a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-task-template-and-capabilit" class="section-name selfRef">Task Template and Capability Ceiling</a>
         </h3>
-<p id="section-4.5-1">AAM's template is consented once and dispatched many times. Mission
-Templates realize this with two distinct refusals that keep the
-ceiling honest. A Dispatch past the consented Template Ceiling is
-refused as out of ceiling. A Dispatch that would confer a
-prohibited-class capability is refused as a prohibited class even
-when that capability sits inside the consented ceiling: consenting
-to the ceiling is not consent for a Dispatch to ever confer the
-high-consequence entry, which is only ever granted by a fresh human
-approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>). The
-ceiling therefore names the whole job's scope, consented a single
-time, while every machine-speed instance is clipped to the
-low-consequence slice.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-1">Mission Templates realize AAM's consent-once, dispatch-many template
+with two distinct refusals that keep the ceiling honest. A Dispatch
+past the consented Template Ceiling is refused as out of ceiling. A
+Dispatch that would confer a prohibited-class capability is refused
+as a prohibited class even when that capability sits inside the
+consented ceiling: consenting to the ceiling is not consent for a
+Dispatch to ever confer the high-consequence entry, which is only
+ever granted by a fresh human approval
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>).<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">The ceiling therefore names the whole job's scope, consented a
+single time, while every machine-speed instance is clipped to the
+low-consequence slice.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="activity-log">
@@ -1468,8 +1468,8 @@ low-consequence slice.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
         <h3 id="name-agent-activity-log">
 <a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-agent-activity-log" class="section-name selfRef">Agent Activity Log</a>
         </h3>
-<p id="section-4.6-1">AAM's log is a supporting system off the request path. The
-realization is a read-model join, not a new store: Policy
+<p id="section-4.6-1">The realization of AAM's activity log, a supporting system off the
+request path, is a read-model join, not a new store: Policy
 Enforcement Point decision evidence, egress evidence, issuer
 ingestion records, Containment Evidence, and Mission lineage,
 threaded into a per-Mission task-run graph

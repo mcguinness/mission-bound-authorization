@@ -1782,28 +1782,36 @@ that revocation carries, bounded the same way by their own <code>exp</code>
 and the deployment's freshness rules (<a href="#propagation" class="auto internal xref">Section 15</a>).<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-3">The same bound applies wherever authority leaves the Mission, for every
-derivation gated after the transition. A Child Mission attenuates from
-the parent's Effective Authority Set, so a contained capability is
-absent from every child derivation gated after the transition; a
-contain transition also propagates entry-wise to every Child Mission
-already justified by the contained entry, so an existing child does not
-keep deriving it either
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
-"Child Mission State"). A cross-domain projection issued after the
-transition projects the Effective Authority Set, so a contained
-capability is absent from it
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). An offline
-attenuation root issued after the transition is derived from the
-Effective Authority Set, so no offline chain minted from it can narrow
-its way back to contained capability
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">What derivation gating and propagation do not reach is authority
+<p id="section-10-3">The same bound applies wherever authority leaves the Mission, for
+every derivation gated after the transition:<a href="#section-10-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-4.1">
+          <p id="section-10-4.1.1">A Child Mission attenuates from the parent's Effective Authority
+Set, so a contained capability is absent from every child
+derivation gated after the transition; a contain transition also
+propagates entry-wise to every Child Mission already justified by
+the contained entry, so an existing child does not keep deriving it
+either (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>,
+Section "Child Mission State").<a href="#section-10-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-4.2">
+          <p id="section-10-4.2.1">A cross-domain projection issued after the transition projects the
+Effective Authority Set, so a contained capability is absent from
+it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-10-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-4.3">
+          <p id="section-10-4.3.1">An offline attenuation root issued after the transition is derived
+from the Effective Authority Set, so no offline chain minted from
+it can narrow its way back to contained capability
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-10-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-5">What derivation gating and propagation do not reach is authority
 already materialized, before the transition, into a standing minting
 capability outside the issuer's control: a cross-domain projection
 grant already redeemed at a Resource AS, or an offline attenuation root
 already minted into a holder's possession. That residual is bounded on
-its own terms, not by this document (<a href="#materialized-residual" class="auto internal xref">Section 11</a>).<a href="#section-10-4" class="pilcrow">¶</a></p>
+its own terms, not by this document (<a href="#materialized-residual" class="auto internal xref">Section 11</a>).<a href="#section-10-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="materialized-residual">
@@ -2413,13 +2421,14 @@ cannot be spent, delegated, or projected in any derivation gated after
 the transition, and propagation carries it to every Child Mission the
 contained entry already justified
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
-"Child Mission State"). The exception is the same one any adversary
-faces: the materialized-capability residual
-(<a href="#materialized-residual" class="auto internal xref">Section 11</a>), bounded by the affected artifact's own
-lifetime regardless of which event forced the transition. Recovery is
-bounded too: the poisoned Missions are enumerable from their
-Containment Evidence, and each restores only through an approval that
-sees the containment history (<a href="#restoration" class="auto internal xref">Section 16</a>).<a href="#section-21.3-1" class="pilcrow">¶</a></p>
+"Child Mission State").<a href="#section-21.3-1" class="pilcrow">¶</a></p>
+<p id="section-21.3-2">The exception is the same one any adversary faces: the
+materialized-capability residual (<a href="#materialized-residual" class="auto internal xref">Section 11</a>), bounded
+by the affected artifact's own lifetime regardless of which event
+forced the transition. Recovery is bounded too: the poisoned Missions
+are enumerable from their Containment Evidence, and each restores
+only through an approval that sees the containment history
+(<a href="#restoration" class="auto internal xref">Section 16</a>).<a href="#section-21.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="history-at-expansion">

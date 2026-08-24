@@ -272,11 +272,11 @@ Table of Contents
       through this document's decision-time verification (Section 5.1),
       over the per-capability comparison scope of Section 5.2.  This
       document adds only the wire representation and per-capability
-      verification: such a refusal is carried as capability_drift
-      (Section 5.3), with its boundary against out_of_authority fixed by
+      verification, carrying such a refusal as capability_drift
+      (Section 5.3) with its boundary against out_of_authority fixed by
       the AuthZEN binding's runtime denial classification
-      ([I-D.draft-mcguinness-mission-authzen]).  It defines no drift
-      rule of its own.
+      ([I-D.draft-mcguinness-mission-authzen]); it defines no drift rule
+      of its own.
 
    *  Resource policy MAY refuse a catalog-sourced action whose
       source_uri or executor is outside the deployment's trusted set.

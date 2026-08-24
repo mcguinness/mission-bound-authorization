@@ -1331,9 +1331,9 @@ mission log; and<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
 <code>expires_at</code> mission-blob member carries the expiry this binding
 requires on every mission (<a href="#lifecycle" class="auto internal xref">Section 5.8</a>); this document defines no new
 AAuth endpoint, header field, token claim, mission-blob member, or
-lifecycle state at all.  Its purpose is to make the security and
-composition properties of AAuth missions explicit and to prevent an
-OAuth-specific authority model from being imposed on them.<a href="#section-1-4" class="pilcrow">¶</a></p>
+lifecycle state at all.  It makes AAuth missions' security and
+composition properties explicit and keeps an OAuth-specific authority
+model from being imposed on them.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <div id="contextual-governance-not-portable-authority">
 <section id="section-1.1">
         <h3 id="name-contextual-governance-not-p">
@@ -1861,8 +1861,7 @@ The Carrier Binding Floor of
 the slots a binding must provide to host action-bound transaction
 authorization, and several have no native home in AAuth or R3 today.
 Consistent with this document's rule that it adds no new AAuth wire
-members, it defines no extensions to close them; this section records
-the status informatively, so the gap is legible rather than implied.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+members, it defines no extensions to close them.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
 <span id="name-transaction-authorization-r"></span><table class="center" id="table-3">
           <caption>
 <a href="#table-3" class="selfRef">Table 3</a>:
@@ -1972,15 +1971,15 @@ reject any mismatch or omission against that person token's
 <code>mission_s256</code>.  That base rule is what makes stripping detectable;
 comparing claims by agent and resource alone cannot, because an agent
 running concurrent missions holds more than one person token for the
-same resource, and only the named person token resolves to one.  This
-binding keeps two further local rules on top of it.  An agent operating
+same resource, and only the named person token resolves to one.<a href="#section-5.7-5" class="pilcrow">¶</a></p>
+<p id="section-5.7-6">This binding keeps two further local rules on top of it.  An agent operating
 under a mission MUST verify that a returned resource token carries the
 exact <code>mission_s256</code>, and MUST NOT continue that authorization under
 the mission when it is absent or different.  A PS whose policy places
 an agent under mission governance MUST reject a missionless token
 request from that agent.  The Lifecycle-Gated Authorization and
 Credential-Bound claims of <a href="#mission-substrate" class="auto internal xref">Section 10</a> cover only requests
-whose resource token carries the protected <code>mission_s256</code> claim.<a href="#section-5.7-5" class="pilcrow">¶</a></p>
+whose resource token carries the protected <code>mission_s256</code> claim.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -2016,25 +2015,25 @@ creating another protocol state.<a href="#section-5.8-3" class="pilcrow">¶</a><
 <code>expires_at</code> member, and the PS MUST enforce it on every decision path
 as AAuth requires.  When a proposal omits an expiry, the PS MUST set
 one at approval under deployment policy, and that policy SHOULD prefer
-the shortest expiry consistent with the mission's purpose.  Expiry
-transitions the mission to <code>terminated</code>; it adds no third state, and no
-token carrying <code>mission_s256</code> outlives the mission's approved
-<code>expires_at</code>.  AAuth distinguishes an expiry-caused termination with a
+the shortest expiry consistent with the mission's purpose.<a href="#section-5.8-4" class="pilcrow">¶</a></p>
+<p id="section-5.8-5">Expiry transitions the mission to <code>terminated</code>; it adds no third
+state, and no token carrying <code>mission_s256</code> outlives the mission's
+approved <code>expires_at</code>.  AAuth distinguishes an expiry-caused termination with a
 <code>termination_reason</code> of <code>expired</code>, surfaced where a management
 companion exposes it, rather than with a separate error status.  An
 early completion, revocation, or administrative termination prevents
 new governed issuance; an outstanding token remains usable until
-revocation or its own expiry, inside that approved bound.<a href="#section-5.8-4" class="pilcrow">¶</a></p>
-<p id="section-5.8-5">There is no suspended state in this binding.  A short wait uses AAuth's
+revocation or its own expiry, inside that approved bound.<a href="#section-5.8-5" class="pilcrow">¶</a></p>
+<p id="section-5.8-6">There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
 handled by terminating the old mission and approving a new, appropriately
-scoped mission while retaining the old log for audit.<a href="#section-5.8-5" class="pilcrow">¶</a></p>
-<p id="section-5.8-6">Termination prevents new governed issuance and PS operations.  It does
+scoped mission while retaining the old log for audit.<a href="#section-5.8-6" class="pilcrow">¶</a></p>
+<p id="section-5.8-7">Termination prevents new governed issuance and PS operations.  It does
 not retroactively erase a previously issued credential or guarantee that
 all independently authorizing resources learn the state immediately.
 Short token lifetimes bound this residual window in PS-asserted and
 federated modes.  A resource needing stronger termination latency
-requires an additional revocation or event mechanism.<a href="#section-5.8-6" class="pilcrow">¶</a></p>
+requires an additional revocation or event mechanism.<a href="#section-5.8-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

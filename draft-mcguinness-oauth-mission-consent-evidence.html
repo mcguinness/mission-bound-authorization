@@ -1472,12 +1472,12 @@ the inbound Mission Intent Submission envelope: raw Intent Submission
 Evidence artifacts presented at admission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) are not embedded in the
 disclosure or the Consent Evidence object, and the verified facts
-they yield land on the Mission record's <code>submission_evidence</code>.
-Material verified provenance is nonetheless part of the approval
+they yield land on the Mission record's <code>submission_evidence</code>.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.1-5">Material verified provenance is nonetheless part of the approval
 surface: the disclosure commits it through
 <code>submission_provenance_hash</code> (<a href="#consent-disclosure" class="auto internal xref">Section 5</a>), covered by
 <code>consent_rendering_hash</code>, so the recorded rendering proves which
-provenance supported the decision.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+provenance supported the decision.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2810,13 +2810,14 @@ disclosure during the retention window as an audit failure.<a href="#section-11-
 while the Mission records another. This profile mitigates that by
 committing a structured disclosure object to the same Mission anchors
 used for authority, so a disclosure that understates the Authority Set
-is detectable in audit. It does not eliminate the threat: the limits
-of a server-side commitment, and the degrees by which the optional
-rungs reduce the rendering trust base, are stated with the ladder
+is detectable in audit.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-2">It does not eliminate the threat: the limits of a server-side
+commitment, and the degrees by which the optional rungs reduce the
+rendering trust base, are stated with the ladder
 (<a href="#rendering-assurance" class="auto internal xref">Section 7</a>, <a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). A deployment that
 needs assurance that the Approver's authenticator confirmed a specific
 disclosure commitment <span class="bcp14">SHOULD</span> evaluate Rung 3 for its high-risk
-classes.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+classes.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="template-downgrade">

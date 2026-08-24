@@ -1374,12 +1374,13 @@ inversion with one rule: the first ticket exchanged under a
 prospective Mission carries the whole task as a pushed Mission
 Intent, and the authorization server derives and obtains approval
 for the full Authority Set, not the ticketed slice
-(<a href="#mission-intent" class="auto internal xref">Section 6</a>). Without that rule the Approver would meet the
+(<a href="#mission-intent" class="auto internal xref">Section 6</a>).<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">Without that rule the Approver would meet the
 Mission one resource-server slice at a time, which is the
 consent-fatigue failure the model exists to prevent. The approved
 set is then a ceiling, and each subsequent ticket a drawdown
 adjudicated by policy within it, the shape the progressive companion
-names (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+names (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-1.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="applicability">
@@ -1593,24 +1594,25 @@ envelope and the Intent are both closed at the top level, the
 authorization server <span class="bcp14">MUST</span> bound size, array lengths, evidence entry
 count, and evidence verification cost, presented evidence is
 dispatched by type and refused when unsupported or failing, and the
-submission is untrusted client input, never authority). The payload <span class="bcp14">MAY</span> additionally carry an
-<code>authorization_details</code> claim: the client's authority proposal, an
-array of <code>authorization_details</code> objects. This claim is this
-binding's proposal carriage, replacing the issuance profile's
-PAR-only carriage rule; that profile's validation, derivation,
-recording, and hashing semantics apply unchanged (a proposal,
-never authority; the Intent itself carries no authority members). A
-Mission created from a push carrying one records <code>proposed_authority</code>
+submission is untrusted client input, never authority). The payload
+<span class="bcp14">MAY</span> additionally carry an <code>authorization_details</code> claim: the
+client's authority proposal, an array of <code>authorization_details</code>
+objects. This claim replaces the issuance profile's PAR-only
+proposal carriage; its validation, derivation, recording, and
+hashing rules apply unchanged, and the proposal itself carries no
+authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A Mission created
+from a push carrying one records <code>proposed_authority</code>
 and <code>proposal_hash</code> as the issuance profile's Mission record defines
-them. The JWT <span class="bcp14">MAY</span> be signed by the client for attribution; a
+them.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">The JWT <span class="bcp14">MAY</span> be signed by the client for attribution; a
 signature confers no authority. Its <code>claim_token_format</code> identifier
-is:<a href="#section-6-2" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-6-3">
+is:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6-4">
 <pre>
 https://mcguinness.github.io/mission-bound-authorization/uma-intent-jwt
-</pre><a href="#section-6-3" class="pilcrow">¶</a>
+</pre><a href="#section-6-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6-4">A Mission-Bound UMA Client <span class="bcp14">MUST</span> push the Mission Intent on the first
+<p id="section-6-5">A Mission-Bound UMA Client <span class="bcp14">MUST</span> push the Mission Intent on the first
 ticket exchange it performs under a prospective Mission, and the
 Intent <span class="bcp14">MUST</span> describe the whole task, not the slice the ticket's
 registered permissions name. The authorization server derives the
@@ -1619,18 +1621,18 @@ one was pushed, bounded by the issuance profile's
 Mission Authority rules; the ticket's permissions locate the first
 drawdown, not the Mission's extent (<a href="#inversion" class="auto internal xref">Section 1.1</a>). A ticket
 exchange with no pushed and no PCT-resolved Mission context is plain
-UMA, outside this profile's scope.<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">The Intent is one claim token among UMA's ordinary ones. The
+UMA, outside this profile's scope.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The Intent is one claim token among UMA's ordinary ones. The
 requesting party's identity claims arrive through their own channels
 (a pushed identity token or interactive claims gathering), in the
 same or other rounds of the <code>need_info</code> rotation loop; the
 authorization server <span class="bcp14">MUST NOT</span> take the Subject from the Mission
 Intent claim token, which is unauthenticated client input
-(<a href="#approval" class="auto internal xref">Section 7</a>).<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">The proposal is the shaping profile's Mission Intent proposal, and a
+(<a href="#approval" class="auto internal xref">Section 7</a>).<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">The proposal is the shaping profile's Mission Intent proposal, and a
 deployment that shapes free-text instructions into structured
 Intents composes here unchanged
-(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-6-6" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-6-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approval">

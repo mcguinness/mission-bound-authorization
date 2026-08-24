@@ -139,24 +139,28 @@ Table of Contents
    can survive after the Mission that justified it is revoked.  A cached
    tool connection can remain usable after the business condition that
    authorized it ends.  A child agent can keep running after its parent
-   Mission is suspended.  This profile defines what a harness must do to
-   avoid treating recoverable runtime state as authorization.  That is
-   one of the harness's two duties; the other is establishing the
-   mediated execution environment, in which work in a mediated action
-   class has no path that bypasses the enforcement point (Section 6).
+   Mission is suspended.
+
+   This profile defines what a harness must do to avoid treating
+   recoverable runtime state as authorization.  That is one of the
+   harness's two duties; the other is establishing the mediated
+   execution environment, in which work in a mediated action class has
+   no path that bypasses the enforcement point (Section 6).
 
    Two ledgers coexist by design, and neither mirrors the other.  The
    harness or its workflow engine keeps the execution ledger: task
    graphs, retry queues, event histories, progress.  The Mission Issuer
    keeps the authorization ledger: the approved task, its lifecycle, and
-   what each decision permitted.  They are separated because they sit in
-   different trust domains: the execution ledger lives with the
-   component this profile assumes compromisable, and a kill switch
-   cannot live inside the thing it kills.  The only shared key is the
-   Mission Binding's reference (Section 7); every obligation this
-   profile places on a harness is a consume-and-gate check at a boundary
-   the engine already has, never a copy of Mission state into engine
-   state or of engine state into the Mission record (Appendix A).
+   what each decision permitted.
+
+   They are separated because they sit in different trust domains: the
+   execution ledger lives with the component this profile assumes
+   compromisable, and a kill switch cannot live inside the thing it
+   kills.  The only shared key is the Mission Binding's reference
+   (Section 7); every obligation this profile places on a harness is a
+   consume-and-gate check at a boundary the engine already has, never a
+   copy of Mission state into engine state or of engine state into the
+   Mission record (Appendix A).
 
 2.  Status: An Optional Profile
 
@@ -434,12 +438,14 @@ Table of Contents
    published claim and the enforced allowlist are the same object.  An
    egress on a channel the statement does not mark mediated, or to a
    destination outside a named set, MUST be refused and recorded
-   (Section 16.2).  The gate applies the same fail-closed Mission state
-   rule as the resume checks (Section 8): work whose Mission is not
-   active does not egress.  An in-process gate mediates the agent's
-   egress interface and supports no containment claim.  The gate is not
-   the session-taint rule: the taint duties of Section 15 apply
-   independently of the channel and destination check.
+   (Section 16.2).
+
+   The gate applies the same fail-closed Mission state rule as the
+   resume checks (Section 8): work whose Mission is not active does not
+   egress.  An in-process gate mediates the agent's egress interface and
+   supports no containment claim.  The gate is not the session-taint
+   rule: the taint duties of Section 15 apply independently of the
+   channel and destination check.
 
 6.1.  Destination-Set Matching
 
@@ -1352,13 +1358,15 @@ Table of Contents
    canonical bytes are the record's JCS canonicalization under the
    imported evidence conventions.  Its type identifier is application/
    mission-harness-evidence+json (a local-use identifier pending
-   registration).  A harness that registers its evidence publishes its
-   signing key in the deployment key set alongside the PEP key the
-   runtime profile requires, so a relying party can verify the harness
-   as the record's authoritative producer.  Harness and egress evidence
-   emitters satisfy the runtime profile's agent-isolated evidence-
-   emission condition only where the Enforcement Scope Statement names
-   them, and their emission paths, in its declaration of the condition
+   registration).
+
+   A harness that registers its evidence publishes its signing key in
+   the deployment key set alongside the PEP key the runtime profile
+   requires, so a relying party can verify the harness as the record's
+   authoritative producer.  Harness and egress evidence emitters satisfy
+   the runtime profile's agent-isolated evidence-emission condition only
+   where the Enforcement Scope Statement names them, and their emission
+   paths, in its declaration of the condition
    ([I-D.draft-mcguinness-mission-runtime]); carrying this evidence
    implies nothing about that isolation.
 

@@ -1296,13 +1296,14 @@ bound, and fails safe on the Mission's <code>expires_at</code>, already meets
 the suite's revocation-propagation model without this channel
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). This channel is
 never the sole state source, and a missed event reads as stale state,
-never as still <code>active</code>. Deploy this profile where polling per
+never as still <code>active</code>.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Deploy this profile where polling per
 Mission does not scale or the staleness bound must shrink below a
 practical polling interval. The Mission Issuer is an SSF transmitter
 and the consumer an SSF receiver in the framework's own vocabulary
 (<span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>), so a deployment already operating a Shared Signals /
-CAEP stream adds this event type to infrastructure it runs today.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This document defines no new Mission semantics: the
+CAEP stream adds this event type to infrastructure it runs today.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This document defines no new Mission semantics: the
 Mission, its lifecycle states, and the <code>mission</code> claim are defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The states this event reports
 are the issuance profile's lifecycle state space
@@ -1311,7 +1312,7 @@ lifecycle profiles the deployment runs
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> and any companion
 profile it adopts). A deployment that does not stand up an event stream
 uses the polling surfaces of the Status profile instead and is
-unaffected by this document.<a href="#section-1-5" class="pilcrow">¶</a></p>
+unaffected by this document.<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="doc-status">
@@ -1394,13 +1395,14 @@ to poll.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
 A consumer discovers the supported methods from the SSF Transmitter
 Configuration Metadata rather than from a separate Authorization
 Server metadata member. The consumer's stream configuration declares,
-in its <code>delivery</code> object, the method it uses. The Mission Issuer <span class="bcp14">MUST</span>
+in its <code>delivery</code> object, the method it uses.<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">The Mission Issuer <span class="bcp14">MUST</span>
 respect the declared method. It <span class="bcp14">MUST NOT</span> silently fall back to a
-less-timely method.<a href="#section-4-5" class="pilcrow">¶</a></p>
-<p id="section-4-6">A bulk lifecycle sweep at the management endpoint
+less-timely method.<a href="#section-4-6" class="pilcrow">¶</a></p>
+<p id="section-4-7">A bulk lifecycle sweep at the management endpoint
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>) emits one SET per
 member Mission; a transmitter should expect, and pace, the resulting
-burst.<a href="#section-4-6" class="pilcrow">¶</a></p>
+burst.<a href="#section-4-7" class="pilcrow">¶</a></p>
 <div id="stream-scoping">
 <section id="section-4.1">
         <h3 id="name-stream-scoping">
@@ -1868,21 +1870,23 @@ verification event. A Mission Issuer <span class="bcp14">MAY</span> additionally
 stream-status heartbeat. A stream is verified live when the consumer
 has received a verified verification or heartbeat event within the
 stream's heartbeat interval; such an event attests that any committed
-transition for the stream's subjects would have been delivered. On a
+transition for the stream's subjects would have been delivered.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">On a
 stream verified live, silence is freshness-preserving: the consumer
 <span class="bcp14">MAY</span> continue to rely on cached Mission state for those subjects up to
 the next heartbeat interval, without polling Mission Status per
-Mission.<a href="#section-8-5" class="pilcrow">¶</a></p>
-<p id="section-8-6">The staleness fallback applies to a stream that is not verified live.
+Mission.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">The staleness fallback applies to a stream that is not verified live.
 A consumer <span class="bcp14">MUST</span> treat cached Mission state as stale once the stream
 has gone without a verified verification or heartbeat event for longer
 than the Mission Issuer's advertised <code>mission_max_stale_seconds</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Once its cached state
 is stale, the consumer <span class="bcp14">MUST</span> re-establish current state before further
-reliance. The Mission Status operation is the <span class="bcp14">RECOMMENDED</span> fallback
+reliance.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">The Mission Status operation is the <span class="bcp14">RECOMMENDED</span> fallback
 surface. A consumer that cannot verify its stream, or that was down
 and may have missed events, applies the same rule rather than
-continuing on possibly stale state.<a href="#section-8-6" class="pilcrow">¶</a></p>
+continuing on possibly stale state.<a href="#section-8-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-compatibility">

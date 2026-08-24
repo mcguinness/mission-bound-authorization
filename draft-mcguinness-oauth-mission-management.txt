@@ -133,10 +133,11 @@ Table of Contents
    Issuer's own trust domain, explicitly authorized for existence
    knowledge over a declared filter scope, compensated not by
    indistinguishability but by explicit authorization and mandatory
-   audit of every call (Section 4.3).  The surface is never agent-
-   facing: the Agent executing a Mission has no role here (Section 4.2).
-   Fleet enumeration and bulk lifecycle are the operator surface of the
-   family's delegated-authority layer
+   audit of every call (Section 4.3).
+
+   The surface is never agent-facing: the Agent executing a Mission has
+   no role here (Section 4.2).  Fleet enumeration and bulk lifecycle are
+   the operator surface of the family's delegated-authority layer
    ([I-D.draft-mcguinness-mission-architecture]).
 
    Both capabilities share one endpoint, one request shape, one
@@ -364,19 +365,21 @@ Table of Contents
    object after issuance, deleting it, or deleting and recreating it
    redraws scope as surely as changing a value.  Every post-issuance
    transition of the administrative metadata (a value change, absent to
-   present, or present to absent) is therefore a *re-home*. A deployment
-   that supports re-homing MUST gate it on an explicit authority
-   distinct from its enumeration and lifecycle grants, MUST require the
-   caller's filter scope to cover the Mission both before and after the
-   change (a Mission without administrative metadata is covered through
-   the filter members that do not match against it), MUST NOT accept an
-   authorization derived from the values the change itself would
-   establish, MUST apply the change as an atomic compare-and-set against
-   the current values, absent being a value the comparison and the
-   record both name, and MUST record the audited management event with
-   both the prior and the new values (Section 4.3).  A re-home does not
-   travel alone: an outstanding bulk token that pins the Mission fails
-   its scope-currency check at its next presentation (Section 14.3).
+   present, or present to absent) is therefore a *re-home*.
+
+   A deployment that supports re-homing MUST gate it on an explicit
+   authority distinct from its enumeration and lifecycle grants, MUST
+   require the caller's filter scope to cover the Mission both before
+   and after the change (a Mission without administrative metadata is
+   covered through the filter members that do not match against it),
+   MUST NOT accept an authorization derived from the values the change
+   itself would establish, MUST apply the change as an atomic compare-
+   and-set against the current values, absent being a value the
+   comparison and the record both name, and MUST record the audited
+   management event with both the prior and the new values
+   (Section 4.3).  A re-home does not travel alone: an outstanding bulk
+   token that pins the Mission fails its scope-currency check at its
+   next presentation (Section 14.3).
 
 6.  Mission Filter
 
@@ -954,8 +957,9 @@ Table of Contents
 
    The status profile makes Mission existence unobservable to the
    unauthorized; this document makes it queryable by the authorized.
-   The two compose safely only if the boundary between them holds.  A
-   deployment MUST NOT satisfy a management request with a credential
+   The two compose safely only if the boundary between them holds.
+
+   A deployment MUST NOT satisfy a management request with a credential
    authorized only for status or lifecycle calls.  The filter-scope
    check of Section 4.3 MUST run before any Mission data is touched, so
    a refusal is data-independent.  The audit rule of Section 4.3 is the

@@ -341,11 +341,11 @@ Table of Contents
    and recorded against the Mission at each continued hop.  Work
    provenance answers "under what approved work did this artifact come
    into existence": it is artifact-scoped and attributed to the
-   Producing Mission.  The two sit beside each other.  Evidence ties an
-   action back to the Mission that took it; provenance ties an artifact
-   back to the Mission that produced it.  Neither answers what a reader
-   of the artifact may do; that remains the Receiving Mission's
-   Authority Set to decide (Section 7).
+   Producing Mission.  Evidence ties an action back to the Mission that
+   took it; provenance ties an artifact back to the Mission that
+   produced it.  Neither answers what a reader of the artifact may do;
+   that remains the Receiving Mission's Authority Set to decide
+   (Section 7).
 
 9.  Work Product Binding
 
@@ -600,6 +600,7 @@ Table of Contents
    (Section 9.2) can attach and sign a Work Product Provenance object
    attributing a fabricated or malicious artifact to a legitimate active
    Mission, and the binding verifies exactly as a faithful one would.
+
    Detection is conditional, not assured.  Where the binding is
    registered as Mission evidence ([I-D.draft-mcguinness-mission-audit])
    and a deployment separately retains independently produced Decision
@@ -611,16 +612,17 @@ Table of Contents
    universal, and a work product's creation need not correspond one-to-
    one to a consequential action with evidence of its own.  Without an
    independent witness to production, a compromised mediator can produce
-   a forgery no correlation rule catches.  Transparency registration
-   makes a false claim permanent and attributable once made; it does not
-   make the claim detectable, and it does not make a dishonest mediator
-   honest.  Routing the mediator role through the Mission Issuer
-   (Section 9.2) helps only where the issuer independently observed the
-   production it signs for, a condition an issuer typically lacks for
-   harness-executed work (Section 6).  The harness profile's own
-   compromise analysis states the same split between prevention and
-   after-the-fact detectability for a compromised execution environment
-   ([I-D.draft-mcguinness-mission-harness]).
+   a forgery no correlation rule catches.
+
+   Transparency registration makes a false claim permanent and
+   attributable once made; it does not make the claim detectable, and it
+   does not make a dishonest mediator honest.  Routing the mediator role
+   through the Mission Issuer (Section 9.2) helps only where the issuer
+   independently observed the production it signs for, a condition an
+   issuer typically lacks for harness-executed work (Section 6).  The
+   harness profile's own compromise analysis states the same split
+   between prevention and after-the-fact detectability for a compromised
+   execution environment ([I-D.draft-mcguinness-mission-harness]).
 
    One residual is not closed by this document.  Independent Missions,
    each acting within its own bounds, can communicate through shared
@@ -634,13 +636,20 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]).
 
    Bounding that aggregate is anticipated defense-in-depth, deferred to
-   later companions and not specified here: an issuer-assigned or
-   deployment-assigned classification of a shared-state effect; a
-   communications and audience envelope for what an agent may write and
-   who may read it; lineage-keyed aggregate bounds across a provenance
-   chain; and quarantine of a work product with blocking of its
-   consumers when the Producing Mission is compromised.  This document
-   specifies none of them now.
+   later companions and not specified here:
+
+   *  an issuer-assigned or deployment-assigned classification of a
+      shared-state effect;
+
+   *  a communications and audience envelope for what an agent may write
+      and who may read it;
+
+   *  lineage-keyed aggregate bounds across a provenance chain; and
+
+   *  quarantine of a work product with blocking of its consumers when
+      the Producing Mission is compromised.
+
+   This document specifies none of them now.
 
 12.  Privacy Considerations
 

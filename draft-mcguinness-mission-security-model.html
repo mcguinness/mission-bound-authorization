@@ -1240,10 +1240,13 @@ considerations of each profile rather than restating them.<a href="#section-abst
             <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-owasp-agentic-threat-covera" class="internal xref">OWASP Agentic Threat Coverage</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
-            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1423,8 +1426,10 @@ state. It must derive faithfully and gate correctly; it assumes the
 Approver is authenticated and the agent is untrusted. Its compromise
 voids the model (<a href="#documenting" class="auto internal xref">Section 11</a> names the key-custody statement a
 deployment publishes for this assumption): a compromised issuer can
-mint arbitrary authority. This is the strongest trust assumption in
-the suite
+mint arbitrary authority, including a forged Mandate over a real
+Mission that a verifier cannot reject on artifact-level checks alone
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>). This is the strongest
+trust assumption in the suite
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1449,7 +1454,7 @@ and carry no Mission binding. It must run the approval ceremony
 faithfully, keep the Mission record and its anchors intact, and
 serve accurate Mission state. Its compromise is equivalent to
 Mission Issuer compromise (forged approvals, altered records, false
-state), with one addition. In this mode the PDP's
+state), plus one addition: in this mode the PDP's
 credential-to-Mission join is the only binding between a presented
 credential and a Mission, so a compromised Mission Authority Server
 combined with the PDP's trust in it yields arbitrary attribution of
@@ -1803,11 +1808,12 @@ active-state freshness for the high-consequence classes and the
 no-unmediated-path rule for mediated classes (which covers both a path
 to those actions and a path to fresh usable credentials for them) are
 already base-profile requirements; a deployment that leaves any of the
-five conditions unmet does not obtain the guarantee. This
-matches the suite's front-door framing: adopting the profiles does not by
-itself make a deployment resistant to a compromised agent. The model
-makes misuse bounded and, where evidence is produced, attributable.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">Earned is also not provable at the wire. The High-Assurance Agent
+five conditions unmet does not obtain the guarantee.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">This matches the suite's front-door framing: adopting the profiles
+does not by itself make a deployment resistant to a compromised
+agent. The model makes misuse bounded and, where evidence is
+produced, attributable.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">Earned is also not provable at the wire. The High-Assurance Agent
 claims name conditions a deployment satisfies, not something a token
 or a decision response proves: the execution-environment scope
 statement they rest on is self-declared
@@ -1815,17 +1821,18 @@ statement they rest on is self-declared
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and absent independent
 evidence, a relying party cannot distinguish, from the protocol
 artifacts alone, a deployment that built the claimed isolation from
-one that merely published the claim. Execution-environment
-attestation is what closes that gap; the runtime profile requires it
-for the two High-Assurance Agent claims specifically, not for base
-conformance (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Retained
+one that merely published the claim.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">Execution-environment attestation is what closes that gap; the
+runtime profile requires it for the two High-Assurance Agent claims
+specifically, not for base conformance
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Retained
 negative-conformance evidence is the complementary recommendation:
 it does not prove the claim at decision time, but it lets an auditor
 check afterward that the deployment ran the tests the claim implies
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Short of attestation, the
 trust assumption is plain: an unattested High-Assurance claim is an
-organizational assertion, taken on trust, not a technical one.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">It does not make a compromised trusted component safe. The compromise of
+organizational assertion, taken on trust, not a technical one.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">It does not make a compromised trusted component safe. The compromise of
 each component degrades a specific guarantee, as listed in
 <a href="#trusted-base" class="auto internal xref">Section 6</a>. It does not verify the agent's reasoning or the
 truthfulness of its outputs; semantic and intent verification are a
@@ -1834,8 +1841,8 @@ inherits the threat models of the substrates the companions profile
 (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
 Response), which those substrates own. <a href="#adversary-model" class="auto internal xref">Section 9</a> gives the
 per-adversary-move detail: what addresses each move, and the residual it
-leaves.<a href="#section-8-5" class="pilcrow">¶</a></p>
-<p id="section-8-6">"On behalf of" is not treated as a permission model. The family
+leaves.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">"On behalf of" is not treated as a permission model. The family
 splits what that phrase conflates: the Mission carries the approved
 task the agent pursues for the Subject; a derived token presents
 delegated authority without identity collapse, since <code>sub</code> remains
@@ -1844,7 +1851,7 @@ chain names who executed; and personal sanction is carried only by
 approval events (the approval event, action-bound approval), never
 inferred from token possession. Authority derived down this chain
 never exceeds its source (the subset rule), so broad "acting as"
-standing cannot be laundered out of a narrow approval.<a href="#section-8-6" class="pilcrow">¶</a></p>
+standing cannot be laundered out of a narrow approval.<a href="#section-8-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="adversary-model">
@@ -2209,9 +2216,10 @@ Disclosure Interrogation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.7">
-          <p id="section-9-5.7.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
-per service; a deployment that needs that property checked registers
-with more than one independent service.<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
+          <p id="section-9-5.7.1"><strong>Single-service equivocation.</strong> Transparency's non-equivocation
+guarantee is per-service, stated in full at the Transparency
+Service trusted-base entry
+(<a href="#trusted-base" class="auto internal xref">Section 6</a>; <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.8">
           <p id="section-9-5.8.1"><strong>Offline breadth.</strong> Offline attenuation
@@ -2398,8 +2406,7 @@ class, which components must be intact for the class's guarantee to hold.
 The statement covers key custody: for each key class the deployment
 operates (issuer signing, evidence signing, agent sender-constraint,
 mediating-PEP custody, attenuation roots), where the key is held, at
-what custody grade, and the compromise-recovery procedure, since the
-model's strongest assumption reduces to those keys
+what custody grade, and the compromise-recovery procedure
 (<a href="#trusted-base" class="auto internal xref">Section 6</a>).
 This documentation is what lets a relying party or auditor reason about
 the deployment's actual security posture rather than the model's
@@ -2850,18 +2857,42 @@ model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" cl
       </table>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">Editorial density pass on this Informational document: the
+Transparency Service entry of <a href="#trusted-base" class="auto internal xref">Section 6</a> kept as the one
+full statement of the single-service-equivocation point, with the
+Ten Residuals restatement compressed to a pointer at it; the
+Documenting section's echo of the Authorization Server entry's
+"strongest trust assumption" phrasing dropped in favor of its
+existing <a href="#trusted-base" class="auto internal xref">Section 6</a> cross-reference, and that entry given an
+explicit citation to the Mission Mandate document it shares the
+issuer-key-compromise concern with. Several over-long paragraphs in
+<a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
+content, anchor, or adversary-model row, mitigation, or residual
+changed.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-C">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-C-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 work and consolidates the trusted base and security assumptions that its
-profiles establish individually.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+profiles establish individually.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

@@ -1340,7 +1340,8 @@ structured token formats.<a href="#section-1-1" class="pilcrow">¶</a></p>
 center of the negotiation. How the authorization server assesses a
 request, what the resource owner approved, in what bounds, with what
 durable record, under what lifecycle: all of it is unspecified policy
-behind the grant endpoint. The Mission model of
+behind the grant endpoint.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The Mission model of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") is a
 specification of exactly that interior: a durable Mission record
 created by an explicit approval event, integrity anchors committing
@@ -1350,17 +1351,18 @@ record. The issuance profile's own Relationship to GNAP names this
 document's premise: the Mission model is the OAuth-native
 instantiation of a binding-neutral contextual-governance kernel, and
 a deployment that starts from GNAP admits a candidate binding onto
-that substrate. This document is that binding.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">Four mechanics the OAuth binding assembles from parts are native
+that substrate. This document is that binding.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Four mechanics the OAuth binding assembles from parts are native
 here. The grant request is delivered by direct post by construction,
 the property the OAuth binding retrofits with pushed authorization
 requests. Structured authority proposals ride the grant request's
 native access rights, the intake role Rich Authorization Requests
 play (<a href="#authority-adapter" class="auto internal xref">Section 7</a> defines their projection into the
 family's Authority Set), and every request is signed with the client
-instance's key, so the proposal is cryptographically attributable. Asynchronous approval is
-the <em>pending</em> grant state with continuation under the server's
-declared wait interval, the surface the OAuth binding reaches through
+instance's key, so the proposal is cryptographically attributable.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Asynchronous approval is the <em>pending</em> grant state with continuation
+under the server's declared wait interval, the surface the OAuth
+binding reaches through
 the Mission Deferred Approval companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>) over an unratified
 substrate. And the resource server's contract with the Mission Issuer
@@ -1369,8 +1371,8 @@ The family has already met this shape once: the Mission Authority
 Server's lifecycle surfaces follow a reference-plus-continuation
 pattern that its specification notes parallels GNAP's grant
 continuation (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>);
-here the parallel is the substrate itself.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This is the fifth binding of the Mission model: the issuance profile
+here the parallel is the substrate itself.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This is the fifth binding of the Mission model: the issuance profile
 binds it to the OAuth Authorization Server, the Mission Authority
 Server to a standalone service beside an unchanged AS, the AAuth
 binding to the AAuth Person Server
@@ -1384,7 +1386,7 @@ contract (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite x
 Substrate Statement (<a href="#mission-substrate" class="auto internal xref">Section 12</a>) is written to that
 document's conformance rules, and it is the first Statement written
 in the contract's supplied/not-supplied form with activation
-conditions.<a href="#section-1-4" class="pilcrow">¶</a></p>
+conditions.<a href="#section-1-6" class="pilcrow">¶</a></p>
 <div id="intent-first">
 <section id="section-1.1">
         <h3 id="name-intent-first-operation">
@@ -1408,13 +1410,14 @@ had to assemble intent-first behavior on an attempt-first substrate,
 GNAP's grant request is mutable by design: <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span> lets a client
 modify a grant while it is <em>approved</em> or <em>pending</em>. The kernel
 requires the Approved Context to be immutable
-(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). This binding resolves
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+<p id="section-1.1-3">This binding resolves
 the tension with one split: a modification within the approved
 Authority Set is a drawdown the authorization server may adjudicate
 by policy, and a modification beyond it is an expansion that <span class="bcp14">MUST</span>
 return to the Approver and, on approval, yields a successor Mission
 (<a href="#drawdown" class="auto internal xref">Section 11.3</a>). The grant is the negotiation
-surface; the Mission record, never the grant, is the approved value.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+surface; the Mission record, never the grant, is the approved value.<a href="#section-1.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="applicability">
@@ -1631,14 +1634,11 @@ evidence is dispatched by type and refused when unsupported or
 failing, and the submission is untrusted client input, never
 authority). The grant request's signature attributes the submission
 to the client instance's key; attribution confers no authority.<a href="#section-6-2" class="pilcrow">¶</a></p>
-<p id="section-6-3">The access rights of the grant request's access token requests are
-this binding's authority proposal, replacing the issuance profile's
-PAR-only carriage rule. GNAP rights are not an OAuth
-<code>authorization_details</code> array: <a href="#authority-adapter" class="auto internal xref">Section 7</a> defines the
-normative projection that resolves, normalizes, and aggregates them
-before the issuance profile's recording and hashing semantics apply
-(a proposal, never authority; the Intent itself carries no authority
-members).<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-3">The grant request's access rights are this binding's authority
+proposal, replacing the issuance profile's PAR-only carriage rule:
+<a href="#authority-adapter" class="auto internal xref">Section 7</a> projects them into the issuance profile's
+recording and hashing rules, and the proposal itself carries no
+authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-6-4">A Mission-Bound GNAP Client Instance <span class="bcp14">MUST</span> carry the Mission Intent
 on the first grant request it makes under a prospective Mission, and
 the Intent <span class="bcp14">MUST</span> describe the whole task, not the slice the request's
@@ -1845,19 +1845,20 @@ endpoint URI (the value <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]
 AS) and <code>client_id</code> the client instance's instance identifier where
 the authorization server registers one, or a stable approval-time
 identifier it derives from the instance's key where none is
-registered. That value is the Actor identity; token presenter keys
+registered.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">That value is the Actor identity; token presenter keys
 are credential bindings recorded separately
 (<a href="#security-key-rotation" class="auto internal xref">Section 15.4</a>).
 <code>expires_at</code> is <span class="bcp14">REQUIRED</span>, in RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time form;
 when the proposal's Intent carries none, the authorization server
-<span class="bcp14">MUST</span> set one by policy.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<p id="section-9-2">Like the UMA binding and unlike the AAuth binding, this substrate
+<span class="bcp14">MUST</span> set one by policy.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">Like the UMA binding and unlike the AAuth binding, this substrate
 carries no wire-native mission artifact to commit. The record is
 held at the authorization server, <code>mission_id</code> and <code>issuer</code> name the
 Mission, and consumers meet the reference in the <code>mission</code> grant
 response member, the token's <code>mission</code> claim, or the introspection
 response (<a href="#credential" class="auto internal xref">Section 11</a>). No substrate-native commitment exists
-beside the anchors, and nothing substitutes for them.<a href="#section-9-2" class="pilcrow">¶</a></p>
+beside the anchors, and nothing substitutes for them.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -1979,13 +1980,14 @@ One derivation is counted per successful GNAP operation that issues
 or rotates credentials under the Mission (an initial grant response,
 a continuation response, a modifying request's response, or a token
 rotation), regardless of the number of tokens the response carries;
-an operation that issues none counts zero. Where the Intent's
+an operation that issues none counts zero.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">Where the Intent's
 <code>controls.max_derivations</code> is
 present, the authorization server <span class="bcp14">MUST</span> refuse the derivation that
 would exceed it, per the issuance profile's count-and-gate rule. An
 access token issued under a Mission <span class="bcp14">MUST NOT</span> expire later than the
-Mission's <code>expires_at</code>, so no credential outlives the Mission.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<p id="section-10.1-2">Where the deployment adopts Mission Containment
+Mission's <code>expires_at</code>, so no credential outlives the Mission.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<p id="section-10.1-3">Where the deployment adopts Mission Containment
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the
 authorization server <span class="bcp14">MUST</span> intersect every issued token's access
 rights, including rights carried in a grant from before a contain
@@ -2000,7 +2002,7 @@ rotation (<code>invalid_rotation</code>) for a token whose rights are no longer
 within the Effective Authority Set; the client instance's recourse
 is a grant modification, which is adjudicated against the current
 set. Carriage of the containment profile's registered denial reason
-on GNAP's error object is deferred wire work (<a href="#limitations" class="auto internal xref">Section 13</a>).<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+on GNAP's error object is deferred wire work (<a href="#limitations" class="auto internal xref">Section 13</a>).<a href="#section-10.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-surfaces">
@@ -2019,13 +2021,13 @@ satisfies them, the token is inactive in that context and the
 response is <code>active: false</code> with every other member omitted. Where
 no minimum was named, an otherwise valid token reports
 <code>active: true</code> with the filtered, possibly empty, <code>access</code> array:
-the resource server then holds no disclosed authority to permit.
-<code>mission.state</code> continues to report <code>active</code> because containment
+the resource server then holds no disclosed authority to permit.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2"><code>mission.state</code> continues to report <code>active</code> because containment
 narrows authority without changing Mission state. The staleness
 bound is the introspection caching the deployment permits, which the
 deployment <span class="bcp14">MUST</span> state; with caching disabled the bound is
-effectively zero.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
-<p id="section-10.2-2">A deployment whose tokens are structured formats validated without
+effectively zero.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">A deployment whose tokens are structured formats validated without
 introspection loses that source, and <span class="bcp14">MUST</span> either cap token lifetime
 at its declared staleness bound (lifetime-bounded reliance) or serve
 an active state surface. A Mission-Bound GNAP Authorization Server
@@ -2039,8 +2041,8 @@ high-consequence classes <span class="bcp14">MUST</span> provide an active fresh
 with a published staleness bound
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); per-use introspection
 with a stated cache bound satisfies it, and token lifetime alone
-does not.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
-<p id="section-10.2-3">An authorization server that serves these surfaces advertises the
+does not.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">An authorization server that serves these surfaces advertises the
 corresponding members (<code>mission_status_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>,
 <code>mission_lifecycle_endpoint</code>, <code>mission_event_stream_endpoint</code>,
@@ -2051,7 +2053,7 @@ profiles define. GNAP defines no client-facing key publication
 surface, so the verification keys for signed family artifacts are
 distributed by deployment configuration or an RS-facing discovery
 extension; registration of these discovery fields is deferred work
-(<a href="#iana" class="auto internal xref">Section 17</a>).<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+(<a href="#iana" class="auto internal xref">Section 17</a>).<a href="#section-10.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

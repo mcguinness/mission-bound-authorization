@@ -130,10 +130,11 @@ Table of Contents
    governance orthogonal to its five resource-access modes.  An agent
    and its Person Server (PS) hold the exact bytes of an approved
    mission blob.  The SHA-256 digest of those bytes, paired with the
-   approving PS URL, forms the native Mission Reference.  Resources and
-   Access Servers see that reference, not the mission body.  The PS
-   retains the context and ordered mission log needed to make governance
-   decisions.
+   approving PS URL, forms the native Mission Reference.
+
+   Resources and Access Servers see that reference, not the mission
+   body.  The PS retains the context and ordered mission log needed to
+   make governance decisions.
 
    AAuth also deliberately gives a mission only two states.  An active
    mission can be used; a terminated mission has ended permanently.
@@ -155,18 +156,19 @@ Table of Contents
    family security model's analysis applies to it
    ([I-D.draft-mcguinness-mission-security-model]).
 
-   This specification currently extends the existing mission_endpoint
-   with an operation member, unambiguous against base requests, which
-   carry none at that URL.  The base protocol splits the surfaces:
-   mission_endpoint is the owning agent's, and parties other than the
-   owning agent read and manage missions at the
-   mission_control_endpoint, whose operations AAuth charters to a
-   companion specification with exactly this document's scope.  A future
-   revision relocates these operations to that endpoint and adopts the
-   base protocol's per-mission URL and action discriminator conventions;
-   the operation semantics defined here are endpoint-independent, and
-   the approving PS remains the only server that can interpret the
-   reference and change its state.
+   This specification extends the existing mission_endpoint with an
+   operation member, unambiguous against base requests, which carry none
+   at that URL.  The base protocol splits the surfaces: mission_endpoint
+   is the owning agent's, and parties other than the owning agent read
+   and manage missions at the mission_control_endpoint, whose operations
+   AAuth charters to a companion specification with exactly this
+   document's scope.
+
+   A future revision relocates these operations to that endpoint and
+   adopts the base protocol's per-mission URL and action discriminator
+   conventions.  The operation semantics defined here are endpoint-
+   independent, and the approving PS remains the only server that can
+   interpret the reference and change its state.
 
 2.  Conventions and Terminology
 
@@ -633,8 +635,9 @@ Table of Contents
    }
 
    mission_s256, as_of, nodes, and complete are REQUIRED.  When another
-   page exists, next_cursor is REQUIRED and complete is false.  A node
-   contains an agent and one of root, sub_agent, or call_chain as
+   page exists, next_cursor is REQUIRED and complete is false.
+
+   A node contains an agent and one of root, sub_agent, or call_chain as
    relationship.  A non-root node contains parent_agent.  tokens MAY be
    returned to a Person or authorized administrator and SHOULD be
    omitted from an Agent response unless required for that Agent's own

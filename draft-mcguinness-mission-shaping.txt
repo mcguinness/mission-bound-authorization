@@ -516,10 +516,13 @@ Table of Contents
    supplied bound distinct from the progressive profile's consented
    authority_ceiling Mission member
    ([I-D.draft-mcguinness-oauth-mission-progressive]), the proposal MUST
-   be a subset of it.  If the task cannot be completed within that
-   ceiling, the shaper MUST request clarification or refuse.  It MUST
-   NOT silently drop necessary authority while emitting a proposal that
-   appears complete, unless both of the following hold:
+   be a subset of it.  It is likewise distinct from the template
+   profile's pre-consented Template Ceiling on Missions dispatched from
+   a template ([I-D.draft-mcguinness-oauth-mission-template]).  If the
+   task cannot be completed within that ceiling, the shaper MUST request
+   clarification or refuse.  It MUST NOT silently drop necessary
+   authority while emitting a proposal that appears complete, unless
+   both of the following hold:
 
    *  Shaping Evidence records the excluded authority; and
 
@@ -1404,6 +1407,11 @@ Table of Contents
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-oauth-mission-
               progressive.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
 
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,

@@ -1838,11 +1838,12 @@ reviewed workflow definition or operation profile. Model output <span class="bcp
 <span class="bcp14">MAY</span> admit one through its review surface: a human review or a
 deterministic validation against a reviewed operation profile.
 Admission adopts the proposal into the deployment's committed
-documentation before dispatch. The adopted plan is then a reviewed
+documentation before dispatch.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+<p id="section-7.1-7">The adopted plan is then a reviewed
 definition, and the Orchestration Evidence that commits its hash
 records the admission. What the rule excludes is model output
 defining an unwind-plan member with nothing between proposal and
-dispatch.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+dispatch.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-unwind-plan">
@@ -1926,11 +1927,11 @@ whose unwind plan requires it; and<a href="#section-8-2.4.1" class="pilcrow">¶<
 <p id="section-8-3">The two triggers differ in what they permit. An established
 non-active state runs the full sequence. Staleness alone, an active
 state that cannot be established within the bound, performs items 1,
-2, 3, and 5 and <span class="bcp14">MUST NOT</span> execute post-completion behavior (item 4).
-Compensation is itself consequential work, and unwinding work nobody
+2, 3, and 5 and <span class="bcp14">MUST NOT</span> execute post-completion behavior (item 4).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">Compensation is itself consequential work, and unwinding work nobody
 stopped is not fail-closed. Post-completion behavior runs only on an
-established non-active state.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">These states are all non-active:<a href="#section-8-4" class="pilcrow">¶</a></p>
+established non-active state.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">These states are all non-active:<a href="#section-8-5" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
         <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -1982,16 +1983,16 @@ established non-active state.<a href="#section-8-3" class="pilcrow">¶</a></p>
           </tr>
         </tbody>
       </table>
-<p id="section-8-6">The orchestrator needs none of those companion profiles to be
+<p id="section-8-7">The orchestrator needs none of those companion profiles to be
 conformant: per the issuance profile's forward-compatibility rule it
 treats any state other than <code>active</code> as non-active. A deployment <span class="bcp14">MAY</span>
 define different operator handling for each state, but none allows
-new governed execution without a fresh authority path.<a href="#section-8-6" class="pilcrow">¶</a></p>
-<p id="section-8-7">In particular, a <code>superseded</code> Mission's continued work <span class="bcp14">SHOULD</span> proceed
+new governed execution without a fresh authority path.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">In particular, a <code>superseded</code> Mission's continued work <span class="bcp14">SHOULD</span> proceed
 under the successor Mission through a fresh derivation from the
 successor's grant, not by rebinding the predecessor's authority; the
 successor carries its own Authority Set
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-8-7" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-8-8" class="pilcrow">¶</a></p>
 <div id="authority-narrowing">
 <section id="section-8.1">
         <h3 id="name-authority-narrowing-behavio">

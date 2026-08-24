@@ -1538,7 +1538,8 @@ record's registered type identifier against the exact type it expects
 before treating the record as that type (<a href="#registration-policy" class="auto internal xref">Section 6.4</a>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.2-4">A registrable evidence type is named at up to three layers, and the
 layers are distinct identifiers with distinct purposes, not spellings
-of one string. The media type, or local-use type identifier,
+of one string.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">The media type, or local-use type identifier,
 identifies the retained representation: the payload schema for a
 <code>+json</code> object, the compact artifact itself for a <code>+jwt</code>, <code>+sd-jwt</code>,
 or SET form. The protected <code>typ</code> of an operational signature
@@ -1550,7 +1551,8 @@ Evidence's <code>mission-consent-evidence+jws</code> names the JWS over the
 <code>payload-preimage-content-type</code> identifies the media type of the
 preimage committed at the transparency boundary; the exact bytes are
 what the canonical-bytes column fixes (<a href="#evidence-types" class="auto internal xref">Section 6.3</a>,
-<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>). The evidence-type table fixes each type's
+<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<p id="section-6.2-6">The evidence-type table fixes each type's
 operational <code>typ</code> explicitly; the identifiers are not derivable from
 one another in every case, and a consumer checks the identifier of
 the layer it is verifying. A new type that fixes an operational
@@ -1560,8 +1562,8 @@ envelope <span class="bcp14">SHOULD</span> set its <code>typ</code> to its regis
 exact-value rule, so a verifier of the runtime evidence types still
 rejects the omitted-prefix forms that profile does not permit. A
 <code>typ</code> naming the secured representation instead is a per-type mapping
-the table documents, not a divergent spelling of the media type.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
-<p id="section-6.2-5">The layering is deliberate, and the layers compose rather than
+the table documents, not a divergent spelling of the media type.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
+<p id="section-6.2-7">The layering is deliberate, and the layers compose rather than
 compete. The operational signature authenticates producer origin and
 record integrity to any verifier that resolves the producer's key; it
 is not inherently deployment-local. The Signed Statement is a typed
@@ -1571,19 +1573,21 @@ verification independent of the producer is neither of these but the
 Transparency Service's Receipt and inclusion proof, under a service
 key trusted and retained separately: they add registration and
 inclusion at a committed time and remove reliance on the producer's
-live records (<a href="#receipts" class="auto internal xref">Section 9</a>). Operator independence, or the
+live records (<a href="#receipts" class="auto internal xref">Section 9</a>).<a href="#section-6.2-7" class="pilcrow">¶</a></p>
+<p id="section-6.2-8">Operator independence, or the
 second-service control of <a href="#limits" class="auto internal xref">Section 11</a>, is what carries the
 cross-domain claim; verification still requires the producer and
 service trust anchors, the Receipt, and the retrievable evidence, and
 proves neither that a record is true nor that a feed is complete
-(<a href="#verification-failures" class="auto internal xref">Section 9.1</a>). The anti-cross-use rule above depends on
+(<a href="#verification-failures" class="auto internal xref">Section 9.1</a>).<a href="#section-6.2-8" class="pilcrow">¶</a></p>
+<p id="section-6.2-9">The anti-cross-use rule above depends on
 keeping the identifiers' roles and checks distinct, not their string
 values: the runtime evidence rows deliberately carry the same media
 type string as operational <code>typ</code> and as
 <code>payload-preimage-content-type</code>. Collapsing the types into one
 envelope, one media type, or a shared <code>typ</code> list would relocate
 domain separation from the registered identifier into a payload
-member.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+member.<a href="#section-6.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-types">
@@ -1598,16 +1602,18 @@ object is unsigned), and the producer authoritative for it: an
 evidence-type registration. This document is that registration,
 normatively, only for the four evidence types it itself defines
 (<a href="#iana" class="auto internal xref">Section 15</a>); a producer of one of those types <span class="bcp14">MUST</span> commit to the
-canonical bytes fixed there. For every other row, the cited profile
+canonical bytes fixed there.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.3-2">For every other row, the cited profile
 is that registration: committing to its canonical bytes is that
 profile's own conformance duty, imposed there, and this document
 neither restates it nor requires consulting that profile's text to
 satisfy it. This table is an informative catalog of every row's
-properties, consulted only where the citing profile is adopted. A
+properties, consulted only where the citing profile is adopted.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+<p id="section-6.3-3">A
 relying party <span class="bcp14">MUST</span> verify, from the producer this table records for
 a record's type, that the record's <code>iss</code> is that producer
 (<a href="#registration-policy" class="auto internal xref">Section 6.4</a>) before treating the record as part of the
-Mission's feed; a row registers nothing on its own.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+Mission's feed; a row registers nothing on its own.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1825,7 +1831,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-6.3-1" clas
             </tr>
           </tbody>
         </table>
-<p id="section-6.3-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
+<p id="section-6.3-5">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
 additional evidence type by fixing its canonical bytes, its
 <code>payload-preimage-content-type</code>, its operational <code>typ</code> together with
 the envelope that carries it, where its retained form has one, or an
@@ -1833,8 +1839,8 @@ explicit none, and its authoritative producer, as the Mandate profile
 does for the Mission Mandate
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>). A relying party admits an
 extension type it implements; it ignores records of a type it does
-not implement, and they are not audit failures.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
-<p id="section-6.3-4">Two evidence producers stay outside the table by design. Shaping
+not implement, and they are not audit failures.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-6">Two evidence producers stay outside the table by design. Shaping
 Evidence fixes no schema or media type; its commitment mechanism is
 the <code>shaping_evidence_hash</code> integrity anchor, the issuance profile's
 domain-separated <code>{typ, iss, value}</code> envelope with committed-object
@@ -1845,8 +1851,8 @@ identifier. Orchestration Evidence registers no media type and keeps
 <code>mission-orchestration-evidence</code> as a local-use identifier
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>); a deployment <span class="bcp14">MAY</span>
 register it under deployment policy by fixing the values a row
-requires.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
-<p id="section-6.3-5">The producer identifiers are principals the suite already names. For
+requires.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
+<p id="section-6.3-7">The producer identifiers are principals the suite already names. For
 every record whose producer is the Mission <code>issuer</code>, the Signed
 Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>issuer</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PDP and PEP keys are those
@@ -1858,8 +1864,8 @@ egress keys publish in the same deployment key sets under the harness
 profile's conventions (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). The
 producer of a Work Product Binding is the <code>mediator</code> principal that
 signed it, projected onto these paths as <a href="#registration-policy" class="auto internal xref">Section 6.4</a>
-fixes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-6.3-5" class="pilcrow">¶</a></p>
-<p id="section-6.3-6">The approval event, the lifecycle-transition object, and the
+fixes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-6.3-7" class="pilcrow">¶</a></p>
+<p id="section-6.3-8">The approval event, the lifecycle-transition object, and the
 derivation record are canonicalized under the issuance profile's
 canonicalization rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). An
 artifact whose retained form is itself a compact serialization (the
@@ -1870,8 +1876,8 @@ receipt evidence) is hashed as the JCS canonical bytes of the
 complete retained object, envelope included, the same shape as the
 approval-governance record digest: hashing received octets instead
 would let a reserialization outside the envelope change the audit
-digest while the operational signature stayed valid.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
-<p id="section-6.3-7">The operational <code>typ</code> column records the protected <code>typ</code> of the
+digest while the operational signature stayed valid.<a href="#section-6.3-8" class="pilcrow">¶</a></p>
+<p id="section-6.3-9">The operational <code>typ</code> column records the protected <code>typ</code> of the
 signature envelope a type's retained form carries, none where the
 type is retained unsigned. It is the per-type mapping named in
 <a href="#evidence-base" class="auto internal xref">Section 6.2</a>, checked when verifying the operational signature,
@@ -1883,55 +1889,55 @@ mapping in this catalog. A harness revision that defines a JWS
 representation fixes, in that profile, the envelope and retained
 form, the protected <code>typ</code>, byte-equality verification, and whether
 transparency commits the JSON payload, the complete nested object,
-or the compact JWS.<a href="#section-6.3-7" class="pilcrow">¶</a></p>
-<p id="section-6.3-8">The media types and type identifiers are defined as follows:<a href="#section-6.3-8" class="pilcrow">¶</a></p>
+or the compact JWS.<a href="#section-6.3-9" class="pilcrow">¶</a></p>
+<p id="section-6.3-10">The media types and type identifiers are defined as follows:<a href="#section-6.3-10" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.3-9.1">
-            <p id="section-6.3-9.1.1">the approval-event, lifecycle-transition, and derivation-record
-media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 15</a>);<a href="#section-6.3-9.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6.3-11.1">
+            <p id="section-6.3-11.1.1">the approval-event, lifecycle-transition, and derivation-record
+media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 15</a>);<a href="#section-6.3-11.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.2">
-            <p id="section-6.3-9.2.1">the consent, decision, execution, refusal, and receipt evidence
+          <li class="normal" id="section-6.3-11.2">
+            <p id="section-6.3-11.2.1">the consent, decision, execution, refusal, and receipt evidence
 types are registered by the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-9.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-11.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.3">
-            <p id="section-6.3-9.3.1">the Approval governance media type by Mission Approval Governance
-(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>);<a href="#section-6.3-9.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-11.3">
+            <p id="section-6.3-11.3.1">the Approval governance media type by Mission Approval Governance
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>);<a href="#section-6.3-11.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.4">
-            <p id="section-6.3-9.4.1">the Signals SET media type by the Signals profile it is carried in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-6.3-9.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-11.4">
+            <p id="section-6.3-11.4.1">the Signals SET media type by the Signals profile it is carried in
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-6.3-11.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.5">
-            <p id="section-6.3-9.5.1">the Mandate media type by the Mandate profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>);<a href="#section-6.3-9.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-11.5">
+            <p id="section-6.3-11.5.1">the Mandate media type by the Mandate profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>);<a href="#section-6.3-11.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.6">
-            <p id="section-6.3-9.6.1">the Child Evidence canonical bytes and type identifier by the
+          <li class="normal" id="section-6.3-11.6">
+            <p id="section-6.3-11.6.1">the Child Evidence canonical bytes and type identifier by the
 child-delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>);<a href="#section-6.3-9.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>);<a href="#section-6.3-11.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.7">
-            <p id="section-6.3-9.7.1">the Discovery Evidence canonical bytes and type identifier by the
-discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>);<a href="#section-6.3-9.7.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-11.7">
+            <p id="section-6.3-11.7.1">the Discovery Evidence canonical bytes and type identifier by the
+discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>);<a href="#section-6.3-11.7.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.8">
-            <p id="section-6.3-9.8.1">the Work Product Binding media type by the work-products profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>);<a href="#section-6.3-9.8.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-11.8">
+            <p id="section-6.3-11.8.1">the Work Product Binding media type by the work-products profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>);<a href="#section-6.3-11.8.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.9">
-            <p id="section-6.3-9.9.1">the Egress Evidence type identifier by the harness profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>); and<a href="#section-6.3-9.9.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-11.9">
+            <p id="section-6.3-11.9.1">the Egress Evidence type identifier by the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>); and<a href="#section-6.3-11.9.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-9.10">
-            <p id="section-6.3-9.10.1">the Containment Evidence and Protected Event Receipt type
+          <li class="normal" id="section-6.3-11.10">
+            <p id="section-6.3-11.10.1">the Containment Evidence and Protected Event Receipt type
 identifiers by the containment profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-6.3-9.10.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-6.3-11.10.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.3-10">The approval event's canonical bytes are the whole Mission record at
+<p id="section-6.3-12">The approval event's canonical bytes are the whole Mission record at
 creation with <code>state</code> excluded, canonicalized (<a href="#evidence-types" class="auto internal xref">Section 6.3</a>):
 every committed member is included, the record's own optional members
 where present (for example, <code>proposed_authority</code> and <code>proposal_hash</code>,
@@ -1944,8 +1950,8 @@ derivation record's <code>entries_digest</code> and <code>token_digest</code>
 signed <code>payload-preimage-content-type</code> in the COSE hash-envelope
 protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>), which binds the committed hash
 to <code>application/mission-approval-record+json</code> and keeps a digest of one
-evidence type from being read as another.<a href="#section-6.3-10" class="pilcrow">¶</a></p>
-<p id="section-6.3-11">Each companion-defined row binds only a deployment that produces that
+evidence type from being read as another.<a href="#section-6.3-12" class="pilcrow">¶</a></p>
+<p id="section-6.3-13">Each companion-defined row binds only a deployment that produces that
 evidence, so the citation is consulted only where the profile is
 adopted. The Discovery Evidence, Containment evidence, Protected
 event receipt, and Work Product Binding rows cite profiles at
@@ -1955,11 +1961,11 @@ and each cited profile places the registration duty on its own
 adopters. A deployment not running one of those profiles omits its
 rows. A deployment that does not run the Signals profile commits
 lifecycle transitions as the transition object
-(<a href="#transition-object" class="auto internal xref">Section 6.3.1</a>) instead of the Signals SET.<a href="#section-6.3-11" class="pilcrow">¶</a></p>
-<p id="section-6.3-12">A Child Evidence record registers on the Parent Mission's feed: the
+(<a href="#transition-object" class="auto internal xref">Section 6.3.1</a>) instead of the Signals SET.<a href="#section-6.3-13" class="pilcrow">¶</a></p>
+<p id="section-6.3-14">A Child Evidence record registers on the Parent Mission's feed: the
 <code>sub</code> is the parent's (<a href="#feed" class="auto internal xref">Section 8</a>), its producer is the <code>issuer</code>, and
 the child Mission's <code>id</code> inside the evidence makes the delegation
-navigable from parent to child.<a href="#section-6.3-12" class="pilcrow">¶</a></p>
+navigable from parent to child.<a href="#section-6.3-14" class="pilcrow">¶</a></p>
 <div id="transition-object">
 <section id="section-6.3.1">
           <h4 id="name-the-lifecycle-transition-ob">
@@ -2402,7 +2408,8 @@ deployment-published key sets the runtime profile and its runtime
 evidence companion require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); the harness
 profile requires the same publication of a harness or egress gate that
-registers its evidence (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). A Work Product Binding projects onto the producer rule rather than
+registers its evidence (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+<p id="section-6.4-6">A Work Product Binding projects onto the producer rule rather than
 meeting it literally
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>). Its evidence
 producer is the <code>mediator</code> principal that signed the inner binding;
@@ -2415,7 +2422,7 @@ signing key <span class="bcp14">MUST</span> be authorized for that same mediator
 role under the deployment's published key material. The Mission
 Issuer does not register a harness-mediated binding as its own
 production: the producer stays the mediator principal, whichever
-component performs the registration.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+component performs the registration.<a href="#section-6.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="availability">
@@ -3311,6 +3318,14 @@ to match: Containment registers its own evidence media types.
 Discovery Evidence gained a self-hosted canonical-bytes definition
 and IANA media-type registration in its own profile, closing the
 one gap this document's citation had left undefined (#662).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Editorial density pass: split several overlong paragraphs in the
+Mission Evidence Base (the evidence-type naming-layers discussion)
+and in Registration Policy and Authoritative Producers, for
+scannability. No wording changed and no BCP-14 keyword sentence
+moved outside its section; the Evidence Types table and the
+Verification Failures integrity-vs-audit split were left untouched.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

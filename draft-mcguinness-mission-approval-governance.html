@@ -1275,22 +1275,22 @@ accountable Approver and defers multi-party approval and
 approval-authority provenance to a governance layer
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> states the rule for the
 OAuth binding, whose record members this document's binding rules
-consume). An enterprise
-review surface is often that governance layer: a decision may
-involve several principals, a threshold or separation-of-duty rule,
-and a delegation-of-authority policy, and an auditor later needs to
-prove not only who approved but under which authority the approval
-was valid. This document defines the Approval Governance Record
-(AGR) as governance evidence with teeth: where it is recorded, it
-participates in whether the Mission activates, so its assertions
-carry authentication and binding requirements, and its committed
-form is signed and immutable.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">Before commitment, the record is part of the approval decision
+consume). An enterprise review surface is often that governance
+layer: a decision may involve several principals, a threshold or
+separation-of-duty rule, and a delegation-of-authority policy, and an
+auditor later needs to prove not only who approved but under which
+authority the approval was valid.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines the Approval Governance Record (AGR) as
+governance evidence with teeth: where it is recorded, it participates
+in whether the Mission activates, so its assertions carry
+authentication and binding requirements, and its committed form is
+signed and immutable.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Before commitment, the record is part of the approval decision
 itself: an assertion that fails authentication, event binding, or
 policy authorization <span class="bcp14">MUST NOT</span> contribute, and a record that cannot be
 evaluated or persisted <span class="bcp14">MUST</span> prevent activation. After commitment, the
 record is evidence: immutable, signed, and consumed by audit, never
-by enforcement.<a href="#section-1-2" class="pilcrow">¶</a></p>
+by enforcement.<a href="#section-1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="optional-status">
@@ -1924,18 +1924,18 @@ basis both populate it, and each profile declares its own maximum age
 against it: <code>review_cadence</code> for template, the ceiling review cadence
 for progressive
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). The two recency
-paths are therefore analogous, each bounding staleness against a
-retained human-approval instant, but distinct in what they gate: this
-section's ceiling governs whether the issuer may count a <code>policy</code>
-assertion, or activate a Mission whose <code>approval_basis</code> stands in for
-one, at evaluation; a profile's own maximum age governs whether the
-dispatch or drawdown may happen at all, independent of whether an AGR
-is ever recorded. A standing-consent Mission's accountable-approver
-rule is satisfied by <code>approval_basis</code> itself
-(<a href="#assertion-requirements" class="auto internal xref">Section 6</a>), never by fabricating a <code>policy</code>
-assertion in its place; the high-risk-class default of this section
-still binds that record directly.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">The two recency paths are therefore analogous, each bounding staleness
+against a retained human-approval instant, but distinct in what they
+gate: this section's ceiling governs whether the issuer may count a
+<code>policy</code> assertion, or activate a Mission whose <code>approval_basis</code>
+stands in for one, at evaluation; a profile's own maximum age governs
+whether the dispatch or drawdown may happen at all, independent of
+whether an AGR is ever recorded.<a href="#section-12-4" class="pilcrow">¶</a></p>
+<p id="section-12-5">A standing-consent Mission's accountable-approver rule is satisfied by
+<code>approval_basis</code> itself (<a href="#assertion-requirements" class="auto internal xref">Section 6</a>), never by
+fabricating a <code>policy</code> assertion in its place; the high-risk-class
+default of this section still binds that record directly.<a href="#section-12-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audit-evidence">

@@ -1915,17 +1915,30 @@ requires a deployment to document
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-retry-idempotency-and-reser" class="section-name selfRef">Retry, Idempotency, and Reserve/Commit Posture</a>
         </h3>
 <p id="section-7.2-1">For a metered permit, the PDP and PEP <span class="bcp14">MUST</span> define retry and idempotency
-behavior. A retry of the same normalized action under the same
-idempotency key or single-use decision identifier <span class="bcp14">MUST NOT</span> consume the
-bound twice. Reuse of an idempotency key or decision identifier for a
-different normalized action <span class="bcp14">MUST</span> cause refusal. For irreversible
-actions and external commitments, a deployment <span class="bcp14">MUST</span> define whether
-metering is reserved before execution and committed after success, or
-committed before execution. It <span class="bcp14">MUST NOT</span> leave the decrement ambiguous:
-a reservation settles on the evidence state (<a href="#settlement-states" class="auto internal xref">Section 11.1.2</a>),
-never on a generic failure signal. The reserve/commit posture fixes
-when consumption is charged; the evidence state fixes how the charge
-settles.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+behavior.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.2-2.1">
+            <p id="section-7.2-2.1.1">A retry of the same normalized action under the same idempotency
+key or single-use decision identifier <span class="bcp14">MUST NOT</span> consume the bound
+twice.<a href="#section-7.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1">Reuse of an idempotency key or decision identifier for a different
+normalized action <span class="bcp14">MUST</span> cause refusal.<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-2.3">
+            <p id="section-7.2-2.3.1">For irreversible actions and external commitments, a deployment
+<span class="bcp14">MUST</span> define whether metering is reserved before execution and
+committed after success, or committed before execution.<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-2.4">
+            <p id="section-7.2-2.4.1">It <span class="bcp14">MUST NOT</span> leave the decrement ambiguous: a reservation settles on
+the evidence state (<a href="#settlement-states" class="auto internal xref">Section 11.1.2</a>), never on a generic
+failure signal.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.2-3">The reserve/commit posture fixes when consumption is charged; the
+evidence state fixes how the charge settles.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

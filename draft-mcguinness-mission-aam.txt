@@ -240,29 +240,30 @@ Table of Contents
 
 4.1.  Agent Identity Broker
 
-   AAM's broker exchanges a service's broad identity for a task-scoped
-   credential inside an established capability ceiling.  The family
-   splits that exchange by consequence class.  The mission-dispatch
-   grant re-issues a clipped, low-consequence instance from a consented
-   Template in one round trip with no human in the loop; a prohibited
-   class (irreversible, external-commitment, privileged-administration,
+   The family realizes AAM's exchange of a service's broad identity for
+   a task-scoped, ceiling-bound credential by splitting it into two
+   paths by consequence class.  The mission-dispatch grant re-issues a
+   clipped, low-consequence instance from a consented Template in one
+   round trip with no human in the loop; a prohibited class
+   (irreversible, external-commitment, privileged-administration,
    external-communication, or cross-domain capability) is never
    dispatched, and instead requires an ordinary Mission approval, a
    fresh human decision recorded as a direct approval basis.  Both kinds
    of Mission ride the same continuation transports across a
    disconnected run ([I-D.draft-mcguinness-oauth-mission-continuation]):
    a rotated, sender-constrained refresh-token family whose absolute
-   lifetime is clamped to the Mission expiry.  The credential is task-
-   scoped and sender-constrained in exactly AAM's sense; the split adds
-   the property that the machine-speed path structurally cannot mint the
-   high-consequence credential.
+   lifetime is clamped to the Mission expiry.
+
+   The credential is task-scoped and sender-constrained in exactly AAM's
+   sense; the split adds the property that the machine-speed path
+   structurally cannot mint the high-consequence credential.
 
 4.2.  Task-Scoped Access Engine
 
-   AAM's engine decides per action against the task's ceiling.  The
-   realization is a stateless Policy Decision Point evaluating, on every
-   consequential action, a per-check view of the Mission: the consented
-   Authority Set intersected with the containment delta
+   The realization of AAM's per-action, ceiling-bound decision engine is
+   a stateless Policy Decision Point evaluating, on every consequential
+   action, a per-check view of the Mission: the consented Authority Set
+   intersected with the containment delta
    ([I-D.draft-mcguinness-mission-authzen]).  No standing grant state is
    provisioned into the decision engine; the view is assembled per
    check, so a containment that landed between two checks is visible to
@@ -281,7 +282,7 @@ Table of Contents
 
 4.4.  Trust Ratchet
 
-   AAM ratchets trust downward on signal.  The realization is Mission
+   The realization of AAM's downward trust ratchet is Mission
    Containment ([I-D.draft-mcguinness-oauth-mission-containment]): a
    trusted source signs a protected event to the issuer, the issuer
    narrows the effective Authority Set deterministically under its
@@ -295,29 +296,30 @@ Table of Contents
 
 4.5.  Task Template and Capability Ceiling
 
-   AAM's template is consented once and dispatched many times.  Mission
-   Templates realize this with two distinct refusals that keep the
-   ceiling honest.  A Dispatch past the consented Template Ceiling is
-   refused as out of ceiling.  A Dispatch that would confer a
-   prohibited-class capability is refused as a prohibited class even
-   when that capability sits inside the consented ceiling: consenting to
-   the ceiling is not consent for a Dispatch to ever confer the high-
-   consequence entry, which is only ever granted by a fresh human
-   approval ([I-D.draft-mcguinness-oauth-mission-template]).  The
-   ceiling therefore names the whole job's scope, consented a single
+   Mission Templates realize AAM's consent-once, dispatch-many template
+   with two distinct refusals that keep the ceiling honest.  A Dispatch
+   past the consented Template Ceiling is refused as out of ceiling.  A
+   Dispatch that would confer a prohibited-class capability is refused
+   as a prohibited class even when that capability sits inside the
+   consented ceiling: consenting to the ceiling is not consent for a
+   Dispatch to ever confer the high-consequence entry, which is only
+   ever granted by a fresh human approval
+   ([I-D.draft-mcguinness-oauth-mission-template]).
+
+   The ceiling therefore names the whole job's scope, consented a single
    time, while every machine-speed instance is clipped to the low-
    consequence slice.
 
 4.6.  Agent Activity Log
 
-   AAM's log is a supporting system off the request path.  The
-   realization is a read-model join, not a new store: Policy Enforcement
-   Point decision evidence, egress evidence, issuer ingestion records,
-   Containment Evidence, and Mission lineage, threaded into a per-
-   Mission task-run graph ([I-D.draft-mcguinness-mission-audit]).
-   Because every producer retains its own evidence under its own
-   document's rules, the log adds no write path and cannot become a
-   second source of truth.
+   The realization of AAM's activity log, a supporting system off the
+   request path, is a read-model join, not a new store: Policy
+   Enforcement Point decision evidence, egress evidence, issuer
+   ingestion records, Containment Evidence, and Mission lineage,
+   threaded into a per-Mission task-run graph
+   ([I-D.draft-mcguinness-mission-audit]).  Because every producer
+   retains its own evidence under its own document's rules, the log adds
+   no write path and cannot become a second source of truth.
 
 5.  The Reference Scenario
 

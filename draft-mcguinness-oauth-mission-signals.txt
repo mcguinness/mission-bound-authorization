@@ -135,12 +135,14 @@ Table of Contents
    suite's revocation-propagation model without this channel
    ([I-D.draft-mcguinness-oauth-mission-status]).  This channel is never
    the sole state source, and a missed event reads as stale state, never
-   as still active.  Deploy this profile where polling per Mission does
-   not scale or the staleness bound must shrink below a practical
-   polling interval.  The Mission Issuer is an SSF transmitter and the
-   consumer an SSF receiver in the framework's own vocabulary
-   ([OIDC-SSF]), so a deployment already operating a Shared Signals /
-   CAEP stream adds this event type to infrastructure it runs today.
+   as still active.
+
+   Deploy this profile where polling per Mission does not scale or the
+   staleness bound must shrink below a practical polling interval.  The
+   Mission Issuer is an SSF transmitter and the consumer an SSF receiver
+   in the framework's own vocabulary ([OIDC-SSF]), so a deployment
+   already operating a Shared Signals / CAEP stream adds this event type
+   to infrastructure it runs today.
 
    This document defines no new Mission semantics: the Mission, its
    lifecycle states, and the mission claim are defined in
@@ -226,9 +228,10 @@ Table of Contents
    A consumer discovers the supported methods from the SSF Transmitter
    Configuration Metadata rather than from a separate Authorization
    Server metadata member.  The consumer's stream configuration
-   declares, in its delivery object, the method it uses.  The Mission
-   Issuer MUST respect the declared method.  It MUST NOT silently fall
-   back to a less-timely method.
+   declares, in its delivery object, the method it uses.
+
+   The Mission Issuer MUST respect the declared method.  It MUST NOT
+   silently fall back to a less-timely method.
 
    A bulk lifecycle sweep at the management endpoint
    ([I-D.draft-mcguinness-oauth-mission-management]) emits one SET per
@@ -622,10 +625,12 @@ Table of Contents
    consumer has received a verified verification or heartbeat event
    within the stream's heartbeat interval; such an event attests that
    any committed transition for the stream's subjects would have been
-   delivered.  On a stream verified live, silence is freshness-
-   preserving: the consumer MAY continue to rely on cached Mission state
-   for those subjects up to the next heartbeat interval, without polling
-   Mission Status per Mission.
+   delivered.
+
+   On a stream verified live, silence is freshness-preserving: the
+   consumer MAY continue to rely on cached Mission state for those
+   subjects up to the next heartbeat interval, without polling Mission
+   Status per Mission.
 
    The staleness fallback applies to a stream that is not verified live.
    A consumer MUST treat cached Mission state as stale once the stream
@@ -633,10 +638,12 @@ Table of Contents
    longer than the Mission Issuer's advertised mission_max_stale_seconds
    ([I-D.draft-mcguinness-oauth-mission-status]).  Once its cached state
    is stale, the consumer MUST re-establish current state before further
-   reliance.  The Mission Status operation is the RECOMMENDED fallback
-   surface.  A consumer that cannot verify its stream, or that was down
-   and may have missed events, applies the same rule rather than
-   continuing on possibly stale state.
+   reliance.
+
+   The Mission Status operation is the RECOMMENDED fallback surface.  A
+   consumer that cannot verify its stream, or that was down and may have
+   missed events, applies the same rule rather than continuing on
+   possibly stale state.
 
 9.  Discharge Compatibility
 

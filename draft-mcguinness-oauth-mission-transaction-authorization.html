@@ -1286,7 +1286,8 @@ Mission Runtime's action-bound approval
 binding, a maximum age, a fresh decision, and atomic consumption. What
 neither defines is the portable wire workflow that carries an
 approval across a trust boundary to a resource that must enforce
-locally. This document supplies that workflow as a profile of the
+locally.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document supplies that workflow as a profile of the
 OAuth transaction authorization challenge
 <span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>. The profile keeps that
 protocol's challenge type, request and response parameters,
@@ -1294,13 +1295,13 @@ capability signal, endpoint, and asynchronous polling whole; it adds
 the Mission-profiled challenge claims, the credential carried to the
 transaction endpoint, Mission and authority validation, approval as
 decision input, the fresh decision, and the transaction-token
-profile.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The approval is not authority. The transaction token is authority
+profile.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The approval is not authority. The transaction token is authority
 because a trusted issuer minted it after a fresh decision bounded by
-the Mission and the approved operation.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This profile is the strict-delta consumer of the upstream protocol;
+the Mission and the approved operation.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">This profile is the strict-delta consumer of the upstream protocol;
 engagement with that protocol's own evolution proceeds through the
-family's coordination process, outside this document.<a href="#section-1-4" class="pilcrow">¶</a></p>
+family's coordination process, outside this document.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="optional-status">
@@ -1328,15 +1329,15 @@ not yet a stable interface and will track the substrate as it
 evolves. It reuses, without restating, the upstream challenge type,
 parameters, endpoint, and polling states, and the Mission's own
 <code>mission</code> claim, <code>requires_action_approval</code>, <code>parameter_digest</code>, and
-<code>act</code> delegation chain exactly as those documents define them.
-Action-bound approval within a single trust domain, which needs only
+<code>act</code> delegation chain exactly as those documents define them.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">Action-bound approval within a single trust domain, which needs only
 the runtime profile, is the stable path; deploy this profile for
 evaluation rather than as a stable interface. This document is
 Experimental for that reason, tracking its substrate and crossing to
-the stable tier by reclassification when the substrate does.<a href="#section-2-3" class="pilcrow">¶</a></p>
-<p id="section-2-4">Maturity: experimental. Maintenance: active-experimental.
+the stable tier by reclassification when the substrate does.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">Maturity: experimental. Maintenance: active-experimental.
 Adopt when: One action needs a fresh, portable, cross-org authorization with no live callback.
-Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.<a href="#section-2-4" class="pilcrow">¶</a></p>
+Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.<a href="#section-2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions">
@@ -1673,11 +1674,12 @@ completion, before <a href="#challenge-redemption" class="auto internal xref">Se
 namespaces it accepts. Whether an accepted issuer shares this
 Authorization Server's subject namespace is configured trust policy,
 never inferred from request data. For a same-namespace issuer the
-verified <code>sub</code> is the destination-local subject, unchanged. For every
+verified <code>sub</code> is the destination-local subject, unchanged.<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1.1-2">For every
 accepted foreign namespace the TAS <span class="bcp14">MUST</span> apply an injective,
 issuer-qualified mapping from the pair (<code>iss</code>, <code>sub</code>) into its own
 namespace and use the mapped value. A missing, ambiguous, stale, or
-disabled mapping <span class="bcp14">MUST</span> be refused rather than guessed.<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
+disabled mapping <span class="bcp14">MUST</span> be refused rather than guessed.<a href="#section-6.1.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1914,12 +1916,28 @@ Exact enforcement profile
 the irreversible effect, or atomically with it where the operation
 store supports that transaction. If the consumption store is
 unavailable, the resource <span class="bcp14">MUST</span> fail closed for this profile.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5"><code>txn</code> identifies the resource transaction and is the atomic
-consumption key; challenge <code>jti</code> identifies one admission into a
-workflow; <code>transaction_authorization_id</code> (or the ARAP task handle
-backing it) identifies one pending workflow; token <code>jti</code> identifies
-one issuance from that workflow, not the one execution; and the
-Operation Profile's idempotency key identifies one effect. At most
+<p id="section-8-5">Five identifiers play distinct roles along this chain:<a href="#section-8-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-6.1">
+          <p id="section-8-6.1.1"><code>txn</code> identifies the resource transaction and is the atomic
+consumption key;<a href="#section-8-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-6.2">
+          <p id="section-8-6.2.1">challenge <code>jti</code> identifies one admission into a workflow;<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-6.3">
+          <p id="section-8-6.3.1"><code>transaction_authorization_id</code> (or the ARAP task handle backing it)
+identifies one pending workflow;<a href="#section-8-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-6.4">
+          <p id="section-8-6.4.1">token <code>jti</code> identifies one issuance from that workflow, not the one
+execution; and<a href="#section-8-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-6.5">
+          <p id="section-8-6.5.1">the Operation Profile's idempotency key identifies one effect.<a href="#section-8-6.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-7">At most
 one authorization result exists per transaction instance, across
 every workflow that references it: repeated polling after a decision
 returns the same token or result stably, and the mint gate is
@@ -1930,13 +1948,14 @@ return that result and <span class="bcp14">MUST NOT</span> mint a second token u
 different <code>jti</code>. A second workflow admitted for the same <code>txn</code>, a
 reissued challenge for one uncompleted operation, therefore
 converges on the first result or refuses; it never yields a second
-live token. An ambiguous retry looks up the
+live token.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">An ambiguous retry looks up the
 prior result along this chain, from <code>txn</code> and token <code>jti</code> to the
 workflow to the idempotency key, and the resource returns
 <code>duplicate_suppressed</code> as the runtime profile defines it
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) rather than executing
 again. A genuinely new attempt requires a new challenge, a new
-workflow, a new token, and a new idempotency key.<a href="#section-8-5" class="pilcrow">¶</a></p>
+workflow, a new token, and a new idempotency key.<a href="#section-8-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-audit">
@@ -2351,9 +2370,10 @@ flow itself requires, in three layers. <a href="#transaction-invariants" class="
 states the invariants that make the flow safe on any substrate.
 <a href="#carrier-requirements" class="auto internal xref">Section 15.2</a> states the slots a protocol binding <span class="bcp14">MUST</span>
 provide to carry them. <a href="#oauth-discharge" class="auto internal xref">Section 15.3</a> names this document's own
-discharge of each slot. A binding that cannot provide a slot does not
+discharge of each slot.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-2">A binding that cannot provide a slot does not
 host this profile: absence is fail-closed, and there is no partial
-hosting.<a href="#section-15-1" class="pilcrow">¶</a></p>
+hosting.<a href="#section-15-2" class="pilcrow">¶</a></p>
 <div id="transaction-invariants">
 <section id="section-15.1">
         <h3 id="name-transaction-invariants">

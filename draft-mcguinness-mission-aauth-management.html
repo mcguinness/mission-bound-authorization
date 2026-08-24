@@ -1330,38 +1330,39 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
 governance orthogonal to its five resource-access modes.  An agent and
 its Person Server (PS) hold the exact bytes of an approved mission blob.
 The SHA-256 digest of those bytes, paired with the approving PS URL,
-forms the native Mission Reference.  Resources and Access Servers see
-that reference, not the mission body.  The PS retains the context and
-ordered mission log needed to make governance decisions.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">AAuth also deliberately gives a mission only two states.  An <code>active</code>
+forms the native Mission Reference.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Resources and Access Servers see that reference, not the mission
+body.  The PS retains the context and ordered mission log needed to
+make governance decisions.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">AAuth also deliberately gives a mission only two states.  An <code>active</code>
 mission can be used; a <code>terminated</code> mission has ended permanently.
 There is no pause or resume operation.  The base protocol defines
 completion through the interaction endpoint and defers other
-transitions, administrative access, and delegation-tree queries.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This document supplies those management functions without replacing
+transitions, administrative access, and delegation-tree queries.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document supplies those management functions without replacing
 AAuth's mission model with an OAuth authorization object.  In
 particular, it introduces no <code>mission_id</code>, Authority Set, scope-subset
 rule, status signal, or additional lifecycle state.  Every operation is
 keyed by the exact native <code>{approver, s256}</code> pair.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
-governance envelope held by the PS.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">The family architecture situates this surface among the lifecycle
+governance envelope held by the PS.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">The family architecture situates this surface among the lifecycle
 companions (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), and the
 family security model's analysis applies to it
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This specification currently extends the existing <code>mission_endpoint</code>
-with an <code>operation</code> member, unambiguous against base requests, which
-carry none at that URL.  The base protocol splits the surfaces:
-<code>mission_endpoint</code> is the owning agent's,
-and parties other than the owning agent read and manage missions at
-the <code>mission_control_endpoint</code>, whose operations AAuth charters to a
-companion specification with exactly this document's scope.  A future
-revision relocates these operations to that endpoint and adopts the
-base protocol's per-mission URL and <code>action</code> discriminator
-conventions; the operation semantics defined here are
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This specification extends the existing <code>mission_endpoint</code> with an
+<code>operation</code> member, unambiguous against base requests, which carry
+none at that URL.  The base protocol splits the surfaces:
+<code>mission_endpoint</code> is the owning agent's, and parties other than the
+owning agent read and manage missions at the
+<code>mission_control_endpoint</code>, whose operations AAuth charters to a
+companion specification with exactly this document's scope.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">A future revision relocates these operations to that endpoint and
+adopts the base protocol's per-mission URL and <code>action</code> discriminator
+conventions.  The operation semantics defined here are
 endpoint-independent, and the approving PS remains the only server
-that can interpret the reference and change its state.<a href="#section-1-5" class="pilcrow">¶</a></p>
+that can interpret the reference and change its state.<a href="#section-1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions">
@@ -1945,23 +1946,24 @@ processing the mission:<a href="#section-8-5" class="pilcrow">¶</a></p>
 </pre><a href="#section-8-6" class="pilcrow">¶</a>
 </div>
 <p id="section-8-7"><code>mission_s256</code>, <code>as_of</code>, <code>nodes</code>, and <code>complete</code> are <span class="bcp14">REQUIRED</span>.  When another
-page exists, <code>next_cursor</code> is <span class="bcp14">REQUIRED</span> and <code>complete</code> is false.  A node
-contains an <code>agent</code> and one of <code>root</code>, <code>sub_agent</code>, or <code>call_chain</code> as
-<code>relationship</code>.  A non-root node contains <code>parent_agent</code>.  <code>tokens</code> <span class="bcp14">MAY</span>
+page exists, <code>next_cursor</code> is <span class="bcp14">REQUIRED</span> and <code>complete</code> is false.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">A node contains an <code>agent</code> and one of <code>root</code>, <code>sub_agent</code>, or
+<code>call_chain</code> as <code>relationship</code>.  A non-root node contains
+<code>parent_agent</code>.  <code>tokens</code> <span class="bcp14">MAY</span>
 be returned to a Person or authorized administrator and <span class="bcp14">SHOULD</span> be
 omitted from an Agent response unless required for that Agent's own
-revocation accounting.<a href="#section-8-7" class="pilcrow">¶</a></p>
-<p id="section-8-8">The result is observational, not exhaustive proof.  Identity-based
+revocation accounting.<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9">The result is observational, not exhaustive proof.  Identity-based
 calls and resource-managed access can occur without a PS token request.
 An intermediary can make a downstream call outside the PS's view.
 <code>complete</code> means only that the returned page exhausts the PS's current
 records; it <span class="bcp14">MUST NOT</span> be described as proof that no other delegation or
-resource access occurred.<a href="#section-8-8" class="pilcrow">¶</a></p>
-<p id="section-8-9">The PS <span class="bcp14">MUST</span> authorize every returned node for the caller.  It <span class="bcp14">MUST NOT</span>
+resource access occurred.<a href="#section-8-9" class="pilcrow">¶</a></p>
+<p id="section-8-10">The PS <span class="bcp14">MUST</span> authorize every returned node for the caller.  It <span class="bcp14">MUST NOT</span>
 leak another tenant's agent identifiers, token identifiers, topology,
 or activity.  Tree reads are sensitive events and <span class="bcp14">MUST</span> be recorded in
 the mission log or, for rejected/unknown references, a security audit
-log that does not create a false mission record.<a href="#section-8-9" class="pilcrow">¶</a></p>
+log that does not create a false mission record.<a href="#section-8-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="errors">

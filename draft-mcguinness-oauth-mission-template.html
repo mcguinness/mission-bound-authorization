@@ -1384,7 +1384,12 @@ without a fresh human approval (<a href="#the-mission-template" class="auto inte
 Mission Template may reach: an array of authorization-details-shaped
 entries, each the shape of an Authority Set entry
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), that every dispatched
-instance <span class="bcp14">MUST</span> be within (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+instance <span class="bcp14">MUST</span> be within (<a href="#dispatch" class="auto internal xref">Section 7</a>). This bound is distinct from
+the progressive profile's <code>authority_ceiling</code> on a single evolving
+Mission and from the shaping companion's caller-supplied shaping
+ceiling on a proposal
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.5">Dispatch:</dt>
@@ -1736,11 +1741,7 @@ Dispatcher, distinct from <code>consent_principal</code>;
 issuance profile's standing-consent requirement) is the instant
 the consenting human approved this exact <code>template_version</code>,
 read from the Mission Issuer's retained template record at
-Dispatch, never from the Dispatch request. This makes the
-approver-of-record shift from a fresh human decision to policy
-adjudication under a prior human consent structured and flagged
-consistently across the family, superseding a bare
-policy-adjudicated marking. The <code>template</code> lineage member
+Dispatch, never from the Dispatch request. The <code>template</code> lineage member
 (<a href="#template-member" class="auto internal xref">Section 7.1</a>), present on every dispatched Mission and
 absent on an ordinarily approved one, remains the claim-carried
 record of which template and Dispatch Policy adjudicated the
@@ -2482,6 +2483,10 @@ object by that value.<a href="#section-15-8.4.1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>

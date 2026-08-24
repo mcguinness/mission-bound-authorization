@@ -100,6 +100,7 @@ Table of Contents
      16.1.  Normative References
      16.2.  Informative References
    Appendix A.  OWASP Agentic Threat Coverage
+   Appendix B.  Document History
    Acknowledgments
    Author's Address
 
@@ -253,8 +254,11 @@ Table of Contents
       authenticated and the agent is untrusted.  Its compromise voids
       the model (Section 11 names the key-custody statement a deployment
       publishes for this assumption): a compromised issuer can mint
-      arbitrary authority.  This is the strongest trust assumption in
-      the suite ([I-D.draft-mcguinness-oauth-mission]).
+      arbitrary authority, including a forged Mandate over a real
+      Mission that a verifier cannot reject on artifact-level checks
+      alone ([I-D.draft-mcguinness-mission-mandate]).  This is the
+      strongest trust assumption in the suite
+      ([I-D.draft-mcguinness-oauth-mission]).
 
    Resource Authorization Server (cross-domain):  When cross-domain
       access is used, a resource-side Authorization Server mints local
@@ -273,15 +277,15 @@ Table of Contents
       binding.  It must run the approval ceremony faithfully, keep the
       Mission record and its anchors intact, and serve accurate Mission
       state.  Its compromise is equivalent to Mission Issuer compromise
-      (forged approvals, altered records, false state), with one
-      addition.  In this mode the PDP's credential-to-Mission join is
-      the only binding between a presented credential and a Mission, so
-      a compromised Mission Authority Server combined with the PDP's
-      trust in it yields arbitrary attribution of authority to any
-      credential the join accepts.  Where Mission Join Assertions are
-      used, the PDP's join trust concentrates in one MAS signature, and
-      the MAS may hold introspection credentials at the Authorization
-      Server, a cross-component channel whose compromise forges joins
+      (forged approvals, altered records, false state), plus one
+      addition: in this mode the PDP's credential-to-Mission join is the
+      only binding between a presented credential and a Mission, so a
+      compromised Mission Authority Server combined with the PDP's trust
+      in it yields arbitrary attribution of authority to any credential
+      the join accepts.  Where Mission Join Assertions are used, the
+      PDP's join trust concentrates in one MAS signature, and the MAS
+      may hold introspection credentials at the Authorization Server, a
+      cross-component channel whose compromise forges joins
       ([I-D.draft-mcguinness-mission-authority-server]).  Where
       consuming Authorization Servers redeem its issuance grants
       ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), a
@@ -562,10 +566,12 @@ Table of Contents
    both a path to those actions and a path to fresh usable credentials
    for them) are already base-profile requirements; a deployment that
    leaves any of the five conditions unmet does not obtain the
-   guarantee.  This matches the suite's front-door framing: adopting the
-   profiles does not by itself make a deployment resistant to a
-   compromised agent.  The model makes misuse bounded and, where
-   evidence is produced, attributable.
+   guarantee.
+
+   This matches the suite's front-door framing: adopting the profiles
+   does not by itself make a deployment resistant to a compromised
+   agent.  The model makes misuse bounded and, where evidence is
+   produced, attributable.
 
    Earned is also not provable at the wire.  The High-Assurance Agent
    claims name conditions a deployment satisfies, not something a token
@@ -575,13 +581,15 @@ Table of Contents
    [I-D.draft-mcguinness-mission-harness]), and absent independent
    evidence, a relying party cannot distinguish, from the protocol
    artifacts alone, a deployment that built the claimed isolation from
-   one that merely published the claim.  Execution-environment
-   attestation is what closes that gap; the runtime profile requires it
-   for the two High-Assurance Agent claims specifically, not for base
-   conformance ([I-D.draft-mcguinness-mission-runtime]).  Retained
-   negative-conformance evidence is the complementary recommendation: it
-   does not prove the claim at decision time, but it lets an auditor
-   check afterward that the deployment ran the tests the claim implies
+   one that merely published the claim.
+
+   Execution-environment attestation is what closes that gap; the
+   runtime profile requires it for the two High-Assurance Agent claims
+   specifically, not for base conformance
+   ([I-D.draft-mcguinness-mission-runtime]).  Retained negative-
+   conformance evidence is the complementary recommendation: it does not
+   prove the claim at decision time, but it lets an auditor check
+   afterward that the deployment ran the tests the claim implies
    ([I-D.draft-mcguinness-mission-runtime]).  Short of attestation, the
    trust assumption is plain: an unattested High-Assurance claim is an
    organizational assertion, taken on trust, not a technical one.
@@ -904,9 +912,10 @@ Table of Contents
       Disclosure Interrogation
       ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
-   *  *Single-service equivocation.* Transparency is non-equivocating
-      only per service; a deployment that needs that property checked
-      registers with more than one independent service.
+   *  *Single-service equivocation.* Transparency's non-equivocation
+      guarantee is per-service, stated in full at the Transparency
+      Service trusted-base entry (Section 6;
+      [I-D.draft-mcguinness-mission-audit]).
 
    *  *Offline breadth.* Offline attenuation
       ([I-D.draft-mcguinness-oauth-mission-attenuation]) bounds each
@@ -1054,10 +1063,9 @@ Table of Contents
    for each key class the deployment operates (issuer signing, evidence
    signing, agent sender-constraint, mediating-PEP custody, attenuation
    roots), where the key is held, at what custody grade, and the
-   compromise-recovery procedure, since the model's strongest assumption
-   reduces to those keys (Section 6).  This documentation is what lets a
-   relying party or auditor reason about the deployment's actual
-   security posture rather than the model's idealized one.
+   compromise-recovery procedure (Section 6).  This documentation is
+   what lets a relying party or auditor reason about the deployment's
+   actual security posture rather than the model's idealized one.
 
    The Mission Deployment Profile
    ([I-D.draft-mcguinness-mission-architecture]) is the artifact this
@@ -1497,6 +1505,23 @@ Appendix A.  OWASP Agentic Threat Coverage
     +----------------+-----------------------------------+-----------+
 
                                  Table 4
+
+Appendix B.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Editorial density pass on this Informational document: the
+      Transparency Service entry of Section 6 kept as the one full
+      statement of the single-service-equivocation point, with the Ten
+      Residuals restatement compressed to a pointer at it; the
+      Documenting section's echo of the Authorization Server entry's
+      "strongest trust assumption" phrasing dropped in favor of its
+      existing Section 6 cross-reference, and that entry given an
+      explicit citation to the Mission Mandate document it shares the
+      issuer-key-compromise concern with.  Several over-long paragraphs
+      in Section 8 split for one idea per paragraph.  No normative
+      content, anchor, or adversary-model row, mitigation, or residual
+      changed.
 
 Acknowledgments
 

@@ -1577,16 +1577,18 @@ that carries a continuation ACROSS a trust boundary the origin does
 not control; Identity Continuation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>) and async
 delegation (<span>[<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>) are the
-intra-domain transports. What the profile adds over this document is
+intra-domain transports.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">What the profile adds over this document is
 the Mission binding common to every transport: a continuation handle
 grants nothing, each continued grant derives a subset of the Mission's
 authority and re-passes its <code>active</code> gate, so continuity is never
-authority. This document remains complete on its own: an issuer <span class="bcp14">MAY</span>
+authority.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">This document remains complete on its own: an issuer <span class="bcp14">MAY</span>
 project a Mission cross-domain without adopting the continuation
 profile, and a partner Resource AS honors the projected authority and
 resolves an audience-local subject exactly as specified here.
 Projection stays single-hop (<a href="#what-crosses" class="auto internal xref">Section 5</a>) regardless of how many
-intra-domain hops continue the Mission on either side.<a href="#section-7-1" class="pilcrow">¶</a></p>
+intra-domain hops continue the Mission on either side.<a href="#section-7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pre-established-trust">
@@ -2062,18 +2064,20 @@ namespace). The value <span class="bcp14">MUST</span> equal the immutable <code>
 originating Mission Record, and the invariant is VALUE equality of
 the closed object: the member survives re-signing and
 re-serialization at every hop and projection, so byte comparison of
-a serialization is not the test. It is identity provenance and a
+a serialization is not the test.<a href="#section-11.1-1.2.1" class="pilcrow">¶</a></p>
+<p id="section-11.1-1.2.2">It is identity provenance and a
 constraint input; it <span class="bcp14">MUST NOT</span> grant or widen authority. A generic
 Mission consumer ignores it under the issuance profile's open-claim
 rule; a consumer claiming this profile <span class="bcp14">MUST</span> verify it or fail
-closed. No display name, email, organization, role, group,
+closed.<a href="#section-11.1-1.2.2" class="pilcrow">¶</a></p>
+<p id="section-11.1-1.2.3">No display name, email, organization, role, group,
 entitlement, or assurance member is permitted in the object: those
 change independently and would turn the invariant into stale
 identity state. The <code>sub</code> value <span class="bcp14">MUST</span> be an opaque pseudonymous
 identifier and <span class="bcp14">MUST NOT</span> carry directly identifying attributes; an
 opaque persistent identifier remains sensitive correlation data,
 personal data even when opaque, subject to the disclosure rules of
-<a href="#origin-principal-disclosure" class="auto internal xref">Section 11.6</a>.<a href="#section-11.1-1.2.1" class="pilcrow">¶</a></p>
+<a href="#origin-principal-disclosure" class="auto internal xref">Section 11.6</a>.<a href="#section-11.1-1.2.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2115,7 +2119,8 @@ Issuer <span class="bcp14">MUST</span> establish that both identify the same pri
 its recorded injective mapping; its signature over the grant attests
 that association. Neither value independently selects an account.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
 <p id="section-11.2-3">The identifier's linkability is fixed at Mission creation, because
-the invariant forbids per-destination substitution afterward. Two
+the invariant forbids per-destination substitution afterward.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
+<p id="section-11.2-4">Two
 properties are available, chosen at the record. The default is an
 origin-sector pseudonym with cross-destination Mission correlation:
 the record <code>subject</code> is the home issuer's pseudonym for the Mission
@@ -2131,7 +2136,7 @@ entitlement resolution goes through the governed mapping of
 provides; onward disclosure beyond the audiences Mission policy and
 privacy policy permit requires authorization; and a
 destination-pairwise value is not constructible under the invariance
-rule.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
+rule.<a href="#section-11.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="origin-principal-mapping">
@@ -2202,7 +2207,8 @@ principal entitlement does not authorize an action absent from the
 delegated set, and an approval or mapping record never bypasses
 current policy. A role or relationship granted through an
 access-request workflow is governance state observed on a fresh
-decision, never a bearer bypass. A deployment claiming this profile
+decision, never a bearer bypass.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+<p id="section-11.5-2">A deployment claiming this profile
 <span class="bcp14">MUST</span> declare the source and maximum staleness of local principal
 entitlement, separately from its Mission-state freshness declaration;
 when current entitlement cannot be established within the declared
@@ -2210,9 +2216,10 @@ bound, the decision fails closed. Under a runtime binding that
 classifies denials, a failed, missing, ambiguous, or stale mapping or
 entitlement step carries the <code>principal_mapping_failed</code> extension
 denial reason, which this profile registers per that binding's
-extension rule. This is the profile's conformance
+extension rule.<a href="#section-11.5-2" class="pilcrow">¶</a></p>
+<p id="section-11.5-3">This is the profile's conformance
 bar: deployments not claiming it keep the issuance profile's
-lifetime-bounded baseline.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+lifetime-bounded baseline.<a href="#section-11.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="origin-principal-disclosure">
@@ -2226,15 +2233,15 @@ AS <span class="bcp14">MUST NOT</span> copy it into tokens for unrelated audienc
 introspection responder, the issuer or a Resource AS, <span class="bcp14">MUST</span> disclose
 it only to a caller holding an explicit <code>origin_principal</code> disclosure
 privilege under the issuance profile's caller authorization and
-minimization rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
-The runtime evidence companion defines the composed
+minimization rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-11.6-1" class="pilcrow">¶</a></p>
+<p id="section-11.6-2">The runtime evidence companion defines the composed
 <code>principal_mapping</code> evidence object and the protected
 subject-reference rule for retained records
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); a deployment
 claiming both composes them, keeping raw identifiers out of retained
 evidence unless the raw identity is necessary for the stated audit
 purpose. The trust agreement states the purpose and retention period
-for the mapping.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
+for the mapping.<a href="#section-11.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example-non-normative">
@@ -2503,12 +2510,13 @@ honors its revocation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" clas
 Mission is revoked at the originating AS, that AS can stop issuing new
 cross-domain grants, but it cannot revoke a token a Resource AS has
 already minted in another domain: that token remains valid until its
-own expiry. Cross-domain revocation latency is therefore the
+own expiry.<a href="#section-16.1-2" class="pilcrow">¶</a></p>
+<p id="section-16.1-3">Cross-domain revocation latency is therefore the
 downstream token lifetime. The grant lifetime is the state lease the
 partner domain runs on: the longest a Resource AS may treat Mission
 state established at issuance as current
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-16.1-2" class="pilcrow">¶</a></p>
-<p id="section-16.1-3">The issuance profile's token introspection closes the revocation gap
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-16.1-3" class="pilcrow">¶</a></p>
+<p id="section-16.1-4">The issuance profile's token introspection closes the revocation gap
 only single-domain: it requires the introspecting AS to hold the
 Mission, and a Resource AS has no query to the issuer keyed by
 <code>mission_id</code> (<a href="#introspection-at-resource-as" class="auto internal xref">Section 13</a>), so short downstream
@@ -2519,8 +2527,8 @@ require: Mission Status
 holding the <code>mission_id</code>, including a Resource AS, a state query
 against the issuer, and Mission Lifecycle Signals
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span> pushes lifecycle
-transitions to the partner domain.<a href="#section-16.1-3" class="pilcrow">¶</a></p>
-<p id="section-16.1-4">Origin containment narrows a live Mission without ending it
+transitions to the partner domain.<a href="#section-16.1-4" class="pilcrow">¶</a></p>
+<p id="section-16.1-5">Origin containment narrows a live Mission without ending it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), and a
 cross-domain grant issued after a contain transition already carries
 the narrowed authority: grant issuance is a derivation, gated on the
@@ -2532,8 +2540,8 @@ token runs to its own expiry under revocation. Deployments relying on
 containment to bound cross-domain authority <span class="bcp14">SHOULD</span> use short grant
 lifetimes and a frequent re-lease cadence
 (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>), so containment takes effect on the Mission's
-next lease rather than waiting out a long-lived grant.<a href="#section-16.1-4" class="pilcrow">¶</a></p>
-<p id="section-16.1-5">This posture bounds a single issuer-mediated hop: the only required
+next lease rather than waiting out a long-lived grant.<a href="#section-16.1-5" class="pilcrow">¶</a></p>
+<p id="section-16.1-6">This posture bounds a single issuer-mediated hop: the only required
 control is the bounded credential lifetime, the 300-second grant cap
 (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>) and the Resource AS's short local-token
 lifetimes; no state query is required. Status and Signals are optional
@@ -2551,7 +2559,7 @@ from the artifact a Resource AS redeems, a cross-domain grant or a
 Chain Presentation (registered
 <code>application/mission-delegation-chain+json</code>), not from the deployment;
 an ordinary local access token minted on either path does not carry
-its provenance in its type.<a href="#section-16.1-5" class="pilcrow">¶</a></p>
+its provenance in its type.<a href="#section-16.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="grant-at-boundary">
@@ -2562,21 +2570,32 @@ its provenance in its type.<a href="#section-16.1-5" class="pilcrow">¶</a></p>
 <p id="section-16.2-1">The cross-domain grant is the highest-authority credential in the
 chain and the only one that crosses a trust boundary. The requirements
 of <a href="#cross-domain-grant" class="auto internal xref">Section 9</a> and <a href="#validation-at-resource-as" class="auto internal xref">Section 10</a> follow
-from that position: issuer trust is established by local policy or
+from that position:<a href="#section-16.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.2-2.1">
+            <p id="section-16.2-2.1.1">issuer trust is established by local policy or
 metadata, never inferred from a signed assertion's own
-<code>mission.issuer</code>; the grant is sender-constrained and one-time-use,
+<code>mission.issuer</code>;<a href="#section-16.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.2-2.2">
+            <p id="section-16.2-2.2.1">the grant is sender-constrained and one-time-use,
 because the underlying grant profile provides no replay backstop of
-its own; and everything the Resource AS honors is bounded by the
-audience-scoped entries the grant conveyed, interpreted fail-closed.
-Downstream of the issuer, <code>authority_hash</code> is an audit and correlation
+its own; and<a href="#section-16.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.2-2.3">
+            <p id="section-16.2-2.3.1">everything the Resource AS honors is bounded by the
+audience-scoped entries the grant conveyed, interpreted fail-closed.<a href="#section-16.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-16.2-3">Downstream of the issuer, <code>authority_hash</code> is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
-chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>).<a href="#section-16.2-1" class="pilcrow">¶</a></p>
-<p id="section-16.2-2">One companion mechanism composes here beyond the trust publication
+chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>).<a href="#section-16.2-3" class="pilcrow">¶</a></p>
+<p id="section-16.2-4">One companion mechanism composes here beyond the trust publication
 methods of <a href="#pre-established-trust" class="auto internal xref">Section 8</a>: a consumer that needs
 independently verifiable provenance of the delegation hops upstream
 of the re-mint, rather than trust in the minting domain's assertion
 of them, <span class="bcp14">MAY</span> require issuer-signed hop receipts
-(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>).<a href="#section-16.2-2" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>).<a href="#section-16.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="per-domain-delegation-depth">
@@ -2586,14 +2605,13 @@ of them, <span class="bcp14">MAY</span> require issuer-signed hop receipts
         </h3>
 <p id="section-16.3-1">Because the cross-domain grant carries no <code>act</code> chain
 (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>), a Resource AS that issues delegated tokens of
-its own begins its delegation depth at 0. This local depth is distinct
+its own begins its delegation depth at 0
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>). This local depth is distinct
 from an attenuation chain's global <code>del_depth</code>, which is monotonic
 across every hop and organizational boundary
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-org-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-org-delegation</a>]</span>):
 projection-local depth starts after chain verification, and a
-projected token cannot re-enter a chain. A Resource AS of this
-document begins its delegation depth at 0
-(<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>). An entry's <code>max_depth</code> ceiling is
+projected token cannot re-enter a chain. An entry's <code>max_depth</code> ceiling is
 therefore enforced per domain, not globally across the projection: a
 Mission delegable to depth N at the originating AS may be delegated a
 further N hops inside each Resource AS domain that honors it. A
@@ -3147,6 +3165,14 @@ the sum of each distinct Resource AS domain's applicable
 per-domain <code>max_depth</code> times a flat domain count, and domains are
 counted by distinct Resource AS from the resource-to-AS mapping,
 never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 8</a>).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.2">
+          <p id="appendix-B-3.2.1">Editorial density pass: split several overlong paragraphs (no BCP-14
+keyword sentence changed) and merged a duplicated sentence in
+Per-Domain Delegation Depth (the unconditional "a Resource AS of
+this document begins its delegation depth at 0" restated what the
+preceding, correctly conditioned sentence already said; the
+citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -621,17 +621,25 @@ Table of Contents
 7.2.  Retry, Idempotency, and Reserve/Commit Posture
 
    For a metered permit, the PDP and PEP MUST define retry and
-   idempotency behavior.  A retry of the same normalized action under
-   the same idempotency key or single-use decision identifier MUST NOT
-   consume the bound twice.  Reuse of an idempotency key or decision
-   identifier for a different normalized action MUST cause refusal.  For
-   irreversible actions and external commitments, a deployment MUST
-   define whether metering is reserved before execution and committed
-   after success, or committed before execution.  It MUST NOT leave the
-   decrement ambiguous: a reservation settles on the evidence state
-   (Section 11.1.2), never on a generic failure signal.  The reserve/
-   commit posture fixes when consumption is charged; the evidence state
-   fixes how the charge settles.
+   idempotency behavior.
+
+   *  A retry of the same normalized action under the same idempotency
+      key or single-use decision identifier MUST NOT consume the bound
+      twice.
+
+   *  Reuse of an idempotency key or decision identifier for a different
+      normalized action MUST cause refusal.
+
+   *  For irreversible actions and external commitments, a deployment
+      MUST define whether metering is reserved before execution and
+      committed after success, or committed before execution.
+
+   *  It MUST NOT leave the decrement ambiguous: a reservation settles
+      on the evidence state (Section 11.1.2), never on a generic failure
+      signal.
+
+   The reserve/commit posture fixes when consumption is charged; the
+   evidence state fixes how the charge settles.
 
 8.  Exclusivity and Separation of Duty
 

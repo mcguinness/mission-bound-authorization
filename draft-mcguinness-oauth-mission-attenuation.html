@@ -1268,17 +1268,18 @@ dependency on the execution hot path. At machine speed that
 dependency is the bottleneck: a swarm forking sub-agents per subtask
 cannot afford an issuer round trip per fork, and localized, offline,
 cryptographically verifiable narrowing is the shape that load
-requires from day one. This profile is the family's OAuth-lane answer to it;
+requires from day one.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This profile is the family's OAuth-lane answer to it;
 its Experimental status reflects the maturity of the attenuation
 substrate it profiles, not a judgment that the capability is
 optional. The stable path meanwhile is issuer-mediated child
-delegation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).
-The saving is amortization, not elimination: because a root's lifetime
+delegation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The saving is amortization, not elimination: because a root's lifetime
 is kept short (<a href="#security-considerations" class="auto internal xref">Section 14</a>), the holder returns to the
 issuer once per subtree per root-lifetime window to mint the root, and
 every narrowing within that window is then offline. The issuer leaves
-the per-fork hot path; it is not removed from the deployment.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">This document removes the issuer from that per-fork path for narrowing
+the per-fork hot path; it is not removed from the deployment.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document removes the issuer from that per-fork path for narrowing
 within a root's lifetime. It
 profiles Attenuating Agent Tokens
 <span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span> (the "attenuation
@@ -1286,24 +1287,24 @@ substrate"), in which a token holder mints a narrower child token
 offline by signing it with the key the parent token's <code>cnf</code> binds, and
 the child commits to its parent by hash. A Mission-bound token can be an
 attenuation-substrate root; its holder then derives narrower children
-for sub-agents with no Authorization Server contact.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">Three things make this safe within the Mission model, and this document
-requires all three (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>, <a href="#kill-switch" class="auto internal xref">Section 9</a>):<a href="#section-1-3" class="pilcrow">¶</a></p>
+for sub-agents with no Authorization Server contact.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Three things make this safe within the Mission model, and this document
+requires all three (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>, <a href="#kill-switch" class="auto internal xref">Section 9</a>):<a href="#section-1-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-1-4.1">
-          <p id="section-1-4.1.1">the child carries the parent chain, with audience and expiry bounded
+<li class="normal" id="section-1-6.1">
+          <p id="section-1-6.1.1">the child carries the parent chain, with audience and expiry bounded
 per hop, so a consumer verifies the narrowing from the tokens it
-holds;<a href="#section-1-4.1.1" class="pilcrow">¶</a></p>
+holds;<a href="#section-1-6.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-1-4.2">
-          <p id="section-1-4.2.1">the Mission kill switch is preserved because consumption is gated by
+        <li class="normal" id="section-1-6.2">
+          <p id="section-1-6.2.1">the Mission kill switch is preserved because consumption is gated by
 the runtime enforcement layer re-checking current Mission state, not
 by the issuer (the attenuation substrate defines no revocation of its
-own); and<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+own); and<a href="#section-1-6.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-1-4.3">
-          <p id="section-1-4.3.1"><code>authority_hash</code> rides the chain as a lineage anchor, not as the
-child's own authority commitment.<a href="#section-1-4.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-1-6.3">
+          <p id="section-1-6.3.1"><code>authority_hash</code> rides the chain as a lineage anchor, not as the
+child's own authority commitment.<a href="#section-1-6.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1750,12 +1751,13 @@ chain and Token Exchange), which narrows at the issuer, online, so the
 issuer observes each delegation; and Mission Child Delegation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), which creates
 a separate Child Mission with its own <code>mission_id</code>, lifecycle, and
-approval. The Mission Child Delegation profile sets out how the three
-differ. Offline attenuation creates no new Mission: every child rides
-the same <code>mission</code> claim and dies with the same Mission. Use offline
-attenuation when a sub-agent needs a narrower token under the same
-Mission, fast, at fan-out scale; use a Child Mission when it needs its
-own durable, separately revocable Mission.<a href="#section-10-1" class="pilcrow">¶</a></p>
+approval. Offline attenuation creates no new Mission: every child rides
+the same <code>mission</code> claim and dies with the same Mission.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2">Mission Child Delegation's own comparison section
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
+"Relationship to Delegated Tokens") is the family's decision guide for
+choosing among the three narrowing mechanisms; this document does not
+restate it.<a href="#section-10-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="actor-attribution">

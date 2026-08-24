@@ -1323,12 +1323,13 @@ operator consoles and incident-response tooling in the Mission
 Issuer's own trust domain, explicitly authorized for existence
 knowledge over a declared filter scope, compensated not by
 indistinguishability but by explicit authorization and mandatory audit
-of every call (<a href="#filter-scope" class="auto internal xref">Section 4.3</a>). The surface is never agent-facing:
-the Agent executing a Mission has no role here
-(<a href="#management-authentication" class="auto internal xref">Section 4.2</a>). Fleet enumeration and bulk lifecycle
-are the operator surface of the family's delegated-authority layer
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">Both capabilities share one endpoint, one request shape, one
+of every call (<a href="#filter-scope" class="auto internal xref">Section 4.3</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The surface is never agent-facing: the Agent executing a Mission has
+no role here (<a href="#management-authentication" class="auto internal xref">Section 4.2</a>). Fleet enumeration and
+bulk lifecycle are the operator surface of the family's
+delegated-authority layer
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Both capabilities share one endpoint, one request shape, one
 authentication and authorization model, one signing discipline, and
 one audit rule; a request's <code>operation</code> member selects between them.
 Bulk operations apply the status profile's per-Mission lifecycle
@@ -1336,7 +1337,7 @@ semantics unchanged, so this document adds no state, no transition,
 and no event type to the lifecycle state space. It is optional and
 does not restate the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> or the status profile; a
-deployment that does not adopt it is unaffected.<a href="#section-1-3" class="pilcrow">¶</a></p>
+deployment that does not adopt it is unaffected.<a href="#section-1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="doc-status">
@@ -1610,8 +1611,8 @@ member matches no Mission that has none (<a href="#filter" class="auto internal 
 object after issuance, deleting it, or deleting and recreating it
 redraws scope as surely as changing a value. Every post-issuance
 transition of the administrative metadata (a value change, absent to
-present, or present to absent) is therefore a <strong>re-home</strong>. A
-deployment that supports re-homing <span class="bcp14">MUST</span> gate it on an explicit
+present, or present to absent) is therefore a <strong>re-home</strong>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">A deployment that supports re-homing <span class="bcp14">MUST</span> gate it on an explicit
 authority distinct from its enumeration and lifecycle grants, <span class="bcp14">MUST</span>
 require the caller's filter scope to cover the Mission both before
 and after the change (a Mission without administrative metadata is
@@ -1623,7 +1624,7 @@ comparison and the record both name, and <span class="bcp14">MUST</span> record 
 management event with both the prior and the new values
 (<a href="#filter-scope" class="auto internal xref">Section 4.3</a>). A re-home does not travel alone: an outstanding
 bulk token that pins the Mission fails its scope-currency check at
-its next presentation (<a href="#bulk-token-security" class="auto internal xref">Section 14.3</a>).<a href="#section-5-5" class="pilcrow">¶</a></p>
+its next presentation (<a href="#bulk-token-security" class="auto internal xref">Section 14.3</a>).<a href="#section-5-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="filter">
@@ -2434,13 +2435,13 @@ audit systems <span class="bcp14">MUST</span> treat them as untrusted input.<a h
         </h3>
 <p id="section-14.2-1">The status profile makes Mission existence unobservable to the
 unauthorized; this document makes it queryable by the authorized. The
-two compose safely only if the boundary between them holds. A
-deployment <span class="bcp14">MUST NOT</span> satisfy a management request with a credential
+two compose safely only if the boundary between them holds.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.2-2">A deployment <span class="bcp14">MUST NOT</span> satisfy a management request with a credential
 authorized only for status or lifecycle calls. The filter-scope check
 of <a href="#filter-scope" class="auto internal xref">Section 4.3</a> <span class="bcp14">MUST</span> run before any Mission data is touched, so a
 refusal is data-independent. The audit rule of <a href="#filter-scope" class="auto internal xref">Section 4.3</a> is
 the compensating control for the disclosure this surface exists to
-provide.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+provide.<a href="#section-14.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="bulk-token-security">

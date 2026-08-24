@@ -122,9 +122,10 @@ Table of Contents
    to either.  A deployment that implements
    [I-D.draft-mcguinness-oauth-mission] and never continues a Mission
    across a transport is fully conformant to that profile and is
-   unaffected by this document.  It defines no new token type, grant
-   type, or endpoint of its own.  No Standards-Track document depends on
-   this one.
+   unaffected by this document.
+
+   It defines no new token type, grant type, or endpoint of its own.  No
+   Standards-Track document depends on this one.
 
    A Mission Issuer claims conformance to this document only when it
    continues a Mission across an Identity Continuation, async
@@ -239,10 +240,12 @@ Table of Contents
    new grant (for example, an Identity Continuation hop that mints a new
    audience-scoped credential) counts as one derivation; the successive
    refreshes of a single async delegation family (Section 7.2) are one
-   delegation and do not each count again.  This counts derivations
-   within one Mission; it does not bound how many derivations a subtree
-   of Child Missions performs in aggregate, which the child delegation
-   profile's own local, per-Mission max_derivations warning addresses
+   delegation and do not each count again.
+
+   This counts derivations within one Mission; it does not bound how
+   many derivations a subtree of Child Missions performs in aggregate,
+   which the child delegation profile's own local, per-Mission
+   max_derivations warning addresses
    ([I-D.draft-mcguinness-oauth-mission-child-delegation],
    Section "Derivation Budget Is Not Inherited").
 
@@ -323,11 +326,12 @@ Table of Contents
    delegation lifetime MUST equal the Mission's expires_at; and the
    family MUST be invalidated when the Mission reaches a terminal state,
    reusing that draft's family-revocation and reuse-detection rules with
-   the Mission lifecycle as the trigger.  This is the "scheduled
-   continuation roots in durable authorization" case: the Mission is
-   that durable authorization.  Successive refreshes within one family
-   are one delegation and are not counted again against max_derivations
-   (Section 5).
+   the Mission lifecycle as the trigger.
+
+   This is the "scheduled continuation roots in durable authorization"
+   case: the Mission is that durable authorization.  Successive
+   refreshes within one family are one delegation and are not counted
+   again against max_derivations (Section 5).
 
    Establishing the family is a delegation-family-creating exchange, and
    a client that loses the response retries with a fresh, valid proof;
@@ -429,16 +433,18 @@ Table of Contents
    reference is a handle that grants nothing, and the Person Server's
    state-gated, one-hour auth-token issuance and federation is the
    continuation point, with revocation latency bounded by the auth-token
-   lifetime.  The cross-workload transports of this profile have no
-   AAuth substrate (AAuth has no token exchange, no act chain, and no
-   ID-JAG), and AAuth declines cross-hop authority carry-forward by
-   design: a chained hop is a fresh decision at its own decision point.
-   AAuth-native cross-workload continuation is therefore deferred work.
-   AAuth over-time continuation is scoped to the Person-Server-mediated,
-   attributed path; an AAuth federated re-issuance in Reference-only
-   mode, where the Access Server does not carry the Mission members, is
-   a fresh federated decision, not a Mission continuation, and is out of
-   scope for this profile.
+   lifetime.
+
+   The cross-workload transports of this profile have no AAuth substrate
+   (AAuth has no token exchange, no act chain, and no ID-JAG), and AAuth
+   declines cross-hop authority carry-forward by design: a chained hop
+   is a fresh decision at its own decision point.  AAuth-native cross-
+   workload continuation is therefore deferred work.  AAuth over-time
+   continuation is scoped to the Person-Server-mediated, attributed
+   path; an AAuth federated re-issuance in Reference-only mode, where
+   the Access Server does not carry the Mission members, is a fresh
+   federated decision, not a Mission continuation, and is out of scope
+   for this profile.
 
    UMA ([I-D.draft-mcguinness-mission-uma]): the persisted-claims token
    is the continuation handle and already realizes the grants-nothing

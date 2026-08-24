@@ -1359,16 +1359,17 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") supports
 delegated Mission-bound tokens. It requires authority to narrow down
 the chain and records actor context. That is sufficient for many
-service-to-service and token-exchange cases. Agent harnesses introduce
+service-to-service and token-exchange cases.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Agent harnesses introduce
 a related but distinct case: a parent agent starts a sub-agent or child
 worker with a durable task of its own. The child may have its own
-session, queue, tool handles, and runtime identity.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">This document defines Child Missions for that case. A Child Mission is
+session, queue, tool handles, and runtime identity.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document defines Child Missions for that case. A Child Mission is
 a Mission whose authority is a strict subset of a Parent Mission and
 whose lifecycle depends on the parent. It has its own Mission
 identifier and actor identity, but it cannot outlive, out-broaden, or
 escape the parent. The child is created through an explicit
-authorization step, not by inheriting a parent harness session.<a href="#section-1-2" class="pilcrow">¶</a></p>
+authorization step, not by inheriting a parent harness session.<a href="#section-1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="optional-status">
@@ -2467,24 +2468,48 @@ Record member, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite 
 <p id="section-7.1-6">Where the deployment requires a human approval event for child
 creation (<a href="#child-creation" class="auto internal xref">Section 6</a>), that event meets the issuance
 profile's approval-event requirements in full, its human Approver is
-the record's <code>approver</code>, and <code>approval_basis.type</code> is <code>direct</code>:
-<code>consent_principal</code> is that Approver, <code>activation</code> is
-<code>{ approval_event_id }</code>, <code>activation_actor</code> equals
-<code>consent_principal</code>, and <code>root_commitment</code> is the child's own
-<code>authority_hash</code>, exactly as for an ordinary Mission.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
-<p id="section-7.1-7">Where creation is adjudicated by policy with no human interaction
+the record's <code>approver</code>, and <code>approval_basis.type</code> is <code>direct</code>:<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-7.1">
+            <p id="section-7.1-7.1.1"><code>consent_principal</code> is that Approver;<a href="#section-7.1-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-7.2">
+            <p id="section-7.1-7.2.1"><code>activation</code> is <code>{ approval_event_id }</code>;<a href="#section-7.1-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-7.3">
+            <p id="section-7.1-7.3.1"><code>activation_actor</code> equals <code>consent_principal</code>; and<a href="#section-7.1-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-7.4">
+            <p id="section-7.1-7.4.1"><code>root_commitment</code> is the child's own <code>authority_hash</code>, exactly as
+for an ordinary Mission.<a href="#section-7.1-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-8">Where creation is adjudicated by policy with no human interaction
 (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), <code>approval_basis.type</code> is
-<code>policy_drawdown</code>: <code>consent_principal</code> is the Parent Mission's own
+<code>policy_drawdown</code>:<a href="#section-7.1-8" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-9.1">
+            <p id="section-7.1-9.1.1"><code>consent_principal</code> is the Parent Mission's own
 <code>approver</code>, the accountable human standing behind the delegation that
-permits child creation (<a href="#fanout" class="auto internal xref">Section 9</a>); <code>activation_actor</code> is the
+permits child creation (<a href="#fanout" class="auto internal xref">Section 9</a>);<a href="#section-7.1-9.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-9.2">
+            <p id="section-7.1-9.2.1"><code>activation_actor</code> is the
 requesting parent agent, the Parent Mission's <code>client_id</code>, distinct
-from <code>consent_principal</code>; and <code>root_commitment</code> is the entry's
+from <code>consent_principal</code>; and<a href="#section-7.1-9.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-9.3">
+            <p id="section-7.1-9.3.1"><code>root_commitment</code> is the entry's
 <code>child_creation_policy</code> reference where the entry carries one,
 otherwise the Parent Mission's own <code>authority_hash</code>, which commits
-the authorizing delegation entry. Either way <code>root_commitment</code> <span class="bcp14">MUST</span>
+the authorizing delegation entry.<a href="#section-7.1-9.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-10">Either way <code>root_commitment</code> <span class="bcp14">MUST</span>
 reference a committed value: the anti-laundering guarantee that a
 <code>policy_drawdown</code> basis always traces to something the human's
-approval actually committed. Where the entry carries a
+approval actually committed.<a href="#section-7.1-10" class="pilcrow">¶</a></p>
+<p id="section-7.1-11">Where the entry carries a
 <code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code> and
 <code>version</code> and this creation's own delegation event identifier (above)
 as <code>activation_event_id</code>. Where it does not, the drawdown is against
@@ -2492,8 +2517,8 @@ the parent's approved delegation entry itself, not a separate policy
 artifact: <code>activation</code> omits <code>policy_id</code> and carries only the
 delegation event identifier as <code>activation_event_id</code>. The record's
 <code>approver</code> is <code>consent_principal</code>: the Parent Mission's human
-Approver, never the policy and never the requesting agent.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
-<p id="section-7.1-8"><code>approved_at</code> (the issuance profile's standing-consent requirement)
+Approver, never the policy and never the requesting agent.<a href="#section-7.1-11" class="pilcrow">¶</a></p>
+<p id="section-7.1-12"><code>approved_at</code> (the issuance profile's standing-consent requirement)
 is the human approval instant of the consented root that
 <code>root_commitment</code> commits, and it follows the root. Both forms above
 were consented at the Parent Mission's approval event, since an
@@ -2504,7 +2529,7 @@ the child-creation request. Where a deployment separately versions
 and re-approves the referenced policy's content as a standing
 consent of its own, <code>approved_at</code> is that policy version's
 human-approval instant, verified from the deployment's retained
-governance record.<a href="#section-7.1-8" class="pilcrow">¶</a></p>
+governance record.<a href="#section-7.1-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2604,7 +2629,8 @@ attenuation rules above bound a child's authority, expiry, and
 delegation policy against the parent, but not its derivation count.
 <code>max_derivations</code> is a per-Mission local issuance counter. A Mission
 Issuer and a deployment <span class="bcp14">MUST NOT</span> treat it, at any single Mission, as
-an aggregate, concurrency, spend, or subtree bound. A Parent Mission's
+an aggregate, concurrency, spend, or subtree bound.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">A Parent Mission's
 own <code>max_derivations</code> caps derivation at the parent alone; it does not
 bound how many derivations the child subtree performs in aggregate,
 and a deep or wide subtree can derive far more than the parent's own
@@ -2612,7 +2638,8 @@ cap suggests. Where an approval interface displays <code>max_derivations</code>,
 or any per-Mission derivation control, as a limit on child creation,
 that interface <span class="bcp14">MUST</span> disclose the composed bound reachable through the
 subtree alongside it, so the Approver sees the real reachable surface
-rather than one Mission's local counter alone. Bounding the aggregate
+rather than one Mission's local counter alone.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<p id="section-8.2-3">Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). This warning is about the
@@ -2621,7 +2648,7 @@ counts derivations within a single Mission's own continued grants,
 where a delegated refresh-token family's successive refreshes are one
 derivation, not one per refresh
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section
-"Authorization Continuity and the Mission").<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+"Authorization Continuity and the Mission").<a href="#section-8.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2795,7 +2822,8 @@ successor's Authority Set.<a href="#section-10-5" class="pilcrow">¶</a></p>
 deployment that creates several Child Missions under a predecessor and
 later expands that predecessor pays for it by tearing down every
 non-terminal descendant and re-creating each one still needed under
-the successor. That cost is deliberate. A Child Mission's authority
+the successor. That cost is deliberate.<a href="#section-10-6" class="pilcrow">¶</a></p>
+<p id="section-10-7">A Child Mission's authority
 must always trace to a committed approval it was actually checked
 against: <code>parent.authority_hash</code> commits to the exact predecessor
 Authority Set the strict-subset check ran against
@@ -2804,40 +2832,40 @@ is not that commitment. The expansion profile's child-cascade consent
 notice is where this cost can be surfaced to the Approver, at the same
 consent event that approves the successor
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
-deferred window").<a href="#section-10-6" class="pilcrow">¶</a></p>
-<p id="section-10-7">Cascade under this profile is issuer-committed. The Mission Issuer
+deferred window").<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-8">Cascade under this profile is issuer-committed. The Mission Issuer
 <span class="bcp14">MUST</span> implement the <code>immediate</code> cascade mode and record the mode on the
-Child Mission:<a href="#section-10-7" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10-8">
-        <dt id="section-10-8.1">
+Child Mission:<a href="#section-10-8" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-9">
+        <dt id="section-10-9.1">
 <code>immediate</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-8.2">
-          <p id="section-10-8.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
+        <dd style="margin-left: 1.5em" id="section-10-9.2">
+          <p id="section-10-9.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
 state when the parent transition commits. On the reversible trigger
 the child is held non-active while the parent is suspended and
-restored to its prior state on parent resume.<a href="#section-10-8.2.1" class="pilcrow">¶</a></p>
+restored to its prior state on parent resume.<a href="#section-10-9.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-10-9">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
+<p id="section-10-10">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
 <code>status_required</code>, which trade issuer-committed transitions for
 consumer-side parent-state checks, are experimental and defined in
 <a href="#experimental-cascade" class="auto internal xref">Appendix A</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
 to continue deriving
-new credentials after the parent is known to be non-active.<a href="#section-10-9" class="pilcrow">¶</a></p>
-<p id="section-10-10">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
+new credentials after the parent is known to be non-active.<a href="#section-10-10" class="pilcrow">¶</a></p>
+<p id="section-10-11">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
 value <span class="bcp14">MUST</span> verify parent state, within the deployment's declared
 freshness window, before each reliance on the child's authority: an
 unrecognized mode may place the interim verification obligation on
-the consumer.<a href="#section-10-10" class="pilcrow">¶</a></p>
-<p id="section-10-11">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
+the consumer.<a href="#section-10-11" class="pilcrow">¶</a></p>
+<p id="section-10-12">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
 commit the terminal cascade transition for every dependent Child
 Mission regardless of its cascade mode; the mode governs only what
-consumers must verify in the interim.<a href="#section-10-11" class="pilcrow">¶</a></p>
-<p id="section-10-12">An <code>immediate</code>-mode descendant under a consumer-verified parent is
+consumers must verify in the interim.<a href="#section-10-12" class="pilcrow">¶</a></p>
+<p id="section-10-13">An <code>immediate</code>-mode descendant under a consumer-verified parent is
 therefore never orphaned: its own transition is committed even where
-the parent's is consumer-observed.<a href="#section-10-12" class="pilcrow">¶</a></p>
-<p id="section-10-13">The cascade behavior by trigger:<a href="#section-10-13" class="pilcrow">¶</a></p>
+the parent's is consumer-observed.<a href="#section-10-13" class="pilcrow">¶</a></p>
+<p id="section-10-14">The cascade behavior by trigger:<a href="#section-10-14" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -2878,13 +2906,14 @@ trigger on its Parent Mission terminates it under <code>immediate</code> cascade
 (<a href="#cascade" class="auto internal xref">Section 10</a>). It is distinct from <code>revoked</code> (the child itself was not
 revoked) and <code>expired</code> (the child's own expiry was not reached), so
 audit can tell a cascade-terminated child from a directly terminated
-one. Following the issuance profile's forward-compatibility rule, a
+one.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2.2.2">Following the issuance profile's forward-compatibility rule, a
 consumer treats <code>cascaded</code> as non-active, as it treats any state other
 than <code>active</code>. Mission Status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) reports it among the
 terminal states, and a Mission lifecycle-change event
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>) carries it on the
-cascade transition.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+cascade transition.<a href="#section-10.1-2.2.2" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>

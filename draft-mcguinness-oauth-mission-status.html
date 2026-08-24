@@ -1689,7 +1689,8 @@ Resource-Server-specific authority projection the response returns
 <p id="section-4.2-6">Which mechanisms and authorization this endpoint accepts are
 discoverable per endpoint, not inferred from the token endpoint's
 metadata. The AS advertises the methods this endpoint accepts in
-<code>mission_status_endpoint_auth_methods_supported</code> (<a href="#as-metadata" class="auto internal xref">Section 10</a>). For
+<code>mission_status_endpoint_auth_methods_supported</code> (<a href="#as-metadata" class="auto internal xref">Section 10</a>).<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.2-7">For
 the sender-constrained access-token path, this endpoint is an OAuth
 protected resource: the AS publishes, in its Protected Resource Metadata
 for this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the <code>resource</code> identifier the token's
@@ -1702,7 +1703,7 @@ direct-client-authentication path (mTLS <span>[<a href="#RFC8705" class="cite xr
 accepted client-assertion signing algorithms are advertised for this
 endpoint (<a href="#as-metadata" class="auto internal xref">Section 10</a>), not read from the token endpoint's
 <code>token_endpoint_auth_methods_supported</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. Both paths are
-therefore discoverable.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+therefore discoverable.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-request-example">
@@ -2151,7 +2152,8 @@ OAuth-shaped APIs they compose with. Each surface's exact member
 requiredness is its own: here and in Mission Management,
 <code>error_description</code> and <code>nonce</code> are <span class="bcp14">REQUIRED</span>; the Mission Authority
 Server makes <code>error_description</code> <span class="bcp14">OPTIONAL</span> and adds the MAS-only
-<code>error_reason</code>. The body is <code>application/json</code> with <code>Cache-Control:
+<code>error_reason</code>.<a href="#section-4.7-10" class="pilcrow">¶</a></p>
+<p id="section-4.7-11">The body is <code>application/json</code> with <code>Cache-Control:
 no-store</code>. <code>error_description</code> is diagnostic and is never
 authorization input. <code>nonce</code> correlates the response to the request in
 support of the signed-response and retry model of <a href="#idempotency" class="auto internal xref">Section 7.8</a> and
@@ -2160,7 +2162,7 @@ rule above. RFC 9457 <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</s
 is neither used on these surfaces nor disparaged: the AuthZEN binding
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span> carries it where that
 ecosystem does, and a future non-OAuth-shaped HTTP API in this family
-<span class="bcp14">MAY</span> choose it.<a href="#section-4.7-10" class="pilcrow">¶</a></p>
+<span class="bcp14">MAY</span> choose it.<a href="#section-4.7-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2602,14 +2604,15 @@ expansion, Token Exchange or other derivation, and any further profile
 that adds a condition), refusing the Intent or the derivation whose
 selector maps to nothing. The AS binds the resolved mapping's
 identifier and version to that exact <code>condition_digest</code> in
-issuer-held metadata. A requesting client <span class="bcp14">MUST NOT</span> select an
+issuer-held metadata.<a href="#section-7.2.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-4">A requesting client <span class="bcp14">MUST NOT</span> select an
 arbitrary otherwise-valid policy merely because adding a condition is
 narrowing: an unchecked choice of mapping for a newly added condition
 could still force the premature discharge that <a href="#completion-security" class="auto internal xref">Section 12.6</a>
 warns against, a denial-of-service on the task and an early
 retirement of its own guardrail. The member is never a raw principal
 or workload structure, and the requesting client cannot select an
-unapproved fallback.<a href="#section-7.2.1-3" class="pilcrow">¶</a></p>
+unapproved fallback.<a href="#section-7.2.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-anti-oracle">
@@ -2839,14 +2842,15 @@ this endpoint, from <code>active</code> or <code>suspended</code>.<a href="#sect
 state space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
 Lifecycle and Gating"). The table below is the authoritative view of
 that space: every state, every transition, and the source of the event
-that drives it. Event sources are the lifecycle endpoint (an operation
+that drives it.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+<p id="section-7.4-2">Event sources are the lifecycle endpoint (an operation
 of <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 7</a>), the expiry clock (a deadline
 reached without a request), and companion adjudication (a transition a
 companion profile commits). The lifecycle-endpoint rows are exactly the
 Mission-state-changing operations of <a href="#legal-transitions" class="auto internal xref">Section 7.3</a>; <code>discharge</code>
 (<a href="#discharge-operation" class="auto internal xref">Section 7.2</a>) is a lifecycle-endpoint operation that
 changes no Mission state and so is not a row of this table. Only
-<code>active</code> permits derivation; every other state is non-deriving.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+<code>active</code> permits derivation; every other state is non-deriving.<a href="#section-7.4-2" class="pilcrow">¶</a></p>
 <table class="center" id="table-4">
           <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
@@ -3016,7 +3020,7 @@ changes no Mission state and so is not a row of this table. Only
             </tr>
           </tbody>
         </table>
-<p id="section-7.4-3"><code>revoke</code> and the Mission's <code>expires_at</code> both apply in <code>suspended</code> as
+<p id="section-7.4-4"><code>revoke</code> and the Mission's <code>expires_at</code> both apply in <code>suspended</code> as
 well as <code>active</code>, so a suspended Mission can still be terminated or
 expire. The <code>superseded</code> and <code>cascaded</code> rows are companion-defined and
 shown here for reference:
@@ -3027,7 +3031,7 @@ committed by the child-delegation profile only when a parent reaches a
 terminal state. A <code>suspended</code> parent holds a dependent Child Mission
 non-active reversibly rather than driving it to <code>cascaded</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Neither
-companion state is produced by this profile's endpoint.<a href="#section-7.4-3" class="pilcrow">¶</a></p>
+companion state is produced by this profile's endpoint.<a href="#section-7.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authentication">
@@ -3042,7 +3046,8 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in <code>mission_lifecycle_endpoint_auth_methods_supported</code> and, for
 <code>private_key_jwt</code>, the accepted client-assertion algorithms in
 <code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
-(<a href="#as-metadata" class="auto internal xref">Section 10</a>). For the sender-constrained access-token path, this
+(<a href="#as-metadata" class="auto internal xref">Section 10</a>).<a href="#section-7.5-1" class="pilcrow">¶</a></p>
+<p id="section-7.5-2">For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
 endpoint is: the AS publishes, in its Protected Resource Metadata for
 this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the <code>resource</code> identifier the token's
@@ -3056,7 +3061,7 @@ private-key JWT <code>client_assertion</code> <span class="bcp14">MUST</span> na
 identifier, exactly as at the Mission Status endpoint. Direct mTLS or
 private-key-JWT callers continue to use the deployment-defined
 equivalent grant, never a scope, exactly as <code>discharge</code> itself does
-(<a href="#discharge-authority" class="auto internal xref">Section 7.2.1</a>).<a href="#section-7.5-1" class="pilcrow">¶</a></p>
+(<a href="#discharge-authority" class="auto internal xref">Section 7.2.1</a>).<a href="#section-7.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization">
@@ -3244,7 +3249,8 @@ request.<a href="#section-7.7-12" class="pilcrow">¶</a></p>
 <p id="section-7.8-1">The request <code>nonce</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 7</a>, Operations) is
 the idempotency key: an opaque string of 1 to 255 characters. The AS
 treats an absent, empty, longer, or non-string <code>nonce</code> as malformed
-(<code>invalid_request</code>, with no <code>nonce</code> echoed). The AS <span class="bcp14">MUST</span> deduplicate
+(<code>invalid_request</code>, with no <code>nonce</code> echoed).<a href="#section-7.8-1" class="pilcrow">¶</a></p>
+<p id="section-7.8-2">The AS <span class="bcp14">MUST</span> deduplicate
 lifecycle requests by the
 triple (client, <code>mission_id</code>, <code>nonce</code>) for a bounded window. On a
 retransmit carrying a <code>nonce</code> already seen for that client and
@@ -3253,15 +3259,16 @@ the AS <span class="bcp14">MUST</span> replay the original response rather than 
 operation. The same <code>nonce</code> paired with a request that is not
 byte-identical to the original <span class="bcp14">MUST</span> be refused <code>invalid_request</code>
 (<a href="#mission-status-errors" class="auto internal xref">Section 4.7</a>); the AS <span class="bcp14">MUST NOT</span> answer it with the
-unrelated original response. The window <span class="bcp14">MUST</span> be at least the validity
+unrelated original response.<a href="#section-7.8-2" class="pilcrow">¶</a></p>
+<p id="section-7.8-3">The window <span class="bcp14">MUST</span> be at least the validity
 span of the signed response the AS would replay (its <code>iat</code> to <code>exp</code>,
 <a href="#mission-status-response" class="auto internal xref">Section 4.4</a>), so any retransmit that could still
 present a live response is deduplicated. A deployment <span class="bcp14">MAY</span> use a longer
 window. This makes a retransmit safe against reordering: a
 delayed <code>suspend</code> retry that arrives after a <code>resume</code> is recognized as
 a duplicate and replays the original <code>suspend</code> response, so it cannot
-re-suspend an already-resumed Mission.<a href="#section-7.8-1" class="pilcrow">¶</a></p>
-<p id="section-7.8-2">Deduplication guards a retransmitted request; it does not guard a
+re-suspend an already-resumed Mission.<a href="#section-7.8-3" class="pilcrow">¶</a></p>
+<p id="section-7.8-4">Deduplication guards a retransmitted request; it does not guard a
 valid request decided over stale state, a fresh <code>suspend</code> issued from
 a console that has not yet seen a newer <code>resume</code>. For that a
 lifecycle request <span class="bcp14">MAY</span> carry <code>expected_version</code>, the state version
@@ -3271,8 +3278,8 @@ the AS <span class="bcp14">MUST</span> refuse the operation with HTTP 409 and er
 current state version differs. A deployment <span class="bcp14">SHOULD</span> require
 <code>expected_version</code> on the operations it classifies high-risk. The
 <code>nonce</code> remains the replay key; the two guards are independent, one
-against duplicate delivery, one against stale decisions.<a href="#section-7.8-2" class="pilcrow">¶</a></p>
-<p id="section-7.8-3">Lifecycle operations that change Mission state follow one rule. An
+against duplicate delivery, one against stale decisions.<a href="#section-7.8-4" class="pilcrow">¶</a></p>
+<p id="section-7.8-5">Lifecycle operations that change Mission state follow one rule. An
 operation whose resulting state (<a href="#legal-transitions" class="auto internal xref">Section 7.3</a>) equals the
 Mission's current state is idempotent success, terminal or not: the AS
 returns the current Mission Status Response, with no state change and
@@ -3282,18 +3289,18 @@ no event emitted. Any other operation not legal from the current state
 <code>conflict</code>, leaving the Mission state unchanged. <code>discharge</code> changes no
 Mission state, so this rule does not bind it; its own idempotency and
 outcome vocabulary are defined in <a href="#discharge-idempotency" class="auto internal xref">Section 7.2.3</a> and
-<a href="#discharge-result" class="auto internal xref">Section 7.2.4</a>.<a href="#section-7.8-3" class="pilcrow">¶</a></p>
-<p id="section-7.8-4"><code>resume</code> is the sole exception to the idempotent-success arm. It is
+<a href="#discharge-result" class="auto internal xref">Section 7.2.4</a>.<a href="#section-7.8-5" class="pilcrow">¶</a></p>
+<p id="section-7.8-6"><code>resume</code> is the sole exception to the idempotent-success arm. It is
 legal only from <code>suspended</code>, and its resulting state <code>active</code> is also
 the baseline a Mission holds before any suspension, so <code>resume</code> on an
 <code>active</code> Mission (one never suspended, or already resumed) or on a
-terminal Mission is not idempotent success but a conflict.<a href="#section-7.8-4" class="pilcrow">¶</a></p>
-<p id="section-7.8-5">One idempotent case carries metadata. A <code>suspend</code> against a
+terminal Mission is not idempotent success but a conflict.<a href="#section-7.8-6" class="pilcrow">¶</a></p>
+<p id="section-7.8-7">One idempotent case carries metadata. A <code>suspend</code> against a
 <code>suspended</code> Mission whose <code>suspend_until</code> or <code>on_expiry</code> differ from
 the recorded values <span class="bcp14">MUST</span> update the recorded values, emitting the
 corresponding transition-metadata change and reporting the updated
 values in the response; silent acceptance without effect is not
-conforming.<a href="#section-7.8-5" class="pilcrow">¶</a></p>
+conforming.<a href="#section-7.8-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
@@ -3319,11 +3326,20 @@ and bulk lifecycle operations for incident response, such as revoking
 every Mission for a compromised Subject, client, or tenant, are
 specified separately by Mission Management
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>; this document does
-not require them. The following capabilities remain deferred to future
-work. Approver transfer or re-anchoring, changing the party that
-anchors a Mission's consent, is not defined here. Administrative
+not require them.<a href="#section-7.10-1" class="pilcrow">¶</a></p>
+<p id="section-7.10-2">The following capabilities remain deferred to future
+work:<a href="#section-7.10-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.10-3.1">
+            <p id="section-7.10-3.1.1">Approver transfer or re-anchoring, changing the party that
+anchors a Mission's consent, is not defined here.<a href="#section-7.10-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.10-3.2">
+            <p id="section-7.10-3.2.1">Administrative
 monotonic narrowing, such as shortening a Mission's <code>expires_at</code>, is
-not defined here.<a href="#section-7.10-1" class="pilcrow">¶</a></p>
+not defined here.<a href="#section-7.10-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 </section>
@@ -3694,13 +3710,14 @@ endpoint, naming the write entry's <code>entry_digest</code>, this condition's
 <code>event_id</code> for its own occurrence record. The Authorization Server
 authenticates the caller against the resolved <code>discharge_policy</code>
 mapping, commits the latch, and returns a signed <code>discharge_result</code> of
-outcome <code>discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 7.2.4</a>). From then on the
+outcome <code>discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 7.2.4</a>).<a href="#section-8.8-4" class="pilcrow">¶</a></p>
+<p id="section-8.8-5">From then on the
 Authorization Server refuses to derive the write entry: a refresh
 returns a token carrying only the read entry. The Mission stays
 <code>active</code>, so the agent can still read the ledger to finish its
 reconciliation report, but it can no longer post journal entries. No
 revoke and no clock was needed; the write authority retired itself
-when the task it was granted for completed.<a href="#section-8.8-4" class="pilcrow">¶</a></p>
+when the task it was granted for completed.<a href="#section-8.8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="completion-conformance">

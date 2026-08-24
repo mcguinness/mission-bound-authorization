@@ -186,12 +186,13 @@ Table of Contents
    inversion with one rule: the first ticket exchanged under a
    prospective Mission carries the whole task as a pushed Mission
    Intent, and the authorization server derives and obtains approval for
-   the full Authority Set, not the ticketed slice (Section 6).  Without
-   that rule the Approver would meet the Mission one resource-server
-   slice at a time, which is the consent-fatigue failure the model
-   exists to prevent.  The approved set is then a ceiling, and each
-   subsequent ticket a drawdown adjudicated by policy within it, the
-   shape the progressive companion names
+   the full Authority Set, not the ticketed slice (Section 6).
+
+   Without that rule the Approver would meet the Mission one resource-
+   server slice at a time, which is the consent-fatigue failure the
+   model exists to prevent.  The approved set is then a ceiling, and
+   each subsequent ticket a drawdown adjudicated by policy within it,
+   the shape the progressive companion names
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
 1.2.  Applicability
@@ -363,15 +364,15 @@ Table of Contents
    submission is untrusted client input, never authority).  The payload
    MAY additionally carry an authorization_details claim: the client's
    authority proposal, an array of authorization_details objects.  This
-   claim is this binding's proposal carriage, replacing the issuance
-   profile's PAR-only carriage rule; that profile's validation,
-   derivation, recording, and hashing semantics apply unchanged (a
-   proposal, never authority; the Intent itself carries no authority
-   members).  A Mission created from a push carrying one records
-   proposed_authority and proposal_hash as the issuance profile's
-   Mission record defines them.  The JWT MAY be signed by the client for
-   attribution; a signature confers no authority.  Its
-   claim_token_format identifier is:
+   claim replaces the issuance profile's PAR-only proposal carriage; its
+   validation, derivation, recording, and hashing rules apply unchanged,
+   and the proposal itself carries no authority
+   ([I-D.draft-mcguinness-oauth-mission]).  A Mission created from a
+   push carrying one records proposed_authority and proposal_hash as the
+   issuance profile's Mission record defines them.
+
+   The JWT MAY be signed by the client for attribution; a signature
+   confers no authority.  Its claim_token_format identifier is:
 
    https://mcguinness.github.io/mission-bound-authorization/uma-intent-jwt
 

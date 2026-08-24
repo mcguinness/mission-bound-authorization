@@ -175,7 +175,11 @@ Table of Contents
 
    Authority ceiling:  The pre-consented maximum authority any expansion
       of a Mission may reach without a further human approval
-      (Section 5).
+      (Section 5).  This bound is distinct from the template profile's
+      Template Ceiling on Missions dispatched from a template and from
+      the shaping companion's caller-supplied shaping ceiling on a
+      proposal ([I-D.draft-mcguinness-oauth-mission-template],
+      [I-D.draft-mcguinness-mission-shaping]).
 
    Drawdown policy:  The policy under which the Mission Issuer may
       adjudicate an in-ceiling expansion by policy rather than by a
@@ -740,6 +744,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-security-model.html>.
 
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-shaping.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -757,11 +766,20 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
+
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Editorial: disambiguated authority_ceiling from the template
+      profile's Template Ceiling and the shaping companion's shaping
+      ceiling at its first definition (Section 4), no normative change.
 
    *  Mirrored the OAuth binding's Mission Template uncommitted-policy-
       body pattern onto drawdown_policy: a SHOULD to additionally commit

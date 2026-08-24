@@ -1745,22 +1745,23 @@ consults.<a href="#section-2.4-1" class="pilcrow">¶</a></p>
 lifecycle-gated capability (Mission state at the issuer, with reliance
 boundable by credential lifetime alone) and <span class="bcp14">MAY</span> additionally provide a
 state-observable capability (an authenticated freshness source with a
-stated staleness bound). A deployment claiming runtime enforcement for
+stated staleness bound).<a href="#section-2.4-2" class="pilcrow">¶</a></p>
+<p id="section-2.4-3">A deployment claiming runtime enforcement for
 an action class whose published staleness bound is tighter than the
 credential lifetime REQUIRES a state-observable substrate for that
 class; the high-consequence classes below always are. A
 lifecycle-gated-only substrate supports issuance gating and a
 lifetime-bounded action-time posture only: it cannot reflect a
 revocation faster than the credential lifetime, so it cannot host a
-class whose bound demands that.<a href="#section-2.4-2" class="pilcrow">¶</a></p>
+class whose bound demands that.<a href="#section-2.4-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-2.4-3.1">
-            <p id="section-2.4-3.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
+<li class="normal" id="section-2.4-4.1">
+            <p id="section-2.4-4.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
 within the deployment's published staleness bound, that the Mission
-is <code>active</code>.<a href="#section-2.4-3.1.1" class="pilcrow">¶</a></p>
+is <code>active</code>.<a href="#section-2.4-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.4-3.2">
-            <p id="section-2.4-3.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with an
+          <li class="normal" id="section-2.4-4.2">
+            <p id="section-2.4-4.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with an
 explicit expiry or lease end, or report only an observation time, in
 which case the state remains acceptable only until that observation
 time plus the deployment's published staleness bound for the
@@ -1768,29 +1769,29 @@ relevant action class. A permit issued from that state view <span class="bcp14">
 expire no later than this state valid-through: the reported expiry
 or lease end, or, absent one, the observation time plus the
 published staleness bound. The observation time alone, without
-adding the staleness bound, is never a permit's expiry.<a href="#section-2.4-3.2.1" class="pilcrow">¶</a></p>
+adding the staleness bound, is never a permit's expiry.<a href="#section-2.4-4.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.4-3.3">
-            <p id="section-2.4-3.3.1">When the credential issuer also holds the Mission, the PDP can learn
+          <li class="normal" id="section-2.4-4.3">
+            <p id="section-2.4-4.3.1">When the credential issuer also holds the Mission, the PDP can learn
 state through token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) at the issuer per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. A non-issuer Resource AS
 introspecting a local token
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) cannot report
 current Mission state; it can establish local token validity, but not
-issuer-side Mission freshness.<a href="#section-2.4-3.3.1" class="pilcrow">¶</a></p>
+issuer-side Mission freshness.<a href="#section-2.4-4.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.4-3.4">
-            <p id="section-2.4-3.4.1">This document defines no cross-issuer by-Mission status query.
+          <li class="normal" id="section-2.4-4.4">
+            <p id="section-2.4-4.4.1">This document defines no cross-issuer by-Mission status query.
 Deployments that need tighter freshness than the token or
 cross-domain grant
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) lifetime
 provides use the Mission Status profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Mission Lifecycle
 Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or an
-out-of-band trusted status feed.<a href="#section-2.4-3.4.1" class="pilcrow">¶</a></p>
+out-of-band trusted status feed.<a href="#section-2.4-4.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.4-3.5">
-            <p id="section-2.4-3.5.1">The maximum staleness bound per action class and state source is
+          <li class="normal" id="section-2.4-4.5">
+            <p id="section-2.4-4.5.1">The maximum staleness bound per action class and state source is
 declared in the Enforcement Scope Statement
 (<a href="#runtime-conformance" class="auto internal xref">Section 6.2</a>), together with the revocation latency it
 implies. Publishing the bound without its latency consequence is
@@ -1802,10 +1803,10 @@ only for paths outside PDP gating. This document imposes no
 universal value because the acceptable latency is deployment- and
 consequence-specific; the bound is the number that determines the
 profile's headline revocation property. The per-class budgets
-below are the <span class="bcp14">RECOMMENDED</span> defaults for the value.<a href="#section-2.4-3.5.1" class="pilcrow">¶</a></p>
+below are the <span class="bcp14">RECOMMENDED</span> defaults for the value.<a href="#section-2.4-4.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.4-3.6">
-            <p id="section-2.4-3.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
+          <li class="normal" id="section-2.4-4.6">
+            <p id="section-2.4-4.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
 freshness mechanism that can reflect a revocation within the staleness
 bound: token introspection at the issuer (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>), the Mission Status
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), a Mission
@@ -1816,23 +1817,33 @@ Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" 
 Token-lifetime expiry alone is not an acceptable state source for
 these classes: it bounds staleness only by the lifetime, so a revoked
 Mission keeps deriving consequence until tokens age out, which is the
-ambient-authority gap this profile exists to close.<a href="#section-2.4-3.6.1" class="pilcrow">¶</a></p>
+ambient-authority gap this profile exists to close.<a href="#section-2.4-4.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-2.4-4">An informative worked example of the latency arithmetic: for a
+<p id="section-2.4-5">An informative worked example of the latency arithmetic: for a
 PDP-gated class with a published staleness bound of 60 seconds and a
 declared execution bound of 30 seconds, a revocation committed
 immediately after a state observation stops new effect after at most
-90 seconds: the stale view remains acceptable for up to 60 seconds,
-a permit issued from that view expires no later than the view's
-valid-through (the permit cap above), and a permitted action
-completes within its execution bound. The general worst case above
+90 seconds. That worst case combines:<a href="#section-2.4-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2.4-6.1">
+            <p id="section-2.4-6.1.1">the stale view remaining acceptable for up to 60 seconds;<a href="#section-2.4-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.4-6.2">
+            <p id="section-2.4-6.2.1">a permit issued from that view expiring no later than the view's
+valid-through (the permit cap above); and<a href="#section-2.4-6.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.4-6.3">
+            <p id="section-2.4-6.3.1">a permitted action completing within its execution bound.<a href="#section-2.4-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-2.4-7">The general worst case above
 counts the permit validity window as its own term because a state
 source reporting an explicit lease end can leave a permit window
 beyond the staleness bound; under observation-time reporting the
 permit cap collapses that term. A path outside PDP gating keeps only
-the derived token's lifetime as its bound.<a href="#section-2.4-4" class="pilcrow">¶</a></p>
-<p id="section-2.4-5">For a deployment whose access tokens are short-lived and whose
+the derived token's lifetime as its bound.<a href="#section-2.4-7" class="pilcrow">¶</a></p>
+<p id="section-2.4-8">For a deployment whose access tokens are short-lived and whose
 issuance and refresh are state-gated per the OAuth binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the refresh cycle itself is
 a conforming active freshness source for any action class whose
@@ -1841,8 +1852,8 @@ is an active check, and a token that exists is evidence the Mission
 was <code>active</code> within the lifetime. This source's revocation latency
 floor is the token lifetime, so it conforms only for classes whose
 bound admits that floor, and the higher-frequency sources (Status,
-introspection, Signals) remain the path to tighter bounds.<a href="#section-2.4-5" class="pilcrow">¶</a></p>
-<p id="section-2.4-6"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
+introspection, Signals) remain the path to tighter bounds.<a href="#section-2.4-8" class="pilcrow">¶</a></p>
+<p id="section-2.4-9"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
 expiry is itself a conforming state source: derivation and refresh
 are gated on <code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so a
 token's remaining lifetime bounds the staleness of the authority it
@@ -1852,10 +1863,10 @@ the clock: no status call, no introspection, no change at the
 consuming resource. A deployment declares it per class in its
 Enforcement Scope Statement like any other source; what it cannot do
 is reflect a revocation faster than the lifetime, which is why the
-high-consequence classes require an active source.<a href="#section-2.4-6" class="pilcrow">¶</a></p>
-<p id="section-2.4-7">Together the sources form a single freshness dial, and a deployment
+high-consequence classes require an active source.<a href="#section-2.4-9" class="pilcrow">¶</a></p>
+<p id="section-2.4-10">Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
-estate. The comparison, informative:<a href="#section-2.4-7" class="pilcrow">¶</a></p>
+estate. The comparison, informative:<a href="#section-2.4-10" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1912,14 +1923,14 @@ estate. The comparison, informative:<a href="#section-2.4-7" class="pilcrow">¶<
             </tr>
           </tbody>
         </table>
-<p id="section-2.4-9">No position on this dial requires a per-request issuer call: the
+<p id="section-2.4-12">No position on this dial requires a per-request issuer call: the
 tightest posture costs one lookup per staleness bound, amortized by
 caching, and the loosest costs a clock. The dial is the architecture's
 freshness dial made concrete
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), and the Enforcement
-Scope Statement records the chosen position per class.<a href="#section-2.4-9" class="pilcrow">¶</a></p>
-<p id="section-2.4-10">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
-class, adopted absent a documented, consequence-specific analysis:<a href="#section-2.4-10" class="pilcrow">¶</a></p>
+Scope Statement records the chosen position per class.<a href="#section-2.4-12" class="pilcrow">¶</a></p>
+<p id="section-2.4-13">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
+class, adopted absent a documented, consequence-specific analysis:<a href="#section-2.4-13" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -1955,9 +1966,9 @@ class, adopted absent a documented, consequence-specific analysis:<a href="#sect
             </tr>
           </tbody>
         </table>
-<p id="section-2.4-12">A deployment justifies any looser value for a high-consequence class
-in its Enforcement Scope Statement.<a href="#section-2.4-12" class="pilcrow">¶</a></p>
-<p id="section-2.4-13">For a Mission carrying a nonzero containment overlay
+<p id="section-2.4-15">A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.<a href="#section-2.4-15" class="pilcrow">¶</a></p>
+<p id="section-2.4-16">For a Mission carrying a nonzero containment overlay
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the <span class="bcp14">RECOMMENDED</span>
 posture for a consequential read whose authorizing entry or action
 class intersects the overlay tightens to a containment-aware state
@@ -1969,7 +1980,8 @@ tightening <span class="bcp14">MUST</span> name a containment-aware state source
 active one: a contained Mission stays <code>active</code>, so a Mission Status
 List bit does not move
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
-"Propagation"). A containment-aware source is full Status or
+"Propagation").<a href="#section-2.4-16" class="pilcrow">¶</a></p>
+<p id="section-2.4-17">A containment-aware source is full Status or
 introspection carrying <code>containment_version</code>, or Mission Lifecycle
 Signals carrying the overlay change
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
@@ -1978,8 +1990,8 @@ shorten the residual, but it checks nothing at action time, so it
 carries Baseline, not Runtime-Enforced, and is not a containment-aware
 source for this tightening
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
-"Containment Properties").<a href="#section-2.4-13" class="pilcrow">¶</a></p>
-<p id="section-2.4-14">A deployment <span class="bcp14">MAY</span> instead tighten on any nonzero overlay regardless of
+"Containment Properties").<a href="#section-2.4-17" class="pilcrow">¶</a></p>
+<p id="section-2.4-18">A deployment <span class="bcp14">MAY</span> instead tighten on any nonzero overlay regardless of
 class. That is a defensible conservative default; its cost is
 incident-time availability load on reads the overlay does not touch,
 since every consequential read then depends on state-source
@@ -1987,14 +1999,14 @@ availability during the incident that triggered containment. The
 under-containment staleness bound for an affected class is declared
 in its Enforcement Scope Statement alongside the ordinary bound
 (<a href="#runtime-conformance" class="auto internal xref">Section 6.2</a>); this posture adds no separate value, and
-the bound carries its latency consequence like any other.<a href="#section-2.4-14" class="pilcrow">¶</a></p>
-<p id="section-2.4-15">The tightening narrows the post-taint window for the classes and
+the bound carries its latency consequence like any other.<a href="#section-2.4-18" class="pilcrow">¶</a></p>
+<p id="section-2.4-19">The tightening narrows the post-taint window for the classes and
 deployments that adopt a containment-aware source; it does not close
 the Baseline residual
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
 "Containment Properties"). A consumer bounded by token lifetime
 alone, or a class this tightening does not reach, still runs to its
-existing bound.<a href="#section-2.4-15" class="pilcrow">¶</a></p>
+existing bound.<a href="#section-2.4-19" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-output">
@@ -2091,25 +2103,26 @@ issued before the contain transition still carries it, established
 from the same Mission state source and freshness bound that governs
 the <code>active</code> check (<a href="#state-freshness" class="auto internal xref">Section 2.4</a>); a Mission stays <code>active</code>
 while contained, so this check, not the state check, is what a
-containment-aware PDP adds. The decision-API binding provides the
+containment-aware PDP adds.<a href="#section-2.6.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.6.1-5">The decision-API binding provides the
 extension point through which a companion profile carries which
-evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 16</a>).<a href="#section-2.6.1-4" class="pilcrow">¶</a></p>
-<p id="section-2.6.1-5">For an entry of type <code>mission_resource_access</code>, the action's
+evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 16</a>).<a href="#section-2.6.1-5" class="pilcrow">¶</a></p>
+<p id="section-2.6.1-6">For an entry of type <code>mission_resource_access</code>, the action's
 <code>resource</code> and invoked action or tool identity <span class="bcp14">MUST</span> be within that
 entry's <code>resource</code> and <code>actions</code>, under the subset rule of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The PEP asserts the
 capability identity (for example, the tool or function name) it will
 invoke. The PDP <span class="bcp14">MUST</span> refuse an identity outside the approved
-<code>actions</code>.<a href="#section-2.6.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.6.1-6">For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span> evaluate
+<code>actions</code>.<a href="#section-2.6.1-6" class="pilcrow">¶</a></p>
+<p id="section-2.6.1-7">For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span> evaluate
 the action under that type's documented runtime semantics and <span class="bcp14">MUST</span>
-refuse if it does not understand or cannot enforce those semantics.<a href="#section-2.6.1-6" class="pilcrow">¶</a></p>
-<p id="section-2.6.1-7">The identity of the executing component that serves a capability
+refuse if it does not understand or cannot enforce those semantics.<a href="#section-2.6.1-7" class="pilcrow">¶</a></p>
+<p id="section-2.6.1-8">The identity of the executing component that serves a capability
 (for example, an MCP server instance) is a request-time fact the
 decision-API binding <span class="bcp14">MAY</span> carry (<a href="#authzen" class="auto internal xref">Section 16</a>); Resource policy <span class="bcp14">MAY</span>
-refuse an executor outside the deployment's trusted set.<a href="#section-2.6.1-7" class="pilcrow">¶</a></p>
-<p id="section-2.6.1-8">A capability sourced from a discovered catalog is additionally
-subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 2.6.2</a>.<a href="#section-2.6.1-8" class="pilcrow">¶</a></p>
+refuse an executor outside the deployment's trusted set.<a href="#section-2.6.1-8" class="pilcrow">¶</a></p>
+<p id="section-2.6.1-9">A capability sourced from a discovered catalog is additionally
+subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 2.6.2</a>.<a href="#section-2.6.1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-drift">
@@ -2239,7 +2252,8 @@ PEP's reverification, not a decision input (<a href="#parameter-binding" class="
 the undertaking stands. A deployment <span class="bcp14">MAY</span> evaluate policy predicates
 over the Mission's prior Decision and Execution Evidence (for
 example, a precondition that a named action class completed) as
-deployment-local context keyed on the Mission's identity. This is
+deployment-local context keyed on the Mission's identity.<a href="#section-2.6.8-1" class="pilcrow">¶</a></p>
+<p id="section-2.6.8-2">This is
 the sequence-aware half of the context asymmetry the architecture
 names (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>): the resource
 prices "delete database" the same in isolation and inside an
@@ -2248,23 +2262,25 @@ where the undertaking's history accumulates can tell the two apart.
 The policy side selects: the deployment's policy or materialized
 view names the predicates a decision requires, and the requesting
 component supplies facts or an evidence reference, never the choice
-of predicate.<a href="#section-2.6.8-1" class="pilcrow">¶</a></p>
-<p id="section-2.6.8-2">History is a decision input, never a grant. A history predicate
+of predicate.<a href="#section-2.6.8-2" class="pilcrow">¶</a></p>
+<p id="section-2.6.8-3">History is a decision input, never a grant. A history predicate
 <span class="bcp14">MUST NOT</span> expand authority beyond the issued
 <code>authorization_details</code>. Where deployment or Resource policy
 requires a history predicate, the PDP <span class="bcp14">MUST</span> fail closed when the
 predicate cannot be established or the evidence store cannot be
-consulted. A deployment that declares history evaluation in its
+consulted.<a href="#section-2.6.8-3" class="pilcrow">¶</a></p>
+<p id="section-2.6.8-4">A deployment that declares history evaluation in its
 Enforcement Scope Statement treats the evidence store as a state
 source under this profile's freshness discipline: a declared
 staleness bound, and refusal when the required history cannot be
-established within the bound (<a href="#state-freshness" class="auto internal xref">Section 2.4</a>). Cross-PDP
+established within the bound (<a href="#state-freshness" class="auto internal xref">Section 2.4</a>).<a href="#section-2.6.8-4" class="pilcrow">¶</a></p>
+<p id="section-2.6.8-5">Cross-PDP
 history composes through the deployment's evidence store or
 registered transparency records
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) and is otherwise out of
 scope. How a decision request names a history predicate, and how
 its evaluation is recorded, is the decision-API binding's
-(<a href="#authzen" class="auto internal xref">Section 16</a>).<a href="#section-2.6.8-2" class="pilcrow">¶</a></p>
+(<a href="#authzen" class="auto internal xref">Section 16</a>).<a href="#section-2.6.8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3361,13 +3377,14 @@ is held by the PEP that sits at the last controllable boundary
 (<a href="#pep-placement" class="auto internal xref">Section 6.5</a>), not by the agent component. The agent therefore
 cannot present the Mission-bound credential directly; to act, it asks
 the mediating PEP, which runs the decision of <a href="#decision" class="auto internal xref">Section 9</a> and only then
-uses the key. No new token type, credential handle, or wire protocol is
+uses the key.<a href="#section-6.6-2" class="pilcrow">¶</a></p>
+<p id="section-6.6-3">No new token type, credential handle, or wire protocol is
 introduced: this is a custody and placement property of the existing
 sender-constraint key. The mediating PEP is a co-trusted process in the
 agent's own trust domain, not a delegate: the token is unchanged, the
 agent remains the principal of record (<code>client_id</code> still attributes the
-action to the agent), and no <code>act</code>-chain entry is added.<a href="#section-6.6-2" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-6.6-3">
+action to the agent), and no <code>act</code>-chain entry is added.<a href="#section-6.6-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-6.6-4">
 <pre>
  Agent                Mediating PEP              Resource
    |                  (holds cnf key)               |
@@ -3378,77 +3395,96 @@ action to the agent), and no <code>act</code>-chain entry is added.<a href="#sec
    |&lt;---- result -----|                             |
    |                                                |
    |     X - - - - - - unmediated path absent - - -&gt;|
-</pre><a href="#section-6.6-3" class="pilcrow">¶</a>
+</pre><a href="#section-6.6-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6.6-4">For any action class a deployment mediates, the acting credential <span class="bcp14">MUST</span>
+<p id="section-6.6-5">For any action class a deployment mediates, the acting credential <span class="bcp14">MUST</span>
 be sender-constrained: a bearer token is incompatible with mediated
 custody, because a bearer token can be presented by whoever holds it,
 including the agent, so the mediating PEP could not be the sole holder
-of the authority.<a href="#section-6.6-4" class="pilcrow">¶</a></p>
-<p id="section-6.6-5">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
+of the authority.<a href="#section-6.6-5" class="pilcrow">¶</a></p>
+<p id="section-6.6-6">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and <span class="bcp14">SHOULD</span> do so for
 the irreversible-action, external-commitment, and
-privileged-administration classes. Two
-properties follow: a credential exfiltrated from a compromised agent is
-unusable without the key; and a compromised agent cannot reach a
+privileged-administration classes.<a href="#section-6.6-6" class="pilcrow">¶</a></p>
+<p id="section-6.6-7">Two properties follow:<a href="#section-6.6-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.6-8.1">
+            <p id="section-6.6-8.1.1">a credential exfiltrated from a compromised agent is
+unusable without the key; and<a href="#section-6.6-8.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.6-8.2">
+            <p id="section-6.6-8.2.1">a compromised agent cannot reach a
 mediated action without passing the per-action check, because it never
-holds a usable credential for that class. Mediated execution depends on
+holds a usable credential for that class.<a href="#section-6.6-8.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.6-9">Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.6-5" class="pilcrow">¶</a></p>
-<p id="section-6.6-6">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.6-9" class="pilcrow">¶</a></p>
+<p id="section-6.6-10">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
 server-side gateway, an LLM gateway, an MCP gateway, or an egress
 proxy, holds the sender-constraint key and the Mission-bound tokens,
 and the agent receives no bearer credential at all. That shape is the
 claim's home: the custody properties above belong to a deployment
 built this way, and a developer laptop with a shell is outside them
-by construction, not by configuration.<a href="#section-6.6-6" class="pilcrow">¶</a></p>
-<p id="section-6.6-7">Where the deployment issues tokens under the client-instance-assertion
+by construction, not by configuration.<a href="#section-6.6-10" class="pilcrow">¶</a></p>
+<p id="section-6.6-11">Where the deployment issues tokens under the client-instance-assertion
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>),
 the sender-constraint key is instance-specific: that profile forbids a
 key shared across a client's instances. Mediated custody composes with
-that rule in either of two shapes. The mediating PEP holds
+that rule in either of two shapes:<a href="#section-6.6-11" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.6-12.1">
+            <p id="section-6.6-12.1.1">the mediating PEP holds
 per-instance keys, taking custody of each instance's key rather than
-one shared key; or the mediating PEP is itself the attested instance
+one shared key; or<a href="#section-6.6-12.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.6-12.2">
+            <p id="section-6.6-12.2.1">the mediating PEP is itself the attested instance
 that obtained the token, presenting the instance assertion and holding
-the instance key. In both shapes that profile's no-shared-key rule and
-this section's custody rules are satisfied together.
-Attestation-based client authentication and SPIFFE
+the instance key.<a href="#section-6.6-12.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.6-13">In both shapes that profile's no-shared-key rule and
+this section's custody rules are satisfied together.<a href="#section-6.6-13" class="pilcrow">¶</a></p>
+<p id="section-6.6-14">Attestation-based client authentication and SPIFFE
 (<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>,
 <span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) can supply the
 client-instance authentication and workload credentials beneath this
 custody layer; they do not define the Mission actor, delegation,
-intent, lifecycle, or evidence semantics.<a href="#section-6.6-7" class="pilcrow">¶</a></p>
-<p id="section-6.6-8">This narrows, and does not eliminate, the compromised-agent exposure.
+intent, lifecycle, or evidence semantics.<a href="#section-6.6-14" class="pilcrow">¶</a></p>
+<p id="section-6.6-15">This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
 out of scope here (<a href="#security-considerations" class="auto internal xref">Section 18</a>); a compromised agent can
 still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
-unilaterally, not that the agent is trusted.<a href="#section-6.6-8" class="pilcrow">¶</a></p>
-<p id="section-6.6-9">The set of action classes a deployment mediates is the load-bearing
+unilaterally, not that the agent is trusted.<a href="#section-6.6-15" class="pilcrow">¶</a></p>
+<p id="section-6.6-16">The set of action classes a deployment mediates is the load-bearing
 parameter here: a deployment that mediates nothing gains nothing from
 this section, however it labels itself. A deployment that relies on this
 profile to protect against agent compromise therefore <span class="bcp14">MUST</span> include the
 high-consequence classes in its mediated set; the protection is only as
-broad as that set.<a href="#section-6.6-9" class="pilcrow">¶</a></p>
-<p id="section-6.6-10">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
+broad as that set.<a href="#section-6.6-16" class="pilcrow">¶</a></p>
+<p id="section-6.6-17">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
 credentials with distinct <code>cnf</code> keys over sharing one key across
 mediating PEPs, so that compromise of one mediating PEP does not expose
 the authority of another. On compromise of a mediating PEP's key, the
 deployment revokes the affected tokens and re-derives. A
 sender-constraint private key is never published; rotation is
 re-derivation with a new <code>cnf</code> binding plus revocation or expiry of
-the tokens bound to the old key. The Enforcement Scope Statement
+the tokens bound to the old key.<a href="#section-6.6-17" class="pilcrow">¶</a></p>
+<p id="section-6.6-18">The Enforcement Scope Statement
 <span class="bcp14">SHOULD</span> state the custody replica topology (a shared HSM-held key
 versus per-replica keys): replicating one <code>cnf</code> key across a PEP
-fleet widens the exposure custody exists to shrink.<a href="#section-6.6-10" class="pilcrow">¶</a></p>
-<p id="section-6.6-11">Mediated execution also places a controllable chokepoint on the
+fleet widens the exposure custody exists to shrink.<a href="#section-6.6-18" class="pilcrow">¶</a></p>
+<p id="section-6.6-19">Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
-payload after the decision and before presentation.<a href="#section-6.6-11" class="pilcrow">¶</a></p>
+payload after the decision and before presentation.<a href="#section-6.6-19" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="agent-isolated-evidence-emission">

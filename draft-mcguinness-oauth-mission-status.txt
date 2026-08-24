@@ -373,9 +373,10 @@ Table of Contents
    Which mechanisms and authorization this endpoint accepts are
    discoverable per endpoint, not inferred from the token endpoint's
    metadata.  The AS advertises the methods this endpoint accepts in
-   mission_status_endpoint_auth_methods_supported (Section 10).  For the
-   sender-constrained access-token path, this endpoint is an OAuth
-   protected resource: the AS publishes, in its Protected Resource
+   mission_status_endpoint_auth_methods_supported (Section 10).
+
+   For the sender-constrained access-token path, this endpoint is an
+   OAuth protected resource: the AS publishes, in its Protected Resource
    Metadata for this resource [RFC9728], the resource identifier the
    token's audience MUST name, the mission_status scope it requires
    (scopes_supported), and the presentation and sender constraints it
@@ -734,9 +735,11 @@ Table of Contents
    requiredness is its own: here and in Mission Management,
    error_description and nonce are REQUIRED; the Mission Authority
    Server makes error_description OPTIONAL and adds the MAS-only
-   error_reason.  The body is application/json with Cache-Control: no-
-   store. error_description is diagnostic and is never authorization
-   input. nonce correlates the response to the request in support of the
+   error_reason.
+
+   The body is application/json with Cache-Control: no-store.
+   error_description is diagnostic and is never authorization input.
+   nonce correlates the response to the request in support of the
    signed-response and retry model of Section 7.8 and is not, by itself,
    replay protection, per the absent-or-malformed-nonce rule above.  RFC
    9457 [RFC9457] problem details is neither used on these surfaces nor
@@ -1089,10 +1092,11 @@ Table of Contents
    Token Exchange or other derivation, and any further profile that adds
    a condition), refusing the Intent or the derivation whose selector
    maps to nothing.  The AS binds the resolved mapping's identifier and
-   version to that exact condition_digest in issuer-held metadata.  A
-   requesting client MUST NOT select an arbitrary otherwise-valid policy
-   merely because adding a condition is narrowing: an unchecked choice
-   of mapping for a newly added condition could still force the
+   version to that exact condition_digest in issuer-held metadata.
+
+   A requesting client MUST NOT select an arbitrary otherwise-valid
+   policy merely because adding a condition is narrowing: an unchecked
+   choice of mapping for a newly added condition could still force the
    premature discharge that Section 12.6 warns against, a denial-of-
    service on the task and an early retirement of its own guardrail.
    The member is never a raw principal or workload structure, and the
@@ -1253,14 +1257,16 @@ Table of Contents
    state space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
    Lifecycle and Gating").  The table below is the authoritative view of
    that space: every state, every transition, and the source of the
-   event that drives it.  Event sources are the lifecycle endpoint (an
-   operation of Section 7), the expiry clock (a deadline reached without
-   a request), and companion adjudication (a transition a companion
-   profile commits).  The lifecycle-endpoint rows are exactly the
-   Mission-state-changing operations of Section 7.3; discharge
-   (Section 7.2) is a lifecycle-endpoint operation that changes no
-   Mission state and so is not a row of this table.  Only active permits
-   derivation; every other state is non-deriving.
+   event that drives it.
+
+   Event sources are the lifecycle endpoint (an operation of Section 7),
+   the expiry clock (a deadline reached without a request), and
+   companion adjudication (a transition a companion profile commits).
+   The lifecycle-endpoint rows are exactly the Mission-state-changing
+   operations of Section 7.3; discharge (Section 7.2) is a lifecycle-
+   endpoint operation that changes no Mission state and so is not a row
+   of this table.  Only active permits derivation; every other state is
+   non-deriving.
 
     +===========+====================+==================+============+
     | From      | Event              | Event source     | To         |
@@ -1330,20 +1336,22 @@ Table of Contents
    mission_lifecycle_endpoint_auth_methods_supported and, for
    private_key_jwt, the accepted client-assertion algorithms in
    mission_lifecycle_endpoint_auth_signing_alg_values_supported
-   (Section 10).  For the sender-constrained access-token path, this
-   endpoint is an OAuth protected resource exactly as the Mission Status
-   endpoint is: the AS publishes, in its Protected Resource Metadata for
-   this resource [RFC9728], the resource identifier the token's audience
-   MUST name and the scopes it requires (scopes_supported):
-   mission_lifecycle for revoke, suspend, resume, and complete
-   (Section 7), and, where the deployment offers discharge,
-   mission_discharge as well (Section 7.2.1).  A private-key JWT
-   client_assertion MUST name the mission_lifecycle_endpoint URL in aud,
-   and a presented access token MUST be audience-restricted to this
-   endpoint's protected-resource identifier, exactly as at the Mission
-   Status endpoint.  Direct mTLS or private-key-JWT callers continue to
-   use the deployment-defined equivalent grant, never a scope, exactly
-   as discharge itself does (Section 7.2.1).
+   (Section 10).
+
+   For the sender-constrained access-token path, this endpoint is an
+   OAuth protected resource exactly as the Mission Status endpoint is:
+   the AS publishes, in its Protected Resource Metadata for this
+   resource [RFC9728], the resource identifier the token's audience MUST
+   name and the scopes it requires (scopes_supported): mission_lifecycle
+   for revoke, suspend, resume, and complete (Section 7), and, where the
+   deployment offers discharge, mission_discharge as well
+   (Section 7.2.1).  A private-key JWT client_assertion MUST name the
+   mission_lifecycle_endpoint URL in aud, and a presented access token
+   MUST be audience-restricted to this endpoint's protected-resource
+   identifier, exactly as at the Mission Status endpoint.  Direct mTLS
+   or private-key-JWT callers continue to use the deployment-defined
+   equivalent grant, never a scope, exactly as discharge itself does
+   (Section 7.2.1).
 
 7.6.  Authorization
 
@@ -1509,22 +1517,24 @@ Table of Contents
    The request nonce (Section 7, Operations) is the idempotency key: an
    opaque string of 1 to 255 characters.  The AS treats an absent,
    empty, longer, or non-string nonce as malformed (invalid_request,
-   with no nonce echoed).  The AS MUST deduplicate lifecycle requests by
-   the triple (client, mission_id, nonce) for a bounded window.  On a
-   retransmit carrying a nonce already seen for that client and
-   mission_id, together with a request byte-identical to the original,
-   the AS MUST replay the original response rather than re-execute the
-   operation.  The same nonce paired with a request that is not byte-
-   identical to the original MUST be refused invalid_request
-   (Section 4.7); the AS MUST NOT answer it with the unrelated original
-   response.  The window MUST be at least the validity span of the
-   signed response the AS would replay (its iat to exp, Section 4.4), so
-   any retransmit that could still present a live response is
-   deduplicated.  A deployment MAY use a longer window.  This makes a
-   retransmit safe against reordering: a delayed suspend retry that
-   arrives after a resume is recognized as a duplicate and replays the
-   original suspend response, so it cannot re-suspend an already-resumed
-   Mission.
+   with no nonce echoed).
+
+   The AS MUST deduplicate lifecycle requests by the triple (client,
+   mission_id, nonce) for a bounded window.  On a retransmit carrying a
+   nonce already seen for that client and mission_id, together with a
+   request byte-identical to the original, the AS MUST replay the
+   original response rather than re-execute the operation.  The same
+   nonce paired with a request that is not byte-identical to the
+   original MUST be refused invalid_request (Section 4.7); the AS MUST
+   NOT answer it with the unrelated original response.
+
+   The window MUST be at least the validity span of the signed response
+   the AS would replay (its iat to exp, Section 4.4), so any retransmit
+   that could still present a live response is deduplicated.  A
+   deployment MAY use a longer window.  This makes a retransmit safe
+   against reordering: a delayed suspend retry that arrives after a
+   resume is recognized as a duplicate and replays the original suspend
+   response, so it cannot re-suspend an already-resumed Mission.
 
    Deduplication guards a retransmitted request; it does not guard a
    valid request decided over stale state, a fresh suspend issued from a
@@ -1577,11 +1587,15 @@ Table of Contents
    every Mission for a compromised Subject, client, or tenant, are
    specified separately by Mission Management
    [I-D.draft-mcguinness-oauth-mission-management]; this document does
-   not require them.  The following capabilities remain deferred to
-   future work.  Approver transfer or re-anchoring, changing the party
-   that anchors a Mission's consent, is not defined here.
-   Administrative monotonic narrowing, such as shortening a Mission's
-   expires_at, is not defined here.
+   not require them.
+
+   The following capabilities remain deferred to future work:
+
+   *  Approver transfer or re-anchoring, changing the party that anchors
+      a Mission's consent, is not defined here.
+
+   *  Administrative monotonic narrowing, such as shortening a Mission's
+      expires_at, is not defined here.
 
 8.  Mission Completion and Entry Discharge
 
@@ -1900,13 +1914,14 @@ Table of Contents
    event_id for its own occurrence record.  The Authorization Server
    authenticates the caller against the resolved discharge_policy
    mapping, commits the latch, and returns a signed discharge_result of
-   outcome discharged (Section 7.2.4).  From then on the Authorization
-   Server refuses to derive the write entry: a refresh returns a token
-   carrying only the read entry.  The Mission stays active, so the agent
-   can still read the ledger to finish its reconciliation report, but it
-   can no longer post journal entries.  No revoke and no clock was
-   needed; the write authority retired itself when the task it was
-   granted for completed.
+   outcome discharged (Section 7.2.4).
+
+   From then on the Authorization Server refuses to derive the write
+   entry: a refresh returns a token carrying only the read entry.  The
+   Mission stays active, so the agent can still read the ledger to
+   finish its reconciliation report, but it can no longer post journal
+   entries.  No revoke and no clock was needed; the write authority
+   retired itself when the task it was granted for completed.
 
 8.9.  Completion Conformance
 
