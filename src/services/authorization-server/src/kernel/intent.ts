@@ -45,12 +45,12 @@ import type {
 const TOP_LEVEL = new Set([
   "goal",
   "goal_lang",
-  "resources",
+  "target_resources",
   "expires_at",
-  "constraints",
+  "task_bounds",
   "success_criteria",
   "purpose",
-  "controls",
+  "requested_derivation_limit",
 ]);
 
 const MAX_INTENT_BYTES = 65536;
@@ -480,11 +480,11 @@ function validateMissionIntentObject(obj: Record<string, JsonValue>): MissionInt
       throw new IntentError("invalid_request", "goal_lang must be a well-formed BCP 47 language tag");
     }
   }
-  const resources = obj.resources;
-  if (!isStringArray(resources) || resources.length === 0 || resources.length > MAX_ARRAY_LEN) {
-    throw new IntentError("invalid_request", "resources is required (non-empty string array)");
+  const targetResources = obj.target_resources;
+  if (!isStringArray(targetResources) || targetResources.length === 0 || targetResources.length > MAX_ARRAY_LEN) {
+    throw new IntentError("invalid_request", "target_resources is required (non-empty string array)");
   }
-  for (const r of resources) {
+  for (const r of targetResources) {
     if (!isAbsoluteUri(r)) throw new IntentError("invalid_request", `resource is not an absolute URI: ${r}`);
   }
   const expiresAt = obj.expires_at;
@@ -492,7 +492,7 @@ function validateMissionIntentObject(obj: Record<string, JsonValue>): MissionInt
     throw new IntentError("invalid_request", "expires_at is required (RFC 3339 date-time)");
   }
 
-  for (const member of ["constraints", "success_criteria"] as const) {
+  for (const member of ["task_bounds", "success_criteria"] as const) {
     const v = obj[member];
     if (v !== undefined && (!isStringArray(v) || v.length > MAX_ARRAY_LEN)) {
       throw new IntentError("invalid_request", `${member} must be a string array`);
@@ -502,16 +502,18 @@ function validateMissionIntentObject(obj: Record<string, JsonValue>): MissionInt
     throw new IntentError("invalid_request", "purpose must be a string");
   }
 
-  const controls = obj.controls;
-  if (controls !== undefined) {
-    if (controls === null || typeof controls !== "object" || Array.isArray(controls)) {
-      throw new IntentError("invalid_request", "controls must be an object");
-    }
-    const md = (controls as Record<string, JsonValue>).max_derivations;
-    if (md !== undefined && (typeof md !== "number" || !Number.isInteger(md) || md < 1)) {
-      // @spec mission#mission-intent: max_derivations below 1 -> invalid_request
-      throw new IntentError("invalid_request", "max_derivations must be an integer >= 1");
-    }
+  // @spec mission#derivation-issuance-policy — the client-requested ceiling
+  // (@spec mission#mission-intent's `requested_derivation_limit`). A request
+  // only: the effective, AS-clamped `derivation_limit` is established at the
+  // approval event, never copied verbatim (@spec mission#derivation-issuance-policy).
+  const requestedDerivationLimit = obj.requested_derivation_limit;
+  if (
+    requestedDerivationLimit !== undefined &&
+    (typeof requestedDerivationLimit !== "number" ||
+      !Number.isInteger(requestedDerivationLimit) ||
+      requestedDerivationLimit < 1)
+  ) {
+    throw new IntentError("invalid_request", "requested_derivation_limit must be an integer >= 1");
   }
 
   return obj as unknown as MissionIntent;
@@ -525,10 +527,10 @@ function validateMissionIntentObject(obj: Record<string, JsonValue>): MissionInt
  * before canonicalization, @spec mission#canonicalization). Each entry MUST be
  * of an advertised type and MUST validate against that type's published JSON
  * Schema (refused `invalid_authorization_details`, never silently kept), and
- * each entry's `resource` MUST be among the Intent's `resources` (refused
- * `invalid_request`).
+ * each entry's `resource` MUST be among the Intent's `target_resources`
+ * (refused `invalid_request`).
  */
-export function validateAuthorityProposal(raw: string, resources: string[]): AuthorityEntry[] {
+export function validateAuthorityProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
   if (Buffer.byteLength(raw, "utf8") > MAX_INTENT_BYTES) {
     throw new IntentError("invalid_request", "authorization_details exceeds size bound");
   }
@@ -545,12 +547,12 @@ export function validateAuthorityProposal(raw: string, resources: string[]): Aut
     throw new IntentError("invalid_request", "authorization_details must be a JSON array");
   }
   for (const entry of parsed) {
-    validateProposedEntry(entry, resources);
+    validateProposedEntry(entry, targetResources);
   }
   return parsed as unknown as AuthorityEntry[];
 }
 
-function validateProposedEntry(entry: JsonValue, resources: string[]): void {
+function validateProposedEntry(entry: JsonValue, targetResources: string[]): void {
   if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
     throw new IntentError("invalid_request", "authorization_details entries must be objects");
   }
@@ -577,9 +579,9 @@ function validateProposedEntry(entry: JsonValue, resources: string[]): void {
     );
   }
   // @spec mission#authority-proposal: each proposed entry carrying `resource`
-  // MUST have it among the Intent's `resources`; violated -> invalid_request.
-  if (typeof e.resource === "string" && !resources.includes(e.resource)) {
-    throw new IntentError("invalid_request", `authorization_details resource not among Intent resources: ${e.resource}`);
+  // MUST have it among the Intent's `target_resources`; violated -> invalid_request.
+  if (typeof e.resource === "string" && !targetResources.includes(e.resource)) {
+    throw new IntentError("invalid_request", `authorization_details resource not among Intent target_resources: ${e.resource}`);
   }
 }
 

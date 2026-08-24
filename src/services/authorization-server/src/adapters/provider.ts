@@ -45,6 +45,62 @@ export class InvalidMissionIntentEvidence extends errors.CustomOIDCProviderError
   }
 }
 
+/**
+ * @spec mission#issuance-gating, mission#error-mapping — `invalid_grant` plus
+ * the `mission_error` token-error-response extension member. oidc-provider
+ * 9.10's `InvalidGrant` hardcodes `error_description` to a generic constant
+ * and its renderer (`err_out.js`) copies only `error`/`error_description`/
+ * `scope`/`state` from a thrown error onto the wire body, so no property added
+ * to a thrown `InvalidGrant` instance reaches the client. `mission_error` is
+ * therefore carried by the `grant.error` event instead (below), which fires
+ * synchronously after the generic body is set but before the response is
+ * flushed: this class is the marker the listener keys on, and `missionError`
+ * is the value it splices in. This is the fix for the wrong wire carrier the
+ * conformance manifest recorded (this member previously never reached the
+ * client at all).
+ */
+export class MissionGrantError extends errors.InvalidGrant {
+  constructor(
+    message: string,
+    readonly missionError?: "mission_revoked" | "mission_expired" | "derivations_exhausted",
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * @spec mission#issuance-gating — map a kernel {@link GateError} onto the
+ * `mission_error` diagnostic value, where one applies. `reason` alone is not
+ * enough: `mission_not_active` also covers a companion state (Mission
+ * Status's `suspended`) with no core `mission_error` value, and the
+ * ancestor-lineage-walk refusal (also `mission_not_active`) names an
+ * ancestor's state, not `missionId`'s own. `currentState`, the FRESH
+ * persisted state of `missionId` itself (read after the throw, since
+ * `applyExpiry` may have just committed an `expired` transition), resolves
+ * both: only an own-state of exactly `revoked` yields `mission_revoked`, so a
+ * suspended or lineage-refused Mission correctly gets no `mission_error`
+ * rather than a misleading one. `authority_contained` and
+ * `authority_exhausted` are not core `mission_error` values (the former rides
+ * the Containment companion's own `mission_denial_reason`; the latter has no
+ * core diagnostic), so both also fall through to plain `invalid_grant`, which
+ * this document's SHOULD permits.
+ */
+export function gateErrorToMissionError(
+  reason: GateError["reason"],
+  currentState: string | undefined,
+): "mission_revoked" | "mission_expired" | "derivations_exhausted" | undefined {
+  switch (reason) {
+    case "mission_expired":
+      return "mission_expired";
+    case "mission_not_active":
+      return currentState === "revoked" ? "mission_revoked" : undefined;
+    case "derivation_cap_exhausted":
+      return "derivations_exhausted";
+    default:
+      return undefined;
+  }
+}
+
 /** Map an intake {@link IntentError} onto its OAuth error class. */
 export function intentErrorToOidc(e: IntentError): Error {
   switch (e.code) {
@@ -694,7 +750,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           // validate hook above also enforces the latter two).
           const proposalRaw = params.authorization_details;
           if (typeof proposalRaw === "string") {
-            kernel.validateProposal(proposalRaw, intent.resources);
+            kernel.validateProposal(proposalRaw, intent.target_resources);
           }
           // @spec mission#intent-submission-evidence — STAGE-2 verification at
           // submission time (required types resolved BEFORE derivation; the
@@ -769,7 +825,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
           // ships.
           return { mission: kernel.missionClaim(famRecord) };
         } catch (e) {
-          if (e instanceof GateError) throw new errors.InvalidGrant(e.message);
+          if (e instanceof GateError) {
+            throw new MissionGrantError(
+              e.message,
+              gateErrorToMissionError(e.reason, kernel.get(famRecord.id)?.state),
+            );
+          }
           throw e;
         }
       }
@@ -792,7 +853,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
             : kernel.missionClaim(gated);
         return { mission: claim };
       } catch (e) {
-        if (e instanceof GateError) throw new errors.InvalidGrant(e.message);
+        if (e instanceof GateError) {
+          throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+        }
         throw e;
       }
     },
@@ -879,6 +942,27 @@ export function buildProvider(opts: AdapterOptions): Provider {
   };
   provider.on("access_token.issued", recordTokenIssuance);
   provider.on("access_token.saved", recordTokenIssuance);
+
+  // @spec mission#issuance-gating, mission#error-mapping — splice `mission_error`
+  // onto the token endpoint's already-rendered `invalid_grant` body. `grant.error`
+  // (oidc-provider's error-handler event for the /token route,
+  // lib/helpers/initialize_app.js: `error(this, "grant.error")`) fires
+  // synchronously right after `error_handler.js` sets `ctx.body` from the thrown
+  // error and before the response is flushed, so mutating `ctx.body` here is the
+  // only point at which a member `err_out.js` does not itself copy (it copies
+  // only error/error_description/scope/state) can still reach the client.
+  // @types/oidc-provider's `on()` overloads predate this event name (same
+  // known drift as the InvalidAuthorizationDetails cast above); cast to the
+  // generic EventEmitter shape rather than widen the typed overload set.
+  (provider as unknown as { on(event: string, listener: (...args: unknown[]) => void): void }).on(
+    "grant.error",
+    (ctx: unknown, err: unknown) => {
+      const body = (ctx as { body?: Record<string, unknown> }).body;
+      if (err instanceof MissionGrantError && err.missionError && body?.error === "invalid_grant") {
+        body.mission_error = err.missionError;
+      }
+    },
+  );
 
   // @spec DTR (draft-gerber-oauth-deferred-token-response-00): the AROP deferred
   // grant on the REAL /token endpoint. Registered AFTER construction so the URN
@@ -1513,7 +1597,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // approval grants).
       const proposal =
         typeof params.authorization_details === "string"
-          ? kernel.validateProposal(params.authorization_details, intent.resources)
+          ? kernel.validateProposal(params.authorization_details, intent.target_resources)
           : undefined;
       const authority = kernel.derive(intent, proposal);
       // @spec mission#intent-submission-evidence — MATERIAL verified
@@ -2494,7 +2578,7 @@ async function handleMissionDispatchGrant(
       return;
     }
     try {
-      const proposal = kernel.validateProposal(proposalRaw, intent.resources);
+      const proposal = kernel.validateProposal(proposalRaw, intent.target_resources);
       proposedAuthority = proposal.length ? proposal : undefined;
     } catch (e) {
       if (e instanceof IntentError) {
@@ -2667,7 +2751,7 @@ async function decide(
   // every anchor.
   const proposedAuthority =
     typeof params.authorization_details === "string"
-      ? opts.kernel.validateProposal(params.authorization_details, intent.resources)
+      ? opts.kernel.validateProposal(params.authorization_details, intent.target_resources)
       : undefined;
   const approver = String(body.approver ?? "");
   const subject = String(body.subject ?? approver);

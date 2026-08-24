@@ -159,7 +159,7 @@ describe("M1 tracer slice", () => {
     const intent = JSON.stringify({
       intent: {
         goal: "Pay Acme invoices for Q3",
-        resources: [CANONICAL_RESOURCE],
+        target_resources: [CANONICAL_RESOURCE],
         expires_at: "2027-01-01T00:00:00Z",
       },
     });
@@ -302,9 +302,19 @@ describe("M1 tracer slice", () => {
     expect((await (await lifecycle("suspend")).json() as { state: string }).state).toBe("suspended");
 
     let res = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
-    let body = (await res.json()) as { error?: string; refresh_token?: string; access_token?: string };
+    let body = (await res.json()) as {
+      error?: string;
+      mission_error?: string;
+      refresh_token?: string;
+      access_token?: string;
+    };
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_grant");
+    // @spec mission#error-mapping — a suspended Mission is a companion
+    // (Mission Status) state with no core `mission_error` value of its own;
+    // this deployment omits the diagnostic rather than misreport it as
+    // `mission_revoked` (@see gateErrorToMissionError).
+    expect(body.mission_error).toBeUndefined();
 
     expect((await (await lifecycle("resume")).json() as { state: string }).state).toBe("active");
     res = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
@@ -324,6 +334,16 @@ describe("M1 tracer slice", () => {
 
     const res2 = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
     expect(res2.status).toBe(400);
+    // This demo deployment satisfies "revocation stops refresh" by destroying
+    // the underlying OAuth Grant directly on a terminal transition (the
+    // lifecycle route above), so refresh fails via oidc-provider's own grant
+    // lookup, never reaching gateDerivation/MissionGrantError: no
+    // `mission_error` is expected on THIS path (@spec mission#issuance-gating
+    // is satisfied either way; @see mission#error-mapping.mission-error-wire-carrier
+    // for the path that does carry it, exercised where the Mission's own
+    // `derivation_limit` gates a still-valid grant).
+    const res2Body = (await res2.json()) as { error?: string; mission_error?: string };
+    expect(res2Body.error).toBe("invalid_grant");
 
     const res3 = await fetch(`${ISSUER}/introspect`, {
       method: "POST",

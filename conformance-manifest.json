@@ -384,7 +384,7 @@
    "id": "core.intent.max-derivations-floor",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-intent",
-   "text": "An AS MUST reject `max_derivations` below 1 with `invalid_request`",
+   "text": "An AS MUST reject a value below 1 with `invalid_request`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -397,7 +397,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "controls.max_derivations of 0 or less fails invalid_request",
+    "normative": "requested_derivation_limit of 0 or less fails invalid_request",
     "local": "the kernel test drives the input but asserts a message regex; the invalid_request code is not yet asserted"
    },
    "level": "unit",
@@ -405,9 +405,40 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "intent validation (@spec mission#submission-via-par) > rejects max_derivations below 1",
+     "name": "intent validation (@spec mission#submission-via-par) > rejects requested_derivation_limit below 1",
      "level": "unit",
      "surface": "par"
+    }
+   ]
+  },
+  {
+   "id": "core.derivation-issuance-policy.effective-limit-is-clamped-minimum",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-issuance-policy",
+   "text": "the AS establishes it as the minimum of the deployment's own policy ceiling for this Mission and the requested `requested_derivation_limit`, where one was submitted",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "derivation_limit = min(deployment policy ceiling, requested_derivation_limit) when both are present; whichever is present alone when only one is; null (no ceiling) when neither is present, never unbounded-by-omission as a hardcoded default",
+    "local": "the demo deployment's own policy.json ceiling is null (no ceiling) by default, so this row's own test constructs a LOCAL kernel with a narrower policy ceiling to exercise the clamp in both directions plus the omission case"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "lifecycle (@spec status#legal-transitions) > @spec mission#derivation-issuance-policy: derivation_limit is min(policy ceiling, requested), never the request copied verbatim",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -636,7 +667,7 @@
    "id": "core.lifecycle.derivation-cap-exhaustion",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
-   "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed the bound",
+   "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -649,7 +680,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "derivation past controls.max_derivations fails invalid_grant at the token endpoint",
+    "normative": "derivation past the established derivation_limit fails invalid_grant at the token endpoint",
     "local": "covered at the kernel gate only; no wire test observes invalid_grant for exhaustion"
    },
    "level": "endpoint",
@@ -736,11 +767,18 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted",
-    "local": "implementation emits mission_denial_reason with the kernel reason set instead; recorded SHOULD-level departure"
+    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > suspend gates refresh with invalid_grant; resume restores issuance",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "core.intent.requested-expiry-invalid-request",
@@ -897,7 +935,7 @@
    "id": "core.derivation.configured-mapping-lookup",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authorization-derivation",
-   "text": "The mapping is a lookup, never synthesis; the AS refuses an Intent that matches no configured mapping with `invalid_authorization_details`",
+   "text": "the AS refuses an Intent that matches no configured mapping, or whose mapped candidates policy narrows to nothing, with `access_denied`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -910,7 +948,7 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping fails invalid_authorization_details, distinguishable from a policy refusal"
+    "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping (or narrowed to nothing by policy) fails access_denied, since no authorization_details object exists for invalid_authorization_details to describe"
    },
    "level": "endpoint",
    "coverage": "todo",

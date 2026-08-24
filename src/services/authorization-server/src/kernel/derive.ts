@@ -76,6 +76,33 @@ function assertNoUnimplementedCommonConstraint(constraints: AuthorityEntry["cons
 export interface DerivationPolicy {
   policy_version: string;
   ceiling: readonly AuthorityEntry[];
+  /**
+   * @spec mission#derivation-issuance-policy — the deployment's own ceiling on
+   * `derivation_limit`, independent of any client `requested_derivation_limit`.
+   * `null`/absent means the deployment imposes no ceiling of its own, so the
+   * effective value is the client's request unchanged (or `null`, unbounded,
+   * if the client requested nothing either). See {@link resolveDerivationLimit}.
+   */
+  derivation_limit_ceiling?: number | null;
+}
+
+/**
+ * @spec mission#derivation-issuance-policy — resolve the immutable, effective
+ * `derivation_limit` a Mission Record commits: `min(policy ceiling, client
+ * request)` when both are present, whichever alone is present when only one
+ * is, and `null` (no ceiling: not "unbounded by omission" as a special case,
+ * simply the absence of any established ceiling) when neither is. A request
+ * can only narrow the policy ceiling, never widen past it.
+ */
+export function resolveDerivationLimit(
+  requested: number | null | undefined,
+  policyCeiling: number | null | undefined,
+): number | null {
+  const req = requested ?? null;
+  const ceil = policyCeiling ?? null;
+  if (req === null) return ceil;
+  if (ceil === null) return req;
+  return Math.min(req, ceil);
 }
 
 /**
@@ -95,8 +122,8 @@ export function deriveAuthoritySet(
   const proposals = proposal?.length
     ? proposal
     : // Template mode: no concrete proposal derives the full policy ceiling
-      // narrowed to the Intent's resources.
-      policy.ceiling.filter((c) => intent.resources.includes(c.resource));
+      // narrowed to the Intent's target_resources.
+      policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
 
   const derived: AuthorityEntry[] = [];
   for (const proposal of proposals) {

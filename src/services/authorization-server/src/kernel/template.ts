@@ -386,7 +386,10 @@ export function dispatchFromTemplate(
     created_at: nowIso,
     expires_at: expiresAt,
     version: 1,
-    max_derivations: input.intent.controls?.max_derivations ?? null,
+    // @spec mission#derivation-issuance-policy — the dispatched instance's
+    // own requested ceiling, clamped by this deployment's policy ceiling
+    // exactly like an ordinary Mission approval.
+    derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

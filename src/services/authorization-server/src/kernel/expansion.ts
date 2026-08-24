@@ -144,7 +144,11 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     created_at: kernel.nowDate().toISOString(),
     expires_at: expiresAt,
     version: 1,
-    max_derivations: predecessor.max_derivations,
+    // @spec mission#derivation-issuance-policy — a successor CONTINUES the
+    // predecessor's effective ceiling (expansion widens authority under the
+    // same derivation accounting; it does not re-clamp against a fresh
+    // request), unchanged from the pre-rename behavior.
+    derivation_limit: predecessor.derivation_limit,
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

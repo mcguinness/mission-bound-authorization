@@ -358,9 +358,13 @@ export {
  * idempotent re-approval).
  *
  * Auth envelope: this is the DEMO's ROOTING-EVENT envelope. `auth_time` is the
- * approval timestamp (from `created_at`) and `acr` is `intent.controls.acr` when
- * present; `amr` is omitted. A real deployment supplies the root AUTHENTICATION
- * event's envelope instead of synthesising it from the approval.
+ * approval timestamp (from `created_at`); `acr` and `amr` are omitted. The
+ * Approver's achieved authentication context is approval-time provenance,
+ * never a Mission Intent or Mission Record member
+ * (@spec mission#approval-authentication): a real deployment that records
+ * Mission Consent Evidence sources it from that profile's
+ * `authentication_context` member instead of synthesising it from the
+ * approval here.
  *
  * The initial handle binds the Mission's actor: the agent CLIENT
  * (iss = AS issuer, sub = client_id), matching the /token four-signal contract's
@@ -369,12 +373,10 @@ export {
  */
 function rootMissionContinuation(store: ContinuationStore, record: MissionRecord): void {
   if (store.handlesForMission(record.id).length > 0) return; // never double-root
-  const acr = record.intent.controls?.acr;
   const anchorId = store.rootGrantAnchor({
     missionId: record.id,
     authEnvelope: {
       authTime: Math.floor(Date.parse(record.created_at) / 1000),
-      ...(acr !== undefined ? { acr } : {}),
     },
   });
   store.mint({
