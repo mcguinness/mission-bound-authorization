@@ -257,6 +257,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-management:
+    title: "Mission Management for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -687,7 +703,14 @@ Authority Set:
 Mission:
 : The durable, immutable record created at the approval event
   ({{mission-record}}), identified by a Mission Identifier
-  ({{mission-id}}).
+  ({{mission-id}}) and, globally, by the pair (`issuer`, `id`). A
+  Mission is independent of any OAuth grant ({{grant-binding}}).
+
+Mission Grant Binding (Grant Binding):
+: The AS-controlled, functional mapping from one Mission-bound grant
+  lineage to exactly one Mission ({{grant-binding}}). A Mission MAY
+  have zero or more bindings; a binding never resolves to more than
+  one Mission.
 
 Mission-referenced token:
 : A token that carries a Mission reference (the `mission` claim or a
@@ -1899,23 +1922,99 @@ commits the authority derived from it.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
-At the approval event the AS binds the Mission to the authorization
-grant it issues: the authorization code, and the refresh token
-issued from it. The binding is server-side and is what "the
-referenced Mission" in {{lifecycle}} refers to. At each subsequent
-derivation the AS resolves the Mission from the grant the client
-presents: the authorization code at the token endpoint (the initial
-exchange uses `grant_type=authorization_code`), the refresh
-token on refresh, or the Mission-bound `subject_token` on Token
-Exchange (the `actor_token` identifies the delegate, {{delegation}}).
-It then applies the gating of {{lifecycle}}.
+A Mission is independent of any OAuth grant: it is identified
+globally by the pair (`issuer`, `id`) ({{mission-record}}), and it
+can be approved, tracked, and terminated with no OAuth grant at all
+(the Mission Authority Server profile is the standing proof,
+{{I-D.draft-mcguinness-mission-authority-server}}). Where this
+document derives a Mission through OAuth, the relation between the
+Mission and the OAuth grants it authorizes is the **Mission grant
+binding**: an AS-controlled, functional mapping from one Mission-bound
+grant lineage to exactly one Mission. The AS alone establishes and
+resolves a binding; a client never supplies or negotiates one.
+
+At the approval event the AS establishes the Mission's first
+binding, to the authorization grant it issues: the authorization
+code, and the refresh token issued from it (a **grant lineage**).
+The binding is server-side and is what "the referenced Mission" in
+{{lifecycle}} refers to. At each subsequent derivation the AS
+resolves the Mission from the grant the client presents: the
+authorization code at the token endpoint (the initial exchange uses
+`grant_type=authorization_code`), the refresh token on refresh, or
+the Mission-bound `subject_token` on Token Exchange (the
+`actor_token` identifies the delegate, {{delegation}}). It then
+applies the gating of {{lifecycle}}.
+
+A Mission MAY carry zero or more bindings. Beyond the code and its
+refresh token, an additional refresh-token family a continuation
+transport establishes later for the same Mission
+({{I-D.draft-mcguinness-oauth-mission-continuation}}), a further
+Token Exchange derivation, and a cross-domain local grant a Resource
+AS mints under the projected Mission
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) are each their
+own binding. Each binding identifies exactly one Mission: the AS
+MUST NOT establish a second binding for a grant lineage already
+bound to a Mission, and MUST refuse with `invalid_grant` a derivation
+that would resolve an already-bound grant lineage to a Mission other
+than the one it is bound to. A grant or credential is never bound to
+more than one Mission.
+
+A Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
+expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}})
+are new Missions, each with its own identity and its own bindings
+under this section's rules; they relate to their origin by lineage
+(the child's `parent` member, the successor's `predecessor` member),
+never by extending the origin Mission's binding to cover a second
+Mission. A continuation handle and a refresh-token family are
+execution and credential machinery rooted in one Mission
+({{I-D.draft-mcguinness-oauth-mission-continuation}}), not the
+Mission itself: they confer no authority of their own, only carrying
+a reference that a live derivation re-resolves against the Mission's
+current state.
+
+A grant binding is distinct from a decision-time runtime join. A
+Policy Decision Point MAY join an ordinary OAuth credential to a
+Mission at the point of a request, the pattern the Mission Authority
+Server specifies in full as the Mission Join
+({{I-D.draft-mcguinness-mission-authority-server}}). Such a join is
+evaluated per request, MAY associate the same credential with
+different Missions across separate requests where the credential's
+subject and client are eligible for more than one, and MUST NOT be
+modeled as a persistent Mission grant binding: it does not make the
+joined OAuth grant Mission-bound, and it rests on its own
+authenticated inputs and evidence, never on this section's binding.
+
+Non-active state gates every future derivation across every binding
+this section defines ({{issuance-gating}}). It does not itself
+revoke an OAuth grant the same client or subject holds outside any
+Mission binding, and it does not recall an access token already
+issued before its `exp` absent a runtime state check the token's
+consumer performs ({{revocation}}, {{introspection}}).
+
+Where an issuer's fleet management needs to cascade a lifecycle
+operation or enumerate a Mission's bound grant lineages and
+credentials, it maintains its own issuer-side index from the Mission
+to each binding. That index is deployment and management-plane
+state, kept distinct from the interoperable model this section
+defines, and this document does not require any party outside the
+issuer to reconstruct it. A companion Mission Management profile MAY
+standardize the index's wire surface
+({{I-D.draft-mcguinness-oauth-mission-management}}).
 
 A client does
 not supply `mission_id` to obtain a derivation; an AS MUST NOT derive
 Mission-bound authority from a client-supplied `mission_id`, because
 the grant, not the identifier, determines the Mission. When the
-authorization code expires unredeemed, no derivation is possible under
-the Mission; the AS SHOULD revoke the Mission or allow it to expire.
+authorization code expires unredeemed, no derivation is possible
+under the Mission regardless of which lifecycle outcome follows: a
+deployment MUST adopt, document, and consistently apply one policy,
+either revoking the Mission or allowing it to reach `expired` at
+`expires_at`, and MUST NOT alternate between the two for the same
+event. Reprocessing the same unredeemed-code timeout (for example, a
+retried cleanup pass) MUST be idempotent: reapplying the declared
+policy to a Mission already in its resulting terminal state MUST NOT
+change that state or emit a second transition.
 
 A client learns its `mission_id` from the `mission` claim's `id` on
 each issued token ({{mission-claim}}) or from the token response. This
@@ -5331,6 +5430,23 @@ resolve before interoperating.
   every scope-only claim that assumed a lossy projection was always
   available (the Intent enforcement table, Resource Server
   Enforcement, and the minimum-deployment note).
+- Mission-to-OAuth-grant cardinality made explicit
+  ({{grant-binding}}): a Mission is independent of any OAuth grant
+  and identified globally by (`issuer`, `id`); the Mission grant
+  binding is the AS-controlled, functional mapping from one
+  Mission-bound grant lineage to exactly one Mission, zero or more
+  bindings per Mission and never more than one Mission per binding.
+  A Child Mission or expansion successor gets its own identity and
+  its own bindings, related to its origin by lineage, never by
+  extending the origin's binding; a continuation handle or
+  refresh-token family is credential machinery rooted in one Mission,
+  not the Mission itself. Non-active state gates every bound
+  derivation without implying revocation of an unrelated grant or
+  recall of an unexpired token. A decision-time runtime join (the
+  Mission Authority Server's Mission Join) never becomes a grant
+  binding. The unredeemed-authorization-code fork is now one
+  deployment policy applied consistently, with idempotent replay
+  (#700).
 - Reader-program normative follow-ups: each supported
   `authorization_details` type's transformation boundary (subset
   relation and delegation semantics understood, or

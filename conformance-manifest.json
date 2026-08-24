@@ -820,6 +820,146 @@
    "tests": []
   },
   {
+   "id": "core.grant-binding.multiple-bindings-per-mission",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "A Mission MAY carry zero or more bindings.",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "one Mission can carry more than one bound grant lineage at once, for example an authorization-code lineage's refresh-token family and a second refresh-token family a continuation transport establishes later for the same Mission: both resolve to the same Mission id and issuer, and establishing or using the second family neither alters nor supersedes the first family's binding"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.grant-binding.rebind-rejected",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "the AS MUST NOT establish a second binding for a grant lineage already bound to a Mission, and MUST refuse with `invalid_grant` a derivation that would resolve an already-bound grant lineage to a Mission other than the one it is bound to",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant lineage already bound to Mission A is refused invalid_grant on any attempt to derive it against, or rebind it to, a different Mission B; the original binding to Mission A is unaffected by the refused attempt"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.grant-binding.token-exchange-preserves-mission",
+   "facet": "token-exchange-derivation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "an additional refresh-token family a continuation transport establishes later for the same Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}), a further Token Exchange derivation, and a cross-domain local grant a Resource AS mints under the projected Mission ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) are each their own binding. Each binding identifies exactly one Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) resolves to, and the issued token carries, the same one Mission as the subject_token; it is never modeled as binding a second Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.grant-binding.cross-domain-destination-family",
+   "facet": "cross-domain-local-grant",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "an additional refresh-token family a continuation transport establishes later for the same Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}), a further Token Exchange derivation, and a cross-domain local grant a Resource AS mints under the projected Mission ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) are each their own binding. Each binding identifies exactly one Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the local token a destination-domain Resource AS mints under a projected Mission is its own binding at that Resource AS, identifying the one originating Mission (`mission.id`, `mission.issuer`) the cross-domain grant conveyed, never a second or locally-created Mission ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}, Section \"Validation at the Resource AS\")"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.grant-binding.runtime-join-not-persistent-binding",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "MUST NOT be modeled as a persistent Mission grant binding: it does not make the joined OAuth grant Mission-bound, and it rests on its own authenticated inputs and evidence, never on this section's binding",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.grant-binding.termination-gates-every-binding",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "Non-active state gates every future derivation across every binding this section defines ({{issuance-gating}}). It does not itself revoke an OAuth grant the same client or subject holds outside any Mission binding, and it does not recall an access token already issued before its `exp` absent a runtime state check the token's consumer performs ({{revocation}}, {{introspection}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "terminating a Mission with two or more bound grant lineages refuses further derivation, at the token endpoint and on refresh, across every one of those lineages; it does not revoke an unrelated OAuth grant the same client or subject holds outside any Mission binding, and an access token already issued under the Mission remains valid per the stateless baseline until its own `exp`, or until a consumer performing a runtime state check ({{introspection}}) observes the non-active state"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "core.tokens.exp-clamp",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-bound-tokens",
