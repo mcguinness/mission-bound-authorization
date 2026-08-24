@@ -1208,6 +1208,11 @@ type, or both.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-resource-boundary-canonical" class="internal xref">Resource Boundary Canonicalization</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
@@ -2066,6 +2071,145 @@ and mapping in force, not assume the type's general capability
 extends to it.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<div id="resource-boundary-canonicalization">
+<section id="section-6.1">
+        <h3 id="name-resource-boundary-canonical">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-resource-boundary-canonical" class="section-name selfRef">Resource Boundary Canonicalization</a>
+        </h3>
+<p id="section-6.1-1">A <code>prefix</code> entry (<a href="#resource-access-type" class="auto internal xref">Section 4</a>) draws an authority
+boundary in URI space. The AS's containment test (<a href="#subset" class="auto internal xref">Section 4.1</a>) and the
+Resource Server's request matching
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) <span class="bcp14">MUST</span> apply the single RFC
+3986 <span>[<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> normalization defined in <a href="#subset" class="auto internal xref">Section 4.1</a>, so issuance and
+enforcement draw the same boundary. A matcher that normalizes
+differently from the party that derived the entry can admit a request
+the Approver never authorized, or deny one it did.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">The normalization <span class="bcp14">MUST</span> run before the prefix comparison, never after,
+and the boundary <span class="bcp14">MUST</span> be evaluated on the same normalized form a
+downstream component will act on. The following vectors each turn on
+such a difference:<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-3.1">
+            <p id="section-6.1-3.1.1"><strong>Encoded slash (<code>%2F</code>).</strong> A reserved octet, left encoded by this
+normalization (which decodes only unreserved octets) and never a
+path-segment separator when matching. An intermediary that decodes
+it before the Resource Server enforces shifts the boundary; a
+deployment <span class="bcp14">MUST</span> prevent that rewriting or account for it.<a href="#section-6.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-3.2">
+            <p id="section-6.1-3.2.1"><strong>Encoded dot (<code>%2e</code>, <code>%2e%2e</code>).</strong> The <code>.</code> octet is unreserved, so
+this normalization decodes it and then removes dot-segments. The
+hazard is order: normalizing before the comparison collapses a
+decoded <code>%2e%2e</code> out of the path and draws the boundary correctly,
+while matching the raw string first and letting a downstream
+component decode and collapse afterward can escape the prefix.<a href="#section-6.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-3.3">
+            <p id="section-6.1-3.3.1"><strong>Double or empty path segments.</strong> An empty path and <code>/</code> denote the
+same base (<a href="#resource-access-type" class="auto internal xref">Section 4</a>); a matcher <span class="bcp14">MUST NOT</span> coalesce
+<code>//</code> or trailing-slash differences of its own, since the <a href="#subset" class="auto internal xref">Section 4.1</a>
+normalization does not.<a href="#section-6.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-3.4">
+            <p id="section-6.1-3.4.1"><strong>Default-port presence.</strong> <code>https://a.example:443</code> and
+<code>https://a.example</code> are one authority only after the default-port
+removal <a href="#subset" class="auto internal xref">Section 4.1</a> performs; a matcher that skips it splits one
+boundary into two.<a href="#section-6.1-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-3.5">
+            <p id="section-6.1-3.5.1"><strong>Unicode and IDNA host.</strong> The <a href="#subset" class="auto internal xref">Section 4.1</a> normalization lowercases
+the host but does not define Unicode to A-label (IDNA) conversion, so
+a deployment that accepts non-ASCII hosts <span class="bcp14">MUST</span> ensure both sides
+compare the same form.<a href="#section-6.1-3.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-3.6">
+            <p id="section-6.1-3.6.1"><strong>Percent-decoding order.</strong> This normalization decodes only
+unreserved octets and runs before comparison; decoding reserved
+octets, or decoding after the comparison, changes which characters
+count as separators and can move the boundary.<a href="#section-6.1-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-4">These vectors make the rule concrete. For a <code>prefix</code> entry whose
+<code>resource</code> is <code>https://api.example/orders</code>, a concrete request URI
+matches as follows:<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<span id="name-prefix-matching-for-https-a"></span><table class="center" id="table-1">
+          <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-prefix-matching-for-https-a" class="selfRef">Prefix matching for https://api.example/orders</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Request URI</th>
+              <th class="text-left" rowspan="1" colspan="1">Result</th>
+              <th class="text-left" rowspan="1" colspan="1">Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example/orders</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
+              <td class="text-left" rowspan="1" colspan="1">The base itself</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example/orders/123</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
+              <td class="text-left" rowspan="1" colspan="1">An extension at a path-segment boundary</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://API.EXAMPLE/orders/123</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
+              <td class="text-left" rowspan="1" colspan="1">Scheme and host are case-folded</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example:443/orders/123</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
+              <td class="text-left" rowspan="1" colspan="1">The default port is removed</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example/Orders/123</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">DENY</td>
+              <td class="text-left" rowspan="1" colspan="1">The path is case-sensitive: <code>Orders</code> is not <code>orders</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example/orders%2F123</code> (equivalently <code>%2f</code>)</td>
+              <td class="text-left" rowspan="1" colspan="1">DENY</td>
+              <td class="text-left" rowspan="1" colspan="1">Hex digits normalize to <code>%2F</code>, which stays encoded and is not a separator: one segment <code>orders%2F123</code>, not an extension of <code>/orders</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example/ordersX</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">DENY</td>
+              <td class="text-left" rowspan="1" colspan="1">The match extends only at a path-segment boundary, not within a segment</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://api.example/orders/%2e%2e/admin</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">DENY</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>%2e%2e</code> decodes to <code>..</code> and the dot-segment is removed, yielding <code>https://api.example/admin</code>, outside the prefix</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-6.1-6">A deployment <span class="bcp14">MAY</span> agree out of band on the canonicalization profile its
+AS and Resource Servers apply; this document defines one rule
+(<a href="#subset" class="auto internal xref">Section 4.1</a>), so no profile identifier is required for interoperation.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -2147,8 +2291,8 @@ registration.<a href="#section-8.2-3.5.1" class="pilcrow">¶</a></p>
 defines (<a href="#common-constraints" class="auto internal xref">Section 4.2</a>); the "Ref" column below is this
 document, at the section shown, for every row, and the full Subset
 Rule and Intersection Rule text is there, not restated in the table:<a href="#section-8.2-4" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Key Name</th>
@@ -2280,8 +2424,9 @@ registry.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
 <li class="normal" id="section-9-3.1">
           <p id="section-9-3.1.1">Initial version: <code>mission_resource_access</code>, its resource and action
 matching, generic constraints, the Common Constraints registry, the
-delegation policy and delegate-matching rules, and the subset and
-intersection algebra, relocated without change from
+delegation policy and delegate-matching rules, the subset and
+intersection algebra, and the Resource Boundary Canonicalization
+security analysis, relocated without change from
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, where they were previously
 defined inline (#637). Adds this type's concrete Scope Projection
 safety conditions and issuance-algorithm interlock (#698), and its

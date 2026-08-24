@@ -210,10 +210,12 @@ Table of Contents
    external commitment, and privileged administration), high-consequence
    classes, and parameter-bound are used as defined in
    [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer, authority_hash), the integrity anchors (intent_hash,
-   authority_hash), and authorization_details entries of type
-   mission_resource_access are used as defined in
-   [I-D.draft-mcguinness-oauth-mission].
+   issuer, authority_hash) and the integrity anchors (intent_hash,
+   authority_hash) are used as defined in
+   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
+   of type mission_resource_access are used as defined in its Mission
+   Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Additional terms:
 
@@ -2310,6 +2312,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

@@ -1400,10 +1400,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
                     <p id="section-toc.1-1.17.2.3.2.1.1"><a href="#section-17.3.1" class="auto internal xref">17.3.1</a>.  <a href="#name-issuance-scope-not-runtime-" class="internal xref">Issuance Scope, Not Runtime Enforcement</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3.2.2">
-                    <p id="section-toc.1-1.17.2.3.2.2.1"><a href="#section-17.3.2" class="auto internal xref">17.3.2</a>.  <a href="#name-resource-boundary-canonical" class="internal xref">Resource Boundary Canonicalization</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3.2.3">
-                    <p id="section-toc.1-1.17.2.3.2.3.1"><a href="#section-17.3.3" class="auto internal xref">17.3.3</a>.  <a href="#name-denial-detail-disclosure" class="internal xref">Denial Detail Disclosure</a></p>
+                    <p id="section-toc.1-1.17.2.3.2.2.1"><a href="#section-17.3.2" class="auto internal xref">17.3.2</a>.  <a href="#name-denial-detail-disclosure" class="internal xref">Denial Detail Disclosure</a></p>
 </li>
                 </ul>
 </li>
@@ -3632,13 +3629,14 @@ each array in a fixed, reproducible order; that order is part of
 the canonical form.<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.2-2.4">
-            <p id="section-7.2-2.4.1">URI-valued members are compared byte-for-byte unless a member's
-definition specifies a normalization. The only normalization this
-document defines is the RFC 3986 <span>[<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> comparison of the
-resource-containment test (<a href="#subset" class="auto internal xref">Section 5.1</a>), which applies to that
-comparison alone: the default <code>resource</code> equality test of <a href="#subset" class="auto internal xref">Section 5.1</a>
-remains an exact match, and anchor computation is always byte-exact
-over the recorded values.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.4.1">URI-valued members are compared byte-for-byte unless a member's own
+type definition specifies a normalization; this document defines no
+such normalization itself. Where a type defines one, as
+<code>mission_resource_access</code> does for its <code>prefix</code>-match resource
+containment test (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>),
+it applies to that comparison alone: the default <code>resource</code> equality
+test remains an exact match, and anchor computation is always
+byte-exact over the recorded values regardless.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-7.2-3">Test vectors for the anchors are provided in <a href="#test-vectors" class="auto internal xref">Appendix B</a>.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
@@ -4599,7 +4597,8 @@ filters.<a href="#section-9.3-2.2.1" class="pilcrow">¶</a></p>
             <p id="section-9.3-2.3.1"><span class="bcp14">MUST</span>, when it matches a concrete request URI against a <code>prefix</code>
 entry (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>), apply the same RFC 3986
 <span>[<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> syntax-based normalization the AS uses for containment
-(<a href="#subset" class="auto internal xref">Section 5.1</a>), and <span class="bcp14">MUST</span> apply it before the prefix comparison rather
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), and <span class="bcp14">MUST</span>
+apply it before the prefix comparison rather
 than after. That normalization decodes only unreserved octets, so
 reserved octets stay encoded: an encoded slash (<code>%2F</code>, equivalently
 <code>%2f</code> since percent-encoding is hex-case-insensitive) remains
@@ -4776,7 +4775,7 @@ enforce, and the request fails closed.<a href="#section-9.3-10.6.1" class="pilcr
 </dl>
 <p id="section-9.3-11">A value the client does not recognize is treated as
 <code>insufficient_authority</code>. The attribute's disclosure considerations
-are <a href="#denial-disclosure" class="auto internal xref">Section 17.3.3</a>'s.<a href="#section-9.3-11" class="pilcrow">¶</a></p>
+are <a href="#denial-disclosure" class="auto internal xref">Section 17.3.2</a>'s.<a href="#section-9.3-11" class="pilcrow">¶</a></p>
 <p id="section-9.3-12">A Mission-unaware Resource Server that authorizes only from <code>scope</code>
 operates within the Mission only to the extent the AS established a
 safe projection for it at issuance (<a href="#scope-projection" class="auto internal xref">Section 9.1</a>): the AS
@@ -6295,156 +6294,19 @@ Mission-carried bound is summarized in the enforcement table
 narrow authority bound, but do not eliminate, this exposure.<a href="#section-17.3.1-4" class="pilcrow">¶</a></p>
 <p id="section-17.3.1-5">Where
 the Resource Server or a composing runtime layer matches a concrete
-request URI against a <code>prefix</code> entry, the single-normalization rule
-of <a href="#resource-boundary-canonicalization" class="auto internal xref">Section 17.3.2</a> binds that match the same
-way.<a href="#section-17.3.1-5" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="resource-boundary-canonicalization">
-<section id="section-17.3.2">
-          <h4 id="name-resource-boundary-canonical">
-<a href="#section-17.3.2" class="section-number selfRef">17.3.2. </a><a href="#name-resource-boundary-canonical" class="section-name selfRef">Resource Boundary Canonicalization</a>
-          </h4>
-<p id="section-17.3.2-1">A <code>prefix</code> entry (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>) draws an authority
-boundary in URI space. The AS's containment test (<a href="#subset" class="auto internal xref">Section 5.1</a>) and the
-Resource Server's request matching (<a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>) <span class="bcp14">MUST</span> apply the
-single RFC 3986 <span>[<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> normalization defined in <a href="#subset" class="auto internal xref">Section 5.1</a>, so
-issuance and enforcement draw the same boundary. A matcher that
-normalizes differently from the party that derived the entry can admit
-a request the Approver never authorized, or deny one it did.<a href="#section-17.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-17.3.2-2">The
-normalization <span class="bcp14">MUST</span> run before the prefix comparison, never after, and
-the boundary <span class="bcp14">MUST</span> be evaluated on the same normalized form a
-downstream component will act on. The following vectors each turn on
-such a difference:<a href="#section-17.3.2-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-17.3.2-3.1">
-              <p id="section-17.3.2-3.1.1"><strong>Encoded slash (<code>%2F</code>).</strong> A reserved octet, left encoded by this
-normalization (which decodes only unreserved octets) and never a
-path-segment separator when matching. An intermediary that decodes
-it before the Resource Server enforces shifts the boundary; a
-deployment <span class="bcp14">MUST</span> prevent that rewriting or account for it.<a href="#section-17.3.2-3.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-17.3.2-3.2">
-              <p id="section-17.3.2-3.2.1"><strong>Encoded dot (<code>%2e</code>, <code>%2e%2e</code>).</strong> The <code>.</code> octet is unreserved, so
-this normalization decodes it and then removes dot-segments. The
-hazard is order: normalizing before the comparison collapses a
-decoded <code>%2e%2e</code> out of the path and draws the boundary correctly,
-while matching the raw string first and letting a downstream
-component decode and collapse afterward can escape the prefix.<a href="#section-17.3.2-3.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-17.3.2-3.3">
-              <p id="section-17.3.2-3.3.1"><strong>Double or empty path segments.</strong> An empty path and <code>/</code> denote the
-same base (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>); a matcher <span class="bcp14">MUST NOT</span> coalesce
-<code>//</code> or trailing-slash differences of its own, since the <a href="#subset" class="auto internal xref">Section 5.1</a>
-normalization does not.<a href="#section-17.3.2-3.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-17.3.2-3.4">
-              <p id="section-17.3.2-3.4.1"><strong>Default-port presence.</strong> <code>https://a.example:443</code> and
-<code>https://a.example</code> are one authority only after the default-port
-removal <a href="#subset" class="auto internal xref">Section 5.1</a> performs; a matcher that skips it splits one
-boundary into two.<a href="#section-17.3.2-3.4.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-17.3.2-3.5">
-              <p id="section-17.3.2-3.5.1"><strong>Unicode and IDNA host.</strong> The <a href="#subset" class="auto internal xref">Section 5.1</a> normalization lowercases
-the host but does not define Unicode to A-label (IDNA) conversion, so
-a deployment that accepts non-ASCII hosts <span class="bcp14">MUST</span> ensure both sides
-compare the same form.<a href="#section-17.3.2-3.5.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-17.3.2-3.6">
-              <p id="section-17.3.2-3.6.1"><strong>Percent-decoding order.</strong> This normalization decodes only
-unreserved octets and runs before comparison; decoding reserved
-octets, or decoding after the comparison, changes which characters
-count as separators and can move the boundary.<a href="#section-17.3.2-3.6.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-17.3.2-4">These vectors make the rule concrete. For a <code>prefix</code> entry whose
-<code>resource</code> is <code>https://api.example/orders</code>, a concrete request URI
-matches as follows:<a href="#section-17.3.2-4" class="pilcrow">¶</a></p>
-<span id="name-prefix-matching-for-https-a"></span><table class="center" id="table-4">
-            <caption>
-<a href="#table-4" class="selfRef">Table 4</a>:
-<a href="#name-prefix-matching-for-https-a" class="selfRef">Prefix matching for https://api.example/orders</a>
-            </caption>
-<thead>
-              <tr>
-                <th class="text-left" rowspan="1" colspan="1">Request URI</th>
-                <th class="text-left" rowspan="1" colspan="1">Result</th>
-                <th class="text-left" rowspan="1" colspan="1">Why</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example/orders</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
-                <td class="text-left" rowspan="1" colspan="1">The base itself</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example/orders/123</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
-                <td class="text-left" rowspan="1" colspan="1">An extension at a path-segment boundary</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://API.EXAMPLE/orders/123</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
-                <td class="text-left" rowspan="1" colspan="1">Scheme and host are case-folded</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example:443/orders/123</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">ALLOW</td>
-                <td class="text-left" rowspan="1" colspan="1">The default port is removed</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example/Orders/123</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">DENY</td>
-                <td class="text-left" rowspan="1" colspan="1">The path is case-sensitive: <code>Orders</code> is not <code>orders</code>
-</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example/orders%2F123</code> (equivalently <code>%2f</code>)</td>
-                <td class="text-left" rowspan="1" colspan="1">DENY</td>
-                <td class="text-left" rowspan="1" colspan="1">Hex digits normalize to <code>%2F</code>, which stays encoded and is not a separator: one segment <code>orders%2F123</code>, not an extension of <code>/orders</code>
-</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example/ordersX</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">DENY</td>
-                <td class="text-left" rowspan="1" colspan="1">The match extends only at a path-segment boundary, not within a segment</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>https://api.example/orders/%2e%2e/admin</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">DENY</td>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>%2e%2e</code> decodes to <code>..</code> and the dot-segment is removed, yielding <code>https://api.example/admin</code>, outside the prefix</td>
-              </tr>
-            </tbody>
-          </table>
-<p id="section-17.3.2-6">A deployment <span class="bcp14">MAY</span> agree out of band on the canonicalization profile its
-AS and Resource Servers apply; this document defines one rule
-(<a href="#subset" class="auto internal xref">Section 5.1</a>), so no profile identifier is required for interoperation.<a href="#section-17.3.2-6" class="pilcrow">¶</a></p>
+request URI against a <code>prefix</code> entry, the single-normalization rule of
+the Mission Resource Access Profile's Resource Boundary
+Canonicalization analysis
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) binds that
+match the same way, for a deployment that supports that type.<a href="#section-17.3.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-disclosure">
-<section id="section-17.3.3">
+<section id="section-17.3.2">
           <h4 id="name-denial-detail-disclosure">
-<a href="#section-17.3.3" class="section-number selfRef">17.3.3. </a><a href="#name-denial-detail-disclosure" class="section-name selfRef">Denial Detail Disclosure</a>
+<a href="#section-17.3.2" class="section-number selfRef">17.3.2. </a><a href="#name-denial-detail-disclosure" class="section-name selfRef">Denial Detail Disclosure</a>
           </h4>
-<p id="section-17.3.3-1">The <code>mission_denial</code> attribute (<a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>) tells a caller
+<p id="section-17.3.2-1">The <code>mission_denial</code> attribute (<a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>) tells a caller
 which path a denial leads into, and thereby reveals authorization
 shape: <code>step_up_required</code> confirms to the presenting party that the
 authority exists, where <code>insufficient_authority</code> denies its
@@ -6455,7 +6317,7 @@ only on a response to a validly signed, audience-correct token whose
 holder its deployment accepts learning the distinction, and <span class="bcp14">SHOULD</span>
 omit the attribute otherwise; when in doubt,
 <code>insufficient_authority</code> is the value that reveals least, and
-omission reveals nothing.<a href="#section-17.3.3-1" class="pilcrow">¶</a></p>
+omission reveals nothing.<a href="#section-17.3.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -7177,8 +7039,8 @@ registration.<a href="#section-20.7-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-20.7-5">This document seeds the registry with the states it defines:<a href="#section-20.7-5" class="pilcrow">¶</a></p>
-<table class="center" id="table-5">
-          <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<table class="center" id="table-4">
+          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Value</th>
@@ -7999,8 +7861,9 @@ resolve before interoperating.<a href="#appendix-B-33" class="pilcrow">¶</a></p
           <p id="appendix-C-3.1.1">Mission Resource Access Profile split (#637, #645, #698): the
 <code>mission_resource_access</code> type definition, its resource and action
 matching, generic constraints, the Common Constraints registry, the
-delegation member and matching rules, and the subset and
-intersection algebra relocated to the Mission Resource Access
+delegation member and matching rules, the subset and
+intersection algebra, and the Resource Boundary Canonicalization
+security analysis relocated to the Mission Resource Access
 Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>);
 this document keeps type-agnostic commitment, the approved-set
 metadata requirement, and derivation gating
@@ -8034,7 +7897,8 @@ sentence restates a rule that remains normatively stated at its
 home (<a href="#mission-bound-tokens" class="auto internal xref">Section 9</a> and <a href="#rs-enforcement" class="auto internal xref">Section 9.3</a> for
 <code>client_id</code>'s registered meaning, <a href="#submission-via-par" class="auto internal xref">Section 4.1</a> for the
 submission trust rule, <a href="#introspection" class="auto internal xref">Section 11</a> for the RFC 7662
-deviation, <a href="#resource-boundary-canonicalization" class="auto internal xref">Section 17.3.2</a> for the
+deviation, the (since relocated) Resource Boundary Canonicalization
+section for the
 single-normalization rule, <a href="#lifecycle" class="auto internal xref">Section 10</a> for short-lifetime
 guidance). The rejected <code>client_id</code>-freezing narrative compressed
 to its design rationale; spec-archaeology sentences removed in

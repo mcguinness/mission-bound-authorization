@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-24T20:30:27Z
-Source repository commit: 8c57e0e098b94006f00245aa5327ffd62c89802f
+Generated: 2026-08-24T20:44:16Z
+Source repository commit: c1627d1e90b44ba80f77f961caae62b45cfd002b
 Member count: 7
 
 Reading order:
@@ -6124,8 +6124,7 @@ Table of Contents
        17.2.2.  Authority Does Not Propagate With Information
      17.3.  Enforcement Boundaries
        17.3.1.  Issuance Scope, Not Runtime Enforcement
-       17.3.2.  Resource Boundary Canonicalization
-       17.3.3.  Denial Detail Disclosure
+       17.3.2.  Denial Detail Disclosure
      17.4.  Credentials and Delegation
        17.4.1.  Token Theft
        17.4.2.  Delegation and Chain Compromise
@@ -7970,12 +7969,14 @@ Table of Contents
       the canonical form.
 
    *  URI-valued members are compared byte-for-byte unless a member's
-      definition specifies a normalization.  The only normalization this
-      document defines is the RFC 3986 [RFC3986] comparison of the
-      resource-containment test (Section 5.1), which applies to that
-      comparison alone: the default resource equality test of
-      Section 5.1 remains an exact match, and anchor computation is
-      always byte-exact over the recorded values.
+      own type definition specifies a normalization; this document
+      defines no such normalization itself.  Where a type defines one,
+      as mission_resource_access does for its prefix-match resource
+      containment test
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]), it applies
+      to that comparison alone: the default resource equality test
+      remains an exact match, and anchor computation is always byte-
+      exact over the recorded values regardless.
 
    Test vectors for the anchors are provided in Appendix B.
 
@@ -8743,7 +8744,8 @@ Table of Contents
 
    *  MUST, when it matches a concrete request URI against a prefix
       entry (Section 5), apply the same RFC 3986 [RFC3986] syntax-based
-      normalization the AS uses for containment (Section 5.1), and MUST
+      normalization the AS uses for containment
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]), and MUST
       apply it before the prefix comparison rather than after.  That
       normalization decodes only unreserved octets, so reserved octets
       stay encoded: an encoded slash (%2F, equivalently %2f since
@@ -8898,7 +8900,7 @@ Table of Contents
 
    A value the client does not recognize is treated as
    insufficient_authority.  The attribute's disclosure considerations
-   are Section 17.3.3's.
+   are Section 17.3.2's.
 
    A Mission-unaware Resource Server that authorizes only from scope
    operates within the Mission only to the extent the AS established a
@@ -10204,109 +10206,12 @@ Table of Contents
 
    Where the Resource Server or a composing runtime layer matches a
    concrete request URI against a prefix entry, the single-normalization
-   rule of Section 17.3.2 binds that match the same way.
+   rule of the Mission Resource Access Profile's Resource Boundary
+   Canonicalization analysis
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]) binds that
+   match the same way, for a deployment that supports that type.
 
-17.3.2.  Resource Boundary Canonicalization
-
-   A prefix entry (Section 5) draws an authority boundary in URI space.
-   The AS's containment test (Section 5.1) and the Resource Server's
-   request matching (Section 9.3) MUST apply the single RFC 3986
-   [RFC3986] normalization defined in Section 5.1, so issuance and
-   enforcement draw the same boundary.  A matcher that normalizes
-   differently from the party that derived the entry can admit a request
-   the Approver never authorized, or deny one it did.
-
-   The normalization MUST run before the prefix comparison, never after,
-   and the boundary MUST be evaluated on the same normalized form a
-   downstream component will act on.  The following vectors each turn on
-   such a difference:
-
-   *  *Encoded slash (%2F).* A reserved octet, left encoded by this
-      normalization (which decodes only unreserved octets) and never a
-      path-segment separator when matching.  An intermediary that
-      decodes it before the Resource Server enforces shifts the
-      boundary; a deployment MUST prevent that rewriting or account for
-      it.
-
-   *  *Encoded dot (%2e, %2e%2e).* The . octet is unreserved, so this
-      normalization decodes it and then removes dot-segments.  The
-      hazard is order: normalizing before the comparison collapses a
-      decoded %2e%2e out of the path and draws the boundary correctly,
-      while matching the raw string first and letting a downstream
-      component decode and collapse afterward can escape the prefix.
-
-   *  *Double or empty path segments.* An empty path and / denote the
-      same base (Section 5); a matcher MUST NOT coalesce // or trailing-
-      slash differences of its own, since the Section 5.1 normalization
-      does not.
-
-   *  *Default-port presence.* https://a.example:443 and
-      https://a.example are one authority only after the default-port
-      removal Section 5.1 performs; a matcher that skips it splits one
-      boundary into two.
-
-   *  *Unicode and IDNA host.* The Section 5.1 normalization lowercases
-      the host but does not define Unicode to A-label (IDNA) conversion,
-      so a deployment that accepts non-ASCII hosts MUST ensure both
-      sides compare the same form.
-
-   *  *Percent-decoding order.* This normalization decodes only
-      unreserved octets and runs before comparison; decoding reserved
-      octets, or decoding after the comparison, changes which characters
-      count as separators and can move the boundary.
-
-   These vectors make the rule concrete.  For a prefix entry whose
-   resource is https://api.example/orders, a concrete request URI
-   matches as follows:
-
-   +====================================+======+======================+
-   | Request URI                        |Result| Why                  |
-   +====================================+======+======================+
-   | https://api.example/orders         |ALLOW | The base itself      |
-   +------------------------------------+------+----------------------+
-   | https://api.example/orders/123     |ALLOW | An extension at a    |
-   |                                    |      | path-segment         |
-   |                                    |      | boundary             |
-   +------------------------------------+------+----------------------+
-   | https://API.EXAMPLE/orders/123     |ALLOW | Scheme and host are  |
-   |                                    |      | case-folded          |
-   +------------------------------------+------+----------------------+
-   | https://api.example:443/orders/123 |ALLOW | The default port is  |
-   |                                    |      | removed              |
-   +------------------------------------+------+----------------------+
-   | https://api.example/Orders/123     |DENY  | The path is case-    |
-   |                                    |      | sensitive: Orders is |
-   |                                    |      | not orders           |
-   +------------------------------------+------+----------------------+
-   | https://api.example/orders%2F123   |DENY  | Hex digits normalize |
-   | (equivalently %2f)                 |      | to %2F, which stays  |
-   |                                    |      | encoded and is not a |
-   |                                    |      | separator: one       |
-   |                                    |      | segment              |
-   |                                    |      | orders%2F123, not an |
-   |                                    |      | extension of /orders |
-   +------------------------------------+------+----------------------+
-   | https://api.example/ordersX        |DENY  | The match extends    |
-   |                                    |      | only at a path-      |
-   |                                    |      | segment boundary,    |
-   |                                    |      | not within a segment |
-   +------------------------------------+------+----------------------+
-   | https://api.example/orders/%2e%2e/ |DENY  | %2e%2e decodes to .. |
-   | admin                              |      | and the dot-segment  |
-   |                                    |      | is removed, yielding |
-   |                                    |      | https://api.example/ |
-   |                                    |      | admin, outside the   |
-   |                                    |      | prefix               |
-   +------------------------------------+------+----------------------+
-
-         Table 4: Prefix matching for https://api.example/orders
-
-   A deployment MAY agree out of band on the canonicalization profile
-   its AS and Resource Servers apply; this document defines one rule
-   (Section 5.1), so no profile identifier is required for
-   interoperation.
-
-17.3.3.  Denial Detail Disclosure
+17.3.2.  Denial Detail Disclosure
 
    The mission_denial attribute (Section 9.3) tells a caller which path
    a denial leads into, and thereby reveals authorization shape:
@@ -10889,7 +10794,7 @@ Table of Contents
    |         |          |                    |            | 10        |
    +---------+----------+--------------------+------------+-----------+
 
-                                 Table 5
+                                 Table 4
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations, carrying its
@@ -11655,14 +11560,15 @@ Appendix C.  Document History
    *  Mission Resource Access Profile split (#637, #645, #698): the
       mission_resource_access type definition, its resource and action
       matching, generic constraints, the Common Constraints registry,
-      the delegation member and matching rules, and the subset and
-      intersection algebra relocated to the Mission Resource Access
-      Profile ([I-D.draft-mcguinness-oauth-mission-resource-access]);
-      this document keeps type-agnostic commitment, the approved-set
-      metadata requirement, and derivation gating (Section 5,
-      Section 5.2, Section 14).  Adds the type-agnostic scope-projection
-      rule and issuance algorithm (Section 9.1) and the machine-readable
-      per-type transformation-capability declaration
+      the delegation member and matching rules, the subset and
+      intersection algebra, and the Resource Boundary Canonicalization
+      security analysis relocated to the Mission Resource Access Profile
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]); this
+      document keeps type-agnostic commitment, the approved-set metadata
+      requirement, and derivation gating (Section 5, Section 5.2,
+      Section 14).  Adds the type-agnostic scope-projection rule and
+      issuance algorithm (Section 9.1) and the machine-readable per-type
+      transformation-capability declaration
       (mission_transformation_capabilities, Section 5.2); sweeps every
       scope-only claim that assumed a lossy projection was always
       available (the Intent enforcement table, Resource Server
@@ -11685,21 +11591,21 @@ Appendix C.  Document History
       sentence restates a rule that remains normatively stated at its
       home (Section 9 and Section 9.3 for client_id's registered
       meaning, Section 4.1 for the submission trust rule, Section 11 for
-      the RFC 7662 deviation, Section 17.3.2 for the single-
-      normalization rule, Section 10 for short-lifetime guidance).  The
-      rejected client_id-freezing narrative compressed to its design
-      rationale; spec-archaeology sentences removed in favor of this
-      history; the Mission Drift consideration folded away.  Structure:
-      the commitment machinery promoted to Integrity and Commitments;
-      the Introduction's positioning subsections merged into
-      Relationship to Adjacent Work; the submission processing order
-      given its own section; Security Considerations grouped into five
-      themed clusters.  Scanability: mission_denial values as a
-      definition list, a remediation-grains table, a prefix-matching
-      example table.  Explicit anchors pinned on every previously auto-
-      slugged surviving heading, matching the published fragments; the
-      end-to-end example now shows mission_id and mission_expires_at on
-      the token response.
+      the RFC 7662 deviation, the (since relocated) Resource Boundary
+      Canonicalization section for the single-normalization rule,
+      Section 10 for short-lifetime guidance).  The rejected client_id-
+      freezing narrative compressed to its design rationale; spec-
+      archaeology sentences removed in favor of this history; the
+      Mission Drift consideration folded away.  Structure: the
+      commitment machinery promoted to Integrity and Commitments; the
+      Introduction's positioning subsections merged into Relationship to
+      Adjacent Work; the submission processing order given its own
+      section; Security Considerations grouped into five themed
+      clusters.  Scanability: mission_denial values as a definition
+      list, a remediation-grains table, a prefix-matching example table.
+      Explicit anchors pinned on every previously auto-slugged surviving
+      heading, matching the published fragments; the end-to-end example
+      now shows mission_id and mission_expires_at on the token response.
 
    *  goal_lang (OPTIONAL, BCP 47) on the Mission Intent and an
       Internationalization Considerations section: a syntactic language
@@ -18710,10 +18616,12 @@ Table of Contents
    external commitment, and privileged administration), high-consequence
    classes, and parameter-bound are used as defined in
    [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer, authority_hash), the integrity anchors (intent_hash,
-   authority_hash), and authorization_details entries of type
-   mission_resource_access are used as defined in
-   [I-D.draft-mcguinness-oauth-mission].
+   issuer, authority_hash) and the integrity anchors (intent_hash,
+   authority_hash) are used as defined in
+   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
+   of type mission_resource_access are used as defined in its Mission
+   Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Additional terms:
 
@@ -20811,6 +20719,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -21183,11 +21097,14 @@ Table of Contents
    irreversible action, external commitment, and privileged
    administration) are used as defined in
    [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer, authority_hash), the integrity anchors (intent_hash,
-   authority_hash), and authorization_details entries of type
-   mission_resource_access are used as defined in
-   [I-D.draft-mcguinness-oauth-mission].  Effective Authority Set is
-   used as defined in [I-D.draft-mcguinness-oauth-mission-status].
+   issuer, authority_hash) and the integrity anchors (intent_hash,
+   authority_hash) are used as defined in
+   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
+   of type mission_resource_access are used as defined in its Mission
+   Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Effective
+   Authority Set is used as defined in
+   [I-D.draft-mcguinness-oauth-mission-status].
 
    Additional terms specific to this binding:
 
@@ -23391,6 +23308,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth

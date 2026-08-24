@@ -140,9 +140,9 @@ Table of Contents
    is a fully conforming issuance-profile deployment
    ([I-D.draft-mcguinness-oauth-mission]).  Nothing here places a new
    requirement back on the issuance profile, and this document adds no
-   constraint to the issuance profile's mission_resource_access.  The
-   provenance object and the handoff rule are companion mechanisms that
-   a deployment adopts where its agents share durable work products.
+   constraint to mission_resource_access.  The provenance object and the
+   handoff rule are companion mechanisms that a deployment adopts where
+   its agents share durable work products.
 
    Maturity: experimental.  Maintenance: lab-best-effort.  Adopt when:
    Artifacts cross into another Mission and must carry provenance, never
