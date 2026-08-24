@@ -350,7 +350,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
-      localClientId: TOPOLOGY.rasLocalClientId,
+      registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
     });
 
     // Redeem the continuation ID-JAG (JWT-bearer grant), sender-constrained to
@@ -401,7 +401,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       trustedIssuers: {},
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
-      localClientId: TOPOLOGY.rasLocalClientId,
+      registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
     });
     const profiles = ras.metadata().authorization_grant_profiles_supported as string[];
     expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag");
@@ -610,7 +610,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
-      localClientId: TOPOLOGY.rasLocalClientId,
+      registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
     });
     const { expires_in } = await ras.redeem(idJag, agentJkt);
     expect(expires_in).toBeGreaterThan(0);

@@ -662,6 +662,15 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   `jti` for the grant's validity window and refuse a second
   presentation with `invalid_grant` ({{RFC7523}} Section 3), so a grant
   cannot be replayed even by the party it is bound to.
+- MUST authenticate the redeeming client at redemption, by whatever
+  mechanism its own token endpoint uses for client authentication,
+  and MUST refuse with `invalid_client` a request whose client
+  authentication fails or whose presented credential does not
+  resolve to a client it recognizes. The cross-domain grant's
+  sender-constraint ({{grant-at-boundary}}) proves only that the
+  presenter holds the grant's bound key; it is not, by itself, client
+  authentication at the Resource AS's own token endpoint and MUST NOT
+  be treated as satisfying this requirement.
 - When issuing local access tokens for its resources, the Resource AS
   uses the subject-resolution rules of the underlying cross-domain
   grant and identity chaining specifications. The local token preserves
@@ -675,19 +684,21 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   - MUST be sender-constrained ({{RFC7800}}), like the grant it
     derives from;
   - MUST NOT be issued as a bearer token; and
-  - MUST identify the redeeming destination client on the local
-    token, per the destination's own credential conventions; where
-    the local token is an RFC 9068-style JWT, that identifier is
-    `client_id`, naming the party that authenticated at redemption in
-    the Resource AS's own namespace ({{RFC8693}} Section 4.3,
-    {{RFC9068}} Section 2.2). It MUST NOT be the Mission's approved
-    agent from the originating domain, and the origin identity
-    travels only via the Origin Principal profile's `mission.subject`
-    ({{origin-principal}}), never as the local client identity. The
-    approved agent remains recoverable at the originating AS from the
-    Mission Record identified by `mission.id` and `mission.issuer`. A
-    Resource Server MAY impose stronger actor-chain requirements but
-    MUST NOT reinterpret `client_id`.
+  - MUST identify, per the destination's own credential conventions,
+    the client identity established by the authentication above;
+    where the local token is an RFC 9068-style JWT, that identifier
+    is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section
+    2.2). It MUST NOT be the Mission's approved agent from the
+    originating domain, and the cross-domain grant's own `client_id`
+    claim ({{cross-domain-grant}}) MUST NOT be reinterpreted as this
+    local identifier under any profile. Where the Origin Principal
+    profile is claimed, that approved agent's origin principal is
+    instead conveyed to the local token through `mission.subject`
+    ({{origin-principal}}); otherwise the approved agent remains
+    recoverable only at the originating AS from the Mission Record
+    identified by `mission.id` and `mission.issuer`. A Resource
+    Server MAY impose stronger actor-chain requirements but MUST NOT
+    reinterpret `client_id`.
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed. It MUST apply its own local
   authorization policy in addition: honoring a Mission does not
@@ -1091,8 +1102,12 @@ A **Resource AS**:
 - bounds every local token by the grant that seeded it and issues it
   sender-constrained and short-lived ({{validation-at-resource-as}},
   {{cross-domain-revocation}});
-- sets each local token's `client_id` to the redeeming client, never
-  the Mission's approved agent ({{validation-at-resource-as}});
+- authenticates the redeeming client at redemption by its own
+  mechanism, distinct from the grant's sender-constraint
+  ({{validation-at-resource-as}});
+- sets each local token's `client_id` to the client identity that
+  authentication established, never the Mission's approved agent nor
+  the grant's own `client_id` claim ({{validation-at-resource-as}});
 - fails redemption with the codes of {{error-responses}};
 - where it offers token introspection for its local tokens, follows
   {{introspection-at-resource-as}}; and
@@ -1578,9 +1593,14 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
   this document begins its delegation depth at 0" restated what the
   preceding, correctly conditioned sentence already said; the
   citation moved onto that sentence and the duplicate was dropped).
-- Restated the Resource AS's local-token client identification as a
-  property-level requirement (identify the redeeming destination
-  client per the destination's own credential conventions, naming
-  `client_id` as the RFC 9068 case) rather than naming `client_id`
-  directly, and cross-referenced the Origin Principal profile's
-  exclusive carriage of origin identity (S-12).
+- Added an explicit Resource AS requirement to authenticate the
+  redeeming client at redemption, distinct from the cross-domain
+  grant's sender-constraint, and restated local-token client
+  identification as a property-level requirement bound to that
+  authentication (identify the redeeming destination client per the
+  destination's own credential conventions, naming `client_id` as
+  the RFC 9068 case) rather than naming `client_id` directly (S-12).
+  Scoped the origin-identity-carriage sentence to the Origin
+  Principal profile when claimed, and separately barred reinterpreting
+  the cross-domain grant's own `client_id` claim as the local
+  identifier under any profile.
