@@ -126,6 +126,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -220,6 +236,11 @@ expansion profile defines them.
 Authority ceiling:
 : The pre-consented maximum authority any expansion of a Mission may
   reach without a further human approval ({{progressive-authorization}}).
+  This bound is distinct from the template profile's Template Ceiling
+  on Missions dispatched from a template and from the shaping
+  companion's caller-supplied shaping ceiling on a proposal
+  ({{I-D.draft-mcguinness-oauth-mission-template}},
+  {{I-D.draft-mcguinness-mission-shaping}}).
 
 Drawdown policy:
 : The policy under which the Mission Issuer may adjudicate an
@@ -717,6 +738,10 @@ convention, none of which require registration.
 
 -01
 
+- Editorial: disambiguated `authority_ceiling` from the template
+  profile's Template Ceiling and the shaping companion's shaping
+  ceiling at its first definition ({{conventions-and-terminology}}), no
+  normative change.
 - Mirrored the OAuth binding's Mission Template uncommitted-policy-body
   pattern onto `drawdown_policy`: a SHOULD to additionally commit the
   policy body under an integrity anchor or disclose it under Consent

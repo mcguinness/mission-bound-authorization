@@ -121,6 +121,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -518,8 +526,11 @@ When a deployment or caller supplies a **shaping ceiling**, a
 caller-supplied bound distinct from the progressive profile's
 consented `authority_ceiling` Mission member
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), the proposal
-MUST be a subset of it. If the task cannot be completed within that
-ceiling, the shaper MUST request clarification or refuse. It MUST NOT
+MUST be a subset of it. It is likewise distinct from the template
+profile's pre-consented Template Ceiling on Missions dispatched from a
+template ({{I-D.draft-mcguinness-oauth-mission-template}}). If the
+task cannot be completed within that ceiling, the shaper MUST request
+clarification or refuse. It MUST NOT
 silently drop necessary authority while emitting a proposal that
 appears complete, unless both of the following hold:
 

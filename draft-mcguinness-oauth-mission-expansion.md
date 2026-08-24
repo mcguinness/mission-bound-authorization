@@ -192,12 +192,13 @@ carries a new Mission Intent in an {{RFC8693}} token exchange
 predecessor's Mission-bound access token, leading to a fresh approval
 event ({{I-D.draft-mcguinness-oauth-mission}}) with its own
 integrity anchors and Mission record. The successor's
-authority comes only from that approval. This document adds exactly
-three things on top of the issuance profile: a way to bind an expansion
-request to the predecessor it expands; a `predecessor` lineage member
-on the resulting Mission; and a terminal `superseded` predecessor state
-with the reconciliation rules that keep concurrent expansions
-consistent.
+authority comes only from that approval.
+
+This document adds exactly three things on top of the issuance
+profile: a way to bind an expansion request to the predecessor it
+expands; a `predecessor` lineage member on the resulting Mission; and
+a terminal `superseded` predecessor state with the reconciliation
+rules that keep concurrent expansions consistent.
 
 ## Status: an optional extension {#optional-status}
 
@@ -540,11 +541,12 @@ references the work it continues, since the successor's authority comes
 only from the fresh consent in any case; and the Subject or an
 administrator acts on the predecessor at the management plane
 regardless, whose standing is the authenticated principal, never a
-token's possession ({{I-D.draft-mcguinness-oauth-mission-status}}). The
-possession proof gates the proposal channel (who may put an expansion
-wearing this predecessor's name in front of the Approver, and who may
-trigger the atomic supersession), never the authority: no proof failure
-can widen anything.
+token's possession ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+The possession proof gates the proposal channel (who may put an
+expansion wearing this predecessor's name in front of the Approver, and
+who may trigger the atomic supersession), never the authority: no proof
+failure can widen anything.
 
 The Mission Issuer MUST record each expansion presentation and count it
 toward the deployment's anomaly detection, and the per-predecessor rate
@@ -756,12 +758,14 @@ against the successor: the successor's Authority Set is freshly
 derived, not inherited by reference, so a child's creation-time subset
 check does not carry forward
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-"Cascade Revocation"). The re-creation above is paid for per child: a
-fresh assertion conveyed to the child actor that held the terminated
-child, and an interval in which that child actor's outstanding tokens
-under the terminated child run to the earlier of their own `exp` and
-the runtime staleness bound, where the runtime enforcement layer is
-deployed, while the replacement is delivered
+"Cascade Revocation").
+
+The re-creation above is paid for per child: a fresh assertion
+conveyed to the child actor that held the terminated child, and an
+interval in which that child actor's outstanding tokens under the
+terminated child run to the earlier of their own `exp` and the runtime
+staleness bound, where the runtime enforcement layer is deployed,
+while the replacement is delivered
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
 "Cascade Failure"). Where a deployment provides the notice recommended
 above, the expansion consent event is where this price is rendered;

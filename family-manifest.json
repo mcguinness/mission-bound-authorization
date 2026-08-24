@@ -1163,7 +1163,8 @@
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
-    "draft-mcguinness-oauth-mission-progressive"
+    "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -1786,11 +1787,13 @@
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-security-model",
+    "draft-mcguinness-mission-shaping",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -1897,6 +1900,7 @@
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-shaping",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
