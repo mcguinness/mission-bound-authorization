@@ -2678,14 +2678,15 @@ Controller does not eliminate those internal trust boundaries.<a href="#section-
 <p id="section-9.5-1">The kernel's non-active outcome stops new positive Controller
 governance decisions.  It does not automatically invalidate every
 artifact previously issued or stop a resource that cannot observe
-state.  Lifecycle-Gated Authorization and State-Observable claims must
+state.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+<p id="section-9.5-2">Lifecycle-Gated Authorization and State-Observable claims must
 state their coverage and residual interval.  Short credential lifetime
-can bound residual authority but is not instantaneous termination.
-The bounded-reliance floor (<a href="#bounded-reliance" class="auto internal xref">Section 4.7</a>) guarantees that a
+can bound residual authority but is not instantaneous termination.<a href="#section-9.5-2" class="pilcrow">¶</a></p>
+<p id="section-9.5-3">The bounded-reliance floor (<a href="#bounded-reliance" class="auto internal xref">Section 4.7</a>) guarantees that a
 stated bound exists on every conforming path; it does not make any
 bound short.  A bound long enough to be vacuous defeats the floor's
 purpose; consumers evaluate the stated interval, not only its
-presence.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+presence.<a href="#section-9.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="governance-record-integrity">
@@ -2883,11 +2884,12 @@ follow from a Mission identifier or hash alone.<a href="#appendix-A.1-2" class="
 Authorization Server.  It can satisfy the kernel and can provide
 Structured Authority and Monotonic Derivation for operations it owns.
 It does not, by itself, prove that an OAuth access token was issued
-under a Mission.  A verified join can establish correlation, and a
+under a Mission.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-2">A verified join can establish correlation, and a
 cooperating credential issuer can add stronger lifecycle and
 credential-binding properties.  The MAS Statement needs to describe
 those with their activation conditions and preserve the boundary
-between MAS assertions and Authorization Server behavior.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+between MAS assertions and Authorization Server behavior.<a href="#appendix-A.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="aauth-native-mapping-the-private-context-pole">
@@ -3123,8 +3125,8 @@ with integrity resting on record custody and the typed anchors.<a href="#appendi
               <td class="text-left" rowspan="1" colspan="1">supplied</td>
               <td class="text-left" rowspan="1" colspan="1">always</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>authorization_details</code> with registered types and the Common Constraints</td>
-              <td class="text-left" rowspan="1" colspan="1">Semantics exist per registered type, not universally</td>
+                <code>authorization_details</code> of AS-supported types, each type's own specification defining semantics (for <code>mission_resource_access</code>, the Mission Resource Access Profile's Common Constraints)</td>
+              <td class="text-left" rowspan="1" colspan="1">Semantics exist per supported type, not universally</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>

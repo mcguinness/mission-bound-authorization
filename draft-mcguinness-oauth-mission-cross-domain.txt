@@ -1274,11 +1274,12 @@ Table of Contents
 
 18.  IANA Considerations
 
-   This document has no IANA actions.  The mission JWT claim, the
-   mission introspection response member, and the
-   mission_resource_access authorization details type it carries are
-   registered by the issuance profile
-   [I-D.draft-mcguinness-oauth-mission].
+   This document has no IANA actions.  The mission JWT claim and the
+   mission introspection response member are defined by the issuance
+   profile [I-D.draft-mcguinness-oauth-mission]; the
+   mission_resource_access authorization details type it carries is
+   defined by that profile's Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
 19.  References
 
@@ -1446,6 +1447,12 @@ Table of Contents
               for OAuth 2.0", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-oauth-
               mission-cross-org-delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

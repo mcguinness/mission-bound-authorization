@@ -189,8 +189,10 @@ Table of Contents
    capitals, as shown here.
 
    This document uses Mission, Authority Set, Approver, Mission Issuer,
-   mission_resource_access, and the subset rule as the issuance profile
-   defines them ([I-D.draft-mcguinness-oauth-mission]); action-bound
+   and the subset rule as the issuance profile defines them
+   ([I-D.draft-mcguinness-oauth-mission]), and mission_resource_access
+   as its Mission Resource Access Profile defines it
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]); action-bound
    approval, the Operation Profile, parameter_digest, and Mission state
    freshness as the runtime profile defines them
    ([I-D.draft-mcguinness-mission-runtime]); the envelope anchor,
@@ -289,11 +291,11 @@ Table of Contents
    reason_uri, are exactly as [I-D.draft-rosomakho-oauth-txn-challenge]
    Section 4.2.2 defines them. authorization_details carries exactly one
    operation-scoped mission_resource_access entry
-   ([I-D.draft-mcguinness-oauth-mission]) or one compound-action detail
-   whose specification-defined semantics make the operation atomic.  The
-   Operation Profile a TAS and the resource apply resolves
-   deterministically from the challenge's iss and that entry's type
-   member ([RFC9396]): a resource versions its Operation Profile by
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]) or one
+   compound-action detail whose specification-defined semantics make the
+   operation atomic.  The Operation Profile a TAS and the resource apply
+   resolves deterministically from the challenge's iss and that entry's
+   type member ([RFC9396]): a resource versions its Operation Profile by
    versioning type, and a TAS MUST retain and recognize a superseded
    Operation Profile version for as long as a pending workflow still
    references it.
@@ -1207,6 +1209,12 @@ Normative References
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-containment.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [I-D.draft-rosomakho-oauth-txn-challenge]
               Rosomakho, Y., Campbell, B., McGuinness, K., and P.

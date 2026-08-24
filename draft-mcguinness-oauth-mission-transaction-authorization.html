@@ -1350,8 +1350,11 @@ Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mis
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">This document uses Mission, Authority Set, Approver, Mission Issuer,
-<code>mission_resource_access</code>, and the subset rule as the issuance profile
-defines them (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); action-bound
+and the subset rule as the issuance profile
+defines them (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and
+<code>mission_resource_access</code> as its Mission Resource Access Profile
+defines it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>);
+action-bound
 approval, the Operation Profile, <code>parameter_digest</code>, and Mission state
 freshness as the runtime profile defines them
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the envelope anchor,
@@ -1472,7 +1475,8 @@ challenge is a JWT with protected header <code>typ</code>
 and <code>reason_uri</code>, are exactly as
 <span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> Section 4.2.2 defines
 them. <code>authorization_details</code> carries exactly one operation-scoped
-<code>mission_resource_access</code> entry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+<code>mission_resource_access</code> entry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>)
 or one compound-action detail whose specification-defined semantics make the
 operation atomic. The Operation Profile a TAS and the resource apply
 resolves deterministically from the challenge's <code>iss</code> and that entry's
@@ -2693,6 +2697,10 @@ cross-organizational, execution-time approval.<a href="#section-17-1" class="pil
 <dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-rosomakho-oauth-txn-challenge">[I-D.draft-rosomakho-oauth-txn-challenge]</dt>
         <dd>

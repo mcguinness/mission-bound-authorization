@@ -2260,27 +2260,27 @@ presenter-authentication rule it states is normative. An external rail
 with its own mandate artifact, for example a payments network's
 payment mandate, can mint its vertical artifact from a Mission
 Mandate, recording the Mandate's <code>mission.id</code> and <code>authority_hash</code> in
-its own artifact. The two then share an audit anchor: activity on the
-rail joins back to the approved Mission that motivated it. The
-derivation itself, what the rail's artifact authorizes and how it is
-consented and revoked, is governed by that rail, not by this document;
-the Mission Mandate contributes committed facts and audit continuity,
-never authority.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
-<p id="section-8.2-2">A Mandate binds no holder and is freely copyable (<a href="#non-goals" class="auto internal xref">Section 9</a>), so
+its own artifact.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">The two then share an audit anchor: activity on the rail joins back to
+the approved Mission that motivated it. The derivation itself, what
+the rail's artifact authorizes and how it is consented and revoked, is
+governed by that rail, not by this document; the Mission Mandate
+contributes committed facts and audit continuity, never authority.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<p id="section-8.2-3">A Mandate binds no holder and is freely copyable (<a href="#non-goals" class="auto internal xref">Section 9</a>), so
 possession of one is not evidence that the presenter is the Mission's
 Subject or client. A rail <span class="bcp14">MUST NOT</span> derive authority on possession of a
 Mandate alone. Before minting its vertical artifact, the rail <span class="bcp14">MUST</span>
 independently authenticate the presenter as the Mission's <code>subject</code> or
 <code>client_id</code> through its own channel, and treat the Mandate only as the
-committed facts that authentication is checked against. That
-authentication is necessary, never sufficient: minting is the rail's
-own authorization decision under its own governance, and neither the
-Mandate nor its presentation substitutes for it. Until a
+committed facts that authentication is checked against.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">That authentication is necessary, never sufficient: minting is the
+rail's own authorization decision under its own governance, and
+neither the Mandate nor its presentation substitutes for it. Until a
 holder-bound Mandate is defined (<a href="#non-goals" class="auto internal xref">Section 9</a>), that independent
 authentication is the only binding between the artifact and its
 presenter, and deriving authority without it repeats the
-mandate-as-credential misuse (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.2-2" class="pilcrow">¶</a></p>
-<p id="section-8.2-3">A rail deriving a durable artifact from a Mandate <span class="bcp14">SHOULD</span> record the
+mandate-as-credential misuse (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">A rail deriving a durable artifact from a Mandate <span class="bcp14">SHOULD</span> record the
 time of its current-state check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) in its own
 artifact. It <span class="bcp14">SHOULD</span> consume Mission Status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Lifecycle Signals
@@ -2292,7 +2292,7 @@ its own artifact's digest with the Mission reference, on the
 Mission's feed under that profile's extension pattern
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), so the Mission's evidence
 shows what external artifacts it spawned, as it shows what children
-it delegated.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+it delegated.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audit-evidence">

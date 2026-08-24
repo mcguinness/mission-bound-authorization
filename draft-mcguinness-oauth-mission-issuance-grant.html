@@ -1852,7 +1852,8 @@ authority source, and refuse when the Mission is not established
 audience-scoped to this AS, <span class="bcp14">MUST</span> carry the Mission's current
 <code>authorization_details</code> and a monotonic state <code>version</code>, and <span class="bcp14">MUST</span>
 answer within a staleness bound the deployment publishes
-(<a href="#conformance" class="auto internal xref">Section 10</a>). Where the Mission is <code>active</code>, the consuming AS
+(<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">Where the Mission is <code>active</code>, the consuming AS
 projects issued authority through the current Effective Authority
 Set: the intersection of the grant's <code>authorization_details</code> (on
 refresh, the refresh family's own ceiling), any narrower authority the
@@ -1861,8 +1862,8 @@ and the consuming AS's own policy, which narrows only, per the subset
 rule above. A partial intersection issues only the remainder. This
 projection precedes scope projection above: an AS that models
 authority as <code>scope</code> maps the narrowed remainder, never the grant's
-original set.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1-2">An empty intersection is refused by its cause. Where the underlying
+original set.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1-3">An empty intersection is refused by its cause. Where the underlying
 authorization is exhausted, that is, where the grant's own authority
 intersected with the Effective Authority Set and the AS's policy is
 already empty before the request's own narrowing term, the refusal is
@@ -1875,8 +1876,8 @@ authorization survives and only the narrowing the client requested
 fails to intersect it, the request is at fault: the refusal is
 <code>invalid_scope</code> where the request carried <code>scope</code>, or
 <code>invalid_authorization_details</code> <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> where it carried
-<code>authorization_details</code>.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
-<p id="section-7.1-3">The Mission Status operation discharges the source properties above
+<code>authorization_details</code>.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">The Mission Status operation discharges the source properties above
 directly: an authenticated, audience-scoped Mission Status Response,
 queried with this AS's own audience, carries current
 <code>authorization_details</code> and the Mission's state <code>version</code>
@@ -1884,8 +1885,8 @@ queried with this AS's own audience, carries current
 an active Mission state, or a Status List VALID bit, does not alone
 satisfy this: containment and discharge narrow an active Mission
 without moving its lifecycle state, and the Status List's bit carries
-no <code>authorization_details</code> at all.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.1-4">A source that is unavailable, fails verification, or reports a state
+no <code>authorization_details</code> at all.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">A source that is unavailable, fails verification, or reports a state
 <code>version</code> older than one already observed for this Mission is a
 transient failure, never authority exhaustion, and is refused in a
 machine-readable shape: this profile defines a token-endpoint use of
@@ -1895,8 +1896,8 @@ deployment's declared state-recovery policy (<a href="#redemption-errors" class=
 The consuming AS leaves its stored ceiling unchanged. <code>invalid_grant</code>
 stays for the permanent classes: an invalid, expired, or replayed
 grant, a Mission that is not established <code>active</code>, and a genuinely
-empty current intersection.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.1-5">Consumption is atomic with issuance. The single-use <code>jti</code> check of
+empty current intersection.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">Consumption is atomic with issuance. The single-use <code>jti</code> check of
 <a href="#redemption" class="auto internal xref">Section 7</a> refuses a grant already recorded; the record itself is
 written atomically with successful issuance, after the state gate and
 this projection. A redemption that fails before issuance, a transient
@@ -1905,20 +1906,20 @@ and retryable, and concurrent redemptions of one grant are resolved by
 that atomic record: the loser is a replay, refused <code>invalid_grant</code>. On
 the refresh path a transient source failure <span class="bcp14">MUST NOT</span> consume or rotate
 the presented refresh token, so the client retries with the credential
-it already holds.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
-<p id="section-7.1-6">A refresh family's issued authority <span class="bcp14">MUST NOT</span> widen across refreshes
+it already holds.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+<p id="section-7.1-7">A refresh family's issued authority <span class="bcp14">MUST NOT</span> widen across refreshes
 within the same Mission: the consuming AS atomically narrows its own
 stored ceiling on every refresh, or retains the highest Mission state
 <code>version</code> it has observed and rejects a source reporting a lower one
-as a rollback.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
-<p id="section-7.1-7">A consuming AS without a Mission-state integration <span class="bcp14">MUST NOT</span> issue
+as a rollback.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
+<p id="section-7.1-8">A consuming AS without a Mission-state integration <span class="bcp14">MUST NOT</span> issue
 refresh tokens under a grant, and relies instead on the grant's
 <code>active</code>-at-minting gate and the short access-token lifetime above. A
 consuming AS that issues refresh tokens strengthens that integration
 from a lifecycle-state check to this authority-capable form:
 reporting Mission state alone no longer suffices. A consuming AS
 that cannot perform this projection <span class="bcp14">MUST NOT</span> claim containment- or
-discharge-aware issuance.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
+discharge-aware issuance.<a href="#section-7.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="redemption-errors">
@@ -2030,19 +2031,31 @@ problem from a dead Mission:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-7.2-3">The distinctions the client needs are "retry as is", "get a fresh
-grant", and "the Mission is dead", and the first is machine-readable:
-<code>temporarily_unavailable</code> with HTTP 503 says the authorization is
-intact and the same credential may be presented again, without parsing
-<code>error_description</code>. Most <code>invalid_grant</code> cases are the second: the
-client mints a fresh grant (<a href="#minting" class="auto internal xref">Section 6</a>) and retries. The dead-Mission
-case is a refresh refused on a non-active Mission; there the AS <span class="bcp14">SHOULD</span>
-make the response distinguishable with an <code>error_description</code> stating
-the Mission is not active, and a client that re-mints will in any case
-be refused at the MAS <code>active</code> gate with <code>mission_not_active</code>
-(<a href="#minting-errors" class="auto internal xref">Section 6.2</a>), which is the authoritative signal to stop rather
-than retry. <code>invalid_scope</code> and <code>invalid_authorization_details</code> name a
-request the client can narrow and re-send under the same grant.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">The distinctions the client needs are retry as is, get a fresh grant,
+and the Mission is dead:<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.2-4.1">
+            <p id="section-7.2-4.1.1"><strong>Retry as is.</strong> <code>temporarily_unavailable</code> with HTTP 503 is
+machine-readable: the authorization is intact and the same
+credential may be presented again, without parsing
+<code>error_description</code>.<a href="#section-7.2-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-4.2">
+            <p id="section-7.2-4.2.1"><strong>Get a fresh grant.</strong> Most <code>invalid_grant</code> cases fall here: the
+client mints a fresh grant (<a href="#minting" class="auto internal xref">Section 6</a>) and retries.<a href="#section-7.2-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-4.3">
+            <p id="section-7.2-4.3.1"><strong>The Mission is dead.</strong> The dead-Mission case is a refresh refused
+on a non-active Mission; there the AS <span class="bcp14">SHOULD</span> make the response
+distinguishable with an <code>error_description</code> stating the Mission is
+not active, and a client that re-mints will in any case be refused
+at the MAS <code>active</code> gate with <code>mission_not_active</code>
+(<a href="#minting-errors" class="auto internal xref">Section 6.2</a>), which is the authoritative signal to stop
+rather than retry.<a href="#section-7.2-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.2-5"><code>invalid_scope</code> and <code>invalid_authorization_details</code> name a request the
+client can narrow and re-send under the same grant.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="par-carriage">
@@ -2079,11 +2092,12 @@ authenticated at the authorization endpoint to the grant's <code>sub</code>: it
 proceeds only where the authenticated user is the grant's Subject
 under the deployment's mapping policy (<a href="#issuance-join" class="auto internal xref">Section 4</a>). The AS
 <span class="bcp14">MUST</span> refuse when a different user authenticates, so the grant cannot
-mint tokens for the wrong resource owner. For a service-owned or
-organizational Mission there is no delegating user to authenticate;
-such a grant is redeemed directly (<a href="#redemption" class="auto internal xref">Section 7</a>), not carried
-through the authorization code flow. The authenticated client <span class="bcp14">MUST</span>
-still be the grant's <code>client_id</code> (<a href="#redemption" class="auto internal xref">Section 7</a>).<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+mint tokens for the wrong resource owner.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+<p id="section-7.3-6">For a service-owned or organizational Mission there is no delegating
+user to authenticate; such a grant is redeemed directly
+(<a href="#redemption" class="auto internal xref">Section 7</a>), not carried through the authorization code flow.
+The authenticated client <span class="bcp14">MUST</span> still be the grant's <code>client_id</code>
+(<a href="#redemption" class="auto internal xref">Section 7</a>).<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
