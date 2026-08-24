@@ -42,6 +42,8 @@ const VIEW: MissionView = {
       constraints: { vendors: ["acme"] },
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 };
 
 const AS = "https://as.test";
@@ -89,8 +91,8 @@ function pep(): Pep {
     modelId,
     // @spec runtime#state-freshness: a synchronous live read, freshness-
     // stamped at this read (Finding 1); source declared to allowedFreshnessSources below.
-    loadView: (id) =>
-      id === VIEW.id
+    loadView: (ref) =>
+      ref.id === VIEW.id && ref.issuer === VIEW.issuer
         ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
         : undefined,
     instanceEpoch: "epoch-1",

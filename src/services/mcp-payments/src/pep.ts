@@ -10,16 +10,26 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
-import { TXN_AUTHORIZATION_REQUIRED, type JsonValue, type TxnMissionClaim , type PropagatedMissionReference } from "@mission/core";
+import {
+  computeAnchor,
+  type JsonValue,
+  MISSION_ORIGIN_SUBJECT_TYP,
+  type PropagatedMissionReference,
+  TXN_AUTHORIZATION_REQUIRED,
+  type TxnMissionClaim,
+} from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
   type Decision,
+  type EntitlementResolver,
   evaluate,
   type EvaluationRequest,
   type Fga,
   type Freshness,
   type MissionView,
+  type OriginPrincipal,
+  type PrincipalMappingResolver,
   relationForAction,
   stalenessBoundSeconds,
 } from "@mission/pdp";
@@ -63,7 +73,27 @@ export interface TokenFacts {
   clientId: string;
   clientInstanceId?: string;
   act?: ActObject;
-  mission: { id: string; issuer: string; authority_hash: string };
+  mission: {
+    id: string;
+    issuer: string;
+    authority_hash: string;
+    /**
+     * @spec cross-domain#mission-subject — the verified token's immutable
+     * origin principal, present only where the Origin Principal profile
+     * applies. Carried unchanged from the validated claim into the AuthZEN
+     * envelope's `context.mission.subject`, never from an unverified request
+     * value.
+     */
+    subject?: OriginPrincipal;
+  };
+  /**
+   * @spec authzen#pdp-request rule 10 — this resource's own issuer identity
+   * (the `iss` every ordinary token here verifies against), carried so the
+   * envelope can populate `subject.properties.iss`: the authenticated
+   * destination-local token subject's home issuer. A resource-wide constant,
+   * not read from the presented token.
+   */
+  iss?: string;
   /**
    * @spec txn-authorization#resource-challenge — the VERIFIED token's whole
    * `mission` claim. A challenge copies it unchanged (including the invariant
@@ -198,6 +228,43 @@ export interface LoadedView {
   freshness: Freshness;
 }
 
+/**
+ * @spec authority-server#reference-tuple — the canonical (`issuer`,
+ * `mission_id`) pair a Mission reference is compared as, whether the source
+ * is a credential's own `mission` claim or a PEP-supplied Mission Join
+ * reference. `loadView` is keyed on this pair, not `id` alone, so a same-id
+ * collision under a different issuer is a load-time miss rather than
+ * something each call site must separately catch.
+ */
+export interface MissionReference {
+  id: string;
+  issuer: string;
+}
+
+/**
+ * @spec authority-server#reference-tuple — verifies the loader honored the
+ * canonical (issuer, id) key it was asked for, rather than trusting it: not
+ * every `loadView` implementation enforces this itself (a fixture matching
+ * on `id` alone is common in tests, and the negative-boundary tests for
+ * {@link Pep.enforceInner}'s own `mission_reference_conflict` check
+ * deliberately keep one). A consumer with no comparable use for that
+ * distinction — {@link Pep.reverifyList}, `McpPaymentsServer.toolsList` —
+ * MUST resolve `loadView` through this wrapper rather than calling it
+ * directly, so a same-id different-issuer collision is a plain miss for
+ * them too, never a silently consumed wrong Mission (#685 review). It is
+ * NOT used by `enforceInner`: that call site needs to tell "no Mission"
+ * apart from "wrong issuer" for its own `mission_reference_conflict`
+ * refusal, so it checks the issuer itself and reports the distinction.
+ */
+export function loadCheckedView(
+  loadView: (ref: MissionReference) => LoadedView | undefined,
+  ref: MissionReference,
+): LoadedView | undefined {
+  const loaded = loadView(ref);
+  if (!loaded || loaded.view.id !== ref.id || loaded.view.issuer !== ref.issuer) return undefined;
+  return loaded;
+}
+
 export interface PepDeps {
   payments: PaymentsStore;
   evidence: EvidenceStore;
@@ -207,9 +274,12 @@ export interface PepDeps {
    * The PDP's view of a mission plus the state source's own freshness
    * assertion (in a real deployment fetched from AS/Status). The loader
    * asserts `freshness`; the PEP only propagates it (@spec
-   * runtime#state-freshness).
+   * runtime#state-freshness). Keyed by the canonical (issuer, id) pair
+   * (@spec authority-server#reference-tuple): a loader MUST resolve only the
+   * Mission whose issuer matches the one supplied, returning `undefined` on
+   * a same-id different-issuer request rather than the wrong Mission.
    */
-  loadView: (missionId: string) => LoadedView | undefined;
+  loadView: (ref: MissionReference) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
   sourceDigest: string;
@@ -223,6 +293,26 @@ export interface PepDeps {
    * to the PDP's `allowedFreshnessSources` unchanged.
    */
   allowedFreshnessSources?: ReadonlySet<string>;
+  /**
+   * @spec cross-domain#origin-principal-mapping — resolves
+   * `context.mission.subject` to a destination-local mapping; forwarded to
+   * the PDP's `principalMapping` unchanged. Absent, the PDP denies every
+   * request claiming the cross-domain Origin Principal profile
+   * `principal_mapping_failed`; a request not claiming the profile never
+   * carries `mission.subject`, so this deployment is unaffected either way.
+   */
+  principalMapping?: PrincipalMappingResolver;
+  /**
+   * @spec cross-domain#dual-axis — resolves current entitlement for the
+   * mapped local principal; forwarded to the PDP's `entitlement` unchanged.
+   */
+  entitlement?: EntitlementResolver;
+  /**
+   * @spec cross-domain#dual-axis — the declared maximum staleness (seconds)
+   * of a principal-entitlement resolution; forwarded to the PDP's
+   * `entitlementStalenessBoundSeconds` unchanged.
+   */
+  entitlementStalenessBoundSeconds?: number;
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
@@ -433,7 +523,7 @@ export class Pep {
       if (!matches) return this.refuse(token, "mission_reference_conflict", mapping.action);
     }
 
-    const loaded = this.deps.loadView(token.mission.id);
+    const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
     if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
     const { view, freshness } = loaded;
 
@@ -551,12 +641,24 @@ export class Pep {
     }
 
     const req: EvaluationRequest = {
-      subject: { id: token.sub },
+      // @spec authzen#pdp-request rule 10 — `subject.properties.iss` is this
+      // resource's own verified issuer identity, carried on TokenFacts by
+      // the token validator that authenticated this request, never anything
+      // client-supplied.
+      subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
       resource: resourceObj,
       action: { name: mapping.action },
       context: {
         audience: CANONICAL_RESOURCE,
-        mission: { id: view.id, issuer: token.mission.issuer, authority_hash: token.mission.authority_hash },
+        mission: {
+          id: view.id,
+          issuer: token.mission.issuer,
+          authority_hash: token.mission.authority_hash,
+          // @spec cross-domain#mission-subject, authzen#context-mission — the
+          // verified token's immutable origin principal, carried unchanged;
+          // never populated from `args` or any other unverified request value.
+          ...(token.mission.subject !== undefined ? { subject: token.mission.subject } : {}),
+        },
         // @spec runtime#state-freshness: `freshness` is the loader's OWN
         // assertion of when it read authoritative state, propagated exactly
         // as `loadView` returned it. The PEP never stamps its own clock here
@@ -597,9 +699,41 @@ export class Pep {
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
       ...(this.deps.allowedFreshnessSources ? { allowedFreshnessSources: this.deps.allowedFreshnessSources } : {}),
+      ...(this.deps.principalMapping ? { principalMapping: this.deps.principalMapping } : {}),
+      ...(this.deps.entitlement ? { entitlement: this.deps.entitlement } : {}),
+      ...(this.deps.entitlementStalenessBoundSeconds !== undefined
+        ? { entitlementStalenessBoundSeconds: this.deps.entitlementStalenessBoundSeconds }
+        : {}),
     });
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
+
+    // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
+    // runtime-evidence#evidence-pii (#686 review) — the PDP's decision context
+    // carries the RAW origin/local {iss, sub} pairs (an ephemeral, in-process
+    // decision contract); the RETAINED Decision Evidence below must not. Every
+    // decision that reached step 4a's mapping success (permit or a later-step
+    // denial, e.g. entitlement-caused principal_mapping_failed) carries this
+    // member, replacing the raw identities with protected references (the
+    // family anchor idiom, typ mission-origin-subject) before persisting.
+    const rawPrincipalMapping = decision.context.principal_mapping as
+      | {
+          origin: OriginPrincipal;
+          local: OriginPrincipal;
+          policy: { id: string; version: string };
+          observed_at: string;
+          valid_until: string;
+        }
+      | undefined;
+    const protectedPrincipalMapping = rawPrincipalMapping
+      ? {
+          origin: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, rawPrincipalMapping.origin as unknown as JsonValue),
+          local: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, rawPrincipalMapping.local as unknown as JsonValue),
+          policy: rawPrincipalMapping.policy,
+          observed_at: rawPrincipalMapping.observed_at,
+          valid_until: rawPrincipalMapping.valid_until,
+        }
+      : undefined;
 
     this.deps.evidence.record({
       kind: "decision",
@@ -614,6 +748,7 @@ export class Pep {
       // `evaluation_id` the PDP response carries, additive alongside the
       // pre-existing `decision_id` copy this record already keeps.
       ...(decision.context.evaluation_id ? { evaluation_id: decision.context.evaluation_id as string } : {}),
+      ...(protectedPrincipalMapping ? { principal_mapping: protectedPrincipalMapping } : {}),
       mission_id: view.id,
       authority_hash: view.authority_hash,
       action: mapping.action,
@@ -794,7 +929,7 @@ export class Pep {
    * `"requested"`), so no separate input needs to be threaded through.
    */
   reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
-    const loaded = this.deps.loadView(token.mission.id);
+    const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
     );

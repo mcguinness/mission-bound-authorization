@@ -34,6 +34,8 @@ const view: MissionView = {
   authority_set: [
     { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 };
 
 const reqFor = (actionClass: string): EvaluationRequest => ({

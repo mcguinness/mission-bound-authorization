@@ -106,6 +106,8 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   I-D.draft-mcguinness-mission-discovery:
     title: "Mission Open-World Discovery"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
@@ -130,8 +132,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   RFC8610:
   I-D.draft-ietf-scitt-scrapi:
   I-D.draft-mcguinness-mission-runtime:
@@ -475,13 +475,20 @@ member.
 Each registrable evidence type fixes the exact bytes that are hashed,
 the media type carried in `payload-preimage-content-type`, the
 operational `typ` its retained form carries (none where the retained
-object is unsigned), and the producer authoritative for it. A producer
-MUST commit to the canonical bytes named here. A relying party MUST
-verify the producer is authoritative for the type
-({{registration-policy}}) before treating a record as part of the
-Mission's feed. The table is a normative catalog of evidence types,
-not a registry: a row registers nothing, and its identifier is
-defined, and registered where it is, by the profile the row cites.
+object is unsigned), and the producer authoritative for it: an
+evidence-type registration. This document is that registration,
+normatively, only for the four evidence types it itself defines
+({{iana}}); a producer of one of those types MUST commit to the
+canonical bytes fixed there. For every other row, the cited profile
+is that registration: committing to its canonical bytes is that
+profile's own conformance duty, imposed there, and this document
+neither restates it nor requires consulting that profile's text to
+satisfy it. This table is an informative catalog of every row's
+properties, consulted only where the citing profile is adopted. A
+relying party MUST verify, from the producer this table records for
+a record's type, that the record's `iss` is that producer
+({{registration-policy}}) before treating the record as part of the
+Mission's feed; a row registers nothing on its own.
 
 | Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
 |---|---|---|---|---|
@@ -611,15 +618,16 @@ to `application/mission-approval-record+json` and keeps a digest of one
 evidence type from being read as another.
 
 Each companion-defined row binds only a deployment that produces that
-evidence, so the reference is consulted only where the profile is
-adopted. A row whose defining profile is Experimental (the Discovery
-Evidence, Containment evidence, Protected event receipt, and Work
-Product Binding rows) stays on that profile's maturity: its reference
-is a conditional normative down-reference, binding only a deployment
-that produces that row's evidence, and a deployment not running an
-Experimental profile omits its rows. A deployment that does not run
-the Signals profile commits lifecycle transitions as the transition
-object ({{transition-object}}) instead of the Signals SET.
+evidence, so the citation is consulted only where the profile is
+adopted. The Discovery Evidence, Containment evidence, Protected
+event receipt, and Work Product Binding rows cite profiles at
+Experimental maturity; the reference classification convention's
+maturity bound keeps this document's citation to each informative,
+and each cited profile places the registration duty on its own
+adopters. A deployment not running one of those profiles omits its
+rows. A deployment that does not run the Signals profile commits
+lifecycle transitions as the transition object
+({{transition-object}}) instead of the Signals SET.
 
 A Child Evidence record registers on the Parent Mission's feed: the
 `sub` is the parent's ({{feed}}), its producer is the `issuer`, and
@@ -1577,6 +1585,8 @@ Service are defined elsewhere:
   ({{I-D.draft-mcguinness-mission-mandate}});
 - the Child Evidence type identifier by the child-delegation profile
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
+- the Discovery Evidence media type by the discovery profile
+  ({{I-D.draft-mcguinness-mission-discovery}});
 - the Harness Evidence and Egress Evidence type identifiers by the
   harness profile ({{I-D.draft-mcguinness-mission-harness}});
 - the Containment Evidence and Protected Event Receipt type
@@ -1593,6 +1603,26 @@ substrate's ({{RFC9943}}). This profile derives the `sub` by profile
 rather than registering a new identifier.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- The Discovery Evidence, Containment evidence, Protected event
+  receipt, and Work Product Binding front-matter references moved
+  from normative to informative, meeting the reference
+  classification convention's maturity bound (a Standards-Track
+  draft never lists an Experimental draft as normative). The Evidence
+  Types normative rule narrowed to this document's own four evidence
+  types ({{iana}}); for every other row, committing to canonical
+  bytes is the cited profile's own conformance duty, never restated
+  or required to be consulted here, and relying-party producer
+  verification consumes only the producer identifier this table
+  records. Containment's Portable Evidence forward-pointer corrected
+  to match: Containment registers its own evidence media types.
+  Discovery Evidence gained a self-hosted canonical-bytes definition
+  and IANA media-type registration in its own profile, closing the
+  one gap this document's citation had left undefined (#662).
 
 # Acknowledgments
 {:numbered="false"}

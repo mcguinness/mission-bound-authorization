@@ -35,6 +35,8 @@ export {
   Pep,
   type PepDeps,
   type LoadedView,
+  type MissionReference,
+  loadCheckedView,
   type RequestSignals,
   type TokenFacts,
   type TxnCredential,

@@ -75,6 +75,8 @@ const VIEW: MissionView = {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: ISSUER, sub: "alice" },
+  client_id: "ap-agent",
 };
 
 let fga: Fga;
@@ -119,8 +121,10 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
   const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
-  const loadView = (id: string) =>
-    id === VIEW.id
+  // Implements the canonical (issuer, id) tuple contract (@spec
+  // authority-server#reference-tuple, #685 review).
+  const loadView = (ref: { id: string; issuer: string }) =>
+    ref.id === VIEW.id && ref.issuer === VIEW.issuer
       ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({
