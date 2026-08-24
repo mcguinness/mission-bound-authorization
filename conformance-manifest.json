@@ -3435,7 +3435,7 @@
    "id": "mas.join.credential-mission-equality",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "high-consequence-binding",
-   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim and a consistent `authority_hash`, and denies on any mismatch",
+   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, and, where both convey `authority_hash`, a consistent value too, denying on any mismatch",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -3446,7 +3446,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a propagated Mission-Reference co-present with a Mission-bound credential must equal the credential's own mission claim exactly; any divergence denies"
+    "normative": "a propagated Mission-Reference co-present with a Mission-bound credential must equal the credential's own mission claim's id and issuer exactly, and its authority_hash too when both sides carry one; any divergence denies (#702: authority_hash left the baseline mission claim, so this check no longer assumes it is always present)"
    },
    "level": "endpoint",
    "coverage": "todo",
