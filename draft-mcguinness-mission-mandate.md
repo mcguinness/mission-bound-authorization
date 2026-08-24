@@ -280,7 +280,7 @@ consumes:
 | --- | --- | --- |
 | Structured Authority | not consumed | `authority_set` and `authority_hash` are committed facts a verifier recomputes for correlation ({{verification}} step 6); a consumer MUST NOT derive authority from any claim member ({{claims}}) |
 | Lifecycle-Gated Authorization | not consumed | A Mandate authorizes no action and gates no decision; reliance on a currently active Mission is the freshness check of {{state-at-issuance}}, not a gate this document performs |
-| State-Observable | consumed | Consumed whenever reliance requires a currently active Mission ({{verification}} step 7); `state_at_issuance` never substitutes, and the stale class of {{failures}} applies until current state is obtained |
+| State-Observable | required when reliance requires a currently active Mission | Consumed whenever reliance requires a currently active Mission ({{verification}} step 7); `state_at_issuance` never substitutes, and the stale class of {{failures}} applies until current state is obtained |
 | Monotonic Derivation | not consumed | A Mandate narrows nothing; a rail's vertical derivation ({{vertical-derivation}}) is that rail's own governance, never a narrowing this document performs |
 | Credential-Bound | not consumed | A Mandate binds no holder and is freely copyable ({{non-goals}}); a deriving rail MUST independently authenticate the presenter through its own channel ({{vertical-derivation}}) |
 | Authorized Context Correlation | not consumed | Presenter correlation is the deriving rail's own independent authentication, never a joining association this document establishes ({{vertical-derivation}}) |

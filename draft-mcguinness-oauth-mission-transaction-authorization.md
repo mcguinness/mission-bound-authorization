@@ -926,8 +926,8 @@ Its declaration against the optional capabilities:
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
 | Lifecycle-Gated Authorization | required | A transaction token is minted only from a Mission the TAS observed `active`; this document adds no second gate to the issuance profile's ({{I-D.draft-mcguinness-oauth-mission}}) |
-| Structured Authority | consumed | The challenge and token's `authorization_details` entry is evaluated against the verified Authority Set under the subset rule ({{challenge-redemption}} step 3) |
-| State-Observable | consumed | Offline verification observes current Mission state within its declared freshness bound ({{offline-verification}}); establishing that state is the runtime and Status profiles' concern |
+| Structured Authority | required | The challenge and token's `authorization_details` entry is evaluated against the verified Authority Set under the subset rule ({{challenge-redemption}} step 3) |
+| State-Observable | required | Offline verification observes current Mission state within its declared freshness bound ({{offline-verification}}); establishing that state is the runtime and Status profiles' concern |
 | Monotonic Derivation | not consumed | A transaction token narrows nothing durable: it is a bounded, single-use permit, not a Mission, Child Mission, or successor |
 | Credential-Bound | required and produced | `subject_token` MUST already be sender-constrained by `cnf`, and the minted transaction token is itself a `cnf`-bound artifact ({{transaction-token}}); this profile both requires and produces the capability |
 | Authorized Context Correlation | not consumed | The Presenting Client authenticates directly with its own `cnf` proof; no issuer-established correlation joins a separate credential to the Mission here |
