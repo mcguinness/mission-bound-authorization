@@ -1826,9 +1826,14 @@ Mission Claim") with status members added. It carries:<a href="#section-4.4-10.2
                 <p id="section-4.4-10.2.2.1.1"><code>id</code>, <code>issuer</code>: the subject Mission's identifier and issuer.<a href="#section-4.4-10.2.2.1.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-4.4-10.2.2.2">
-                <p id="section-4.4-10.2.2.2.1"><code>authority_hash</code>: the issuance profile's consent commitment over
-the Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Integrity Anchors").<a href="#section-4.4-10.2.2.2.1" class="pilcrow">¶</a></p>
+                <p id="section-4.4-10.2.2.2.1"><code>authority_hash</code>: <span class="bcp14">OPTIONAL</span>. The issuance profile's consent
+commitment over the Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Integrity Anchors"), disclosed at the AS's discretion to
+a caller it authorizes for audit or correlation use, on the same
+minimization footing as the issuance profile's introspection
+disclosure privilege (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Caller Authorization and Minimization"). Not carried on
+the issuance profile's baseline <code>mission</code> claim.<a href="#section-4.4-10.2.2.2.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-4.4-10.2.2.3">
                 <p id="section-4.4-10.2.2.3.1"><code>state</code>: the current Mission lifecycle state. The authoritative
@@ -2185,10 +2190,11 @@ Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> pr
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "Mission State via
 Token Introspection"). That section already
 defines a <code>mission</code> member on the introspection response carrying
-<code>id</code>, <code>issuer</code>, <code>authority_hash</code>, and (from the Mission's issuer) the
-lifecycle <code>state</code>, together with the caller-authorization,
-minimization, and issuer-only-reports-state rules. This document does
-not restate those rules.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<code>id</code> and <code>issuer</code>, and (from the Mission's issuer) the lifecycle
+<code>state</code>, with <code>authority_hash</code> disclosed only to a caller holding
+that member's disclosure privilege, together with the
+caller-authorization, minimization, and issuer-only-reports-state
+rules. This document does not restate those rules.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">This extension adds the following to that projection:<a href="#section-5-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5-3.1">
@@ -4234,12 +4240,12 @@ covers privacy specific to the extensions here.<a href="#section-13-1" class="pi
         </h3>
 <p id="section-13.1-1">The Mission Status operation (<a href="#mission-status" class="auto internal xref">Section 4</a>) and the
 introspection projection (<a href="#introspection-projection" class="auto internal xref">Section 5</a>) disclose
-Mission state, the
-<code>authority_hash</code>, and the audience-scoped <code>authorization_details</code> to
-the authenticated, authorized requester. A deployment <span class="bcp14">MUST</span> treat both
-as Mission information-disclosure surfaces with the same privacy
-posture, audience-filtering the disclosed authority so a consumer
-never sees entries addressed to other audiences
+Mission state and the audience-scoped <code>authorization_details</code> to the
+authenticated, authorized requester, and <span class="bcp14">MAY</span> additionally disclose
+<code>authority_hash</code> to a requester authorized for it. A deployment <span class="bcp14">MUST</span>
+treat both as Mission information-disclosure surfaces with the same
+privacy posture, audience-filtering the disclosed authority so a
+consumer never sees entries addressed to other audiences
 (<a href="#mission-status-response" class="auto internal xref">Section 4.4</a>).<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>

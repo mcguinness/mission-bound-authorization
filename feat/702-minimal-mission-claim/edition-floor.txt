@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-24T23:23:38Z
-Source repository commit: daa235221df6583c27bc2a74d6aa0f61eeee93f0
+Generated: 2026-08-24T23:43:38Z
+Source repository commit: f596cc19545b5f0b4c07ce642c98ec1c8ede1c54
 Member count: 7
 
 Reading order:
@@ -1644,10 +1644,13 @@ Table of Contents
 
 10.3.  The Mission-Bound Credential
 
-   A credential carrying the mission claim (id, issuer, authority_hash)
-   and Mission-derived authorization details, issued only while the
-   Mission is active.  Home: the OAuth binding's Mission-Bound Access
-   Tokens and The Mission Claim sections.
+   A credential carrying the mission claim (id, issuer) and Mission-
+   derived authorization details, issued only while the Mission is
+   active.  Home: the OAuth binding's Mission-Bound Access Tokens and
+   The Mission Claim sections.  The claim's id and issuer are the
+   Mission-identity condition; a token-carried Authority Set commitment
+   is never required for it, per condition 2 of credential-mission-bound
+   above.
 
    This is the binding-dependent primitive, and it is exactly where the
    bindings split.  The OAuth binding provides it.  The standalone
@@ -1655,10 +1658,9 @@ Table of Contents
    MAS provides neither this credential nor issuance gating
    ([I-D.draft-mcguinness-mission-authority-server]).  An AAuth auth
    token can carry the native {approver, s256} mission reference, but it
-   does not carry the OAuth authority_hash or Mission-derived
-   authorization details and therefore is Mission-referenced, not a
-   Mission-bound credential in the strong sense defined above
-   ([I-D.draft-mcguinness-mission-aauth]).
+   does not carry Mission-derived authorization details and therefore is
+   Mission-referenced, not a Mission-bound credential in the strong
+   sense defined above ([I-D.draft-mcguinness-mission-aauth]).
 
    For profiles that compose with it, the seam is the runtime profile's
    Mission binding establishment step
@@ -12900,9 +12902,15 @@ Table of Contents
 
       -  id, issuer: the subject Mission's identifier and issuer.
 
-      -  authority_hash: the issuance profile's consent commitment over
-         the Authority Set ([I-D.draft-mcguinness-oauth-mission],
-         Section "Integrity Anchors").
+      -  authority_hash: OPTIONAL.  The issuance profile's consent
+         commitment over the Authority Set
+         ([I-D.draft-mcguinness-oauth-mission], Section "Integrity
+         Anchors"), disclosed at the AS's discretion to a caller it
+         authorizes for audit or correlation use, on the same
+         minimization footing as the issuance profile's introspection
+         disclosure privilege ([I-D.draft-mcguinness-oauth-mission],
+         Section "Caller Authorization and Minimization").  Not carried
+         on the issuance profile's baseline mission claim.
 
       -  state: the current Mission lifecycle state.  The authoritative
          state space is the issuance profile's
@@ -13171,10 +13179,11 @@ Table of Contents
    Introspection [RFC7662] projection of
    [I-D.draft-mcguinness-oauth-mission] (Section "Mission State via
    Token Introspection").  That section already defines a mission member
-   on the introspection response carrying id, issuer, authority_hash,
-   and (from the Mission's issuer) the lifecycle state, together with
-   the caller-authorization, minimization, and issuer-only-reports-state
-   rules.  This document does not restate those rules.
+   on the introspection response carrying id and issuer, and (from the
+   Mission's issuer) the lifecycle state, with authority_hash disclosed
+   only to a caller holding that member's disclosure privilege, together
+   with the caller-authorization, minimization, and issuer-only-reports-
+   state rules.  This document does not restate those rules.
 
    This extension adds the following to that projection:
 
@@ -14722,12 +14731,13 @@ Table of Contents
 13.1.  Status and Lifecycle as Disclosure Surfaces
 
    The Mission Status operation (Section 4) and the introspection
-   projection (Section 5) disclose Mission state, the authority_hash,
-   and the audience-scoped authorization_details to the authenticated,
-   authorized requester.  A deployment MUST treat both as Mission
-   information-disclosure surfaces with the same privacy posture,
-   audience-filtering the disclosed authority so a consumer never sees
-   entries addressed to other audiences (Section 4.4).
+   projection (Section 5) disclose Mission state and the audience-scoped
+   authorization_details to the authenticated, authorized requester, and
+   MAY additionally disclose authority_hash to a requester authorized
+   for it.  A deployment MUST treat both as Mission information-
+   disclosure surfaces with the same privacy posture, audience-filtering
+   the disclosed authority so a consumer never sees entries addressed to
+   other audiences (Section 4.4).
 
 13.2.  Status Audit Logging
 

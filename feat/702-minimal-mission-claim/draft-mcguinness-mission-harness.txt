@@ -515,8 +515,10 @@ Table of Contents
    issuer:  REQUIRED.  The Mission's issuer, the Mission Issuer's issuer
       URL.
 
-   authority_hash:  REQUIRED when known.  The Authority Set commitment
-      from the Mission claim.
+   authority_hash:  REQUIRED when known.  The Mission's Authority Set
+      commitment, recorded on the Mission and not part of the issuance
+      profile's baseline mission claim; a harness holds it only where a
+      companion profile discloses it to it.
 
    status_checked_at:  REQUIRED when the harness has checked status.  An
       RFC 3339 timestamp.

@@ -1921,11 +1921,18 @@ published key material for its signed artifacts.<a href="#section-9.2-4" class="
 <a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-the-mission-claim" class="section-name selfRef">The Mission Claim</a>
         </h3>
 <p id="section-10.1-1">An RPT issued under a Mission names it through the <code>mission</code> claim:
-the family members <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> as the
-issuance profile defines them, and it <span class="bcp14">SHOULD</span> carry the <code>expires_at</code>
-member as the issuance profile defines it
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), a bounding commitment with
-no liveness. The claim is delivered on one of two carriage surfaces:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+the family members <code>id</code> and <code>issuer</code>, as the issuance profile's
+baseline <code>mission</code> claim defines them
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It <span class="bcp14">SHOULD</span> also carry the
+<code>expires_at</code> member as the issuance profile defines it, a bounding
+commitment with no liveness; the issuance profile's rule that a
+profile minting a further credential downstream, or verifying Mission
+lifetime from retained state, <span class="bcp14">MUST</span> require it applies here unchanged.
+<code>authority_hash</code> is likewise not part of this binding's baseline
+claim; it becomes available only on the same disclosure terms the
+issuance profile defines for its own baseline claim (introspection's
+disclosure privilege, or its Local Approved-Set Verification
+profile). The claim is delivered on one of two carriage surfaces:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10.1-2.1">
             <p id="section-10.1-2.1.1"><strong>Token-carried</strong>: a deployment issuing JWT-format RPTs carries
@@ -2051,8 +2058,6 @@ the document-service drawdown:<a href="#section-10.5-1" class="pilcrow">¶</a></
   "mission": {
     "id": "msn_4Xq7NvR2pTb8Kd1zYw6mA3f5",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:Qm4dSrX0kJc2uJ9pVzWfY7hTgD1eN8oLxCAiRb63EMk",
     "expires_at": "2026-12-31T23:59:59Z",
     "state": "active"
   }

@@ -2165,7 +2165,7 @@ recorded policy.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
 <code>predecessor</code> member, both on the successor's <code>mission</code> claim and on
 the successor's Mission record.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The issuance profile's <code>mission</code> claim is an open object: additional
-members <span class="bcp14">MAY</span> appear alongside <code>id</code>, <code>issuer</code>, and <code>authority_hash</code>, each
+members <span class="bcp14">MAY</span> appear alongside <code>id</code> and <code>issuer</code>, each
 defined by the profile that introduces it, and a consumer <span class="bcp14">MUST</span> ignore
 members it does not understand and <span class="bcp14">MUST NOT</span> use any additional member
 to grant or widen authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
@@ -2253,8 +2253,6 @@ other token claims omitted):<a href="#section-7-11" class="pilcrow">¶</a></p>
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
@@ -3038,8 +3036,6 @@ token carries a <code>predecessor</code> member:<a href="#section-14-3" class="p
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }

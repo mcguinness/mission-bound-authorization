@@ -1463,9 +1463,13 @@ consuming AS. Only this authenticated client redeems the grant.<a href="#section
 <dt id="section-5-3.13">
 <code>mission</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-3.14">
-          <p id="section-5-3.14.1"><span class="bcp14">REQUIRED</span>. The issuance profile's <code>mission</code> claim object (<code>id</code>, <code>issuer</code>,
-<code>authority_hash</code>), exactly as recorded, extended with the
-<code>expires_at</code> member of <a href="#expires-at-member" class="auto internal xref">Section 5.1</a>.<a href="#section-5-3.14.1" class="pilcrow">¶</a></p>
+          <p id="section-5-3.14.1"><span class="bcp14">REQUIRED</span>. The issuance profile's <code>mission</code> claim object (<code>id</code> and
+<code>issuer</code>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), extended with the
+<code>expires_at</code> member of <a href="#expires-at-member" class="auto internal xref">Section 5.1</a>. This profile REQUIRES
+<code>authority_hash</code> on that object too, reintroducing it beyond the
+issuance profile's baseline as this profile's own lineage anchor for
+the consuming AS, which has no further channel back to the Mission
+Issuer once it holds the grant.<a href="#section-5-3.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-3.15">
