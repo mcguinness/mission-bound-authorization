@@ -1474,11 +1474,13 @@ conformance language of <a href="#conformance" class="auto internal xref">Sectio
 supports none of them is unaffected and remains a conforming issuance
 profile.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">This document does not restate the issuance profile. The Mission Intent,
-authority derivation, the <code>mission_resource_access</code> authorization
-details type, the <code>mission</code> claim, the integrity anchors, Mission-bound
-token issuance, the subset rule, and lifecycle gating are all defined
-in <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and are referenced, not
-re-specified, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
+authority derivation, the <code>mission</code> claim, the integrity anchors,
+Mission-bound token issuance, the subset rule, and lifecycle gating are
+all defined in <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the
+<code>mission_resource_access</code> authorization details type is defined in its
+Mission Resource Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>); both are
+referenced, not re-specified, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="doc-status">
@@ -1488,7 +1490,8 @@ re-specified, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-2-1">Maturity: stable. Maintenance: active.
 Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
-Requires: Mission-Bound Authorization for OAuth 2.0.<a href="#section-2-1" class="pilcrow">¶</a></p>
+Requires: Mission-Bound Authorization for OAuth 2.0.
+Also requires, conditionally: Mission Resource Access Profile for OAuth 2.0 (when the completion capability's terminal_when Common Constraint is used).<a href="#section-2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1509,8 +1512,10 @@ serves these surfaces with the same semantics; the AAuth Person
 Server plays the same role for its native missions through its own
 AAuth-native management surface
 <span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), Authority Set, the
-<code>mission</code> claim, <code>mission_id</code>, and the <code>mission_resource_access</code>
-authorization details type. Resource AS is used as defined in the
+<code>mission</code> claim, and <code>mission_id</code>; and the <code>mission_resource_access</code>
+authorization details type defined in its Mission Resource Access
+Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).
+Resource AS is used as defined in the
 cross-domain companion
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>. It additionally
 uses:<a href="#section-3-2" class="pilcrow">¶</a></p>
@@ -1895,8 +1900,8 @@ where the deployment publishes a Mission Status List
           <li class="normal" id="section-4.4-10.3">
             <p id="section-4.4-10.3.1"><code>authorization_details</code>: the audience-scoped Authority Set entries
 relevant to the requesting audience, as the <code>mission_resource_access</code>
-shape of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "Mission
-Authority"), carried at the top level as a sibling of <code>mission</code> (as
+shape of <span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>,
+carried at the top level as a sibling of <code>mission</code> (as
 on the token and in the introspection response). Entries addressed
 to other audiences <span class="bcp14">MUST NOT</span> be disclosed. When the request omits
 <code>audience</code> (<a href="#mission-status-request" class="auto internal xref">Section 4.1</a>), there is no requesting
@@ -3371,7 +3376,7 @@ rendered and committed, and carry no machine effect
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8-2" class="pilcrow">¶</a></p>
 <p id="section-8-3">This section supplies the enforceable counterpart. It defines
 <code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) on a
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) on a
 <code>mission_resource_access</code> entry that carries one or more completion
 conditions. When a condition is met, the entry is <strong>discharged</strong>: the
 Authorization Server no longer derives a token carrying that entry
@@ -3408,16 +3413,21 @@ own authority without waiting for a clock or a revoke.<a href="#section-8-7" cla
 <a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the Issuance Profile</a>
         </h3>
 <p id="section-8.1-1">The completion capability depends normatively on the issuance profile
-and is not implementable alone. It reuses, without restating, the
-issuance profile's Mission, <code>mission_resource_access</code> entry, Authority
-Set, subset rule, integrity anchors, lifecycle states, and issuance
-gating, and the inert <code>success_criteria</code> member of the Mission Intent.
-It uses Mission, Mission Issuer, Authority Set, and derivation as the
-issuance profile defines them.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<p id="section-8.1-2">It extends the issuance profile in one narrow, additive way: it
-registers <code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint on a
+and on its Mission Resource Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), and is not
+implementable alone. It reuses, without restating, the issuance
+profile's Mission, Authority Set, subset rule, integrity anchors,
+lifecycle states, and issuance gating, and the inert <code>success_criteria</code>
+member of the Mission Intent; and the Mission Resource Access
+Profile's <code>mission_resource_access</code> entry and Common Constraints
+registry. It uses Mission, Mission Issuer, Authority Set, and
+derivation as the issuance profile defines them, and the
+<code>mission_resource_access</code> entry as the Mission Resource Access Profile
+defines it.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">It extends the Mission Resource Access Profile in one narrow, additive
+way: it registers <code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint on a
 <code>mission_resource_access</code> entry (<a href="#terminal-when" class="auto internal xref">Section 8.2</a>), whose subset rule
-the issuance profile's existing subset comparison applies
+that profile's existing subset comparison applies
 (<a href="#subset-extension" class="auto internal xref">Section 8.4</a>). It changes no Mission lifecycle state and no
 meaning of any existing member.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 </section>
@@ -3428,10 +3438,10 @@ meaning of any existing member.<a href="#section-8.1-2" class="pilcrow">¶</a></
 <a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-entry-completion-conditions" class="section-name selfRef">Entry Completion Conditions</a>
         </h3>
 <p id="section-8.2-1">This section defines <code>terminal_when</code>, a Common Constraint
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) carried in the <code>constraints</code>
-object of a <code>mission_resource_access</code> entry. It is a
-specification-defined Common Constraint under the issuance profile's
-naming convention (<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) carried in
+the <code>constraints</code> object of a <code>mission_resource_access</code> entry. It is a
+specification-defined Common Constraint under the Mission Resource
+Access Profile's naming convention (<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-8.2-2">
           <dt id="section-8.2-2.1">
 <code>terminal_when</code>:</dt>
@@ -4273,13 +4283,13 @@ above.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
 <p id="section-14-1">This document requests IANA actions for OAuth AS metadata members, a
-media type, and a registration in the issuance profile's Mission
-Common Constraints registry. It defines no new registry of its own:
-the endpoint authentication-method value space is a closed set defined
-inline (<a href="#as-metadata" class="auto internal xref">Section 10</a>), and the <code>terminal_when</code> Common Constraint is
-registered in the issuance profile's registry
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), not established as a
-registry here (<a href="#iana-terminal-when" class="auto internal xref">Section 14.4</a>).<a href="#section-14-1" class="pilcrow">¶</a></p>
+media type, and a registration in the Mission Resource Access
+Profile's Mission Common Constraints registry. It defines no new
+registry of its own: the endpoint authentication-method value space is
+a closed set defined inline (<a href="#as-metadata" class="auto internal xref">Section 10</a>), and the <code>terminal_when</code>
+Common Constraint is registered in that profile's registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), not
+established as a registry here (<a href="#iana-terminal-when" class="auto internal xref">Section 14.4</a>).<a href="#section-14-1" class="pilcrow">¶</a></p>
 <div id="oauth-authorization-server-metadata-registration">
 <section id="section-14.1">
         <h3 id="name-oauth-authorization-server-">
@@ -4439,8 +4449,9 @@ Specification Required policy:<a href="#section-14.3-1" class="pilcrow">¶</a></
 <a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-common-constraints-registry" class="section-name selfRef">Common Constraints Registry: terminal_when</a>
         </h3>
 <p id="section-14.4-1">The completion capability (<a href="#completion" class="auto internal xref">Section 8</a>) registers one Common
-Constraint in the issuance profile's Mission Common Constraints
-registry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under that
+Constraint in the Mission Resource Access Profile's Mission Common
+Constraints registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), under that
 registry's Specification Required policy. This document supplies the
 registration's required fields:<a href="#section-14.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -4481,10 +4492,11 @@ identical array and the identical <code>authority_hash</code>.<a href="#section-
 </li>
         </ul>
 <p id="section-14.4-3"><code>terminal_when</code> is a <code>constraints</code> member of the <code>mission_resource_access</code>
-authorization details type defined by the issuance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <code>event_type</code> values are
-deployment- or registry-defined and opaque to this document, as
-<code>purpose</code> is, so this document establishes no registry of event types.<a href="#section-14.4-3" class="pilcrow">¶</a></p>
+authorization details type defined by the Mission Resource Access
+Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).
+<code>event_type</code> values are deployment- or registry-defined and opaque to
+this document, as <code>purpose</code> is, so this document establishes no
+registry of event types.<a href="#section-14.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="well-known-uri">
@@ -4526,6 +4538,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-3-draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

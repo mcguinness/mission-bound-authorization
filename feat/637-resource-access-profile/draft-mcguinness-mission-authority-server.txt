@@ -372,11 +372,16 @@ Table of Contents
    |             |        |            |                         |exceeded     |
    +-------------+--------+------------+-------------------------+-------------+
    |Structured   |supplied|always      |The issuance profile's   |Semantics    |
-   |Authority    |        |            |Authority Set and Common |apply only to|
-   |             |        |            |Constraints are held at  |the declared |
-   |             |        |            |the MAS and evaluated at |authority-   |
-   |             |        |            |the joining PDP          |detail types |
-   |             |        |            |                         |and mappings |
+   |Authority    |        |            |Authority Set, including |apply only to|
+   |             |        |            |any supported type's own |the declared |
+   |             |        |            |constraint vocabulary    |authority-   |
+   |             |        |            |(for                     |detail types |
+   |             |        |            |mission_resource_access, |and mappings |
+   |             |        |            |the Mission Resource     |             |
+   |             |        |            |Access Profile's Common  |             |
+   |             |        |            |Constraints), is held at |             |
+   |             |        |            |the MAS and evaluated at |             |
+   |             |        |            |the joining PDP          |             |
    +-------------+--------+------------+-------------------------+-------------+
    |Monotonic    |supplied|native child|The defined no-broader-  |PDP action   |
    |Derivation   |        |creation    |than relation at the     |evaluation is|

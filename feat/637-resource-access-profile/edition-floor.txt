@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-24T20:17:18Z
-Source repository commit: a0e9ecb7974b803ccfad13e7e10772acf4db74fc
+Generated: 2026-08-24T20:30:27Z
+Source repository commit: 8c57e0e098b94006f00245aa5327ffd62c89802f
 Member count: 7
 
 Reading order:
@@ -927,8 +927,9 @@ Table of Contents
       drawdown within a ceiling a human pre-consented
       ([I-D.draft-mcguinness-oauth-mission-progressive]).  The relation
       is typed: it is defined where a structured-authority vocabulary
-      defines it (in the OAuth binding, mission_resource_access and the
-      Common Constraints), and authority carried in a type with no
+      defines it (on the OAuth binding, mission_resource_access and its
+      Common Constraints, defined by the OAuth binding's Mission
+      Resource Access Profile), and authority carried in a type with no
       defined subset relation is carried as approved, neither narrowed,
       delegated, nor projected; moving authority into expressive policy-
       language entries weakens this guarantee exactly there, a trade to
@@ -1025,7 +1026,8 @@ Table of Contents
    agreement: the resource owns its operation semantics and
    consequences, while the family owns the registered cross-resource
    constraint vocabulary, which a resource explicitly advertises and
-   adopts before it binds ([I-D.draft-mcguinness-oauth-mission]).
+   adopts before it binds
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Resource-owned meaning reaches the three consuming layers through
    five mechanisms, each normative in its own home and composing as one
@@ -1035,7 +1037,8 @@ Table of Contents
       conforming party evaluates identically, with the
       mission_constraints_supported protected-resource metadata member
       advertising which constraints a resource enforces.  Home: the
-      issuance profile ([I-D.draft-mcguinness-oauth-mission]).
+      OAuth binding's Mission Resource Access Profile
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Capability-source binding:  Catalog-sourced capability definitions
       (an MCP tool, an OpenAPI operation) content-digested at derivation
@@ -1498,102 +1501,88 @@ Table of Contents
 
 10.1.  The Primitives, at a Glance
 
-   +==============+==================+==================+==============+
-   |Primitive     |The OAuth         | Normative home   |Consumed by   |
-   |              |realization       |                  |              |
-   +==============+==================+==================+==============+
-   |Mission       |An opaque, non-   | The OAuth        |Every         |
-   |Identifier and|reused identifier | binding: Mission |companion:    |
-   |Issuer        |with at least 128 | Record, Mission  |decisions,    |
-   |              |bits of entropy   | Identifier       |evidence,     |
-   |              |and no semantic   | Format           |harness       |
-   |              |content, plus the |                  |bindings, the |
-   |              |issuer URL;       |                  |state         |
-   |              |together they     |                  |surfaces, the |
-   |              |name exactly one  |                  |audit         |
-   |              |Mission.  The     |                  |statement     |
-   |              |kernel requires   |                  |subject, the  |
-   |              |stability, non-   |                  |Mandate       |
-   |              |reassignment, and |                  |              |
-   |              |unguessability,   |                  |              |
-   |              |not this syntax   |                  |              |
-   +--------------+------------------+------------------+--------------+
-   |Lifecycle     |The states of     | The OAuth        |Runtime per-  |
-   |state space   |Section 4, open   | binding (state   |class re-check|
-   |              |to companion-     | space, only-     |(fail closed  |
-   |              |defined states,   | active); the     |on staleness),|
-   |              |with the only-    | status and       |harness pause,|
-   |              |active rule,      | runtime profiles |suppress, and |
-   |              |fail-safe         | (freshness);     |terminate, the|
-   |              |unrecognized      | Status and       |orchestrator's|
-   |              |states, and a     | Signals          |unwind        |
-   |              |freshness source  | (observation)    |trigger, the  |
-   |              |with a stated     |                  |Mandate (state|
-   |              |staleness bound   |                  |as of minting)|
-   +--------------+------------------+------------------+--------------+
-   |Authority Set |Authorization-    | The OAuth        |Runtime and   |
-   |representation|details entries   | binding: Mission |the AuthZEN   |
-   |              |([RFC9396]), each | Authority,       |binding, the  |
-   |              |naming resource,  | Subset Rule,     |MAS, Expansion|
-   |              |actions, and      | Common           |and           |
-   |              |constraints,      | Constraints      |Completion,   |
-   |              |under the subset  |                  |Child         |
-   |              |rule (derived or  |                  |Delegation and|
-   |              |delegated         |                  |Offline       |
-   |              |authority is      |                  |Attenuation,  |
-   |              |never broader)    |                  |Consent       |
-   |              |and the Common    |                  |Evidence, the |
-   |              |Constraints       |                  |Mandate       |
-   |              |vocabulary        |                  |              |
-   |              |(registered names |                  |              |
-   |              |with fixed subset |                  |              |
-   |              |and intersection  |                  |              |
-   |              |rules)            |                  |              |
-   +--------------+------------------+------------------+--------------+
-   |Integrity-    |A committed       | The OAuth        |Consent       |
-   |anchor        |object hashed     | binding:         |Evidence,     |
-   |envelope      |over a typ-       | Integrity        |Shaping, the  |
-   |              |domain-separated, | Anchors,         |runtime layer |
-   |              |issuer-bound      | Canonicalization |and AuthZEN   |
-   |              |envelope with     | Rules,           |binding       |
-   |              |fixed             | Extensibility    |(mission-     |
-   |              |canonicalization  |                  |policy-view), |
-   |              |and an algorithm- |                  |Orchestration,|
-   |              |prefixed encoding |                  |the Mandate,  |
-   |              |a verifier        |                  |Audit         |
-   |              |recognizes or     |                  |Transparency  |
-   |              |rejects (unknown  |                  |              |
-   |              |prefixes refuse;  |                  |              |
-   |              |no downgrade);    |                  |              |
-   |              |the typ space is  |                  |              |
-   |              |the extension     |                  |              |
-   |              |point             |                  |              |
-   +--------------+------------------+------------------+--------------+
-   |Issuer key    |Signing keys      | The OAuth        |Verifiers of  |
-   |material      |resolvable from   | binding: Signing |Mission-bound |
-   |              |issuer; across a  | and Key Rotation |credentials,  |
-   |              |rotation each key |                  |Consent       |
-   |              |identifier stays  |                  |Evidence, the |
-   |              |resolvable while  |                  |Mandate, the  |
-   |              |artifacts signed  |                  |signed state  |
-   |              |under it remain   |                  |surfaces,     |
-   |              |within the audit  |                  |Audit         |
-   |              |horizon           |                  |Transparency  |
-   +--------------+------------------+------------------+--------------+
-   |Audit horizon |The deployment-   | The OAuth        |Consent and   |
-   |              |declared          | binding: Mission |runtime       |
-   |              |retention window: | Record           |evidence and  |
-   |              |at least the      |                  |Audit         |
-   |              |Mission's         |                  |Transparency  |
-   |              |lifetime plus a   |                  |(retention),  |
-   |              |declared post-    |                  |the MAS       |
-   |              |terminal period   |                  |(record       |
-   |              |                  |                  |retention),   |
-   |              |                  |                  |the security  |
-   |              |                  |                  |model's       |
-   |              |                  |                  |retention     |
-   |              |                  |                  |analysis      |
-   +--------------+------------------+------------------+--------------+
+   +==============+========================+================+==============+
+   |Primitive     |The OAuth realization   |Normative home  |Consumed by   |
+   +==============+========================+================+==============+
+   |Mission       |An opaque, non-reused   |The OAuth       |Every         |
+   |Identifier and|identifier with at least|binding: Mission|companion:    |
+   |Issuer        |128 bits of entropy and |Record, Mission |decisions,    |
+   |              |no semantic content,    |Identifier      |evidence,     |
+   |              |plus the issuer URL;    |Format          |harness       |
+   |              |together they name      |                |bindings, the |
+   |              |exactly one Mission.    |                |state         |
+   |              |The kernel requires     |                |surfaces, the |
+   |              |stability, non-         |                |audit         |
+   |              |reassignment, and       |                |statement     |
+   |              |unguessability, not this|                |subject, the  |
+   |              |syntax                  |                |Mandate       |
+   +--------------+------------------------+----------------+--------------+
+   |Lifecycle     |The states of Section 4,|The OAuth       |Runtime per-  |
+   |state space   |open to companion-      |binding (state  |class re-check|
+   |              |defined states, with the|space, only-    |(fail closed  |
+   |              |only-active rule, fail- |active); the    |on staleness),|
+   |              |safe unrecognized       |status and      |harness pause,|
+   |              |states, and a freshness |runtime profiles|suppress, and |
+   |              |source with a stated    |(freshness);    |terminate, the|
+   |              |staleness bound         |Status and      |orchestrator's|
+   |              |                        |Signals         |unwind        |
+   |              |                        |(observation)   |trigger, the  |
+   |              |                        |                |Mandate (state|
+   |              |                        |                |as of minting)|
+   +--------------+------------------------+----------------+--------------+
+   |Authority Set |Authorization-details   |The OAuth       |Runtime and   |
+   |representation|entries ([RFC9396]),    |binding: Mission|the AuthZEN   |
+   |              |each naming resource,   |Authority,      |binding, the  |
+   |              |actions, and            |Subset Rule; the|MAS, Expansion|
+   |              |constraints, under the  |Mission Resource|and           |
+   |              |subset rule (derived or |Access Profile: |Completion,   |
+   |              |delegated authority is  |Common          |Child         |
+   |              |never broader) and, for |Constraints     |Delegation and|
+   |              |mission_resource_access,|                |Offline       |
+   |              |the Common Constraints  |                |Attenuation,  |
+   |              |vocabulary (registered  |                |Consent       |
+   |              |names with fixed subset |                |Evidence, the |
+   |              |and intersection rules) |                |Mandate       |
+   +--------------+------------------------+----------------+--------------+
+   |Integrity-    |A committed object      |The OAuth       |Consent       |
+   |anchor        |hashed over a typ-      |binding:        |Evidence,     |
+   |envelope      |domain-separated,       |Integrity       |Shaping, the  |
+   |              |issuer-bound envelope   |Anchors,        |runtime layer |
+   |              |with fixed              |Canonicalization|and AuthZEN   |
+   |              |canonicalization and an |Rules,          |binding       |
+   |              |algorithm-prefixed      |Extensibility   |(mission-     |
+   |              |encoding a verifier     |                |policy-view), |
+   |              |recognizes or rejects   |                |Orchestration,|
+   |              |(unknown prefixes       |                |the Mandate,  |
+   |              |refuse; no downgrade);  |                |Audit         |
+   |              |the typ space is the    |                |Transparency  |
+   |              |extension point         |                |              |
+   +--------------+------------------------+----------------+--------------+
+   |Issuer key    |Signing keys resolvable |The OAuth       |Verifiers of  |
+   |material      |from issuer; across a   |binding: Signing|Mission-bound |
+   |              |rotation each key       |and Key Rotation|credentials,  |
+   |              |identifier stays        |                |Consent       |
+   |              |resolvable while        |                |Evidence, the |
+   |              |artifacts signed under  |                |Mandate, the  |
+   |              |it remain within the    |                |signed state  |
+   |              |audit horizon           |                |surfaces,     |
+   |              |                        |                |Audit         |
+   |              |                        |                |Transparency  |
+   +--------------+------------------------+----------------+--------------+
+   |Audit horizon |The deployment-declared |The OAuth       |Consent and   |
+   |              |retention window: at    |binding: Mission|runtime       |
+   |              |least the Mission's     |Record          |evidence and  |
+   |              |lifetime plus a declared|                |Audit         |
+   |              |post-terminal period    |                |Transparency  |
+   |              |                        |                |(retention),  |
+   |              |                        |                |the MAS       |
+   |              |                        |                |(record       |
+   |              |                        |                |retention),   |
+   |              |                        |                |the security  |
+   |              |                        |                |model's       |
+   |              |                        |                |retention     |
+   |              |                        |                |analysis      |
+   +--------------+------------------------+----------------+--------------+
 
           Table 1: Substrate primitives in their OAuth realization
 
@@ -12050,10 +12039,12 @@ Table of Contents
    none of them is unaffected and remains a conforming issuance profile.
 
    This document does not restate the issuance profile.  The Mission
-   Intent, authority derivation, the mission_resource_access
-   authorization details type, the mission claim, the integrity anchors,
-   Mission-bound token issuance, the subset rule, and lifecycle gating
-   are all defined in [I-D.draft-mcguinness-oauth-mission] and are
+   Intent, authority derivation, the mission claim, the integrity
+   anchors, Mission-bound token issuance, the subset rule, and lifecycle
+   gating are all defined in [I-D.draft-mcguinness-oauth-mission]; the
+   mission_resource_access authorization details type is defined in its
+   Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]); both are
    referenced, not re-specified, here.
 
 2.  Status: An Optional Profile
@@ -12061,6 +12052,9 @@ Table of Contents
    Maturity: stable.  Maintenance: active.  Adopt when: You must observe
    or change Mission state beyond token expiry (revoke, suspend,
    complete).  Requires: Mission-Bound Authorization for OAuth 2.0.
+   Also requires, conditionally: Mission Resource Access Profile for
+   OAuth 2.0 (when the completion capability's terminal_when Common
+   Constraint is used).
 
 3.  Conventions and Terminology
 
@@ -12079,10 +12073,12 @@ Table of Contents
    Server plays the same role for its native missions through its own
    AAuth-native management surface
    [I-D.draft-mcguinness-mission-aauth]), Authority Set, the mission
-   claim, mission_id, and the mission_resource_access authorization
-   details type.  Resource AS is used as defined in the cross-domain
-   companion [I-D.draft-mcguinness-oauth-mission-cross-domain].  It
-   additionally uses:
+   claim, and mission_id; and the mission_resource_access authorization
+   details type defined in its Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Resource AS
+   is used as defined in the cross-domain companion
+   [I-D.draft-mcguinness-oauth-mission-cross-domain].  It additionally
+   uses:
 
    Mission Status Response:  A signed payload returned by the dedicated
       Mission Status operation (Section 4), reporting a Mission's
@@ -12403,13 +12399,12 @@ Table of Contents
    *  authorization_details: the audience-scoped Authority Set entries
       relevant to the requesting audience, as the
       mission_resource_access shape of
-      [I-D.draft-mcguinness-oauth-mission] (Section "Mission
-      Authority"), carried at the top level as a sibling of mission (as
-      on the token and in the introspection response).  Entries
-      addressed to other audiences MUST NOT be disclosed.  When the
-      request omits audience (Section 4.1), there is no requesting
-      audience: the response is state-only and MUST NOT carry
-      authorization_details.
+      [I-D.draft-mcguinness-oauth-mission-resource-access], carried at
+      the top level as a sibling of mission (as on the token and in the
+      introspection response).  Entries addressed to other audiences
+      MUST NOT be disclosed.  When the request omits audience
+      (Section 4.1), there is no requesting audience: the response is
+      state-only and MUST NOT carry authorization_details.
 
    A consumer MUST verify, before honoring a response:
 
@@ -13476,11 +13471,12 @@ Table of Contents
 
    This section supplies the enforceable counterpart.  It defines
    terminal_when, an OPTIONAL Common Constraint
-   ([I-D.draft-mcguinness-oauth-mission]) on a mission_resource_access
-   entry that carries one or more completion conditions.  When a
-   condition is met, the entry is *discharged*: the Authorization Server
-   no longer derives a token carrying that entry (Section 8.3), exactly
-   as it refuses derivation for a non-active Mission.
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]) on a
+   mission_resource_access entry that carries one or more completion
+   conditions.  When a condition is met, the entry is *discharged*: the
+   Authorization Server no longer derives a token carrying that entry
+   (Section 8.3), exactly as it refuses derivation for a non-active
+   Mission.
 
    Three properties make this safe inside the Mission model and this
    section requires all three:
@@ -13507,27 +13503,32 @@ Table of Contents
 8.1.  Relationship to the Issuance Profile
 
    The completion capability depends normatively on the issuance profile
-   and is not implementable alone.  It reuses, without restating, the
-   issuance profile's Mission, mission_resource_access entry, Authority
-   Set, subset rule, integrity anchors, lifecycle states, and issuance
-   gating, and the inert success_criteria member of the Mission Intent.
-   It uses Mission, Mission Issuer, Authority Set, and derivation as the
-   issuance profile defines them.
+   and on its Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]), and is not
+   implementable alone.  It reuses, without restating, the issuance
+   profile's Mission, Authority Set, subset rule, integrity anchors,
+   lifecycle states, and issuance gating, and the inert success_criteria
+   member of the Mission Intent; and the Mission Resource Access
+   Profile's mission_resource_access entry and Common Constraints
+   registry.  It uses Mission, Mission Issuer, Authority Set, and
+   derivation as the issuance profile defines them, and the
+   mission_resource_access entry as the Mission Resource Access Profile
+   defines it.
 
-   It extends the issuance profile in one narrow, additive way: it
-   registers terminal_when, an OPTIONAL Common Constraint on a
-   mission_resource_access entry (Section 8.2), whose subset rule the
-   issuance profile's existing subset comparison applies (Section 8.4).
-   It changes no Mission lifecycle state and no meaning of any existing
-   member.
+   It extends the Mission Resource Access Profile in one narrow,
+   additive way: it registers terminal_when, an OPTIONAL Common
+   Constraint on a mission_resource_access entry (Section 8.2), whose
+   subset rule that profile's existing subset comparison applies
+   (Section 8.4).  It changes no Mission lifecycle state and no meaning
+   of any existing member.
 
 8.2.  Entry Completion Conditions
 
    This section defines terminal_when, a Common Constraint
-   ([I-D.draft-mcguinness-oauth-mission]) carried in the constraints
-   object of a mission_resource_access entry.  It is a specification-
-   defined Common Constraint under the issuance profile's naming
-   convention (Section 14).
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]) carried in the
+   constraints object of a mission_resource_access entry.  It is a
+   specification-defined Common Constraint under the Mission Resource
+   Access Profile's naming convention (Section 14).
 
    terminal_when:  OPTIONAL.  An array of one or more completion
       conditions.  When any condition is met, the entry is discharged
@@ -14187,13 +14188,13 @@ Table of Contents
 14.  IANA Considerations
 
    This document requests IANA actions for OAuth AS metadata members, a
-   media type, and a registration in the issuance profile's Mission
-   Common Constraints registry.  It defines no new registry of its own:
-   the endpoint authentication-method value space is a closed set
-   defined inline (Section 10), and the terminal_when Common Constraint
-   is registered in the issuance profile's registry
-   ([I-D.draft-mcguinness-oauth-mission]), not established as a registry
-   here (Section 14.4).
+   media type, and a registration in the Mission Resource Access
+   Profile's Mission Common Constraints registry.  It defines no new
+   registry of its own: the endpoint authentication-method value space
+   is a closed set defined inline (Section 10), and the terminal_when
+   Common Constraint is registered in that profile's registry
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]), not
+   established as a registry here (Section 14.4).
 
 14.1.  OAuth Authorization Server Metadata Registration
 
@@ -14288,10 +14289,10 @@ Table of Contents
 14.4.  Common Constraints Registry: terminal_when
 
    The completion capability (Section 8) registers one Common Constraint
-   in the issuance profile's Mission Common Constraints registry
-   ([I-D.draft-mcguinness-oauth-mission]), under that registry's
-   Specification Required policy.  This document supplies the
-   registration's required fields:
+   in the Mission Resource Access Profile's Mission Common Constraints
+   registry ([I-D.draft-mcguinness-oauth-mission-resource-access]),
+   under that registry's Specification Required policy.  This document
+   supplies the registration's required fields:
 
    *  Key Name: terminal_when
 
@@ -14323,10 +14324,11 @@ Table of Contents
    *  Reference: this document, Section 8.2
 
    terminal_when is a constraints member of the mission_resource_access
-   authorization details type defined by the issuance profile
-   ([I-D.draft-mcguinness-oauth-mission]). event_type values are
-   deployment- or registry-defined and opaque to this document, as
-   purpose is, so this document establishes no registry of event types.
+   authorization details type defined by the Mission Resource Access
+   Profile ([I-D.draft-mcguinness-oauth-mission-resource-access]).
+   event_type values are deployment- or registry-defined and opaque to
+   this document, as purpose is, so this document establishes no
+   registry of event types.
 
 14.5.  Well-Known URI
 
@@ -14354,6 +14356,12 @@ Normative References
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

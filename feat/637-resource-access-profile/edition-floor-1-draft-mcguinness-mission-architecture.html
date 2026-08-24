@@ -2285,8 +2285,9 @@ approved successor: a fresh approval
 drawdown within a ceiling a human pre-consented
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). The relation
 is typed: it is defined where a structured-authority vocabulary
-defines it (in the OAuth binding, <code>mission_resource_access</code> and
-the Common Constraints), and authority carried in a type with no
+defines it (on the OAuth binding, <code>mission_resource_access</code> and
+its Common Constraints, defined by the OAuth binding's Mission
+Resource Access Profile), and authority carried in a type with no
 defined subset relation is carried as approved, neither narrowed,
 delegated, nor projected; moving authority into expressive
 policy-language entries weakens this guarantee exactly there, a
@@ -2399,7 +2400,7 @@ separately approved, never a place where authority widens
 resource owns its operation semantics and consequences, while the
 family owns the registered cross-resource constraint vocabulary,
 which a resource explicitly advertises and adopts before it binds
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">Resource-owned meaning reaches the three consuming layers through
 five mechanisms, each normative in its own home and composing as one
 contract:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
@@ -2409,8 +2410,9 @@ contract:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
             <p id="section-8.1-3.2.1">The registered constraint vocabulary every conforming party
 evaluates identically, with the <code>mission_constraints_supported</code>
 protected-resource metadata member advertising which constraints a
-resource enforces. Home: the issuance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
+resource enforces. Home: the OAuth binding's Mission Resource
+Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.1-3.3">Capability-source binding:</dt>
@@ -3009,8 +3011,8 @@ and the audit horizon participates in the governance record.<a href="#section-10
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Authority Set representation</td>
-              <td class="text-left" rowspan="1" colspan="1">Authorization-details entries (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and the Common Constraints vocabulary (registered names with fixed subset and intersection rules)</td>
-              <td class="text-left" rowspan="1" colspan="1">The OAuth binding: Mission Authority, Subset Rule, Common Constraints</td>
+              <td class="text-left" rowspan="1" colspan="1">Authorization-details entries (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and, for <code>mission_resource_access</code>, the Common Constraints vocabulary (registered names with fixed subset and intersection rules)</td>
+              <td class="text-left" rowspan="1" colspan="1">The OAuth binding: Mission Authority, Subset Rule; the Mission Resource Access Profile: Common Constraints</td>
               <td class="text-left" rowspan="1" colspan="1">Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate</td>
             </tr>
             <tr>
