@@ -1781,10 +1781,13 @@ together.
 
 ## The Mission-Bound Credential
 
-A credential carrying the `mission` claim (`id`, `issuer`,
-`authority_hash`) and Mission-derived authorization details, issued
-only while the Mission is `active`. Home: the OAuth binding's Mission-Bound
-Access Tokens and The Mission Claim sections.
+A credential carrying the `mission` claim (`id`, `issuer`) and
+Mission-derived authorization details, issued only while the Mission
+is `active`. Home: the OAuth binding's Mission-Bound Access Tokens and
+The Mission Claim sections. The claim's `id` and `issuer` are the
+Mission-identity condition; a token-carried Authority Set commitment
+is never required for it, per condition 2 of
+`credential-mission-bound` above.
 
 This is the binding-dependent primitive, and it is exactly where the
 bindings split. The OAuth binding provides it. The standalone binding
@@ -1792,10 +1795,9 @@ does not: the MAS's Mission Substrate section states that a MAS provides
 neither this credential nor issuance gating
 ({{I-D.draft-mcguinness-mission-authority-server}}). An AAuth auth token
 can carry the native `{approver, s256}` mission reference, but it does
-not carry the OAuth `authority_hash` or Mission-derived authorization
-details and therefore is Mission-referenced, not a Mission-bound
-credential in the strong sense defined above
-({{I-D.draft-mcguinness-mission-aauth}}).
+not carry Mission-derived authorization details and therefore is
+Mission-referenced, not a Mission-bound credential in the strong sense
+defined above ({{I-D.draft-mcguinness-mission-aauth}}).
 
 For profiles that compose with it, the seam is the runtime profile's
 Mission binding establishment step

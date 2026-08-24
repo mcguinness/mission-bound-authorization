@@ -607,10 +607,10 @@ Cache-Control: no-store
   "mission_id": "msn_5Jt9wX4kP7rN2vQ8yL3sD6zB0mF1hG-" }
 ~~~
 
-The token carries the `mission` claim and its `authority_hash` as the
-issuance profile defines. The agent never abandoned its request; the
-approval resolved over the narrowed proposal, and the committed
-`authority_hash` is over the read-only Authority Set actually approved.
+The token carries the `mission` claim as the issuance profile defines
+it. The agent never abandoned its request; the approval resolved over
+the narrowed proposal, and the committed `authority_hash`, recorded on
+the Mission, is over the read-only Authority Set actually approved.
 
 # Conformance {#conformance}
 
