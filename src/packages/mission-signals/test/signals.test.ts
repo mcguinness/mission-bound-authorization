@@ -103,6 +103,8 @@ async function bootstrap() {
     issuer: record.issuer,
     authority_hash: record.authority_hash,
     authority_set: record.authority_set,
+    subject: record.subject,
+    client_id: record.client_id,
   };
 
   const loadView = (id: string): MissionView | undefined => {
@@ -115,6 +117,8 @@ async function bootstrap() {
       version: s.version,
       authority_hash: snapshot.authority_hash,
       authority_set: snapshot.authority_set,
+      subject: snapshot.subject,
+      client_id: snapshot.client_id,
     };
   };
 

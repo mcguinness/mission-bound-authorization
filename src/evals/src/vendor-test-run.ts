@@ -22,6 +22,8 @@ async function main() {
     version: 1,
     authority_hash: "sha-256:evalhash",
     authority_set: EVAL_VIEW_AUTHORITY,
+    subject: { iss: "https://as.test", sub: "alice" },
+    client_id: "ap-agent",
   };
   const seedStore = () => {
     const s = new PaymentsStore();

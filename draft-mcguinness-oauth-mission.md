@@ -3430,9 +3430,14 @@ trust domain, not a cross-party protocol exchange, and the lifecycle
 gate that makes it effective ({{lifecycle}}, {{introspection}})
 already rides on existing endpoints, so no standardized endpoint is
 required for interoperability. A standardized Mission management API,
-with `suspend`/`resume`/`complete` operations, is specified separately
-by Mission Status {{I-D.draft-mcguinness-oauth-mission-status}}; this
-document does not require it.
+with `revoke`/`suspend`/`resume`/`complete` operations, is specified
+separately by Mission Status
+{{I-D.draft-mcguinness-oauth-mission-status}}; this document does not
+require it. The MUST is satisfiable through a deployment-defined
+authenticated surface; where a deployment adopts Mission Status, its
+Mission Lifecycle endpoint's `revoke` operation provides the
+interoperable operation, authorized per Status's own lifecycle
+authorization policy.
 
 A deployment MAY additionally treat {{RFC7009}} revocation of a
 Mission's refresh token as revoking the Mission. A deployment MUST NOT

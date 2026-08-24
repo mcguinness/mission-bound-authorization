@@ -1120,7 +1120,7 @@ Access Server, with contextual PS governance when the PS is on path.
 : A Mission ends by a state change at its issuer, not by finding and
   destroying credentials; outstanding credentials meet the issuance
   gate, the runtime re-check, or their own expiry, whichever comes
-  first ({{validity-model}}).
+  first ({{validity-model}}; {{I-D.draft-mcguinness-oauth-mission-status}}).
 
 **Attribution is carried, never inferred**:
 : Each role in the actor chain travels in its own construct, and the

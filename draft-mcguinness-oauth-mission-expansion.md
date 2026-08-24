@@ -1156,11 +1156,17 @@ The child delegation profile
 same parameter with the same semantics on its child-creation
 exchange, as `mission_denial_reason` is shared across the profiles
 that mint a Mission related to an existing one ({{denial-reasons}}).
-Delegation-family-creating exchanges adopt the same definitions by
-reference, each under its own domain-separating `op` value
-({{creation-fingerprint}}); the continuation profile's
-async-delegation exchange does so
-({{I-D.draft-mcguinness-oauth-mission-continuation}}).
+More generally, a creation exchange explicitly profiled by an
+adopter, not only one that mints a Mission, adopts the same
+definitions by reference, each under its own domain-separating `op`
+value and its own binding of the fingerprint's `source` and other
+members to what that exchange actually creates
+({{creation-fingerprint}}): the continuation profile's
+async-delegation exchange does so for a delegated refresh-token
+family, which is not a Mission
+({{I-D.draft-mcguinness-oauth-mission-continuation}}), and the
+template profile's Dispatch does so for a dispatched Mission
+({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 ## The operation fingerprint {#creation-fingerprint}
 
@@ -1185,8 +1191,13 @@ The fingerprint object carries exactly these members:
 
 `op`:
 : `expansion` for this document's exchange; `child-creation` for the
-  child delegation profile's. This member domain-separates the two
-  operations that share the token-exchange grant.
+  child delegation profile's; `dispatch` for the template profile's
+  Dispatch ({{I-D.draft-mcguinness-oauth-mission-template}}). This
+  member domain-separates the operations that share a creation
+  exchange. An adopting profile under the clause above declares its
+  own value the same way, as the continuation profile's
+  async-delegation exchange declares `async-delegation`
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
 
 `iss`:
 : The Mission Issuer's issuer identifier.
@@ -1197,10 +1208,19 @@ The fingerprint object carries exactly these members:
 `source`:
 : The `mission_id` of the source Mission resolved from
   `subject_token` ({{request-binding}}): the predecessor here, the
-  parent under child delegation. The resolved identifier is the
-  member, never the raw `subject_token`, since a legitimate retry
-  may carry a newly issued token for the same Mission, and never the
-  optional cross-check alone, which is non-authoritative.
+  parent under child delegation, and the base Mission under the
+  continuation profile's async-delegation exchange
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}). The resolved
+  identifier is the member, never the raw `subject_token`, since a
+  legitimate retry may carry a newly issued token for the same
+  Mission, and never the optional cross-check alone, which is
+  non-authoritative. An adopting profile whose exchange has no source
+  Mission or `subject_token` to resolve binds `source` to its own
+  profiled source authority instead, stated in its own adoption
+  clause: the template profile's Dispatch binds it to the dispatched
+  Mission Template's `id`
+  ({{I-D.draft-mcguinness-oauth-mission-template}}), never pretending
+  that identifier is a Mission ID.
 
 `cnf`:
 : The verified presenter confirmation: the DPoP proof key's `jkt`,

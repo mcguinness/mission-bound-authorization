@@ -53,6 +53,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-oauth-mission-transaction-authorization:
@@ -155,14 +163,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-status:
-    title: "Mission Status and Lifecycle for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
     author:
       -
         ins: K. McGuinness
@@ -560,9 +560,9 @@ It consumes these optional capabilities:
 | --- | --- | --- |
 | Structured Authority | required | The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
 | Lifecycle-Gated Authorization | required | Every Runtime Decision gates on the only-`active`-permits rule ({{decision}}) |
-| State-Observable | conditional | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
-| Monotonic Derivation | conditional | Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation ({{input-authority}}) |
-| Credential-Bound | conditional | Consumed when the binding provides the Mission-bound credential carrying the `mission` claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of {{mission-binding}} |
+| State-Observable | required when the enforcement scope's staleness bound is tighter than the credential lifetime | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
+| Monotonic Derivation | required when delegation, attenuation, or containment narrowing is enforced at action time | Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation ({{input-authority}}) |
+| Credential-Bound | required when the binding provides the Mission-bound credential | Consumed when the binding provides the Mission-bound credential carrying the `mission` claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of {{mission-binding}} |
 | Independently Verifiable | not consumed | Offline verification is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the runtime evidence companion defines the records and their scoped verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 | Portable Evidence | not consumed | Evidence portability is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the records themselves are the runtime evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 {: title="Runtime profile capability consumption"}

@@ -54,8 +54,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -64,6 +62,8 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
@@ -99,6 +99,22 @@ informative:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
     author:
       -
         ins: K. McGuinness
@@ -173,7 +189,7 @@ Nothing here places a new requirement back on the issuance profile.
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
-Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0.
+Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0; Mission Expansion for OAuth 2.0.
 <!-- family-status: END -->
 
 # Relationship to Other Profiles {#relationship}
@@ -193,10 +209,16 @@ The runtime enforcement profile {{I-D.draft-mcguinness-mission-runtime}}
 is a normative dependency for its action classes, which the
 prohibited-class rule tests against ({{prohibited-classes}}).
 
+The expansion profile {{I-D.draft-mcguinness-oauth-mission-expansion}}
+is also a normative dependency: Dispatch adopts its creation
+idempotency apparatus (the operation fingerprint, the durable
+reservation, revalidation, and recovery-as-delivery) by reference,
+under its own `op: dispatch` fingerprint value, rather than restating
+it ({{dispatch}}).
+
 Progressive authorization
-({{I-D.draft-mcguinness-oauth-mission-progressive}}) and expansion
-({{I-D.draft-mcguinness-oauth-mission-expansion}}) are informative
-siblings. Progressive removes the per-expansion human from a consented
+({{I-D.draft-mcguinness-oauth-mission-progressive}}) is an informative
+sibling. Progressive removes the per-expansion human from a consented
 authority ceiling on a single evolving Mission; this document removes
 the per-dispatch human from a consented template that mints many
 independent Missions. Both concentrate one considered human consent to
@@ -528,15 +550,83 @@ The Mission Issuer adjudicates a Dispatch in this order:
      than applying an undisclosed fourth clamp; and
    - `template` lineage member is set ({{template-member}}).
 
-A Dispatch MUST be idempotent per dispatch event identifier. The
-Dispatcher supplies a dispatch event identifier with the request; a
-repeated request bearing an identifier the Mission Issuer has already
-committed returns the Mission it already committed, and instantiates no
-second Mission. This makes retry safe at machine speed and keeps
-`max_active` and `dispatch_rate` accounting exact. The dispatch event
-identifier is this grant's realization of the creation idempotency
-the expansion profile defines for the family's Mission-creating token
-exchanges ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+A Dispatch MUST be idempotent per `dispatch_event_id`. The Dispatcher
+supplies a `dispatch_event_id` with the request, adopting the
+expansion profile's creation idempotency apparatus by reference
+under its own domain-separating `op` value, `dispatch`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
+Idempotency").
+
+The identifier and reservation key are `(authenticated client,
+dispatch_event_id)`, the Dispatcher being the authenticated client of
+{{grant-type}}. In the operation fingerprint, `op` is `dispatch`;
+`iss` and `client` are as the expansion profile defines them;
+`source` is this Dispatch's `template_id`, since a Dispatch has no
+source Mission or `subject_token` to resolve one from; `cnf` is the
+Dispatcher's verified presenter confirmation, the DPoP proof key's
+`jkt` or the mTLS certificate's `x5t#S256`; `intent` and `evidence`
+are the parsed `mission_intent` Submission envelope's members
+({{grant-type}}); `proposal` is the parsed `authorization_details`
+array, when present. `actor`, `child_actor`, `requested_token_type`,
+and `cross_check` are absent: a Dispatch carries no acting-agent
+token, no child actor, no token-exchange requested token type, and no
+predecessor or parent cross-check to compare against a resolved
+source. A dispatch-specific parameter affecting derivation, approval,
+output, or side effects extends the fingerprint the same way an
+extension parameter would under the expansion profile's own rule
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
+operation fingerprint").
+
+The reservation, its `(client, dispatch_event_id)` uniqueness, and
+the fingerprint-comparison outcomes on a repeated presentation are
+the expansion profile's, applied by reference: same fingerprint and
+completed, recover it; same fingerprint and reserved or pending,
+return the same in-progress result; different fingerprint, refuse
+with `invalid_request`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
+durable reservation"). The reservation and the dispatched Mission's
+identifier MUST be committed atomically with instance derivation and
+`max_active`/`dispatch_rate` accounting. Evidence emission is not
+part of that same atomic commit: the Mission Issuer atomically
+commits the evidence record, or a durable outbox entry for it, with
+Mission creation, and delivers or publishes it idempotently
+afterward, since external emission cannot generally participate in
+the datastore transaction.
+
+A revalidated retry's obligations depend on whether the original
+operation already committed creation. For a **completed** operation,
+the Mission Issuer MUST verify the recorded template identity,
+`template_version`, and fingerprint; the requester's continued
+membership in `allowed_dispatchers` and possession of the recorded
+`cnf`; and that the created Mission remains `active`, before
+recovering it. Current template applicability, including whether the
+checked `template_version` is still in force, is NOT re-evaluated for
+a completed operation: a template's own lifecycle already governs
+retirement, which stops further dispatch but does not terminate a
+Mission already dispatched ({{template-lifecycle}}), so recovery of
+that Mission MUST survive later retirement of the template version
+that created it. For a **reserved or pending** operation, which has
+not yet committed creation, the Mission Issuer instead revalidates
+the retry exactly as a fresh Dispatch: current `allowed_dispatchers`
+membership, possession of `cnf`, and current template applicability
+all apply, since no Mission yet exists for the retry to recover
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
+"Revalidation and lookup order").
+
+Recovery is delivery of the already-dispatched Mission, never a
+second instantiation and never a second count against `max_active` or
+`dispatch_rate`. A retry recovered while the original access token
+remains valid returns that token; a retry recovered after it has
+expired is answered by minting a fresh access token for the same,
+still-`active` instance, an ordinary delivery event that repeats no
+creation accounting, exactly as the expansion profile's recovery
+defines for an expired delivery credential
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Recovery
+is delivery"). Tombstone retention follows the expansion profile's
+rule, against the deployment's published retry horizon
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Tombstone
+retention"). This makes retry safe at machine speed and keeps
+`max_active` and `dispatch_rate` accounting exact.
 
 ## The template lineage member {#template-member}
 
@@ -655,13 +745,37 @@ class is within the Template Ceiling:
   ({{I-D.draft-mcguinness-mission-runtime}}); or
 - cross-domain authority.
 
-This is the prohibited set the progressive profile holds back from
-policy adjudication ({{I-D.draft-mcguinness-oauth-mission-progressive}}),
-applied here to dispatch. To make the rule testable, a deployment MUST
-publish in the Mission Deployment Profile a mapping from its action
-identifiers to the runtime profile's action classes
+Progressive holds back this same set from its own policy adjudication
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), applied here to
+dispatch. To make the rule testable, a deployment MUST publish in the
+Mission Deployment Profile a mapping from its action identifiers to
+the runtime profile's action classes
 ({{I-D.draft-mcguinness-mission-runtime}}), or an equivalent declared
 classification.
+
+The issuance profile's fourth high-risk class, a consumption bound
+({{I-D.draft-mcguinness-oauth-mission}}), is not on this list: it is
+the containment mechanism a dispatched instance draws down under, not
+a hazard dispatch amplifies. The template's `approval_basis` already
+carries the trace the issuance profile's approval-authentication floor
+requires for that class, through `consent_principal` and
+`approved_at` ({{dispatch}}); a deployment recording Consent Evidence
+renders the bound at the same surface under the metering profile's
+consent-integrity rule ({{I-D.draft-mcguinness-mission-metering}}).
+
+Where a deployment adopts Approval Governance
+({{I-D.draft-mcguinness-mission-approval-governance}}) and records a
+Governance Record for a dispatched instance, the template's
+`approval_basis` satisfies that profile's accountable-approver rule
+directly, through the same `consent_principal`, `root_commitment`,
+and `approved_at` this document already requires: no assertion is
+fabricated in the name of the Dispatcher or the Dispatch Policy to
+stand in for a fresh human decision that did not occur. Approval
+Governance's own high-risk-class default still binds that record: a
+dispatched instance carrying a consumption bound activates only where
+a committed, class-named exception admits it; absent the exception,
+the Mission fails to activate under that profile's atomic-commitment
+rule.
 
 The deployment's configured dispatch-prohibited action set MUST cover
 every action the published mapping classifies as irreversible,
@@ -846,8 +960,11 @@ conforming issuance-profile Mission Issuer
 - refuse a Dispatch outside the ceiling with `out_of_template_ceiling`
   and a Dispatch of a prohibited class with `dispatch_prohibited_class`
   ({{denial-reasons}});
-- make every Dispatch idempotent per dispatch event identifier
-  ({{dispatch}});
+- make every Dispatch idempotent per `dispatch_event_id`, adopting the
+  expansion profile's creation idempotency apparatus by reference
+  under `op: dispatch`, with the `(client, dispatch_event_id)`
+  reservation, fingerprint, revalidation, and delivery-as-recovery
+  bindings of {{dispatch}};
 - answer a Dispatch in one authenticated back-channel round trip, using
   no PAR, no interactive consent surface, and never
   `authorization_pending` ({{dispatch}});
@@ -886,8 +1003,26 @@ This is a proposed registration. The value is used under the reserved
 advance of registration completing; this document is the specification
 that names and defines it.
 
-Beyond that registration, this document requests no further IANA
-action. Following the restraint of the sibling profiles:
+This document also registers one parameter in the "OAuth Parameters"
+registry:
+
+- Name: `dispatch_event_id`
+- Parameter Usage Location: token request
+- Change Controller: IETF
+- Reference: this document, {{grant-type}}, {{dispatch}}
+
+`dispatch_event_id` is a distinct name from the expansion profile's
+`creation_request_id` ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
+even though it plays the identifier-and-reservation-key role that
+parameter's registration defines: it is already load-bearing as the
+`template` lineage member's field and in `approval_basis.activation`
+({{dispatch}}), and in the Dispatch grant-type parameter list
+({{grant-type}}), so this document keeps the name rather than
+reusing the expansion profile's own registered parameter under
+`op: dispatch`.
+
+Beyond these two registrations, this document requests no further
+IANA action. Following the restraint of the sibling profiles:
 
 - `template_hash` is a Mission integrity anchor whose `typ`,
   `mission-template`, follows the issuance profile's collision-resistant

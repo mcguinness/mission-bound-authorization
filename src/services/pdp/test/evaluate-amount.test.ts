@@ -33,6 +33,8 @@ const view = (maxAmount: string): MissionView => ({
       constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 });
 
 const request = (amount: string): EvaluationRequest => ({
