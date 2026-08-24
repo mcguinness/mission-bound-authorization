@@ -1221,7 +1221,7 @@ reference to it; no change is ever made solely to move words.
 
 ## OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-oauth-digest: b510b95d32d69ef7 -->
+<!-- assessed-oauth-digest: 313518555ceb0962 -->
 
 This section is this document's Mapping Assessment of the OAuth
 Mission binding ({{I-D.draft-mcguinness-oauth-mission}}), published
@@ -1343,11 +1343,16 @@ Delegation:
   `authorization_details`, carries the `mission` claim unchanged,
   sender-constrains the delegated credential to the delegate's own
   key, and refuses issuance unless the Mission is active.  The Token
-  Exchange that issues the delegated credential is itself a grant
-  binding at issuance: the AS joins the Mission and Subject carried
-  by the Mission-bound `subject_token` with the delegate identity
-  established by the `actor_token` or the delegate's own client
-  authentication, binding both to the newly issued credential.  Four
+  Exchange that issues the delegated credential associates, at
+  issuance, the Mission and Subject carried by the Mission-bound
+  `subject_token` with the delegate identity established by the
+  `actor_token` or the delegate's own client authentication, binding
+  all three to the newly issued credential without itself
+  establishing a new grant binding: an access-token-only delegated
+  exchange is a derived token under the subject_token's existing
+  binding, not a second binding of its own
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the
+  Mission to the Grant").  Four
   of the five claims are supplied always, and Delegation exercises
   them rather than creating them; Authorized Context Correlation is
   the exception, activated by this role, whose Token Exchange join
