@@ -7,12 +7,12 @@
     "content_sha256": "91182132dd12f3fb5bd2652db1a1702dfe52d377edb636f1b9bab8439e1d3a13"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "c9169c04bdf86a3a66ac89b3fb0d055d44fe9d99",
-    "content_sha256": "6b4d28985aece695781504cda464085e7a834c491fb04b87e5945b6991407220"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "c191cc1f7e7ef2dd6942cf8ee79457ea2fa60d4e96c6cc16f36ab7e5a32d3bcb"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "76900e24a39d374c10312b3f78e13b8ac47820a8",
-    "content_sha256": "76e52c8a8ddd5c22c83c0065c47a06a02c7b68ad42c43116aa31fd3b3eb90307"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "05be78b62a5f9cc093fbe42d86f7d6a4e982e7e51cec807744de96f7bf50d7a2"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "76900e24a39d374c10312b3f78e13b8ac47820a8",
@@ -27,8 +27,8 @@
     "content_sha256": "94f27fb07357fba93989a05797d4798e0d662eeccdbbca2e549f217d8ce6af37"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
-    "content_sha256": "78d330c74a64280d52c3cd83bacf4007b08ad53dee20bb91a4b971c6ddfac1cf"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "8fd63b493b5f611ad4da8f5b8ab7648c9647b2fd7d248b2346d02785ed0f627d"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "a914b3a4530cb25d50399448c43096afac40da48",
@@ -43,8 +43,8 @@
     "content_sha256": "9668a310b3ce3338e277921bc8967a82c87a7bf0324c6802cf6593fc663c7e1b"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
-    "content_sha256": "0c93d323cbbe4b90c8e8dfb22cbdd065d6e01fe76aa01cea7bbbd4ba4bf202bb"
+    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
+    "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "503f817257c5f5e58952570f48608c35068c6ca7",
