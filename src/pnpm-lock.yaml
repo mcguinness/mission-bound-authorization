@@ -154,6 +154,9 @@ importers:
       '@mission/core':
         specifier: workspace:*
         version: link:../mission-core
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../store
       jose:
         specifier: ^6.1.3
         version: 6.2.3

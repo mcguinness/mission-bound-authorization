@@ -48,6 +48,7 @@ import {
 import {
   buildAuthorizationServer,
   type BuiltAs,
+  createChildMission,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
@@ -604,6 +605,68 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
       .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
       .get() as { n: number };
     expect(undoneAfter.n).toBe(0);
+  });
+
+  it("cascade under replay (#641): a child-bearing predecessor's crash-window replay re-cascades nothing", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read", "payments:vendor.read"]);
+    const { child } = createChildMission(as.kernel, {
+      parentId: pred.missionId,
+      intent: { goal: "Classify invoices", resources: [RESOURCE], expires_at: FAR_EXP },
+      proposedAuthority: authority(["payments:invoice.read"]),
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+    });
+    expect(as.kernel.get(child.id)?.state).toBe("active");
+
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    approveDeferral(ob.deferral_code as string);
+    const first = await pollExpansion(ob.deferral_code as string);
+    const fb = (await first.json()) as { access_token?: string };
+    expect(first.status, JSON.stringify(fb)).toBe(200);
+
+    // The finalization drain cascaded the child once, in generation order.
+    const cascaded = as.kernel.get(child.id);
+    expect(cascaded?.state).toBe("cascaded");
+    const versionAfterFirst = cascaded?.version;
+
+    // Crash window: the deferral was never marked redeemed and the durable
+    // finalization job was never drained.
+    as.expansionDeferrals.db
+      .prepare("UPDATE expansion_deferrals SET redeemed = 0 WHERE deferral_code = ?")
+      .run(ob.deferral_code as string);
+    as.kernel.db.prepare("UPDATE lifecycle_outbox SET done = 0").run();
+
+    const recorded: Array<{ id: string }> = [];
+    const kernelAny = as.kernel as unknown as {
+      opts: { onLifecycleCommit?: (c: { id: string }) => void };
+    };
+    const origHook = kernelAny.opts.onLifecycleCommit;
+    kernelAny.opts.onLifecycleCommit = (c) => {
+      recorded.push(c);
+      origHook?.(c);
+    };
+    try {
+      const second = await pollExpansion(ob.deferral_code as string);
+      const sb = (await second.json()) as { access_token?: string };
+      expect(second.status, JSON.stringify(sb)).toBe(200);
+    } finally {
+      kernelAny.opts.onLifecycleCommit = origHook;
+    }
+
+    // Idempotent under replay: the already-cascaded child is skipped (same
+    // terminal state, same version), and no child commit was re-emitted; the
+    // replay redelivers only the persisted activation and supersession.
+    const after = as.kernel.get(child.id);
+    expect(after?.state).toBe("cascaded");
+    expect(after?.version).toBe(versionAfterFirst);
+    expect(recorded.filter((c) => c.id === child.id)).toHaveLength(0);
+    const undone = as.kernel.db
+      .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
+      .get() as { n: number };
+    expect(undone.n).toBe(0);
   });
 
   it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {

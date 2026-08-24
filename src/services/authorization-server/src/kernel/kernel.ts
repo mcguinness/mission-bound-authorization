@@ -1778,10 +1778,13 @@ export class MissionKernel {
    * durability. Each replay delivers the PERSISTED, immutable commit
    * payloads (same `event_id`, same `committed_at`) to the lifecycle hook,
    * at-least-once, and re-runs the state-guarded mandatory child cascade;
-   * jobs are marked done only after both. Durability PAST the hook,
-   * per-consumer signed-SET delivery acknowledged at the Signals profile's
-   * durable boundary, plus a recurring dispatcher and multi-process
-   * claiming, is tracked as issue #641 and deliberately not claimed here.
+   * jobs are marked done only after both. Durability PAST the hook is the
+   * signal plane's (#641, built): @mission/signals journals one durable job
+   * per (event, consumer) in the commit hook, redelivers byte-identical
+   * SETs under a bounded backoff, and runs a recurring dispatcher with
+   * lease-based claiming. THIS outbox's own recurring drive and
+   * multi-process claiming stay scoped to the file-backed kernel store,
+   * which KernelOptions does not plumb yet (D27 :memory: baseline).
    * Drains run at startup (buildAuthorizationServer) and on every
    * redemption or recovery poll.
    */

@@ -562,6 +562,28 @@ duplicate; this is duplicate suppression, not a hard reject.
 Following {{RFC8417}}, this profile does not require an `exp` on the
 SET; a consumer MAY reject a SET whose `iat` is implausibly old.
 
+# Transmitter Delivery {#delivery}
+
+Emission is part of the committed transition, not best effort inside
+the issuer. A Mission Issuer MUST NOT lose a committed lifecycle
+transition between the commit and the delivery method's hand-off: it
+persists each not-yet-delivered event, per configured stream, and
+redelivers until the delivery method acknowledges receipt.
+Redelivery reuses the event's identity: the same `jti`, so the
+consumer-side duplicate rule of {{set-protection}} applies, and, once
+a SET is signed, the same bytes; a redelivered event is never
+re-signed into a sibling assertion. The retry schedule is bounded
+({{security-considerations}}): an unavailable receiver delays its own
+delivery without amplifying traffic, and the bounded schedule backs
+off rather than dropping the event.
+
+This duty places the durable boundary at the transmitter, and it
+composes with, never replaces, the consumer's side: delivery remains
+at-least-once end to end, and a consumer still bounds its reliance on
+event freshness with the fallback of {{consumer-behavior}}. The
+transmitter never silently drops a committed event; the consumer
+never treats silence as health.
+
 # Consumer Behavior on Receipt {#consumer-behavior}
 
 On receiving and verifying ({{set-protection}}) a
@@ -782,7 +804,8 @@ This document is OPTIONAL. An implementation that claims it:
 - as a **Mission Issuer**, emits a signed `mission.lifecycle-change`
   SET ({{lifecycle-event}}, {{set-protection}}) on every committed
   Mission lifecycle transition, supports at least one SSF delivery
-  method ({{event-stream}}), advertises
+  method ({{event-stream}}), meets the transmitter delivery duty of
+  {{delivery}}, advertises
   `mission_event_stream_endpoint` ({{as-metadata}}), and, where a
   committed transition would carry `authority_changed` true, gates its
   delivery per {{discharge-compatibility}};

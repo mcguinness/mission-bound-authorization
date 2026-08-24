@@ -31,8 +31,8 @@
     "content_sha256": "39763855736c359502b005a33ef1c912f7d4025807bf9435fadd0057252c56e0"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "8780173e8411381f3693903b731b2f7cab19e21aaaa73cf07c19943a92927723"
+    "revision": "3688d04b8270889ae1c8b1fbbaaf6447c9329c12",
+    "content_sha256": "096878b22657073ff5945c1cd96025032a972de4b8341a1707aafd9879f01775"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
@@ -2227,6 +2227,108 @@
     }
    ],
    "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: an event whose effective-authority change is represented by `authority_changed` ALONE is withheld from an undeclared stream. The gate keys on a `containment_version` ADVANCE rather than its presence, tracked per Mission with the same cursor discipline the receiver uses, so the composite case is caught: a discharge on a PREVIOUSLY CONTAINED Mission carries containment_version unchanged and is still gated, while the contain commit before it (an actual advance) still reaches the undeclared stream, leaving containment's delivery rules unchanged. With no cursor yet, only containment_version 1 counts as an advance; a higher first-seen value is ambiguous and the gate withholds. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
+  },
+  {
+   "id": "signals.delivery.persist-until-acknowledged",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "delivery",
+   "text": "A Mission Issuer MUST NOT lose a committed lifecycle transition between the commit and the delivery method's hand-off",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a committed transition whose delivery hand-off fails stays journaled and is redelivered until acknowledged, surviving an emitter restart over a persistent store"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > journals a failed hand-off and redelivers the identical SET (same jti, same bytes)",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > survives a restart: a fresh emitter over the same file store delivers what its predecessor journaled",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > keeps a job pending for an audience with no wired sink, and delivers on late registration",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ]
+  },
+  {
+   "id": "signals.delivery.same-event-redelivery",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "delivery",
+   "text": "Redelivery reuses the event's identity: the same `jti`, so the consumer-side duplicate rule of",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every redelivery of a journaled event carries the same jti and, once signed, byte-identical SET content; a replayed kernel commit re-enqueues nothing"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > journals a failed hand-off and redelivers the identical SET (same jti, same bytes)",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > re-enqueues nothing on a kernel-outbox replay of the same commit (UNIQUE event identity)",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ]
+  },
+  {
+   "id": "signals.delivery.bounded-retry",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "security-considerations",
+   "text": "a transmitter MUST bound its retry schedule so an unavailable receiver cannot amplify delivery traffic",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "redelivery backs off exponentially to a configured cap and holds there; the job is never dropped and never retried faster than the cap once reached"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > bounds the retry schedule at the cap (the draft's transmitter DoS rule)",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ]
   },
   {
    "id": "cross-org.chain.presentation-closed",

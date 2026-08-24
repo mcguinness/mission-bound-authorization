@@ -10,6 +10,7 @@
   "dependencies": {
     "@mission/authorization-server": "workspace:*",
     "@mission/core": "workspace:*",
+    "@mission/store": "workspace:*",
     "jose": "^6.1.3"
   },
   "devDependencies": {

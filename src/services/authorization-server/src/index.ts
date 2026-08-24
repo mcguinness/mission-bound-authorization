@@ -719,8 +719,10 @@ export async function buildAuthorizationServer(opts: {
   const expansionDeferrals = new ExpansionDeferralStore(kernel);
   // Round-5 (#640 review): startup drain of committed-but-unfinalized
   // expansion work (meaningful for the file-backed store escape hatch; a
-  // no-op on the D27 :memory: baseline). A recurring dispatcher with
-  // multi-process claiming is issue #641.
+  // no-op on the D27 :memory: baseline). Event-plane durability past the
+  // hook lives in @mission/signals' durable outbox and dispatcher (#641);
+  // this kernel outbox's own recurring drive stays scoped to a plumbed
+  // file-backed kernel store, which does not exist yet.
   kernel.drainExpansionOutbox();
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
