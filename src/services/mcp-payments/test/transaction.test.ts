@@ -55,12 +55,16 @@ const VIEW: MissionView = {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 };
 
 /** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
  *  at this read (Finding 1); `allowedFreshnessSources` below declares "load_view" as trusted. */
-const loadView = (id: string) =>
-  id === VIEW.id ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } } : undefined;
+const loadView = (ref: { id: string; issuer: string }) =>
+  ref.id === VIEW.id && ref.issuer === VIEW.issuer
+    ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    : undefined;
 /**
  * @spec RFC 9449 — the presenter's REAL key. A transaction credential is only
  * ever accepted with a proof of possession bound to this request, so the

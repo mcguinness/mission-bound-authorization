@@ -103,6 +103,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -357,7 +365,7 @@ It consumes these optional capabilities:
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
 | Lifecycle-Gated Authorization | required | Inherited scope: metering is performed by the runtime profile's PDP within a documented enforcement scope ({{relationship}}), so every metered decision is already gated on the only-`active`-permits rule; this document adds counters to that gate and defines no second one |
-| Structured Authority | conditional | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
+| Structured Authority | required when a call class or an exclusive selector is drawn from the Authority Set's identifiers | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
 | State-Observable | not consumed | Mission state is established by the runtime decision this document adds counters to, under that profile's freshness rules, not by this document ({{I-D.draft-mcguinness-mission-runtime}}) |
 | Monotonic Derivation | not consumed | A lineage-keyed budget identifier correlates a root Mission and its Child Missions to one shared counter ({{aggregate-bounds}}); lineage counters are correlation, not narrowing, and this document defines no no-broader-than comparison |
 | Credential-Bound | not consumed | This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}) |
@@ -896,6 +904,13 @@ failure signal:
   {{settlement-contract}}. The applied settlement is unchanged; the
   conflict is audited, never adjudicated by the intake.
 
+A containment overlay's contain transition
+({{I-D.draft-mcguinness-oauth-mission-containment}}) is not settlement
+evidence: an open reservation or duration lease still settles under
+the evidence states above, unaffected by contain, and contain narrows
+only forward draw, a new reservation or a lease renewal, through the
+ordinary permit check against the narrowed Effective Authority Set.
+
 The operational consequence: a lossy evidence channel accumulates
 reservations against `max_budget` and `max_calls` until the Mission
 starves on `quota_exceeded`, a self-inflicted denial of service. A
@@ -1074,6 +1089,18 @@ evidence companion's extension conventions
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- One informative cross-reference in Settlement by Evidence State
+  ({{settlement-states}}): a containment overlay's contain transition
+  is not settlement evidence. An open reservation or duration lease
+  still settles unchanged under the existing evidence-state rules, and
+  contain narrows only forward draw, a new reservation or a lease
+  renewal, through the ordinary permit check against the narrowed
+  Effective Authority Set. No new settlement state (#670).
 
 # Acknowledgments
 {:numbered="false"}

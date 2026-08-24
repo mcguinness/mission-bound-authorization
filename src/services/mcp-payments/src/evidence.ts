@@ -73,6 +73,34 @@ export interface DecisionEvidence extends EvidenceBase {
    * anchor), copied from the PDP's decision context when present.
    */
   entry_digest?: string;
+  /**
+   * @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
+   * runtime-evidence#evidence-pii — present whenever the decision evaluated the
+   * cross-domain Origin Principal profile's mapping (permit or a later-step
+   * denial that still passed the mapping check), never a partial object.
+   * `origin`/`local` are PROTECTED subject references (the family anchor
+   * idiom, `typ` `mission-origin-subject`, {@link MISSION_ORIGIN_SUBJECT_TYP}),
+   * never the raw `{iss, sub}` pair: this is a RETAINED record, and the
+   * privacy rule requires a protected reference here, not the ephemeral
+   * PDP decision context's raw values.
+   *
+   * DISCLOSURE (@spec runtime-evidence#evidence-pii): this deployment uses
+   * the deterministic-digest form of protected reference (a keyed
+   * pseudonym or an opaque, auditor-resolvable reference are the other two
+   * forms the spec allows). A deterministic digest of an enumerable
+   * identifier is dictionary-attackable: it is correlation infrastructure,
+   * not concealment. Anyone who can enumerate candidate `{iss, sub}` pairs
+   * (a small, known population) can confirm membership by recomputing the
+   * digest; it does not hide WHICH known principal a record is about, only
+   * that raw identity is not stored verbatim.
+   */
+  principal_mapping?: {
+    origin: string;
+    local: string;
+    policy: { id: string; version: string };
+    observed_at: string;
+    valid_until: string;
+  };
 }
 
 export interface RefusalRecord extends EvidenceBase {

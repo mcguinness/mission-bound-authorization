@@ -15,16 +15,16 @@
     "content_sha256": "7b6036a9b25391d2b46a48b1501531adf43d84c50b7d8eb78f656edb3faeb070"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "9dbadb3898d79ea05ff628f2569ff8218bfeee08",
-    "content_sha256": "e0e7b21343a21d6ca44c2406bfe5a13fa318be19725ec41c49f80e339921307e"
+    "revision": "8337f81179998d21aec3875b4dcb847d418faf88",
+    "content_sha256": "0f56178f76109ac4cfc4987c0a2683793ea6fd712309bd3089c1abc75ed580a1"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "c1e14193d93f7919dc145d1d5188d7d147499a382b83dce52827e14f1d37457e"
+    "revision": "11e12adff962b5c2ba99b9d87dd0b86fa49ae059",
+    "content_sha256": "89a4137e91b8761c7c49eb479dded30637f3b66e7a88d3de33c6232e6c1d8435"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "ef2e47d8a31c7d9c95eb6e18963ec68442b83effe949eeb39db9a739d9a097ac"
+    "revision": "fed8428db1723cbbf5e60aebbcef29e1de988e57",
+    "content_sha256": "48b31d93ea5231a67f57a0aba8349e6bcb9feb9d863357b2ea5522978c86faf7"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
@@ -34,17 +34,25 @@
     "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
     "content_sha256": "232363f43eeddc3a21aa47352c02cbad96659af24d4be065ef58cf4f5bb9749d"
    },
+   "draft-mcguinness-oauth-mission-template.md": {
+    "revision": "a9612da6eacc7575e37c1cc7430117d423d626bb",
+    "content_sha256": "e67019478334d7916cd7a49956238c389c526c372708ac309767a39d694d540e"
+   },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "9ef5e45985155b3606761d7d9a24425412acae3ef1654df6cd80bbfb3c5131c3"
+    "revision": "e75c5b60e7105b4b88abdb65dfbbace4f6322857",
+    "content_sha256": "ccce269a7481f9e60ef7dd288e0408cd5b9cd5a370ce1af08ccb352f3c939f8a"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "83e2cab81313d9a2ae4dfbf5a730a4073f4aca777890d1f5bbe0a169ce28ecd5"
+    "revision": "11e12adff962b5c2ba99b9d87dd0b86fa49ae059",
+    "content_sha256": "b4855e7392d5925349a6d67dac995c024b668318309dd0bcf8df5cd4d70776de"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "dc3f88f0dac6c798d63b94171028734058fdf963",
-    "content_sha256": "c212f435915e5dc86338b740d87db4009666aff60cbe3ed66317a5f4ebd81dc6"
+    "revision": "af16a065fa5eb5df906f77800aa55550c2a8f9d2",
+    "content_sha256": "b2fec9ce20a5b1d017d1d0f60cb1571ae0fea5f9c43b5008baa6b6377499a7b6"
+   },
+   "draft-mcguinness-mission-orchestration.md": {
+    "revision": "b6218ccbe45b28597f72929cb1763457fca18182",
+    "content_sha256": "9af76e2e85ee2a90e7fe4a538a3d410ddd7424571ddb0dd728bda154d128f91b"
    }
   }
  },
@@ -60,7 +68,8 @@
    "Controller",
    "PRODUCER",
    "RECEIPT-ISSUER",
-   "RECEIPT-VERIFIER"
+   "RECEIPT-VERIFIER",
+   "orchestrator"
   ],
   "strengths": [
    "MUST",
@@ -137,7 +146,8 @@
    "issuance-grant.state-integration",
    "mas.enterprise",
    "core.standing-consent",
-   "core.standing-consent-recency"
+   "core.standing-consent-recency",
+   "template.dispatch"
   ]
  },
  "profiles": [
@@ -7718,9 +7728,40 @@
     "normative": "a PEP-placed origin-principal mapping is conveyed as a structured, integrity-protected observation the PDP verifies; a failed, missing, ambiguous, or stale mapping or entitlement result denies principal_mapping_failed"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Cross-Domain is a disabled conditional for the Runtime-Enforced Baseline (notes/adoption-plan.md); profiles is empty for this cross-domain-only row even though the surrounding pdp-request rows are baseline."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping resolver returns undefined (missing/ambiguous/disabled mapping): denies principal_mapping_failed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping resolved but stale beyond its OWN valid_until: denies principal_mapping_failed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping valid, entitlement resolver returns undefined: denies principal_mapping_failed, but the mapping WAS established so principal_mapping evidence is still attached (Refusal Record binding)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > mapping valid, entitlement entitled but stale beyond entitlementStalenessBoundSeconds: denies principal_mapping_failed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > profile claimed, everything valid: permits, and the permit carries a complete principal_mapping evidence object",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial (#539 stage A): the shared failure classification this row's observation.normative also states -- a failed, missing, ambiguous, or stale mapping or entitlement result denies principal_mapping_failed, and the permit/refusal binds the principal_mapping evidence object once the mapping is established -- is covered, PDP-authoritative (the profile's default placement: EvaluateOptions.principalMapping/.entitlement, injected resolver contracts, the same idiom as Fga). This row's own quoted MUST clause is the OTHER deployment configuration (mapping placed at the PEP, conveyed as a structured, integrity-protected observation the PDP verifies): that placement is not implemented, so it is not claimed tested. Cross-Domain is a disabled conditional for the Runtime-Enforced Baseline (notes/adoption-plan.md); profiles is empty for this cross-domain-only row even though the surrounding pdp-request rows are baseline."
   },
   {
    "id": "authzen.pdp-request.subject-shape-and-issuer-presence",
@@ -7741,8 +7782,22 @@
     "normative": "subject.type defaults to user unless the deployment profiles another value, subject.id is the token's authenticated sub, and subject.properties.iss is REQUIRED when known, carrying the issuer that authenticated the Subject so a sub is disambiguated across issuers; a PEP that cannot establish the issuer omits it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#pdp-request (subject.properties.iss) -- populated from the verified TokenFacts.iss (this resource's own issuer), regardless of whether the profile is claimed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#pdp-request (subject.properties.iss) -- 'a PEP that cannot establish the Subject's issuer omits it': TokenFacts.iss absent means subject.properties is absent too, never a fabricated value",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial (#539 stage A): subject.properties.iss presence-when-known and omission-when-unknown are both tested (services/mcp-payments/src/pep.ts and src/server.ts's TokenFacts.iss, populated from the resource's own verified issuer). subject.type's default-to-user behavior is untested: this PEP never sets subject.type at all, relying on the wire-level AuthZEN default, which these tests do not separately assert."
   },
   {
    "id": "authzen.clock-skew.leeway-bounded-and-published",
@@ -7946,8 +8001,22 @@
     "normative": "context.mission.subject is OPTIONAL in general and REQUIRED for a request claiming the cross-domain Origin Principal profile; the PEP populates it only from a verified source, never from an unverified request value"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#context-mission -- context.mission.subject is populated from the verified TokenFacts, never from an unverified request value",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec authzen#context-mission -- a token with no mission.subject (the profile not claimed) omits context.mission.subject entirely, never a synthesized empty object",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial (#539 stage A): the mcp-payments PEP envelope-construction path is covered -- populated only from verified TokenFacts, omitted entirely (never a synthesized empty object) when the profile is not claimed. Not claimed tested/closed: the controlling review disposition ties this row to origin-principal-mapping-required and requires both to stay open until the Cross-Org grant and ID-JAG RAS entry paths are repaired in the same wave (stage 2); both still drop mission.subject today."
   },
   {
    "id": "authzen.context-actor.provenance-not-in-act-chain",
@@ -12859,8 +12928,28 @@
     "normative": "the principal_mapping extension member's origin, local, policy, observed_at, and valid_until sub-members are all REQUIRED whenever the member is present; the origin/local references follow this document's protected-reference privacy rule"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping (#686 review) -- an entitlement-caused principal_mapping_failed DENIAL still retains principal_mapping (protected references), since the mapping itself was established before entitlement failed",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > a request NOT claiming the profile never carries principal_mapping on its retained Decision Evidence",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#539/#686 review: the PDP's decision context carries the composed mapping (permit or a later-step denial past the mapping check); the PEP's evidence.record() now copies it onto the retained Decision Evidence, replacing the raw {iss, sub} pairs with protected references (computeAnchor, typ mission-origin-subject) before persisting. Never a partial object: present with all five sub-members, or absent entirely for a request not claiming the profile."
   },
   {
    "id": "evidence.conformance.producer-bar",
@@ -13123,8 +13212,16 @@
     "normative": "where the cross-domain Origin Principal profile is in use, retained records should carry the principal_mapping extension with a protected subject reference rather than a raw identity, unless the raw identity is necessary for the stated audit purpose; a deployment using the deterministic-digest form of protected reference must disclose that it is dictionary-attackable correlation infrastructure, not concealment"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/origin-principal.test.ts",
+     "name": "PEP AuthZEN envelope: origin principal and local-subject issuer (#539 stage A) > @spec runtime-evidence#principal_mapping, runtime-evidence#evidence-pii (#686 review) -- a PERMIT's retained Decision Evidence carries principal_mapping with PROTECTED (digest) references, never the raw origin/local {iss, sub} pairs",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#539/#686 review: the protected-reference half is tested (the deterministic-digest form; raw {iss, sub} confirmed absent from the serialized record). The MUST-disclose-the-limitation half is not machine-tested; it is satisfied by source documentation at the point a deployment would read it (services/mcp-payments/src/evidence.ts's principal_mapping field doc, packages/mission-core/src/anchors.ts's MISSION_ORIGIN_SUBJECT_TYP doc), not verified here."
   },
   {
    "id": "evidence.privacy.pep-should-supply-digest-only-for-pii-parameters",
@@ -13650,6 +13747,213 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
+  },
+  {
+   "id": "orchestration.authority-narrowing.not-dispatched-suppressed-or-paused",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `not_dispatched` step the re-evaluation now denies MUST be suppressed or paused",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a mission.lifecycle-change event carrying authority_changed true at unchanged state, after rematerializing the Effective Authority Set, a not_dispatched step the re-evaluation now denies is suppressed or paused",
+    "local": "reEvaluateStepOnAuthorityNarrowing (src/packages/orchestration/src/authority-narrowing.ts) returns orchestration_decision 'suppress' and requires_evidence true for a denied not_dispatched step, and leaves a still-authorized step untouched (no decision, no evidence). Coverage stays 'partial': this is the per-step decision logic only. The signal consumption, the Mission Status rematerialization call, and the fresh PDP evaluation (or authorizing_entry/entry_digest comparison) that produce the stillAuthorized input are integration concerns this dependency-free package takes as an injected predicate; no orchestrator in this repo wires a live authority_changed event to this function."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: still authorized proceeds untouched (no decision, no evidence, no dispatch)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1, which asked for truthful per-facet rows and manifest-linked tests rather than one todo row covering three facets."
+  },
+  {
+   "id": "orchestration.authority-narrowing.dispatched-not-committed-follows-in-flight-behavior",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `dispatched_not_committed` step the re-evaluation now denies MUST follow its unwind plan's existing `in_flight_behavior`",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dispatched_not_committed step the authority-narrowing re-evaluation now denies follows its unwind plan's existing in_flight_behavior; this trigger re-gates already-dispatched work rather than additionally stopping it",
+    "local": "reEvaluateStepOnAuthorityNarrowing reuses the same in_flight_behavior -> OrchestrationDecision mapping as the non-active sequence's fromInFlight (cancel_if_possible->cancel, continue_to_safe_point unchanged, wait_then_review/human_review->human_review), so a denied dispatched_not_committed step is never assigned a decision outside that existing range: this trigger adds no new machinery. Coverage stays 'partial' for the same integration-wiring reason as the sibling not_dispatched row."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > dispatched_not_committed: denied follows the step's EXISTING in_flight_behavior (re-gated, not additionally stopped)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > dispatched_not_committed: still authorized proceeds (this trigger does not stop already-dispatched work by itself)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1."
+  },
+  {
+   "id": "orchestration.authority-narrowing.committed-not-compensated",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `committed` step MUST NOT be compensated merely because authority narrowed after it committed",
+   "role": "orchestrator",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a committed step is never compensated merely because authority narrowed after it committed; the authority-narrowing trigger does not treat a completed action as denied",
+    "local": "reEvaluateStepOnAuthorityNarrowing short-circuits a committed step BEFORE calling the caller's stillAuthorized resolver: the resolver is asserted never invoked (vi.fn spy), and the step's own result always carries still_authorized true with no orchestration_decision. This makes 'no double-commit'/'no compensation on narrowing alone' structural: there is no code path from this function that can emit a compensate decision for a committed step, fully covered by the unit test with no further wiring needed to verify this specific claim."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > committed: MUST NOT be compensated merely because authority narrowed (resolver never consulted, no double-commit possible)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1. Unlike its sibling rows, this claim is a restraint (an absence of action) fully decidable from the pure function alone, with no missing integration piece, so coverage is 'tested' rather than 'partial'."
+  },
+  {
+   "id": "orchestration.authority-narrowing.evidence-step-id-required",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "orchestration-evidence",
+   "text": "OPTIONAL, and REQUIRED when the record reports a re-evaluation under",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Orchestration Evidence record reporting a re-evaluation under the authority-narrowing trigger carries step_id, naming the affected step, even though step_id is otherwise OPTIONAL",
+    "local": "buildAuthorityNarrowingEvidence (src/packages/orchestration/src/evidence.ts) narrows BuildOrchestrationEvidenceInput's optional step_id to a required string at the type level and throws at runtime when it is empty, delegating to buildOrchestrationEvidence for every other rule (compensate-member enforcement, envelope signing) unchanged."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > evidence: step_id is REQUIRED on an authority-narrowing record (fail closed when absent)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > evidence: a valid authority-narrowing record carries step_id, state_source signal, and mission_state active",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1, which named conditional step_id as one of the observable facets the original row omitted.",
+   "id": "template.dispatch.idempotent-retry-returns-committed",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "A redemption bearing an identifier the Mission Issuer has already committed MUST return the previously committed instance and MUST NOT derive a second Mission.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Dispatch redemption bearing a dispatch_event_id already committed returns the same mission_id, never a second Mission"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Tested for the same-fingerprint retry path only (an unchanged repeated dispatch_event_id). Fingerprint-mismatch refusal, atomic-reservation concurrency, and tombstone retention are not exercised by the current suite; the current implementation dedupes on dispatch_event_id via the issuance profile's approval_event_id mechanism and does not yet implement the fingerprint object this profile's adoption of the expansion apparatus specifies."
+  },
+  {
+   "id": "template.dispatch.fingerprint-mismatch-refusal",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "different fingerprint, refuse with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dispatch_event_id reused with a different operation fingerprint (a changed template_id, intent, evidence, proposal, or cnf) is refused with invalid_request rather than recovered"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "template.dispatch.completed-recovery-survives-retirement",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "recovery of that Mission MUST survive later retirement of the template version that created it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a completed Dispatch operation is recovered on retry even after the Mission Issuer retires the template version that created it, since retirement stops new dispatch but does not terminate an already-dispatched Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   }
  ]
 }

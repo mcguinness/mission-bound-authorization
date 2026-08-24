@@ -78,6 +78,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-architecture:
@@ -91,14 +99,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-signals:
-    title: "Mission Lifecycle Signals for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
     author:
       -
         ins: K. McGuinness
@@ -138,7 +138,9 @@ Before governed execution begins, the orchestrator records an unwind
 plan for each consequential step. When Mission state becomes non-active
 or cannot be established, the orchestrator stops new governed work and
 executes the plan: cancel, compensate, suppress, pause, or hand off to
-human review.
+human review. When effective authority narrows while the Mission stays
+active, the orchestrator re-gates each pending step against the
+narrowed authority instead ({{authority-narrowing}}).
 
 The boundary with the harness profile
 ({{I-D.draft-mcguinness-mission-harness}}) is the question each
@@ -157,7 +159,7 @@ Mission Assurance Level
 Maturity: experimental. Maintenance: lab-best-effort.
 Adopt when: In-flight work must unwind safely if the Mission ends mid-workflow.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
-Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source).
+Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source); Mission Lifecycle Signals for OAuth 2.0 (when Signals is the authority-change trigger source).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
@@ -268,7 +270,7 @@ It consumes these optional capabilities:
 | --- | --- | --- |
 | Lifecycle-Gated Authorization | required | When the orchestrator learns a Mission is no longer `active`, or cannot establish active state within the deployment's staleness bound, it stops dispatching new governed steps, suppresses or pauses queued work, and evaluates in-flight steps; post-completion behavior runs only on an established non-active state ({{state-change-behavior}}) |
 | State-Observable | required | The orchestration profile MUST define the source of Mission state used by the orchestrator and a staleness bound per action class, calibrated against the runtime profile's non-normative freshness table ({{orchestration-profile}}) |
-| Structured Authority | conditional | Consumed only for a successor's or remedial Mission's own Authority Set: a `separate_mission` compensation basis requires a distinct `active` Mission whose Authority Set is scoped to compensation actions for the terminated Mission's committed steps, and a `resource_policy` basis lies outside Mission authority entirely ({{compensation-authority}}) |
+| Structured Authority | required when a compensation basis draws on a successor's or remedial Mission's own Authority Set | Consumed only for a successor's or remedial Mission's own Authority Set: a `separate_mission` compensation basis requires a distinct `active` Mission whose Authority Set is scoped to compensation actions for the terminated Mission's committed steps, and a `resource_policy` basis lies outside Mission authority entirely ({{compensation-authority}}) |
 | Monotonic Derivation | not consumed | The orchestrator derives no authority; a superseded Mission's continued work proceeds through a fresh derivation from the successor's grant, not by rebinding the predecessor's authority ({{state-change-behavior}}) |
 | Credential-Bound | not consumed | The runtime profile still governs each consequential action at the last controllable boundary ({{relationship}}); under a `resource_policy` compensation basis the orchestrator presents no Mission-bound credential ({{compensation-authority}}) |
 | Independently Verifiable | not consumed | The orchestrator establishes Mission state through its declared trigger sources ({{trigger-sources}}); it verifies no Mission property offline |
@@ -552,6 +554,51 @@ successor's grant, not by rebinding the predecessor's authority; the
 successor carries its own Authority Set
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
+## Authority-Narrowing Behavior {#authority-narrowing}
+
+A third trigger is independent of the non-active and staleness
+sequences above: a `mission.lifecycle-change` event carries
+`authority_changed` true at unchanged `state`
+({{I-D.draft-mcguinness-oauth-mission-signals}}). The Mission stays
+`active`; the narrowing is scoped to the entries it affects, not to
+the Mission as a whole.
+
+On this trigger the orchestrator MUST rematerialize its Effective
+Authority Set for the Mission through the Mission Status operation,
+per the Signals rematerialization rule
+({{I-D.draft-mcguinness-oauth-mission-signals}}), then re-evaluate
+each pending step's concrete resource and action against the
+rematerialized set. The unwind plan records only the step, the
+Mission, and behavioral classifications ({{unwind-plan}}), no
+authority binding, so the orchestrator MUST resolve a step's
+authority basis one of two ways: a fresh PDP evaluation of the step's
+concrete resource and action ({{I-D.draft-mcguinness-mission-runtime}}),
+or a comparison of the step's recorded `authorizing_entry` or
+`entry_digest`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) against the
+rematerialized set.
+
+The re-evaluation outcome follows the step's in-flight class
+({{in-flight}}) for three of its four classes:
+
+- a `not_dispatched` step the re-evaluation now denies MUST be
+  suppressed or paused;
+- a `dispatched_not_committed` step the re-evaluation now denies MUST
+  follow its unwind plan's existing `in_flight_behavior`
+  ({{unwind-plan}}): this trigger re-gates already-dispatched work, it
+  does not additionally stop it; and
+- a `committed` step MUST NOT be compensated merely because authority
+  narrowed after it committed ({{compensation}}).
+
+An `unknown` step is unaffected by this trigger: {{in-flight}}'s own
+rule already requires human review for it.
+
+A step the re-evaluation still permits proceeds. The orchestrator MUST
+emit Orchestration Evidence under {{orchestration-evidence}} for every
+step this trigger denies, naming the step in `step_id`, with
+`state_source` `signal`, `mission_state` `active`, and
+`orchestration_decision` set from the mapping already defined there.
+
 ## Trigger Sources {#trigger-sources}
 
 An orchestrator can learn of Mission state change from:
@@ -722,7 +769,8 @@ members:
 : REQUIRED. The workflow or task graph identifier.
 
 `step_id`:
-: OPTIONAL. The step affected.
+: OPTIONAL, and REQUIRED when the record reports a re-evaluation under
+  {{authority-narrowing}}. The step affected.
 
 `mission_state`:
 : REQUIRED. The state observed.
@@ -986,6 +1034,24 @@ and avoid recording raw user content when identifiers are sufficient.
 This document makes no IANA request.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Authority-Narrowing Behavior ({{authority-narrowing}}): a third
+  State-Change Behavior trigger, independent of the non-active and
+  staleness sequences, for a `mission.lifecycle-change` event's
+  generic `authority_changed` true at unchanged `state`. The
+  orchestrator rematerializes its Effective Authority Set and
+  re-evaluates each pending step's concrete resource/action, resolved
+  by a fresh PDP evaluation or the step's Decision Evidence
+  `authorizing_entry`/`entry_digest`; a denied `not_dispatched` step
+  is suppressed or paused, a denied `dispatched_not_committed` step
+  follows its existing `in_flight_behavior`, and a `committed` step is
+  never compensated on narrowing alone. `step_id` is REQUIRED on
+  Orchestration Evidence reporting this trigger. Signals promoted from
+  an informative to a normative reference (#670).
 
 # Acknowledgments
 {:numbered="false"}

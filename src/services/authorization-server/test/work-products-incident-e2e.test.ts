@@ -105,6 +105,8 @@ function viewFor(missionId: string): MissionView {
     version: fresh.version,
     authority_hash: fresh.authority_hash,
     authority_set: fresh.authority_set,
+    subject: fresh.subject,
+    client_id: fresh.client_id,
     ...(fresh.containment
       ? { containment: { version: fresh.containment.containment_version, contained: fresh.containment.contained } }
       : {}),

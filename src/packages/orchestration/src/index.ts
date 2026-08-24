@@ -10,6 +10,13 @@
  */
 
 export {
+  type AuthorityNarrowingDecision,
+  type AuthorityNarrowingStepInput,
+  type NarrowableOutcome,
+  reEvaluateOnAuthorityNarrowing,
+  reEvaluateStepOnAuthorityNarrowing,
+} from "./authority-narrowing.js";
+export {
   type AuthorityBasis,
   type CompensationAuthorityResult,
   type CompensationOutcome,
@@ -23,6 +30,7 @@ export {
 } from "./compensation.js";
 export {
   type BuildOrchestrationEvidenceInput,
+  buildAuthorityNarrowingEvidence,
   buildOrchestrationEvidence,
   type EnvelopeSigner,
   type MissionDescriptor,

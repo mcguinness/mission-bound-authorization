@@ -72,6 +72,8 @@ const view = (entry: AuthorityEntry): MissionView => ({
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [entry],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 });
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
@@ -124,6 +126,8 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         version: 1,
         authority_hash: "sha-256:testhash",
         authority_set: [entryOfType("future_authorization_details_type"), entryOfType(MISSION_RESOURCE_ACCESS_TYPE)],
+        subject: { iss: "https://as.test", sub: "alice" },
+        client_id: "ap-agent",
       };
       const dec = await evaluate(req(), opts(mixedView));
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
