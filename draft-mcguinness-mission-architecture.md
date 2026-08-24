@@ -1180,9 +1180,11 @@ summary, is the normative text this passage tracks.
 Read under composition, the invariants bound one Mission's own
 Authority Set, not the aggregate surface a delegation tree, a
 cross-domain hop, or a chain of child generations reaches together:
-depth resets at each hop and generation independently of its parent,
-so the authorized surface a body of work can reach can exceed what
-any single approval appears to bound. This is again a reading of the
+delegation depth resets at each cross-domain hop and child
+generation, and each Child Mission enforces its own derivation cap
+independently of its parent's, so the authorized surface a body of
+work can reach can exceed what any single approval appears to bound.
+This is again a reading of the
 invariants above, not an eighth invariant; disclosing the composed
 bound at the consent surface is the cross-domain and child-delegation
 profiles' role, and bounding aggregate consumption is the metering
