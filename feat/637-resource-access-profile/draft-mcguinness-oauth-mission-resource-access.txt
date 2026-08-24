@@ -82,17 +82,20 @@ Table of Contents
    4.  The Mission Resource Access Type
      4.1.  Subset Rule
      4.2.  Common Constraints
-     4.3.  Delegate Eligibility
-     4.4.  Scope Projection
-     4.5.  Transformation Capabilities
-     4.6.  Modeling Tools and Function Calls
+     4.3.  Resource Server Enforcement
+     4.4.  Protected Resource Metadata
+     4.5.  Delegate Eligibility
+     4.6.  Scope Projection
+     4.7.  Transformation Capabilities
+     4.8.  Modeling Tools and Function Calls
    5.  Conformance
    6.  Security Considerations
      6.1.  Resource Boundary Canonicalization
    7.  Privacy Considerations
    8.  IANA Considerations
      8.1.  The Mission Resource Access Authorization Details Type
-     8.2.  Common Constraints Registry
+     8.2.  OAuth Protected Resource Metadata Registration
+     8.3.  Common Constraints Registry
    9.  Document History
    Acknowledgments
    References
@@ -228,37 +231,35 @@ Table of Contents
       deployments; any other name is deployment-defined.
 
       *  Because a constraints member narrows authority, a Resource
-         Server that cannot enforce one MUST fail closed
-         ([I-D.draft-mcguinness-oauth-mission]).
+         Server that cannot enforce one MUST fail closed (Section 4.3).
 
       *  To avoid that failure mode, the AS SHOULD emit for a given
          resource only constraints keys that the Resource Server serving
          it is known (by registration, deployment policy, or the
          resource's advertised mission_constraints_supported
-         ([I-D.draft-mcguinness-oauth-mission])) to understand and
-         enforce.
+         (Section 4.4)) to understand and enforce.
 
    delegation:  OPTIONAL.  An object.  The delegation policy for this
-      entry (Section 4.3).  When absent, this entry's authority is non-
+      entry (Section 4.5).  When absent, this entry's authority is non-
       delegable: it MUST NOT appear in a delegated token.  When present,
       it has these members:
 
       max_depth:  REQUIRED.  An integer.  The maximum delegation depth
-         at which this entry's authority may be exercised (Section 4.3).
+         at which this entry's authority may be exercised (Section 4.5).
 
       allowed_delegates:  RECOMMENDED.  An array of objects.  The
          permitted delegates, each a may_act-style matcher
-         (Section 4.3): { "sub": "<client_id>" } for a specific
+         (Section 4.5): { "sub": "<client_id>" } for a specific
          delegate, or { "sub_profile": "<actor-type>" } for an actor-
          type class.  When absent, eligibility falls to the AS's
          delegation-authorization policy, which MUST be applied at every
-         exchange (Section 4.3); absence delegates the decision to
+         exchange (Section 4.5); absence delegates the decision to
          policy, it never grants blanket eligibility.  The member is
          RECOMMENDED so that eligibility is committed and rendered with
          the entry rather than left wholly to policy.
 
       A companion profile MAY define additional delegation members.
-      Such a member is policy, not authority (Section 4.3): a derived
+      Such a member is policy, not authority (Section 4.5): a derived
       entry's value for it MUST NOT be broader than the parent entry's,
       and a member the AS does not understand is carried unchanged.
 
@@ -342,7 +343,7 @@ Table of Contents
    flat behavior unchanged.
 
    The delegation member is policy, not authority, and is not part of
-   this comparison (Section 4.3).  A derived entry's delegation, when
+   this comparison (Section 4.5).  A derived entry's delegation, when
    present, MUST NOT be broader than the parent entry's:
 
    *  its max_depth MUST be no greater than the parent entry's;
@@ -360,7 +361,7 @@ Table of Contents
    Constraints give independently developed deployments one vocabulary
    they interpret, narrow, and compare identically; further Common
    Constraints are defined by specification under the naming convention
-   of Section 8.2.
+   of Section 8.3.
 
    A Common Constraint definition fixes:
 
@@ -383,7 +384,7 @@ Table of Contents
    a candidate entry from a ceiling (a client's authority proposal
    narrowed to the Authority Set, or an Authority Set entry narrowed to
    a derived or delegated token, [I-D.draft-mcguinness-oauth-mission],
-   Section 4.3), a registered Common Constraint key present in the
+   Section 4.5), a registered Common Constraint key present in the
    ceiling entry that the AS does not implement narrowing for MUST NOT
    be dropped while the entry survives.  The AS MUST instead fail
    closed: refuse the whole derivation, or omit the entry from the
@@ -492,14 +493,14 @@ Table of Contents
    it rather than attempt to parse it: an authority proposal carrying
    one is refused at submission ([I-D.draft-mcguinness-oauth-mission]),
    and a Resource Server treats a malformed decimal value the same as a
-   constraints key it cannot enforce
-   ([I-D.draft-mcguinness-oauth-mission]).  Comparison and intersection
-   over two such decimal-string values MUST be computed as exact decimal
-   arithmetic (for example, by scaling both values to integers by their
-   fractional digit count and comparing the integers) and MUST NOT parse
-   either value into an IEEE 754 binary floating-point type: that
-   representation does not hold every value the grammar above admits
-   exactly and can compare or combine two values incorrectly.
+   constraints key it cannot enforce (Section 4.3).  Comparison and
+   intersection over two such decimal-string values MUST be computed as
+   exact decimal arithmetic (for example, by scaling both values to
+   integers by their fractional digit count and comparing the integers)
+   and MUST NOT parse either value into an IEEE 754 binary floating-
+   point type: that representation does not hold every value the grammar
+   above admits exactly and can compare or combine two values
+   incorrectly.
 
    A numeric constraint value MUST lie within the range JCS [RFC8785]
    serializes exactly.  Monetary amounts avoid that hazard by
@@ -508,7 +509,54 @@ Table of Contents
    a future Common Constraint for a monetary value SHOULD reuse this
    shape rather than a JSON number.
 
-4.3.  Delegate Eligibility
+4.3.  Resource Server Enforcement
+
+   [I-D.draft-mcguinness-oauth-mission] requires a Resource Server to
+   enforce each applicable authorization_details entry according to that
+   entry's own type specification, and to fail closed on an entry whose
+   type it does not implement or cannot fully evaluate.  This section
+   states that specification for a mission_resource_access entry.  A
+   Resource Server:
+
+   *  MUST enforce an entry whose resource (under resource_match,
+      Section 4) matches the request, permitting only the listed actions
+      subject to constraints.  Where more than one applicable entry
+      matches, entries are alternative grants of authority, not
+      conjunctive filters.
+
+   *  MUST treat an entry's resource_match value it does not recognize
+      as unenforceable and fail closed (Section 4).
+
+   *  MUST, when it matches a concrete request URI against a prefix
+      entry, apply the RFC 3986 [RFC3986] normalization Section 4.1
+      defines for containment, before the prefix comparison rather than
+      after, per the Resource Boundary Canonicalization analysis
+      (Section 6.1).
+
+   *  MUST fail closed on any constraints key it does not understand, or
+      understands but cannot enforce, in an applicable entry: refuse the
+      request (for example, a 403 with insufficient_scope [RFC6750], or
+      the deployment's usual insufficient-authority error) rather than
+      grant access while ignoring the key.
+
+   *  MUST NOT reduce a constraints key to disclosure-only: an
+      unenforced key that narrows authority silently widens the grant if
+      treated as absent or advisory.
+
+4.4.  Protected Resource Metadata
+
+   A protected resource MAY advertise, in its protected resource
+   metadata [RFC9728]:
+
+   mission_constraints_supported:  OPTIONAL.  An array of strings: the
+      constraints keys (Common Constraints and deployment-defined names)
+      the resource understands and enforces (Section 4.3).  It gives the
+      AS's duty to emit only keys the serving resource is known to
+      understand (Section 4) a discovery surface, and lets a client
+      predict a fail-closed constraint mismatch before making the
+      request.  When absent, that knowledge is established out of band.
+
+4.5.  Delegate Eligibility
 
    [I-D.draft-mcguinness-oauth-mission] gates a delegated token's
    carried entries on the entry type's own delegation policy, evaluated
@@ -559,7 +607,7 @@ Table of Contents
    sub matcher it cannot resolve, is specified by the companion
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
-4.4.  Scope Projection
+4.6.  Scope Projection
 
    [I-D.draft-mcguinness-oauth-mission] states the semantic subset
    condition and issuance algorithm an Authorization Server applies
@@ -611,7 +659,7 @@ Table of Contents
    issuance to that target when it is scope-only and no other carried
    entry supplies a safe projection.
 
-4.5.  Transformation Capabilities
+4.7.  Transformation Capabilities
 
    [I-D.draft-mcguinness-oauth-mission] requires an Authorization Server
    to declare, for every AS-supported authorization_details type,
@@ -627,12 +675,12 @@ Table of Contents
       and Section 4.2 is fully defined, over every member this document
       specifies.
 
-   delegation: true  The delegation policy of Section 4.3 is fully
+   delegation: true  The delegation policy of Section 4.5 is fully
       defined; an entry's delegation member states its own depth and
       eligibility bounds.
 
    projection: true  A safe scope projection is defined, and decidable
-      per entry, by Section 4.4; it is not unconditionally available for
+      per entry, by Section 4.6; it is not unconditionally available for
       every entry, and an Authorization Server MUST still apply that
       section's conditions per entry before emitting scope.
 
@@ -643,7 +691,7 @@ Table of Contents
    fallback then applies to scope projection for this type at that
    deployment, exactly as it would for an unsupported type.
 
-4.6.  Modeling Tools and Function Calls
+4.8.  Modeling Tools and Function Calls
 
    This section is non-normative guidance.  A "tool" an agent invokes,
    such as a Model Context Protocol (MCP) tool or a function call, is
@@ -690,7 +738,7 @@ Table of Contents
    ]
 
    Delegation to a sub-agent works unchanged: add a delegation member to
-   a tool entry (Section 4.3).  For example, an entry a sub-agent of
+   a tool entry (Section 4.5).  For example, an entry a sub-agent of
    type ai_agent may invoke at depth 1, narrowed to the read tool only:
 
    { "type": "mission_resource_access",
@@ -710,34 +758,50 @@ Table of Contents
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens], with object
    capability systems such as UCAN as prior art) is a richer primitive
    deferred to future work; it would extend the delegation and subset
-   model of this document (Section 4.3, Section 4.1) rather than
+   model of this document (Section 4.5, Section 4.1) rather than
    introduce a new entry type.
 
 5.  Conformance
 
-   An implementation conforms to this document by supporting
+   An implementation conforms to this document in one of two roles.
+
+   An *Authorization Server* conforms by supporting
    mission_resource_access as one of the authorization_details types
-   [I-D.draft-mcguinness-oauth-mission] names in its approved set.  A
-   conforming Authorization Server or Resource Server implements:
+   [I-D.draft-mcguinness-oauth-mission] names in its approved set, and
+   implements:
 
-   *  the type definition (Section 4);
+   *  schema validation of a proposed or carried entry against the type
+      definition (Section 4); and
 
-   *  the subset and intersection algebra (Section 4.1, Section 4.2);
+   *  the Transformation Capabilities declaration (Section 4.7), stating
+      which of narrowing, delegation, and projection it claims for this
+      type.
 
-   *  the delegate eligibility test (Section 4.3), where it claims the
-      issuance profile's Delegation capability; and
+   Beyond that floor, an Authorization Server implements, for each
+   capability it declares as true:
 
-   *  the Transformation Capabilities declaration (Section 4.5).
+   *  *narrowing*: the subset and intersection algebra (Section 4.1,
+      Section 4.2);
 
-   An Authorization Server MAY additionally claim the Scope Projection
-   capability: establishing, per entry and per target, the safety
-   conditions of Section 4.4 before emitting scope.  An implementation
-   that does not claim it MUST NOT emit scope for a
-   mission_resource_access entry under
-   [I-D.draft-mcguinness-oauth-mission]'s issuance algorithm, and
-   instead omits scope or refuses issuance to a scope-only target,
-   exactly as that document requires for any type without a declared
-   projection.
+   *  *delegation*: the delegate eligibility test (Section 4.5); and
+
+   *  *projection*: the three per-entry, per-target safety conditions of
+      Section 4.6 before emitting scope.  An Authorization Server that
+      does not claim projection MUST NOT emit scope for a
+      mission_resource_access entry under
+      [I-D.draft-mcguinness-oauth-mission]'s issuance algorithm, and
+      instead omits scope or refuses issuance to a scope-only target,
+      exactly as that document requires for any type without a declared
+      projection.
+
+   A *Resource Server* conforms by implementing the enforcement duties
+   of Section 4.3: exact or prefix resource matching, action and action-
+   family matching, and every carried constraints key, failing closed on
+   a member, matching mode, or key it does not implement.  A Resource
+   Server does not implement narrowing, delegate eligibility, or the
+   Transformation Capabilities declaration; those are the Authorization
+   Server's, and their presence or absence does not bear on a Resource
+   Server's conformance.
 
 6.  Security Considerations
 
@@ -758,24 +822,24 @@ Table of Contents
       Resource Server or scope projection that treats an unrecognized
       constraints key as absent, or as disclosure-only, grants more than
       the entry authorizes; [I-D.draft-mcguinness-oauth-mission] and
-      Section 4.4 both require fail-closed handling instead.
+      Section 4.6 both require fail-closed handling instead.
 
    *  *A safe projection is per entry, not per type.* That
       mission_resource_access defines a projection relation
-      (Section 4.4) does not make every entry of the type safely
+      (Section 4.6) does not make every entry of the type safely
       projectable; an Authorization Server MUST evaluate the three
-      conditions of Section 4.4 for the specific entry and mapping in
+      conditions of Section 4.6 for the specific entry and mapping in
       force, not assume the type's general capability extends to it.
 
 6.1.  Resource Boundary Canonicalization
 
    A prefix entry (Section 4) draws an authority boundary in URI space.
    The AS's containment test (Section 4.1) and the Resource Server's
-   request matching ([I-D.draft-mcguinness-oauth-mission]) MUST apply
-   the single RFC 3986 [RFC3986] normalization defined in Section 4.1,
-   so issuance and enforcement draw the same boundary.  A matcher that
-   normalizes differently from the party that derived the entry can
-   admit a request the Approver never authorized, or deny one it did.
+   request matching (Section 4.3) MUST apply the single RFC 3986
+   [RFC3986] normalization defined in Section 4.1, so issuance and
+   enforcement draw the same boundary.  A matcher that normalizes
+   differently from the party that derived the entry can admit a request
+   the Approver never authorized, or deny one it did.
 
    The normalization MUST run before the prefix comparison, never after,
    and the boundary MUST be evaluated on the same normalized form a
@@ -888,7 +952,21 @@ Table of Contents
    action here.  If a registry of authorization details types is
    established in the future, this type SHOULD be registered in it.
 
-8.2.  Common Constraints Registry
+8.2.  OAuth Protected Resource Metadata Registration
+
+   This document registers the following in the "OAuth Protected
+   Resource Metadata" registry ([RFC9728]):
+
+   *  Metadata Name: mission_constraints_supported
+
+   *  Metadata Description: JSON array of the constraints keys the
+      protected resource understands and enforces.
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 4.4
+
+8.3.  Common Constraints Registry
 
    This document establishes the "Mission Common Constraints" registry.
    The registration policy is Specification Required [RFC8126].  A
@@ -1014,6 +1092,19 @@ Table of Contents
 
    -00
 
+   *  Review response (#637): relocated the Resource Server enforcement
+      duties (exact/prefix resource matching, action matching, per-entry
+      constraints enforcement) and the mission_constraints_supported
+      protected-resource metadata member (definition and IANA
+      registration) from the issuance profile, which had continued to
+      interpret this type's members directly in its generic Resource
+      Server contract.  Split the Conformance section by role
+      (Authorization Server vs. Resource Server) so an RS is not
+      measured against issuer-only duties (subset/intersection, delegate
+      eligibility, Transformation Capabilities declaration) it has no
+      reason to implement.  Adds this document's conformance-manifest
+      source pin and its own requirement rows.
+
    *  Initial version: mission_resource_access, its resource and action
       matching, generic constraints, the Common Constraints registry,
       the delegation policy and delegate-matching rules, the subset and
@@ -1057,6 +1148,11 @@ Normative References
               Resource Identifier (URI): Generic Syntax", STD 66,
               RFC 3986, DOI 10.17487/RFC3986, January 2005,
               <https://www.rfc-editor.org/rfc/rfc3986>.
+
+   [RFC6750]  Jones, M. and D. Hardt, "The OAuth 2.0 Authorization
+              Framework: Bearer Token Usage", RFC 6750,
+              DOI 10.17487/RFC6750, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6750>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
