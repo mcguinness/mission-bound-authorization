@@ -287,7 +287,6 @@
    "pull_when": "A cross-domain party must verify evidence integrity without trusting issuer logs.",
    "normative_references": [
     "draft-mcguinness-mission-approval-governance",
-    "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-runtime-evidence",
@@ -295,9 +294,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
-    "draft-mcguinness-oauth-mission-containment",
-    "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-work-products"
+    "draft-mcguinness-oauth-mission-signals"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate",
