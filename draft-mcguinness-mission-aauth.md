@@ -124,9 +124,9 @@ This document is a thin binding over those facilities.  AAuth's own
 `expires_at` mission-blob member carries the expiry this binding
 requires on every mission ({{lifecycle}}); this document defines no new
 AAuth endpoint, header field, token claim, mission-blob member, or
-lifecycle state at all.  Its purpose is to make the security and
-composition properties of AAuth missions explicit and to prevent an
-OAuth-specific authority model from being imposed on them.
+lifecycle state at all.  It makes AAuth missions' security and
+composition properties explicit and keeps an OAuth-specific authority
+model from being imposed on them.
 
 ## Contextual Governance, Not Portable Authority
 
@@ -499,8 +499,7 @@ The Carrier Binding Floor of
 the slots a binding must provide to host action-bound transaction
 authorization, and several have no native home in AAuth or R3 today.
 Consistent with this document's rule that it adds no new AAuth wire
-members, it defines no extensions to close them; this section records
-the status informatively, so the gap is legible rather than implied.
+members, it defines no extensions to close them.
 
 | Requirement | Native today | Missing home |
 | --- | --- | --- |
@@ -559,8 +558,9 @@ reject any mismatch or omission against that person token's
 `mission_s256`.  That base rule is what makes stripping detectable;
 comparing claims by agent and resource alone cannot, because an agent
 running concurrent missions holds more than one person token for the
-same resource, and only the named person token resolves to one.  This
-binding keeps two further local rules on top of it.  An agent operating
+same resource, and only the named person token resolves to one.
+
+This binding keeps two further local rules on top of it.  An agent operating
 under a mission MUST verify that a returned resource token carries the
 exact `mission_s256`, and MUST NOT continue that authorization under
 the mission when it is absent or different.  A PS whose policy places
@@ -595,10 +595,11 @@ Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
 as AAuth requires.  When a proposal omits an expiry, the PS MUST set
 one at approval under deployment policy, and that policy SHOULD prefer
-the shortest expiry consistent with the mission's purpose.  Expiry
-transitions the mission to `terminated`; it adds no third state, and no
-token carrying `mission_s256` outlives the mission's approved
-`expires_at`.  AAuth distinguishes an expiry-caused termination with a
+the shortest expiry consistent with the mission's purpose.
+
+Expiry transitions the mission to `terminated`; it adds no third
+state, and no token carrying `mission_s256` outlives the mission's
+approved `expires_at`.  AAuth distinguishes an expiry-caused termination with a
 `termination_reason` of `expired`, surfaced where a management
 companion exposes it, rather than with a separate error status.  An
 early completion, revocation, or administrative termination prevents

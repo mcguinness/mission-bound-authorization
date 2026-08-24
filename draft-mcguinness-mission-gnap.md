@@ -279,7 +279,9 @@ What GNAP deliberately does not standardize is the object at the
 center of the negotiation. How the authorization server assesses a
 request, what the resource owner approved, in what bounds, with what
 durable record, under what lifecycle: all of it is unspecified policy
-behind the grant endpoint. The Mission model of
+behind the grant endpoint.
+
+The Mission model of
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") is a
 specification of exactly that interior: a durable Mission record
 created by an explicit approval event, integrity anchors committing
@@ -298,9 +300,11 @@ requests. Structured authority proposals ride the grant request's
 native access rights, the intake role Rich Authorization Requests
 play ({{authority-adapter}} defines their projection into the
 family's Authority Set), and every request is signed with the client
-instance's key, so the proposal is cryptographically attributable. Asynchronous approval is
-the _pending_ grant state with continuation under the server's
-declared wait interval, the surface the OAuth binding reaches through
+instance's key, so the proposal is cryptographically attributable.
+
+Asynchronous approval is the _pending_ grant state with continuation
+under the server's declared wait interval, the surface the OAuth
+binding reaches through
 the Mission Deferred Approval companion
 ({{I-D.draft-mcguinness-oauth-mission-approval}}) over an unratified
 substrate. And the resource server's contract with the Mission Issuer
@@ -348,7 +352,9 @@ had to assemble intent-first behavior on an attempt-first substrate,
 GNAP's grant request is mutable by design: {{RFC9635}} lets a client
 modify a grant while it is _approved_ or _pending_. The kernel
 requires the Approved Context to be immutable
-({{I-D.draft-mcguinness-mission-substrate}}). This binding resolves
+({{I-D.draft-mcguinness-mission-substrate}}).
+
+This binding resolves
 the tension with one split: a modification within the approved
 Authority Set is a drawdown the authorization server may adjudicate
 by policy, and a modification beyond it is an expansion that MUST
@@ -509,14 +515,11 @@ failing, and the submission is untrusted client input, never
 authority). The grant request's signature attributes the submission
 to the client instance's key; attribution confers no authority.
 
-The access rights of the grant request's access token requests are
-this binding's authority proposal, replacing the issuance profile's
-PAR-only carriage rule. GNAP rights are not an OAuth
-`authorization_details` array: {{authority-adapter}} defines the
-normative projection that resolves, normalizes, and aggregates them
-before the issuance profile's recording and hashing semantics apply
-(a proposal, never authority; the Intent itself carries no authority
-members).
+The grant request's access rights are this binding's authority
+proposal, replacing the issuance profile's PAR-only carriage rule:
+{{authority-adapter}} projects them into the issuance profile's
+recording and hashing rules, and the proposal itself carries no
+authority ({{I-D.draft-mcguinness-oauth-mission}}).
 
 A Mission-Bound GNAP Client Instance MUST carry the Mission Intent
 on the first grant request it makes under a prospective Mission, and
@@ -694,7 +697,9 @@ endpoint URI (the value {{RFC9635}} defines as the identifier of the
 AS) and `client_id` the client instance's instance identifier where
 the authorization server registers one, or a stable approval-time
 identifier it derives from the instance's key where none is
-registered. That value is the Actor identity; token presenter keys
+registered.
+
+That value is the Actor identity; token presenter keys
 are credential bindings recorded separately
 ({{security-key-rotation}}).
 `expires_at` is REQUIRED, in RFC 3339 {{RFC3339}} date-time form;
@@ -779,7 +784,9 @@ One derivation is counted per successful GNAP operation that issues
 or rotates credentials under the Mission (an initial grant response,
 a continuation response, a modifying request's response, or a token
 rotation), regardless of the number of tokens the response carries;
-an operation that issues none counts zero. Where the Intent's
+an operation that issues none counts zero.
+
+Where the Intent's
 `controls.max_derivations` is
 present, the authorization server MUST refuse the derivation that
 would exceed it, per the issuance profile's count-and-gate rule. An
@@ -817,6 +824,7 @@ response is `active: false` with every other member omitted. Where
 no minimum was named, an otherwise valid token reports
 `active: true` with the filtered, possibly empty, `access` array:
 the resource server then holds no disclosed authority to permit.
+
 `mission.state` continues to report `active` because containment
 narrows authority without changing Mission state. The staleness
 bound is the introspection caching the deployment permits, which the
