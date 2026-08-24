@@ -136,11 +136,14 @@ dependency on the execution hot path. At machine speed that
 dependency is the bottleneck: a swarm forking sub-agents per subtask
 cannot afford an issuer round trip per fork, and localized, offline,
 cryptographically verifiable narrowing is the shape that load
-requires from day one. This profile is the family's OAuth-lane answer to it;
+requires from day one.
+
+This profile is the family's OAuth-lane answer to it;
 its Experimental status reflects the maturity of the attenuation
 substrate it profiles, not a judgment that the capability is
 optional. The stable path meanwhile is issuer-mediated child
 delegation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+
 The saving is amortization, not elimination: because a root's lifetime
 is kept short ({{security-considerations}}), the holder returns to the
 issuer once per subtree per root-lifetime window to mint the root, and
@@ -524,12 +527,14 @@ chain and Token Exchange), which narrows at the issuer, online, so the
 issuer observes each delegation; and Mission Child Delegation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), which creates
 a separate Child Mission with its own `mission_id`, lifecycle, and
-approval. The Mission Child Delegation profile sets out how the three
-differ. Offline attenuation creates no new Mission: every child rides
-the same `mission` claim and dies with the same Mission. Use offline
-attenuation when a sub-agent needs a narrower token under the same
-Mission, fast, at fan-out scale; use a Child Mission when it needs its
-own durable, separately revocable Mission.
+approval. Offline attenuation creates no new Mission: every child rides
+the same `mission` claim and dies with the same Mission.
+
+Mission Child Delegation's Relationship to Delegated Tokens section
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Relationship to Delegated Tokens") is the family's decision guide for
+choosing among the three narrowing mechanisms; this document does not
+restate it.
 
 # Actor Attribution on the Chain {#actor-attribution}
 

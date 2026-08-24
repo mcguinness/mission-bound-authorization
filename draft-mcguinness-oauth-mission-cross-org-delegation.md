@@ -175,6 +175,7 @@ whose evidence layer is the actor-suite companions (issuer-signed hop
 receipts, actor-signed hop proofs, and recorded authority bounds), is
 documented as related work and is not defined here; maintaining two
 wire formats in a first revision would make interoperability worse.
+
 A family profiling of Actor Chain Authority Bounds is constrained
 ahead of time: every in-Mission basis-reset or widening mechanism,
 including a domain-transition reset, is prohibited; a new authority
