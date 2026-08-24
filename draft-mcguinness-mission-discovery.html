@@ -2036,24 +2036,37 @@ consented family. The mitigation is at consent time: ceiling
 families <span class="bcp14">SHOULD</span> be as narrow as the task allows, and the progressive
 profile's rate bound applies per chain, so mass encounter-binding is
 bounded and visible.<a href="#section-12-2" class="pilcrow">¶</a></p>
-<p id="section-12-3"><strong>Declaration swap.</strong> A resource that changes its declaration
+<p id="section-12-3"><strong>Harness taint-duty strength is a conformance note, not a new
+requirement.</strong> The harness's duties to track parameter-level
+provenance and to gate egress on tainted content are <span class="bcp14">SHOULD</span>-level
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), outside its opt-in
+PDP-enforced taint path. A deployment whose harness supplies only
+coarse session-level taint can still satisfy this profile, but more
+encounters route to a human or are refused. A missing, stale, or
+unverifiable report is treated as tainted under the rule above
+(<a href="#adjudication" class="auto internal xref">Section 7</a>); it is not an untainted report. This profile does
+not strengthen the harness's separate <span class="bcp14">SHOULD</span>-level post-binding
+egress response. The degradation is therefore explicit: less precise
+taint information reduces policy binding, while weaker harness
+egress enforcement remains a separately disclosed residual.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4"><strong>Declaration swap.</strong> A resource that changes its declaration
 between encounter and use is caught by the digest: the runtime
 capability-drift rule refuses catalog capabilities whose source
 changed, and a re-encountered resource whose declaration digest
-differs is a new encounter, not a bound one.<a href="#section-12-3" class="pilcrow">¶</a></p>
-<p id="section-12-4"><strong>Probing.</strong> The outcome trichotomy itself leaks coarse ceiling
+differs is a new encounter, not a bound one.<a href="#section-12-4" class="pilcrow">¶</a></p>
+<p id="section-12-5"><strong>Probing.</strong> The outcome trichotomy itself leaks coarse ceiling
 shape to whoever controls what the agent meets: bind, route, and
 refuse partition the world. Refusals are uniform (<code>refused</code> carries
 no ceiling detail), the adjudication rate bound of <a href="#adjudication" class="auto internal xref">Section 7</a>
 prices the probe, a deployment <span class="bcp14">MAY</span> collapse <code>refused</code> into
 <code>routed_to_approval</code> so a probe sees a single non-bind outcome while
 a human sees the pattern, and the anti-oracle discipline of the
-family's status surfaces applies to any encounter-facing endpoint.<a href="#section-12-4" class="pilcrow">¶</a></p>
-<p id="section-12-5"><strong>Adjudicator availability.</strong> The adjudicator sits on the discovery
+family's status surfaces applies to any encounter-facing endpoint.<a href="#section-12-5" class="pilcrow">¶</a></p>
+<p id="section-12-6"><strong>Adjudicator availability.</strong> The adjudicator sits on the discovery
 path only: a bound resource is thereafter enforced by the runtime
 layer without re-adjudication, and adjudicator outage stops new
 bindings, never existing authority. Fail-closed here costs
-opportunity, not work in flight.<a href="#section-12-5" class="pilcrow">¶</a></p>
+opportunity, not work in flight.<a href="#section-12-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -2291,12 +2304,24 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Discovery Evidence gained a self-hosted Canonical Bytes subsection
+          <p id="appendix-A-2.1.1">Security Considerations gained a conformance note stating explicitly
+that the harness's provenance-tracking and egress-gating taint
+duties are <span class="bcp14">SHOULD</span>-level outside its opt-in PDP-enforced path: a
+coarse but trustworthy report still satisfies this profile at the
+cost of more human routing, a missing, stale, or unverifiable report
+is treated as tainted under the existing rule, and this profile
+never strengthens the harness's own <span class="bcp14">SHOULD</span>-level egress response,
+which remains a separately disclosed residual. No new requirement;
+the note names where the ceiling path's routing cost actually comes
+from (#664).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Discovery Evidence gained a self-hosted Canonical Bytes subsection
 and a full IANA media-type registration for
 <code>application/mission-discovery-evidence+json</code>, with the Mission
 Issuer stated as its explicit authoritative producer. The
 operational <code>typ</code> now names that registered media type, prefix
-omitted, dropping the prior pending-registration language (#662).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+omitted, dropping the prior pending-registration language (#662).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

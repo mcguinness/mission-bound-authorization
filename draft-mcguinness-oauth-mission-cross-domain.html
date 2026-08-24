@@ -1874,42 +1874,58 @@ presentation with <code>invalid_grant</code> (<span>[<a href="#RFC7523" class="c
 cannot be replayed even by the party it is bound to.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.6">
-          <p id="section-10-2.6.1">When issuing local access tokens for its resources, the Resource AS
+          <p id="section-10-2.6.1"><span class="bcp14">MUST</span> authenticate the redeeming client at redemption, by whatever
+mechanism its own token endpoint uses for client authentication,
+and <span class="bcp14">MUST</span> refuse with <code>invalid_client</code> a request whose client
+authentication fails or whose presented credential does not
+resolve to a client it recognizes. The cross-domain grant's
+sender-constraint (<a href="#grant-at-boundary" class="auto internal xref">Section 16.2</a>) proves only that the
+presenter holds the grant's bound key; it is not, by itself, client
+authentication at the Resource AS's own token endpoint and <span class="bcp14">MUST NOT</span>
+be treated as satisfying this requirement.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.7">
+          <p id="section-10-2.7.1">When issuing local access tokens for its resources, the Resource AS
 uses the subject-resolution rules of the underlying cross-domain
 grant and identity chaining specifications. The local token preserves
 the <code>mission</code> claim (<code>id</code>, <code>issuer</code>, and <code>authority_hash</code>) unchanged
 from the cross-domain grant. The issuing <code>iss</code> is the Resource AS;
-<code>mission.issuer</code> remains the originating AS. Such a local token:<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+<code>mission.issuer</code> remains the originating AS. Such a local token:<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10-2.6.2.1">
-              <p id="section-10-2.6.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
+<li class="normal" id="section-10-2.7.2.1">
+              <p id="section-10-2.7.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
 AS does not hold the Mission's <code>expires_at</code>; because the grant's
 own <code>exp</code> is bounded by it (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>), the local
-token is bounded transitively;<a href="#section-10-2.6.2.1.1" class="pilcrow">¶</a></p>
+token is bounded transitively;<a href="#section-10-2.7.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-10-2.6.2.2">
-              <p id="section-10-2.6.2.2.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>), like the grant it
-derives from;<a href="#section-10-2.6.2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-10-2.7.2.2">
+              <p id="section-10-2.7.2.2.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>), like the grant it
+derives from;<a href="#section-10-2.7.2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-10-2.6.2.3">
-              <p id="section-10-2.6.2.3.1"><span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-10-2.6.2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-10-2.7.2.3">
+              <p id="section-10-2.7.2.3.1"><span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-10-2.7.2.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-10-2.6.2.4">
-              <p id="section-10-2.6.2.4.1">sets <code>client_id</code> to the client that requested this local token,
-the party that authenticated at redemption in the Resource AS's
-own namespace, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 4.3 and <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>
-Section 2.2. It <span class="bcp14">MUST NOT</span> set <code>client_id</code> to the Mission's
-approved agent from the originating domain. The approved agent is
-not carried directly on this local token: it remains recoverable
-at the originating AS from the Mission Record identified by
-<code>mission.id</code> and <code>mission.issuer</code>. A Resource Server <span class="bcp14">MAY</span> impose
-stronger actor-chain requirements but <span class="bcp14">MUST NOT</span> reinterpret
-<code>client_id</code>.<a href="#section-10-2.6.2.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-10-2.7.2.4">
+              <p id="section-10-2.7.2.4.1"><span class="bcp14">MUST</span> identify, per the destination's own credential conventions,
+the client identity established by the authentication above;
+where the local token is an RFC 9068-style JWT, that identifier
+is <code>client_id</code> (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 4.3, <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> Section
+2.2). It <span class="bcp14">MUST NOT</span> be the Mission's approved agent from the
+originating domain, and the cross-domain grant's own <code>client_id</code>
+claim (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>) <span class="bcp14">MUST NOT</span> be reinterpreted as this
+local identifier under any profile. Where the Origin Principal
+profile is claimed, that approved agent's origin principal is
+instead conveyed to the local token through <code>mission.subject</code>
+(<a href="#origin-principal" class="auto internal xref">Section 11</a>); otherwise the approved agent remains
+recoverable only at the originating AS from the Mission Record
+identified by <code>mission.id</code> and <code>mission.issuer</code>. A Resource
+Server <span class="bcp14">MAY</span> impose stronger actor-chain requirements but <span class="bcp14">MUST NOT</span>
+reinterpret <code>client_id</code>.<a href="#section-10-2.7.2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
-        <li class="normal" id="section-10-2.7">
-          <p id="section-10-2.7.1"><span class="bcp14">MUST</span> bound the issued <code>authorization_details</code> by what the
+        <li class="normal" id="section-10-2.8">
+          <p id="section-10-2.8.1"><span class="bcp14">MUST</span> bound the issued <code>authorization_details</code> by what the
 cross-domain grant conveyed. It <span class="bcp14">MUST</span> apply its own local
 authorization policy in addition: honoring a Mission does not
 obligate it to authorize any particular request. Because the
@@ -1920,10 +1936,10 @@ conveyed <code>actions</code> identifier or <code>constraints</code> key it does
 recognize for the resource in question, exactly as a Resource Server
 does (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource
 Server Enforcement"), so authority it cannot interpret is never
-honored across the trust boundary rather than enforced by guess.<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
+honored across the trust boundary rather than enforced by guess.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-2.8">
-          <p id="section-10-2.8.1"><span class="bcp14">MUST</span>, when it issues delegated tokens of its own, enforce each
+        <li class="normal" id="section-10-2.9">
+          <p id="section-10-2.9.1"><span class="bcp14">MUST</span>, when it issues delegated tokens of its own, enforce each
 entry's <code>delegation</code> policy as the issuance profile specifies
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
 Constraints"); the policy travels on the conveyed entries. The
@@ -1935,10 +1951,10 @@ delegate model (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite
 "Delegation Within a Mission"); that chain identifies delegates
 within this domain only. The Mission's originating approved agent
 is recoverable from the Mission Record, not from <code>client_id</code> or
-this domain's <code>act</code> chain.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+this domain's <code>act</code> chain.<a href="#section-10-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-2.9">
-          <p id="section-10-2.9.1"><span class="bcp14">SHOULD</span> record, per minted local token, both sides of the
+        <li class="normal" id="section-10-2.10">
+          <p id="section-10-2.10.1"><span class="bcp14">SHOULD</span> record, per minted local token, both sides of the
 derivation: the consumed grant's <code>jti</code> and conveyed
 <code>authorization_details</code>, and the local token's own identifier or
 digest (<code>jti</code>), <code>iss</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, and issued
@@ -1948,7 +1964,7 @@ tying a local token to the grant it was minted from and showing
 its authority did not widen; without it, cross-domain minting is
 unaccountable to both domains. Whether the Resource AS keeps this
 record is a pre-established trust input
-(<a href="#pre-established-trust" class="auto internal xref">Section 8</a>).<a href="#section-10-2.9.1" class="pilcrow">¶</a></p>
+(<a href="#pre-established-trust" class="auto internal xref">Section 8</a>).<a href="#section-10-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-10-3">A grant that carries no <code>mission</code> claim is outside this profile: the
@@ -2431,18 +2447,24 @@ sender-constrained and short-lived (<a href="#validation-at-resource-as" class="
 <a href="#cross-domain-revocation" class="auto internal xref">Section 16.1</a>);<a href="#section-15-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.3">
-          <p id="section-15-5.3.1">sets each local token's <code>client_id</code> to the redeeming client, never
-the Mission's approved agent (<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>);<a href="#section-15-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.3.1">authenticates the redeeming client at redemption by its own
+mechanism, distinct from the grant's sender-constraint
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>);<a href="#section-15-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.4">
-          <p id="section-15-5.4.1">fails redemption with the codes of <a href="#error-responses" class="auto internal xref">Section 12</a>;<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.4.1">sets each local token's <code>client_id</code> to the client identity that
+authentication established, never the Mission's approved agent nor
+the grant's own <code>client_id</code> claim (<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>);<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.5">
-          <p id="section-15-5.5.1">where it offers token introspection for its local tokens, follows
-<a href="#introspection-at-resource-as" class="auto internal xref">Section 13</a>; and<a href="#section-15-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.5.1">fails redemption with the codes of <a href="#error-responses" class="auto internal xref">Section 12</a>;<a href="#section-15-5.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.6">
-          <p id="section-15-5.6.1">never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-15-5.6.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.6.1">where it offers token introspection for its local tokens, follows
+<a href="#introspection-at-resource-as" class="auto internal xref">Section 13</a>; and<a href="#section-15-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.7">
+          <p id="section-15-5.7.1">never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-15-5.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-15-6">A Resource AS is not required to implement the issuance profile's Mission
@@ -3179,6 +3201,19 @@ Per-Domain Delegation Depth (the unconditional "a Resource AS of
 this document begins its delegation depth at 0" restated what the
 preceding, correctly conditioned sentence already said; the
 citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.3">
+          <p id="appendix-B-3.3.1">Added an explicit Resource AS requirement to authenticate the
+redeeming client at redemption, distinct from the cross-domain
+grant's sender-constraint, and restated local-token client
+identification as a property-level requirement bound to that
+authentication (identify the redeeming destination client per the
+destination's own credential conventions, naming <code>client_id</code> as
+the RFC 9068 case) rather than naming <code>client_id</code> directly (S-12).
+Scoped the origin-identity-carriage sentence to the Origin
+Principal profile when claimed, and separately barred reinterpreting
+the cross-domain grant's own <code>client_id</code> claim as the local
+identifier under any profile.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

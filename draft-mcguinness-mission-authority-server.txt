@@ -2664,8 +2664,8 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-status.html>.
 
    [MCP-META] Model Context Protocol Project, "Model Context Protocol:
-              Base Protocol", 2025, <https://modelcontextprotocol.io/
-              specification/2025-11-25/basic/index>.
+              Base Protocol", 2026, <https://modelcontextprotocol.io/
+              specification/2026-07-28/basic/index>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
