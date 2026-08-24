@@ -776,6 +776,22 @@ families SHOULD be as narrow as the task allows, and the progressive
 profile's rate bound applies per chain, so mass encounter-binding is
 bounded and visible.
 
+**Harness taint-duty strength is a conformance note, not a new
+requirement.** This document's fail-safe ({{adjudication}}) treats a
+missing, stale, or unverifiable taint state as tainted, but that
+fail-safe does not raise the strength of the taint state itself: the
+harness's own duties to track parameter-level provenance and to gate
+egress on tainted content are SHOULD-level
+({{I-D.draft-mcguinness-mission-harness}}), outside its opt-in
+PDP-enforced taint path, which carries MUSTs but only where the
+deployment's Enforcement Scope Statement declares it. A harness
+meeting only the SHOULD-level duties still supplies a taint state
+this document's adjudication accepts, at the cost of routing more
+encounters to a human, or refusing them, than a harness held to a
+MUST-level taint duty would produce. The degradation is absorbed,
+not hidden: an over-broad routing floor, never an unrecognized
+tainted bind.
+
 **Declaration swap.** A resource that changes its declaration
 between encounter and use is caught by the digest: the runtime
 capability-drift rule refuses catalog capabilities whose source
@@ -848,6 +864,14 @@ This document registers one media type per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Security Considerations gained a conformance note stating explicitly
+  that the harness's provenance-tracking and egress-gating taint
+  duties are SHOULD-level outside its opt-in PDP-enforced path, so a
+  conforming harness meeting only those duties still satisfies this
+  document's fail-safe, at the cost of routing more encounters to a
+  human than a MUST-level harness would. No new requirement; the note
+  names where the ceiling path's routing cost actually comes from
+  (#664).
 - Discovery Evidence gained a self-hosted Canonical Bytes subsection
   and a full IANA media-type registration for
   `application/mission-discovery-evidence+json`, with the Mission
