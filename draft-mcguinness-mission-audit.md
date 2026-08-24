@@ -1637,6 +1637,12 @@ rather than registering a new identifier.
   Discovery Evidence gained a self-hosted canonical-bytes definition
   and IANA media-type registration in its own profile, closing the
   one gap this document's citation had left undefined (#662).
+- Editorial density pass: split several overlong paragraphs in the
+  Mission Evidence Base (the evidence-type naming-layers discussion)
+  and in Registration Policy and Authoritative Producers, for
+  scannability. No wording changed and no BCP-14 keyword sentence
+  moved outside its section; the Evidence Types table and the
+  Verification Failures integrity-vs-audit split were left untouched.
 
 # Acknowledgments
 {:numbered="false"}

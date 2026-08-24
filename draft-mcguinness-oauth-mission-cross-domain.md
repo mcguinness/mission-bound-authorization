@@ -1569,3 +1569,9 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
   per-domain `max_depth` times a flat domain count, and domains are
   counted by distinct Resource AS from the resource-to-AS mapping,
   never by resource count ({{pre-established-trust}}).
+- Editorial density pass: split several overlong paragraphs (no BCP-14
+  keyword sentence changed) and merged a duplicated sentence in
+  Per-Domain Delegation Depth (the unconditional "a Resource AS of
+  this document begins its delegation depth at 0" restated what the
+  preceding, correctly conditioned sentence already said; the
+  citation moved onto that sentence and the duplicate was dropped).

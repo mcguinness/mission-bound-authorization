@@ -530,7 +530,7 @@ a separate Child Mission with its own `mission_id`, lifecycle, and
 approval. Offline attenuation creates no new Mission: every child rides
 the same `mission` claim and dies with the same Mission.
 
-Mission Child Delegation's Relationship to Delegated Tokens section
+Mission Child Delegation's own comparison section
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
 "Relationship to Delegated Tokens") is the family's decision guide for
 choosing among the three narrowing mechanisms; this document does not
