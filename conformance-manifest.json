@@ -8116,10 +8116,10 @@
    ]
   },
   {
-   "id": "authzen.pdp-request.consistency-view-id-and-authority-hash-equal",
+   "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "The `id` and `authority_hash` in `context.mission` equal the `mission_id` and `authority_hash` committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
+   "text": "The `id` and `issuer` in `context.mission` equal the `mission_id` and issuer committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -8131,25 +8131,35 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request whose context.mission id or authority_hash disagrees with the loaded materialized view's committed values is denied view_inconsistent"
+    "normative": "a request whose context.mission id or issuer disagrees with the loaded materialized view's committed values is denied view_inconsistent"
    },
    "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > a supplied mission reference that mismatches the loaded view is refused, never silently accepted",
-     "level": "unit",
-     "surface": "decision-request"
-    }
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. The prior tests exercised an authority_hash mismatch specifically; the same-PR src update to services/pdp/src/evaluate.ts (dropping the unconditional authority_hash comparison) rewrites them to exercise an id/issuer mismatch and re-wires coverage here."
+  },
+  {
+   "id": "authzen.pdp-request.consistency-authority-hash-equal-when-present",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "When `context.mission.authority_hash` is also present, it MUST equal the view's committed `authority_hash`, with the same `view_inconsistent` result on inequality",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
    ],
-   "notes": "The endpoint-level test needs live OpenFGA and sandbox-skips locally; the unit-level test runs unconditionally against a stub Fga and proves the same authority_hash-mismatch -> view_inconsistent rule without it, so this row has non-skipping local coverage too."
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a supplied context.mission.authority_hash that disagrees with the PDP's loaded view's committed authority_hash is denied view_inconsistent; its omission alone never denies (see consistency-no-fail-on-optional-omission)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission. Test wiring pending the same-PR src update to services/pdp/src/evaluate.ts."
   },
   {
    "id": "authzen.pdp-request.consistency-policy-view-id-equal",
@@ -8206,7 +8216,7 @@
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id` or `policy_version` was omitted; the view the PDP loaded is authoritative.",
+   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id`, `policy_version`, or `authority_hash` was omitted; the view the PDP loaded is authoritative.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -8218,11 +8228,12 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "omitting the optional policy_view_id or policy_version never by itself fails a decision; the PDP's own loaded view is authoritative"
+    "normative": "omitting the optional policy_view_id, policy_version, or authority_hash never by itself fails a decision; the PDP's own loaded view is authoritative"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#702: authority_hash left context.mission's baseline (formerly REQUIRED) member set and joined policy_view_id/policy_version as an optional member whose omission this rule already covered; extended to name it explicitly rather than leaving the extension implicit."
   },
   {
    "id": "authzen.pdp-request.consistency-parameter-digest-presence-and-match",
@@ -8493,7 +8504,7 @@
    "id": "authzen.context-mission.identity-members-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-mission",
-   "text": "REQUIRED. A string. The Authority Set integrity anchor, in the integrity-anchor encoded form ({{I-D.draft-mcguinness-oauth-mission}}).",
+   "text": "REQUIRED. A string. The Mission's `id`.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -8505,7 +8516,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "context.mission always carries id, issuer, and authority_hash, the Mission's required identity and Authority Set integrity anchor, and carries policy_version when known (a PEP not co-located with the Mission record omits it and relies on policy_view_id for view correlation)"
+    "normative": "context.mission always carries id and issuer, the Mission's required identity; authority_hash is OPTIONAL (#702) and carried only where the PEP holds it under the issuance profile's Local Approved-Set Verification profile or introspection disclosure privilege; policy_version is carried when known (a PEP not co-located with the Mission record omits it and relies on policy_view_id for view correlation)"
    },
    "level": "unit",
    "coverage": "partial",
@@ -8517,7 +8528,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Tested indirectly through authority_hash's consistency-check consequence; id/issuer presence itself is not separately asserted by a test."
+   "notes": "#702 narrowed this row's observation from authority_hash-as-required to id/issuer-as-required (authority_hash is now OPTIONAL, tracked separately by consistency-authority-hash-equal-when-present and consistency-no-fail-on-optional-omission). The wired test predates the #702 src update and currently exercises an authority_hash mismatch; id/issuer presence itself is still not separately asserted by a test, so coverage remains partial pending the same-PR src update."
   },
   {
    "id": "authzen.context-mission.origin-principal-only-from-verified-source",
@@ -10548,7 +10559,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "The Controller is the Mission Issuer/AS ({{oauth-mission#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-view-id-and-authority-hash-equal), not this Controller-role row."
+   "notes": "The Controller is the Mission Issuer/AS ({{oauth-mission#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-id-and-issuer-equal), not this Controller-role row."
   },
   {
    "id": "substrate.basic-gate.decision-only-while-active",
