@@ -373,7 +373,7 @@ It consumes these optional capabilities:
 | State-Observable | required when a consumer claims the Runtime-Enforced property | Consumed only for the Runtime-Enforced property: a consumer that checks a fresh, authenticated state source at or near action time denies contained capability whether or not its credential predates the transition; a consumer that never consults such a source gets Baseline only ({{containment-properties}}) |
 | Credential-Bound | required when derivation issues Mission-bound tokens | Consumed where derivation issues Mission-bound tokens; a token issued before the transition is the same residual that revocation carries, bounded by its own `exp` and the deployment's freshness rules ({{derivation-gating}}) |
 | Independently Verifiable | not consumed | This document defines no offline verification artifact or trust-anchor discovery; its evidence objects are the Mission Issuer's own audit material ({{containment-evidence}}) |
-| Portable Evidence | not consumed | This document produces audit material of its own, the Containment Evidence object and the Protected Event Receipt, whose canonical bytes and type identifiers an audit or transparency profile registers ({{evidence-canonical}}, {{protected-event-receipt}}) |
+| Portable Evidence | not consumed | This document produces audit material of its own, the Containment Evidence object and the Protected Event Receipt, and registers their canonical bytes and type identifiers itself ({{evidence-canonical}}, {{protected-event-receipt}}) |
 {: title="Containment profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this

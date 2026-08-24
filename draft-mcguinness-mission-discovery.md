@@ -36,6 +36,8 @@ normative:
         name: Karl McGuinness
     date: 2026
   RFC3339:
+  RFC6838:
+  RFC7515:
   RFC8785:
   RFC9728:
   I-D.draft-mcguinness-oauth-mission:
@@ -670,14 +672,18 @@ Evidence object:
 `adjudicated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} date-time.
 
-The adjudicator signs the object under the suite's evidence
+The Discovery Adjudicator, always the Mission Issuer
+({{conventions}}), is the authoritative producer of Discovery
+Evidence and signs the object under the suite's evidence
 conventions: a JWS whose protected header carries `alg`, a `kid`
 resolvable in the Mission Issuer's published key material, and a
-`typ` of `mission-discovery-evidence+json` (a local-use identifier
-pending registration; the value omits the `application/` prefix, as
-JWS `typ` values do). The signature is what identifies the
-adjudicator, so the object carries no member for it. The payload's
-canonical bytes are its JCS canonicalization {{RFC8785}}.
+`typ` of `mission-discovery-evidence+json`, naming the
+`application/mission-discovery-evidence+json` media type
+({{discovery-evidence-canonical}}) with the `application/` prefix
+omitted, as JWS `typ` values do {{RFC7515}}. The signature is what
+identifies the adjudicator, so the object carries no member for it.
+The payload's canonical bytes are its JCS canonicalization
+{{RFC8785}}.
 It is registrable in a transparency log on the Mission's feed
 ({{I-D.draft-mcguinness-mission-audit}}), and its members make an
 encounter reproducible: what was met, what it claimed, what was
@@ -718,6 +724,13 @@ section, or a Discovery Evidence record carrying `tainted` true, as a
 protected event. Neither field alone determines the event: this
 document defines the outcome and the evidence it produces, not the
 policy that consumes them into a containment trigger.
+
+## Canonical Bytes {#discovery-evidence-canonical}
+
+A Discovery Evidence object's canonical bytes are its JCS {{RFC8785}}
+canonicalization, and its type identifier is
+`application/mission-discovery-evidence+json`, registered by this
+document ({{iana}}).
 
 # Conformance {#conformance}
 
@@ -797,10 +810,47 @@ digest commitment keeps that content out of the log.
 
 # IANA Considerations {#iana}
 
-This document makes no IANA request. The evidence type identifier of
-{{discovery-evidence}} is local-use pending registration.
+This document registers one media type per {{RFC6838}}.
+
+## Media Type Registration
+
+### Discovery Evidence Media Type
+
+- Type name: application
+- Subtype name: mission-discovery-evidence+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission open-world discovery
+  deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Discovery Evidence gained a self-hosted Canonical Bytes subsection
+  and a full IANA media-type registration for
+  `application/mission-discovery-evidence+json`, with the Mission
+  Issuer stated as its explicit authoritative producer. The
+  operational `typ` now names that registered media type, prefix
+  omitted, dropping the prior pending-registration language (#662).
 
 # Acknowledgments
 {:numbered="false"}

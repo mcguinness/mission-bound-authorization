@@ -41,6 +41,8 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   authority_set: [
     { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
   ...over,
 });
 
@@ -225,6 +227,8 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
         constraints: { vendors: ["acme", "globex"] },
       },
     ],
+    subject: { iss: "https://as.test", sub: "alice" },
+    client_id: "ap-agent",
   };
   const listReq = (vendorIds: string[]): EvaluationRequest => ({
     subject: { id: "alice" },

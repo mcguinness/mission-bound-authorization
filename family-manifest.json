@@ -216,7 +216,9 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -287,7 +289,6 @@
    "pull_when": "A cross-domain party must verify evidence integrity without trusting issuer logs.",
    "normative_references": [
     "draft-mcguinness-mission-approval-governance",
-    "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-runtime-evidence",
@@ -295,9 +296,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
-    "draft-mcguinness-oauth-mission-containment",
-    "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-work-products"
+    "draft-mcguinness-oauth-mission-signals"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate",
@@ -977,7 +976,8 @@
    "pull_when": "Actions need a point-of-use check, not just issuance-time gating.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
@@ -1202,19 +1202,10 @@
    "pull_when": "Evaluating a UMA 2.0 deployment only.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-issuance-grant"
+    "draft-mcguinness-oauth-mission"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
-   ],
-   "requires_when": [
-    {
-     "when": "the expires_at member is adopted",
-     "requires": [
-      "draft-mcguinness-oauth-mission-issuance-grant"
-     ]
-    }
    ],
    "references": [
     "draft-mcguinness-mission-aauth",
@@ -1238,7 +1229,6 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
@@ -1383,6 +1373,7 @@
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-signals",
@@ -1522,6 +1513,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-uma",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion"
    ]
@@ -1778,6 +1770,7 @@
    ],
    "references": [
     "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-metering",
@@ -1880,15 +1873,19 @@
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-expansion"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-expansion"
    ],
    "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
+    "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",

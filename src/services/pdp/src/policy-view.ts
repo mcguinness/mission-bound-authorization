@@ -44,6 +44,15 @@ export interface MissionView {
   authority_hash: string;
   authority_set: AuthorityEntry[];
   /**
+   * @spec authority-server#mission-join rules 3-4 — the Mission's authorized
+   * party, joined against the presented credential's authenticated subject
+   * and client identifier. Not a `policyViewId` input (below): the join
+   * compares these against the credential outside the pinned commitment, so
+   * adding them here does not perturb an existing pinned hash.
+   */
+  subject: { iss: string; sub: string };
+  client_id: string;
+  /**
    * The containment DELTA (what was removed), not a filtered authority set:
    * carrying the delta lets the PDP distinguish never-approved
    * (`out_of_authority`) from approved-then-contained (`authority_contained`).

@@ -52,6 +52,8 @@ const VIEW: MissionView = {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
 };
 const TOKEN: TokenFacts = {
   sub: "alice",
@@ -92,8 +94,10 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
       // stamped at this read (Finding 1); "load_view" declared trusted below.
-      loadView: (id) =>
-        id === VIEW.id
+      // Implements the canonical (issuer, id) tuple contract (@spec
+      // authority-server#reference-tuple, #685 review).
+      loadView: (ref) =>
+        ref.id === VIEW.id && ref.issuer === VIEW.issuer
           ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
           : undefined,
       instanceEpoch: "epoch-1",

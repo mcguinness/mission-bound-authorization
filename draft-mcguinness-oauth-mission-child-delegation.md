@@ -93,6 +93,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -598,7 +606,7 @@ Interactive:
   the issuance profile's own approval ceremony via a Pushed
   Authorization Request {{RFC9126}}
   ({{I-D.draft-mcguinness-oauth-mission}}), after which the child grant
-  reference is returned. This interactive path is retained.
+  reference is returned.
 
 The child grant reference conveyed at completion is the child-bound JWT
 authorization grant of {{child-client-identity}}, never a child token.
@@ -1148,7 +1156,13 @@ subtree alongside it, so the Approver sees the real reachable surface
 rather than one Mission's local counter alone. Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
-({{I-D.draft-mcguinness-mission-metering}}).
+({{I-D.draft-mcguinness-mission-metering}}). This warning is about the
+child-subtree axis specifically; the continuation profile separately
+counts derivations within a single Mission's own continued grants,
+where a delegated refresh-token family's successive refreshes are one
+derivation, not one per refresh
+({{I-D.draft-mcguinness-oauth-mission-continuation}}, Section
+"Authorization Continuity and the Mission").
 
 # Fan-Out Controls {#fanout}
 

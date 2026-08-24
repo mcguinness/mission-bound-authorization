@@ -60,6 +60,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -283,7 +291,12 @@ ceiling. A continuation that issues a distinct new grant (for example, an
 Identity Continuation hop that mints a new audience-scoped credential)
 counts as one derivation; the successive refreshes of a single async
 delegation family ({{transport-async}}) are one delegation and do not
-each count again.
+each count again. This counts derivations within one Mission; it does
+not bound how many derivations a subtree of Child Missions performs in
+aggregate, which the child delegation profile's own local, per-Mission
+`max_derivations` warning addresses
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Derivation Budget Is Not Inherited").
 
 # The Grants-Nothing Invariant {#invariant}
 

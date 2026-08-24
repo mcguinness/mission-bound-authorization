@@ -33,6 +33,8 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
       actions: ["payments:invoice.read"],
     },
   ],
+  subject: { iss: "https://as.test", sub: "alice" },
+  client_id: "ap-agent",
   ...over,
 });
 

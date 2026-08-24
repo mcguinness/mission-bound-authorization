@@ -118,6 +118,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -322,6 +330,32 @@ profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
 reused: that value names policy-approved child creation, not a
 ceiling drawdown.
+
+The issuance profile's fourth high-risk class, a consumption bound
+({{I-D.draft-mcguinness-oauth-mission}}), is not held back here: it is
+the containment an in-ceiling expansion draws down under, not a
+hazard drawdown amplifies. The `ceiling_drawdown` `approval_basis`
+already carries the trace the issuance profile's approval-authentication
+floor requires for that class, through the `consent_principal` and
+`approved_at` fields this section defines; a deployment recording
+Consent Evidence renders the bound at the same surface under the
+metering profile's consent-integrity rule
+({{I-D.draft-mcguinness-mission-metering}}).
+
+Where a deployment adopts Approval Governance
+({{I-D.draft-mcguinness-mission-approval-governance}}) and records a
+Governance Record for a policy-adjudicated drawdown, the
+`ceiling_drawdown` `approval_basis` satisfies that profile's
+accountable-approver rule directly, through the same
+`consent_principal`, `root_commitment`, and `approved_at` this
+document already requires: no assertion is fabricated in the name of
+the requesting client or the drawdown policy to stand in for a fresh
+human decision that did not occur. Approval Governance's own
+high-risk-class default still binds that record: a policy-adjudicated
+drawdown carrying a consumption bound activates only where a
+committed, class-named exception admits it; absent the exception, the
+Mission fails to activate under that profile's atomic-commitment
+rule.
 
 When the adjudication is by the pre-consented drawdown policy, the
 Mission Issuer MAY complete the authorization request without prompting
