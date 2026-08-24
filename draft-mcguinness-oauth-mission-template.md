@@ -120,6 +120,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -259,7 +267,12 @@ Template Ceiling:
   Mission Template may reach: an array of authorization-details-shaped
   entries, each the shape of an Authority Set entry
   ({{I-D.draft-mcguinness-oauth-mission}}), that every dispatched
-  instance MUST be within ({{dispatch}}).
+  instance MUST be within ({{dispatch}}). This bound is distinct from
+  the progressive profile's `authority_ceiling` on a single evolving
+  Mission and from the shaping companion's caller-supplied shaping
+  ceiling on a proposal
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}},
+  {{I-D.draft-mcguinness-mission-shaping}}).
 
 Dispatch:
 : The act of instantiating an ordinary Mission from a Mission Template
@@ -519,11 +532,7 @@ The Mission Issuer adjudicates a Dispatch in this order:
      issuance profile's standing-consent requirement) is the instant
      the consenting human approved this exact `template_version`,
      read from the Mission Issuer's retained template record at
-     Dispatch, never from the Dispatch request. This makes the
-     approver-of-record shift from a fresh human decision to policy
-     adjudication under a prior human consent structured and flagged
-     consistently across the family, superseding a bare
-     policy-adjudicated marking. The `template` lineage member
+     Dispatch, never from the Dispatch request. The `template` lineage member
      ({{template-member}}), present on every dispatched Mission and
      absent on an ordinarily approved one, remains the claim-carried
      record of which template and Dispatch Policy adjudicated the

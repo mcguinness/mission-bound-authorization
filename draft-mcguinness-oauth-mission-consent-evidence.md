@@ -278,6 +278,7 @@ Evidence artifacts presented at admission
 ({{I-D.draft-mcguinness-oauth-mission}}) are not embedded in the
 disclosure or the Consent Evidence object, and the verified facts
 they yield land on the Mission record's `submission_evidence`.
+
 Material verified provenance is nonetheless part of the approval
 surface: the disclosure commits it through
 `submission_provenance_hash` ({{consent-disclosure}}), covered by
@@ -1241,9 +1242,11 @@ The primary threat is rendering confusion: the Approver sees one thing
 while the Mission records another. This profile mitigates that by
 committing a structured disclosure object to the same Mission anchors
 used for authority, so a disclosure that understates the Authority Set
-is detectable in audit. It does not eliminate the threat: the limits
-of a server-side commitment, and the degrees by which the optional
-rungs reduce the rendering trust base, are stated with the ladder
+is detectable in audit.
+
+It does not eliminate the threat: the limits of a server-side
+commitment, and the degrees by which the optional rungs reduce the
+rendering trust base, are stated with the ladder
 ({{rendering-assurance}}, {{experimental-rungs}}). A deployment that
 needs assurance that the Approver's authenticator confirmed a specific
 disclosure commitment SHOULD evaluate Rung 3 for its high-risk

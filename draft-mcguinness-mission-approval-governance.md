@@ -146,16 +146,17 @@ accountable Approver and defers multi-party approval and
 approval-authority provenance to a governance layer
 ({{I-D.draft-mcguinness-oauth-mission}} states the rule for the
 OAuth binding, whose record members this document's binding rules
-consume). An enterprise
-review surface is often that governance layer: a decision may
-involve several principals, a threshold or separation-of-duty rule,
-and a delegation-of-authority policy, and an auditor later needs to
-prove not only who approved but under which authority the approval
-was valid. This document defines the Approval Governance Record
-(AGR) as governance evidence with teeth: where it is recorded, it
-participates in whether the Mission activates, so its assertions
-carry authentication and binding requirements, and its committed
-form is signed and immutable.
+consume). An enterprise review surface is often that governance
+layer: a decision may involve several principals, a threshold or
+separation-of-duty rule, and a delegation-of-authority policy, and an
+auditor later needs to prove not only who approved but under which
+authority the approval was valid.
+
+This document defines the Approval Governance Record (AGR) as
+governance evidence with teeth: where it is recorded, it participates
+in whether the Mission activates, so its assertions carry
+authentication and binding requirements, and its committed form is
+signed and immutable.
 
 Before commitment, the record is part of the approval decision
 itself: an assertion that fails authentication, event binding, or
@@ -670,18 +671,20 @@ basis both populate it, and each profile declares its own maximum age
 against it: `review_cadence` for template, the ceiling review cadence
 for progressive
 ({{I-D.draft-mcguinness-oauth-mission-template}},
-{{I-D.draft-mcguinness-oauth-mission-progressive}}). The two recency
-paths are therefore analogous, each bounding staleness against a
-retained human-approval instant, but distinct in what they gate: this
-section's ceiling governs whether the issuer may count a `policy`
-assertion, or activate a Mission whose `approval_basis` stands in for
-one, at evaluation; a profile's own maximum age governs whether the
-dispatch or drawdown may happen at all, independent of whether an AGR
-is ever recorded. A standing-consent Mission's accountable-approver
-rule is satisfied by `approval_basis` itself
-({{assertion-requirements}}), never by fabricating a `policy`
-assertion in its place; the high-risk-class default of this section
-still binds that record directly.
+{{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+The two recency paths are therefore analogous, each bounding staleness
+against a retained human-approval instant, but distinct in what they
+gate: this section's ceiling governs whether the issuer may count a
+`policy` assertion, or activate a Mission whose `approval_basis`
+stands in for one, at evaluation; a profile's own maximum age governs
+whether the dispatch or drawdown may happen at all, independent of
+whether an AGR is ever recorded.
+
+A standing-consent Mission's accountable-approver rule is satisfied by
+`approval_basis` itself ({{assertion-requirements}}), never by
+fabricating a `policy` assertion in its place; the high-risk-class
+default of this section still binds that record directly.
 
 # Mission Evidence {#audit-evidence}
 
