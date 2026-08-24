@@ -43,8 +43,8 @@
     "content_sha256": "e67019478334d7916cd7a49956238c389c526c372708ac309767a39d694d540e"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "e75c5b60e7105b4b88abdb65dfbbace4f6322857",
-    "content_sha256": "ccce269a7481f9e60ef7dd288e0408cd5b9cd5a370ce1af08ccb352f3c939f8a"
+    "revision": "6a695f8f646784e23013239eb3c62d9e0751b884",
+    "content_sha256": "33e1902646d6018676917dc63086ffc4135895dbae3af9d5739c05d1477df7e4"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "11e12adff962b5c2ba99b9d87dd0b86fa49ae059",
@@ -340,7 +340,7 @@
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -370,7 +370,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -2125,31 +2125,31 @@
    "tests": [
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
      "level": "unit",
      "surface": "signals"
     },
@@ -3445,7 +3445,7 @@
    "id": "txn-authorization.workflow.exactly-one-issuance",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",
-   "text": "a TAS MUST NOT mint a second token, under a different `jti`, for a `txn` whose workflow already produced one",
+   "text": "where any workflow has already produced a result for that `txn`, the TAS MUST return that result and MUST NOT mint a second token under a different `jti`",
    "role": "TAS",
    "strength": "MUST NOT",
    "applicability": {
@@ -3455,7 +3455,7 @@
    "surface": "transaction-authorization-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "repeated polling of a workflow that already produced a token never causes the TAS to mint a second, differently-keyed token for the same txn; at most one authorization result exists per accepted workflow"
+    "normative": "one txn yields at most one minted result across every workflow: repeated polls and a second workflow's completion return the first token or refuse; a second jti is never minted"
    },
    "level": "concurrency",
    "coverage": "tested",
@@ -9855,7 +9855,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -9885,7 +9885,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -13578,7 +13578,7 @@
     },
     {
      "file": "src/services/authorization-server/test/continuation-assertion.test.ts",
-     "name": "validateContinuationAssertion \u2014 rejects > a jti the redeeming caller already consumed",
+     "name": "validateContinuationAssertion — rejects > a jti the redeeming caller already consumed",
      "level": "unit",
      "surface": "verification"
     }
@@ -13757,6 +13757,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
+  },
+  {
+   "id": "txn-authorization.token.txn-scoped-mint-gate",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "offline-verification",
+   "text": "Before minting, the TAS MUST consult its issuance record for the `txn` atomically",
+   "role": "TAS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "the mint gate is txn-scoped, never workflow-scoped: the TAS checks the txn's issuance record atomically before any mint, so concurrent workflow completions cannot each mint"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "From the post-merge review of PR #558 (finding 1); executable test rides the #540 implementation track.",
+   "profiles": []
   },
   {
    "id": "orchestration.authority-narrowing.not-dispatched-suppressed-or-paused",
