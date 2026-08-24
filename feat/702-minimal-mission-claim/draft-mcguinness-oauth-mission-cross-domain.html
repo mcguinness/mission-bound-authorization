@@ -1720,9 +1720,12 @@ replay it within its lifetime (<a href="#validation-at-resource-as" class="auto 
         <li class="normal" id="section-9-4.8">
           <p id="section-9-4.8.1"><span class="bcp14">MUST</span> carry the <code>mission</code> claim
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "The Mission
-Claim") with <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> unchanged from the
-Mission, and the audience-scoped <code>authorization_details</code>
-(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>); and<a href="#section-9-4.8.1" class="pilcrow">¶</a></p>
+Claim") with <code>id</code> and <code>issuer</code> unchanged from the Mission, and the
+audience-scoped <code>authorization_details</code> (<a href="#audience-scope" class="auto internal xref">Section 5.1</a>). This
+profile REQUIRES <code>authority_hash</code> on that claim too, reintroducing
+it beyond the issuance profile's baseline as this profile's own
+lineage and audit anchor for the party receiving the grant across
+the trust-domain hop; and<a href="#section-9-4.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-4.9">
           <p id="section-9-4.9.1"><span class="bcp14">MUST</span> convey the Mission's Subject in the form the identity chaining

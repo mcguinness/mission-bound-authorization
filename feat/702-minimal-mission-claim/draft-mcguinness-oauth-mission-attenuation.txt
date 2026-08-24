@@ -238,8 +238,13 @@ Table of Contents
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens], [RFC9396]).
    The Mission Issuer derives that authority from the Mission's
    Authority Set by the mapping of Section 5.1.  The root carries the
-   mission claim (id, issuer, authority_hash) and the holder's
-   confirmation key, as both profiles require.
+   mission claim ([I-D.draft-mcguinness-oauth-mission]) and the holder's
+   confirmation key, as both profiles require.  This profile REQUIRES
+   authority_hash on that claim, reintroducing it as this profile's own
+   lineage anchor beyond the issuance profile's baseline id/issuer
+   ([I-D.draft-mcguinness-oauth-mission]): the offline chain has no
+   other channel back to the approved Mission once the root leaves the
+   issuer.
 
    The root's iss MUST equal its mission.issuer: only the Mission Issuer
    mints a Mission-bound root, and it signs the root with its own keys.

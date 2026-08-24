@@ -1542,7 +1542,7 @@ requirement back on the issuance profile; it reads only fields that
 profile already defines:<a href="#section-1.2-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.2-5.1">
-            <p id="section-1.2-5.1.1">the <code>mission</code> claim (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>);<a href="#section-1.2-5.1.1" class="pilcrow">¶</a></p>
+            <p id="section-1.2-5.1.1">the <code>mission</code> claim (<code>id</code>, <code>issuer</code>);<a href="#section-1.2-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-5.2">
             <p id="section-1.2-5.2.1">the token's <code>authorization_details</code>, including entries of type
@@ -2521,11 +2521,14 @@ privacy-preserving digest of the evaluation request otherwise.<a href="#section-
 and trusted for the refusal or decision path:<a href="#section-2.10-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-2.10-4.1">
-            <p id="section-2.10-4.1.1">the Mission reference (<code>mission.id</code>, <code>mission.issuer</code>) and the
-<code>authority_hash</code> (and <code>intent_hash</code> when known: it is carried in
-neither the <code>mission</code> claim nor introspection, so it is available only
-to a PDP with direct Mission-record access, and most deployments
-record <code>authority_hash</code> alone) it operated under;<a href="#section-2.10-4.1.1" class="pilcrow">¶</a></p>
+            <p id="section-2.10-4.1.1">the Mission reference (<code>mission.id</code>, <code>mission.issuer</code>) and, when
+available, the <code>authority_hash</code> and <code>intent_hash</code> it operated under:
+neither is carried on the issuance profile's baseline <code>mission</code>
+claim or default introspection projection
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so both are available only
+to a PDP with direct Mission-record access, one holding
+introspection's <code>authority_hash</code> disclosure privilege, or one
+participating in the Local Approved-Set Verification profile;<a href="#section-2.10-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.10-4.2">
             <p id="section-2.10-4.2.1">the token issuer and audience or protected-resource identifier when

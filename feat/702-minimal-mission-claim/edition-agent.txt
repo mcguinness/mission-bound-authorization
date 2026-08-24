@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-24T22:53:00Z
-Source repository commit: 6fd31f48a6b32214cf720bfa79d5a84227f50c5c
+Generated: 2026-08-24T23:23:41Z
+Source repository commit: daa235221df6583c27bc2a74d6aa0f61eeee93f0
 Member count: 9
 
 Reading order:
@@ -15334,7 +15334,7 @@ Table of Contents
    back on the issuance profile; it reads only fields that profile
    already defines:
 
-   *  the mission claim (id, issuer, authority_hash);
+   *  the mission claim (id, issuer);
 
    *  the token's authorization_details, including entries of type
       mission_resource_access (resource, actions, constraints, and any
@@ -16153,11 +16153,14 @@ Table of Contents
    A record MUST also contain the following fields when they are
    available and trusted for the refusal or decision path:
 
-   *  the Mission reference (mission.id, mission.issuer) and the
-      authority_hash (and intent_hash when known: it is carried in
-      neither the mission claim nor introspection, so it is available
-      only to a PDP with direct Mission-record access, and most
-      deployments record authority_hash alone) it operated under;
+   *  the Mission reference (mission.id, mission.issuer) and, when
+      available, the authority_hash and intent_hash it operated under:
+      neither is carried on the issuance profile's baseline mission
+      claim or default introspection projection
+      ([I-D.draft-mcguinness-oauth-mission]), so both are available only
+      to a PDP with direct Mission-record access, one holding
+      introspection's authority_hash disclosure privilege, or one
+      participating in the Local Approved-Set Verification profile;
 
    *  the token issuer and audience or protected-resource identifier
       when available;
@@ -19279,11 +19282,10 @@ Table of Contents
    external commitment, and privileged administration), high-consequence
    classes, and parameter-bound are used as defined in
    [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer, authority_hash) and the integrity anchors (intent_hash,
-   authority_hash) are used as defined in
-   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
-   of type mission_resource_access are used as defined in its Mission
-   Resource Access Profile
+   issuer) and the integrity anchors (intent_hash, authority_hash) are
+   used as defined in [I-D.draft-mcguinness-oauth-mission];
+   authorization_details entries of type mission_resource_access are
+   used as defined in its Mission Resource Access Profile
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Additional terms:
@@ -19434,15 +19436,18 @@ Table of Contents
       reference object, extended with the facts below, so the evidence
       chains back to the exact approved Mission.  Sub-members:
 
-      id, issuer, authority_hash:  REQUIRED.  From the request's Mission
-         reference.
+      id, issuer:  REQUIRED.  From the request's Mission reference.
 
       policy_view_id:  REQUIRED.  The PDP's own view identifier; the PDP
          always knows and populates it, whatever the request carried.
 
-      intent_hash:  OPTIONAL.  It is carried in neither the mission
-         claim nor introspection, so only a PDP with direct Mission-
-         record access can record it.
+      authority_hash, intent_hash:  OPTIONAL.  Neither is carried on the
+         baseline mission claim or default introspection projection
+         ([I-D.draft-mcguinness-oauth-mission]), so a PDP records either
+         only when it has direct Mission-record access, holds
+         introspection's authority_hash disclosure privilege, or the
+         request carried it under the Local Approved-Set Verification
+         profile.
 
       policy_version:  OPTIONAL.  From the request's Mission reference,
          when known.
@@ -19698,11 +19703,11 @@ Table of Contents
       has no PDP decision and no permit.
 
    mission:  OPTIONAL.  An object.  The Mission reference (id, issuer,
-      authority_hash), present only when the refusing component
-      established it before the failure: for a PEP, for example, on
-      pdp_unreachable; for a PDP refusing on mission_context_missing,
-      the reference is typically absent, since that is exactly what the
-      request lacked.
+      and authority_hash where the refusing component holds it), present
+      only when the refusing component established it before the
+      failure: for a PEP, for example, on pdp_unreachable; for a PDP
+      refusing on mission_context_missing, the reference is typically
+      absent, since that is exactly what the request lacked.
 
    subject, actor, credential:  OPTIONAL.  Objects.  Verified facts
       only, in the projected forms Section 5 defines (for example, as
@@ -19760,9 +19765,7 @@ Table of Contents
      "refusal_id": "ref_3VtM9kQ2xN7rB4sL8eP1jY5wZc",
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "issuer": "https://as.example.com",
-       "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+       "issuer": "https://as.example.com"
      },
      "audience": "https://erp.example.com",
      "action": { "name": "journal-entries.write" },
@@ -21104,11 +21107,14 @@ Table of Contents
 
    The actor member carries the delegation chain, which MAY reveal
    service accounts, client instances, and organizational structure.
-   Evidence carrying the same Mission id and authority_hash across
-   resource boundaries can correlate a subject's activity; this is
-   inherent to the Mission's role as a governance handle.  Deployments
-   that require unlinkability need an additional privacy design outside
-   this document.
+   Evidence carrying the same Mission id across resource boundaries can
+   correlate a subject's activity; this is inherent to the Mission's
+   role as a governance handle.  Where a record also carries
+   authority_hash (a PDP with direct Mission-record access, or a
+   disclosure-privileged introspection caller), the same correlation
+   extends to it, unlike the issuance profile's default disclosure.
+   Deployments that require unlinkability need an additional privacy
+   design outside this document.
 
 12.4.  Mission Receipt
 
@@ -21760,11 +21766,10 @@ Table of Contents
    irreversible action, external commitment, and privileged
    administration) are used as defined in
    [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer, authority_hash) and the integrity anchors (intent_hash,
-   authority_hash) are used as defined in
-   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
-   of type mission_resource_access are used as defined in its Mission
-   Resource Access Profile
+   issuer) and the integrity anchors (intent_hash, authority_hash) are
+   used as defined in [I-D.draft-mcguinness-oauth-mission];
+   authorization_details entries of type mission_resource_access are
+   used as defined in its Mission Resource Access Profile
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Effective
    Authority Set is used as defined in
    [I-D.draft-mcguinness-oauth-mission-status].
@@ -21810,11 +21815,14 @@ Table of Contents
    reproducibility rules, its bounded-fidelity property, and the
    content-addressed policy_view_id with its mission-policy-view
    integrity envelope are defined by the runtime profile
-   ([I-D.draft-mcguinness-mission-runtime]).  That envelope's committed
-   manifest binds the Mission's mission_id and authority_hash, alongside
-   policy_version and the compiler identity that produced it, so a
-   consistency check between a decision request and the loaded view is
-   an equality test on mission_id and authority_hash alone (Section 6).
+   ([I-D.draft-mcguinness-mission-runtime]).  The trusted compiler
+   computes that envelope, and the authority_hash it binds, from its own
+   held Mission record; the issuance profile's baseline mission claim
+   does not carry authority_hash on the wire
+   ([I-D.draft-mcguinness-oauth-mission]), so a consistency check
+   between a decision request and the loaded view is an equality test on
+   mission_id and issuer alone, with policy_view_id as the optional,
+   stronger content check where the requesting PEP holds it (Section 6).
    Nothing in this binding requires the PDP to be remote: a PDP embedded
    in or colocated with its PEP, evaluating against a loaded
    materialized policy view, is a conforming deployment, and the
@@ -21925,9 +21933,17 @@ Table of Contents
 
    issuer:  REQUIRED.  A string containing a URI.  The Mission's issuer.
 
-   authority_hash:  REQUIRED.  A string.  The Authority Set integrity
+   authority_hash:  OPTIONAL.  A string.  The Authority Set integrity
       anchor, in the integrity-anchor encoded form
-      ([I-D.draft-mcguinness-oauth-mission]).
+      ([I-D.draft-mcguinness-oauth-mission]).  Not carried on the
+      issuance profile's baseline mission claim or default introspection
+      projection; a PEP includes it only where it holds it under that
+      profile's Local Approved-Set Verification profile or
+      introspection's disclosure privilege
+      ([I-D.draft-mcguinness-oauth-mission]).  The mandatory identity
+      check of Section 6 does not depend on it; a PDP that receives it
+      and independently verifies it MAY use it as a further audit
+      correlator, never as a substitute for that check.
 
    policy_version:  REQUIRED when known.  A string.  The policy_version
       recorded at the approval event.  It is a Mission-record field
@@ -21959,9 +21975,12 @@ Table of Contents
       roles remain semantically distinct even when two identifiers
       happen to be equal.
 
-   This context anchors the Mission's approved Authority Set through
-   authority_hash.  Where a Mission runs a narrowing mechanism, the PDP
-   evaluates the request against the Effective Authority Set
+   This context anchors the Mission's approved Authority Set through id
+   and issuer, resolved against the materialized policy view the PDP
+   loads for that Mission (Section 5); authority_hash, where a PEP
+   carries it, is an additional audit correlator, not the anchor itself.
+   Where a Mission runs a narrowing mechanism, the PDP evaluates the
+   request against the Effective Authority Set
    ([I-D.draft-mcguinness-oauth-mission-status]), not the approved set
    alone, per the runtime profile's Authority decision input
    ([I-D.draft-mcguinness-mission-runtime]).  The Containment profile is
@@ -22386,8 +22405,6 @@ Table of Contents
        "mission": {
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "issuer": "https://as.example.com",
-         "authority_hash":
-           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
          "policy_version": "deploy-policy:v17",
          "policy_view_id":
            "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
@@ -22449,11 +22466,15 @@ Table of Contents
         state.  PEP-supplied state is a floor, never a substitute for a
         state source the PDP can itself consult.
 
-   2.   The id and authority_hash in context.mission equal the
-        mission_id and authority_hash committed in the materialized
-        policy view the PDP has loaded for this Mission
+   2.   The id and issuer in context.mission equal the mission_id and
+        issuer committed in the materialized policy view the PDP has
+        loaded for this Mission
         ([I-D.draft-mcguinness-mission-runtime]); the PDP returns
-        view_inconsistent on any inequality.
+        view_inconsistent on any inequality.  When
+        context.mission.authority_hash is also present, it MUST equal
+        the view's committed authority_hash, with the same
+        view_inconsistent result on inequality (its omission is covered
+        by rule 5 below).
 
    3.   When context.mission.policy_view_id is present, it MUST equal
         the loaded view's policy_view_id, and the PDP returns
@@ -22468,8 +22489,8 @@ Table of Contents
         missed a committed change.
 
    5.   A PDP MUST NOT fail a decision solely because the optional
-        policy_view_id or policy_version was omitted; the view the PDP
-        loaded is authoritative.
+        policy_view_id, policy_version, or authority_hash was omitted;
+        the view the PDP loaded is authoritative.
 
    6.   When context.credential.expires_at is present, it has not
         passed; otherwise the PDP returns credential_invalid.
@@ -22615,9 +22636,7 @@ Table of Contents
          "context": {
            "mission": {
              "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-             "issuer": "https://as.example.com",
-             "authority_hash":
-               "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+             "issuer": "https://as.example.com"
            },
            "mission_state_observation": {
              "state": "active",
@@ -22653,9 +22672,7 @@ Table of Contents
          "context": {
            "mission": {
              "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-             "issuer": "https://as.example.com",
-             "authority_hash":
-               "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+             "issuer": "https://as.example.com"
            },
            "mission_state_observation": {
              "state": "active",
@@ -23074,11 +23091,11 @@ Table of Contents
       SHOULD mark the denial transient with next_action: retry
       (Section 7.1).
 
-   *  view_inconsistent: the request's Mission id, authority_hash, or
-      policy_view_id does not equal the committed values in the
-      materialized policy view the PDP loaded, so the request and the
-      loaded view disagree on which Mission or view is in force.  This
-      is a view inconsistency, not staleness.
+   *  view_inconsistent: the request's Mission id or issuer, or (when
+      carried) authority_hash or policy_view_id, does not equal the
+      committed values in the materialized policy view the PDP loaded,
+      so the request and the loaded view disagree on which Mission or
+      view is in force.  This is a view inconsistency, not staleness.
 
    *  mission_inactive: the Mission state is not active.
 
@@ -23423,9 +23440,11 @@ Table of Contents
    |(freshness-window    |           |                                |
    |violation)           |           |                                |
    +---------------------+-----------+--------------------------------+
-   |Request Mission id,  |PDP denial | view_inconsistent              |
-   |authority_hash, or   |           |                                |
-   |policy_view_id       |           |                                |
+   |Request Mission id or|PDP denial | view_inconsistent              |
+   |issuer, or (when     |           |                                |
+   |carried)             |           |                                |
+   |authority_hash or    |           |                                |
+   |policy_view_id,      |           |                                |
    |inconsistent with the|           |                                |
    |loaded view          |           |                                |
    +---------------------+-----------+--------------------------------+

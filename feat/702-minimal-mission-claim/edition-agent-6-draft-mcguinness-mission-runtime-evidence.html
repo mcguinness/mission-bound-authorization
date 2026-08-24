@@ -1439,7 +1439,7 @@ names consequential read, consequential write, irreversible action,
 external commitment, and privileged administration), high-consequence
 classes, and parameter-bound are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. The Mission claim (<code>id</code>,
-<code>issuer</code>, <code>authority_hash</code>) and the integrity anchors (<code>intent_hash</code>,
+<code>issuer</code>) and the integrity anchors (<code>intent_hash</code>,
 <code>authority_hash</code>) are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; <code>authorization_details</code>
 entries of type <code>mission_resource_access</code> are used as defined in its
@@ -1633,7 +1633,7 @@ object, extended with the facts below, so the evidence chains back
 to the exact approved Mission. Sub-members:<a href="#section-5.1-1.6.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5.1-1.6.2">
               <dt id="section-5.1-1.6.2.1">
-<code>id</code>, <code>issuer</code>, <code>authority_hash</code>:</dt>
+<code>id</code>, <code>issuer</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-5.1-1.6.2.2">
                 <p id="section-5.1-1.6.2.2.1"><span class="bcp14">REQUIRED</span>. From the request's Mission reference.<a href="#section-5.1-1.6.2.2.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1646,11 +1646,14 @@ and populates it, whatever the request carried.<a href="#section-5.1-1.6.2.4.1" 
 </dd>
               <dd class="break"></dd>
 <dt id="section-5.1-1.6.2.5">
-<code>intent_hash</code>:</dt>
+<code>authority_hash</code>, <code>intent_hash</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-5.1-1.6.2.6">
-                <p id="section-5.1-1.6.2.6.1"><span class="bcp14">OPTIONAL</span>. It is carried in neither the <code>mission</code> claim nor
-introspection, so only a PDP with direct Mission-record access
-can record it.<a href="#section-5.1-1.6.2.6.1" class="pilcrow">¶</a></p>
+                <p id="section-5.1-1.6.2.6.1"><span class="bcp14">OPTIONAL</span>. Neither is carried on the baseline <code>mission</code> claim or
+default introspection projection (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+so a PDP records either only when it has direct Mission-record
+access, holds introspection's <code>authority_hash</code> disclosure
+privilege, or the request carried it under the Local
+Approved-Set Verification profile.<a href="#section-5.1-1.6.2.6.1" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 <dt id="section-5.1-1.6.2.7">
@@ -2043,9 +2046,10 @@ and no permit.<a href="#section-5.2-4.18.1" class="pilcrow">¶</a></p>
 <dt id="section-5.2-4.19">
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-4.20">
-            <p id="section-5.2-4.20.1"><span class="bcp14">OPTIONAL</span>. An object. The Mission reference (<code>id</code>, <code>issuer</code>,
-<code>authority_hash</code>), present only when the refusing component
-established it before the failure: for a PEP, for example, on
+            <p id="section-5.2-4.20.1"><span class="bcp14">OPTIONAL</span>. An object. The Mission reference (<code>id</code>, <code>issuer</code>, and
+<code>authority_hash</code> where the refusing component holds it), present
+only when the refusing component established it before the failure:
+for a PEP, for example, on
 <code>pdp_unreachable</code>; for a PDP refusing on
 <code>mission_context_missing</code>, the reference is typically absent,
 since that is exactly what the request lacked.<a href="#section-5.2-4.20.1" class="pilcrow">¶</a></p>
@@ -2128,9 +2132,7 @@ that failed closed:<a href="#section-5.2-8" class="pilcrow">¶</a></p>
   "refusal_id": "ref_3VtM9kQ2xN7rB4sL8eP1jY5wZc",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+    "issuer": "https://as.example.com"
   },
   "audience": "https://erp.example.com",
   "action": { "name": "journal-entries.write" },
@@ -3770,10 +3772,13 @@ Evidence <code>result_summary</code> <span class="bcp14">MUST NOT</span> carry u
         </h3>
 <p id="section-12.3-1">The <code>actor</code> member carries the delegation chain, which <span class="bcp14">MAY</span> reveal
 service accounts, client instances, and organizational structure.
-Evidence carrying the same Mission <code>id</code> and <code>authority_hash</code> across
-resource boundaries can correlate a subject's activity; this is
-inherent to the Mission's role as a governance handle. Deployments that
-require unlinkability need an additional privacy design outside this
+Evidence carrying the same Mission <code>id</code> across resource boundaries can
+correlate a subject's activity; this is inherent to the Mission's role
+as a governance handle. Where a record also carries <code>authority_hash</code>
+(a PDP with direct Mission-record access, or a disclosure-privileged
+introspection caller), the same correlation extends to it, unlike the
+issuance profile's default disclosure. Deployments that require
+unlinkability need an additional privacy design outside this
 document.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>

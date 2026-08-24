@@ -475,9 +475,12 @@ Table of Contents
 
    *  MUST carry the mission claim
       ([I-D.draft-mcguinness-oauth-mission], Section "The Mission
-      Claim") with id, issuer, and authority_hash unchanged from the
-      Mission, and the audience-scoped authorization_details
-      (Section 5.1); and
+      Claim") with id and issuer unchanged from the Mission, and the
+      audience-scoped authorization_details (Section 5.1).  This profile
+      REQUIRES authority_hash on that claim too, reintroducing it beyond
+      the issuance profile's baseline as this profile's own lineage and
+      audit anchor for the party receiving the grant across the trust-
+      domain hop; and
 
    *  MUST convey the Mission's Subject in the form the identity
       chaining architecture defines, so the Resource AS can resolve it
