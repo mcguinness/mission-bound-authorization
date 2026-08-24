@@ -90,6 +90,32 @@
       "note": "draft-mcguinness-oauth-mission cites ISO4217 as a normative reference with front-matter seriesinfo `ISO: \"4217:2015\"`; this entry pins that same edition. No sha256: ISO 4217:2015 is a paywalled standard with no freely republishable canonical file, so there is no text this registry can legally fetch and hash; the publisher and edition identifier are the pin, and this note is the disclosed reason sha256 is absent. scripts/check-external-pins.mjs accepts a null sha256 only for kind \"standard\"; git and datatracker entries must always carry one.",
       "reference_keys": ["ISO4217"],
       "pin_id": "ISO4217@4217-2015"
+    },
+    {
+      "id": "MCP",
+      "kind": "git",
+      "repo": "modelcontextprotocol/modelcontextprotocol",
+      "commit": "5f5440bb26a62e2cf3440b92da5a667efa03b267",
+      "path": "docs/specification/2026-07-28/basic/authorization/index.mdx",
+      "sha256": "e31841f18b21f83f984689c0b0409577139cc50b698ce7c8fbd09a8c920a5241",
+      "status": "established",
+      "ref": "GitHub tag 2026-07-28 (modelcontextprotocol/modelcontextprotocol), established at the #533 adoption review (2026-08-24)",
+      "note": "draft-mcguinness-oauth-mission cites MCP (Model Context Protocol: Authorization) as a normative reference for its tool-modeling section; this entry refreshes the family's pin from the retired 2025-11-25 legacy-handshake track (issue #533, split from #290) to the 2026-07-28 release. The `2026-07-28` tag is a lightweight tag confirmed via the git refs API to point directly at commit 5f5440bb26a62e2cf3440b92da5a667efa03b267 (the commit the tag resolves to: merge of PR #3158, 2026-07-28, the last merge before tagging). Located at docs/specification/2026-07-28/basic/authorization/index.mdx (confirmed via the repository contents API: blob sha b41b14e23eeecef953025d90d565d4ed18137dbc, size 25678 bytes, matching the fetched raw file this sha256 is computed over); the draft's own front-matter target already named this exact page and revision, so only this registry entry was missing. Adoption review disclosure: the 2026-07-28 diff's two deltas named at ruling (the statelessness redesign and the removed initialize/notifications/initialized handshake, both SEP-2575) were checked against this draft's claim that authorizing a tool's name as an action 'lines up with MCP filtering its tool list by the caller's granted authority'. The claim survives on direct textual confirmation, not inference: docs/specification/2026-07-28/server/tools.mdx (same commit) states the `tools/list` result set 'MUST NOT vary per-connection or as a side effect of other requests on the connection' but 'MAY vary by the authorization presented on the request ... since credentials are per-request input, not connection state' (eliding the spec's own mid-sentence example, which names the same caller-scoped filtering this note describes); the CacheableResult `cacheScope: \"private\"` value (minor change, SEP-2549) corroborates this, since a private cache scope on a list result is only meaningful if list content can be caller-specific. Separately, formal Scope-Filtered Tool Discovery (SEP-1881) was never adopted into the spec at either revision (closed 2026-06-24 as a procedural casualty of the SEP-to-PR migration, not rejected on the merits); the tools.mdx text above is the spec's own affirmative statement of the same behavior, informal-SEP history aside. No prose changed.",
+      "reference_keys": ["MCP"],
+      "pin_id": "MCP@e31841f18b21"
+    },
+    {
+      "id": "MCP-META",
+      "kind": "git",
+      "repo": "modelcontextprotocol/modelcontextprotocol",
+      "commit": "5f5440bb26a62e2cf3440b92da5a667efa03b267",
+      "path": "docs/specification/2026-07-28/basic/index.mdx",
+      "sha256": "ce6b16e0b22544bb7efc201b09906b5f3efb6d55a83881766b36b8a71cfbeb95",
+      "status": "established",
+      "ref": "GitHub tag 2026-07-28 (modelcontextprotocol/modelcontextprotocol), established at the #533 adoption review (2026-08-24)",
+      "note": "draft-mcguinness-mission-authority-server cites MCP-META (Model Context Protocol: Base Protocol) as a normative reference for the MCP Carriage section's `_meta` namespacing rule; this entry refreshes the family's pin from the retired 2025-11-25 legacy-handshake track (issue #533, split from #290) to the 2026-07-28 release, the same tag and commit as the MCP entry above (5f5440bb26a62e2cf3440b92da5a667efa03b267), a different file within it. Located at docs/specification/2026-07-28/basic/index.mdx (confirmed via the repository contents API: blob sha dfe11ecc1443b7dec051b1b1b9a93982b735c647, size 25134 bytes, matching the fetched raw file this sha256 is computed over). The citing draft's own front-matter target and date were bumped from 2025-11-25 to 2026-07-28 in the same change that established this entry. Adoption review disclosure: the section's load-bearing claim is that `com.karlmcguinness.mission/reference` is a reverse-DNS-prefixed key outside MCP's own reserved `_meta` namespace. The 2026-07-28 revision states this rule more precisely than before (a prefix is MCP-reserved only when its second label is `modelcontextprotocol` or `mcp`), and the family's key's second label (`karlmcguinness`) is not reserved under that rule, so the claim holds, now on more explicit textual footing. The statelessness delta (SEP-2575) adds required per-request `_meta` fields but does not touch the reserved-prefix rule this section relies on, and it reinforces the section's own per-request, never-session-state, carriage rule. The section separately reads 'absent negotiated or configured propagation support the call MUST be refused': the removed initialize/notifications/initialized handshake was one way capability negotiation used to happen, but the sentence never named that mechanism, and per-request `io.modelcontextprotocol/clientCapabilities`, the `extensions` field, and `server/discover` are all still 'negotiated ... support' under the ordinary meaning of the word; this was a deliberate read, not an oversight, and the sentence is left as written. No prose changed beyond the pin refresh.",
+      "reference_keys": ["MCP-META"],
+      "pin_id": "MCP-META@ce6b16e0b225"
     }
   ],
   "archive": []

@@ -82,6 +82,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -741,14 +749,19 @@ integrity anchors, PDP permits, Child Missions, or portable evidence
 
 The model's boundary is deliberate. The family does not define:
 
-- **A new authority format, or a new grant protocol.** Rich
+- **A new grant protocol.** Rich
   Authorization Requests {{RFC9396}} and kindred mechanisms already
-  fill the authority-expression role; the family leaves that to them
-  ({{the-mission}}). The same restraint holds against GNAP and the
-  capability-system lineage (macaroons, Biscuit, UCAN,
-  object-capability narrowing): this family composes with deployed
-  grant protocols and attenuation primitives rather than introducing
-  a competing one of its own; the OAuth binding states the comparison
+  fill the authority-expression role; the family leaves the grant
+  exchange to them ({{the-mission}}) and defines its own
+  cross-resource `authorization_details` type only where {{RFC9396}}
+  leaves type semantics to the type, in the OAuth binding's Mission
+  Resource Access Profile
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The same
+  restraint holds against GNAP and the capability-system lineage
+  (macaroons, Biscuit, UCAN, object-capability narrowing): this
+  family composes with deployed grant protocols and attenuation
+  primitives rather than introducing a competing one of its own; the
+  OAuth binding states the comparison
   ({{I-D.draft-mcguinness-oauth-mission}}).
 - **A policy language.** The PDP evaluates the Mission's Authority
   Set, constraints, and state; how a deployment authors policy beyond
@@ -1112,8 +1125,9 @@ Access Server, with contextual PS governance when the PS is on path.
   drawdown within a ceiling a human pre-consented
   ({{I-D.draft-mcguinness-oauth-mission-progressive}}). The relation
   is typed: it is defined where a structured-authority vocabulary
-  defines it (in the OAuth binding, `mission_resource_access` and
-  the Common Constraints), and authority carried in a type with no
+  defines it (on the OAuth binding, `mission_resource_access` and
+  its Common Constraints, defined by the OAuth binding's Mission
+  Resource Access Profile), and authority carried in a type with no
   defined subset relation is carried as approved, neither narrowed,
   delegated, nor projected; moving authority into expressive
   policy-language entries weakens this guarantee exactly there, a
@@ -1213,7 +1227,7 @@ separately approved, never a place where authority widens
 resource owns its operation semantics and consequences, while the
 family owns the registered cross-resource constraint vocabulary,
 which a resource explicitly advertises and adopts before it binds
-({{I-D.draft-mcguinness-oauth-mission}}).
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 Resource-owned meaning reaches the three consuming layers through
 five mechanisms, each normative in its own home and composing as one
@@ -1223,8 +1237,9 @@ Common Constraints:
 : The registered constraint vocabulary every conforming party
   evaluates identically, with the `mission_constraints_supported`
   protected-resource metadata member advertising which constraints a
-  resource enforces. Home: the issuance profile
-  ({{I-D.draft-mcguinness-oauth-mission}}).
+  resource enforces. Home: the OAuth binding's Mission Resource
+  Access Profile
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 Capability-source binding:
 : Catalog-sourced capability definitions (an MCP tool, an OpenAPI
@@ -1704,7 +1719,7 @@ and the audit horizon participates in the governance record.
 |---|---|---|---|
 | Mission Identifier and Issuer | An opaque, non-reused identifier with at least 128 bits of entropy and no semantic content, plus the issuer URL; together they name exactly one Mission. The kernel requires stability, non-reassignment, and unguessability, not this syntax | The OAuth binding: Mission Record, Mission Identifier Format | Every companion: decisions, evidence, harness bindings, the state surfaces, the audit statement subject, the Mandate |
 | Lifecycle state space | The states of {{the-mission}}, open to companion-defined states, with the only-`active` rule, fail-safe unrecognized states, and a freshness source with a stated staleness bound | The OAuth binding (state space, only-`active`); the status and runtime profiles (freshness); Status and Signals (observation) | Runtime per-class re-check (fail closed on staleness), harness pause, suppress, and terminate, the orchestrator's unwind trigger, the Mandate (state as of minting) |
-| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule, Common Constraints | Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
+| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and, for `mission_resource_access`, the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule; the Mission Resource Access Profile: Common Constraints | Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
 | Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding a verifier recognizes or rejects (unknown prefixes refuse; no downgrade); the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN binding (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
 | Issuer key material | Signing keys resolvable from `issuer`; across a rotation each key identifier stays resolvable while artifacts signed under it remain within the audit horizon | The OAuth binding: Signing and Key Rotation | Verifiers of Mission-bound credentials, Consent Evidence, the Mandate, the signed state surfaces, Audit Transparency |
 | Audit horizon | The deployment-declared retention window: at least the Mission's lifetime plus a declared post-terminal period | The OAuth binding: Mission Record | Consent and runtime evidence and Audit Transparency (retention), the MAS (record retention), the security model's retention analysis |
@@ -3227,6 +3242,7 @@ bound profiled by `aauth-mission-expiry`.
 | Document | Role |
 |---|---|
 | `oauth-mission` | The OAuth binding, its OAuth companions' issuance profile: the OAuth realization of the Mission, the approval event and anchors, the `mission` claim, the subset rule, state-gated issuance. |
+| `oauth-mission-resource-access` | The Mission Resource Access Profile: the `mission_resource_access` authorization_details type, its resource and action matching, Common Constraints, delegation policy, and subset/intersection algebra, split from the OAuth binding so RFC 9396 typed semantics live with the type. |
 | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
 | `oauth-mission-issuance-grant` | The issuance join: MAS-minted grants an estate Authorization Server redeems at its token endpoint for Mission-bound, state-gated tokens. |
 | `mission-aauth` | The AAuth Mission Context binding: the Person Server as controlling authority, the exact-byte mission blob under AAuth's `s256` commitment, native `{approver, s256}` propagation, and active-state gating on PS endpoints and the PS-asserted and federated paths. It defines no OAuth Authority Set or additional AAuth wire members. |
@@ -3388,6 +3404,12 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Non-goal reworded (#637): "a new authority format, or a new grant
+  protocol" narrowed to "a new grant protocol," naming the OAuth
+  binding's Mission Resource Access Profile as the family's one
+  cross-resource `authorization_details` type, since RFC 9396 leaves
+  type semantics to the type and the family now defines one. Document
+  Map gains the profile's row under "The substrate and the bindings."
 - Editorial density pass on this Informational document: the
   aggregate-ceiling and artifact-plane (non-transitive work-product)
   composition readings under {{invariants}} tightened to a summary

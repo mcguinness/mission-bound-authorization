@@ -172,7 +172,7 @@ A Mission Issuer or deployment that does not implement this document is
 a fully conforming issuance-profile deployment
 ({{I-D.draft-mcguinness-oauth-mission}}). Nothing here places a new
 requirement back on the issuance profile, and this document adds no
-constraint to the issuance profile's `mission_resource_access`. The provenance
+constraint to `mission_resource_access`. The provenance
 object and the handoff rule are companion mechanisms that a deployment
 adopts where its agents share durable work products.
 

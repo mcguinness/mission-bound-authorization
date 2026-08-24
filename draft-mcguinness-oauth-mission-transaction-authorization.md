@@ -52,6 +52,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -286,8 +294,11 @@ Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mis
 {::boilerplate bcp14-tagged}
 
 This document uses Mission, Authority Set, Approver, Mission Issuer,
-`mission_resource_access`, and the subset rule as the issuance profile
-defines them ({{I-D.draft-mcguinness-oauth-mission}}); action-bound
+and the subset rule as the issuance profile
+defines them ({{I-D.draft-mcguinness-oauth-mission}}), and
+`mission_resource_access` as its Mission Resource Access Profile
+defines it ({{I-D.draft-mcguinness-oauth-mission-resource-access}});
+action-bound
 approval, the Operation Profile, `parameter_digest`, and Mission state
 freshness as the runtime profile defines them
 ({{I-D.draft-mcguinness-mission-runtime}}); the envelope anchor,
@@ -385,7 +396,8 @@ The challenge's REQUIRED claims `iss`, `aud`, `iat`, `exp`, `jti`,
 and `reason_uri`, are exactly as
 {{I-D.draft-rosomakho-oauth-txn-challenge}} Section 4.2.2 defines
 them. `authorization_details` carries exactly one operation-scoped
-`mission_resource_access` entry ({{I-D.draft-mcguinness-oauth-mission}})
+`mission_resource_access` entry
+({{I-D.draft-mcguinness-oauth-mission-resource-access}})
 or one compound-action detail whose specification-defined semantics make the
 operation atomic. The Operation Profile a TAS and the resource apply
 resolves deterministically from the challenge's `iss` and that entry's
