@@ -39,10 +39,10 @@ normative:
   RFC9651:
   MCP-META:
     title: "Model Context Protocol: Base Protocol"
-    target: https://modelcontextprotocol.io/specification/2025-11-25/basic/index
+    target: https://modelcontextprotocol.io/specification/2026-07-28/basic/index
     author:
       - org: Model Context Protocol Project
-    date: 2025
+    date: 2026
   RFC9068:
   RFC9325:
   I-D.draft-mcguinness-oauth-mission:
