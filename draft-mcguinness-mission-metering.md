@@ -103,6 +103,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -896,6 +904,13 @@ failure signal:
   {{settlement-contract}}. The applied settlement is unchanged; the
   conflict is audited, never adjudicated by the intake.
 
+A containment overlay's contain transition
+({{I-D.draft-mcguinness-oauth-mission-containment}}) is not settlement
+evidence: an open reservation or duration lease still settles under
+the evidence states above, unaffected by contain, and contain narrows
+only forward draw, a new reservation or a lease renewal, through the
+ordinary permit check against the narrowed Effective Authority Set.
+
 The operational consequence: a lossy evidence channel accumulates
 reservations against `max_budget` and `max_calls` until the Mission
 starves on `quota_exceeded`, a self-inflicted denial of service. A
@@ -1074,6 +1089,18 @@ evidence companion's extension conventions
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- One informative cross-reference in Settlement by Evidence State
+  ({{settlement-states}}): a containment overlay's contain transition
+  is not settlement evidence. An open reservation or duration lease
+  still settles unchanged under the existing evidence-state rules, and
+  contain narrows only forward draw, a new reservation or a lease
+  renewal, through the ordinary permit check against the narrowed
+  Effective Authority Set. No new settlement state (#670).
 
 # Acknowledgments
 {:numbered="false"}

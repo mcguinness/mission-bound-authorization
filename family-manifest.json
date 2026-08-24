@@ -849,7 +849,8 @@
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-containment"
    ]
   },
   {
@@ -871,6 +872,7 @@
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
@@ -900,6 +902,12 @@
      "when": "Status polling is the trigger source",
      "requires": [
       "draft-mcguinness-oauth-mission-status"
+     ]
+    },
+    {
+     "when": "Signals is the authority-change trigger source",
+     "requires": [
+      "draft-mcguinness-oauth-mission-signals"
      ]
     }
    ],

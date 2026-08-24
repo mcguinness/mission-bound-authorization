@@ -49,6 +49,10 @@
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "af16a065fa5eb5df906f77800aa55550c2a8f9d2",
     "content_sha256": "b2fec9ce20a5b1d017d1d0f60cb1571ae0fea5f9c43b5008baa6b6377499a7b6"
+   },
+   "draft-mcguinness-mission-orchestration.md": {
+    "revision": "b6218ccbe45b28597f72929cb1763457fca18182",
+    "content_sha256": "9af76e2e85ee2a90e7fe4a538a3d410ddd7424571ddb0dd728bda154d128f91b"
    }
   }
  },
@@ -64,7 +68,8 @@
    "Controller",
    "PRODUCER",
    "RECEIPT-ISSUER",
-   "RECEIPT-VERIFIER"
+   "RECEIPT-VERIFIER",
+   "orchestrator"
   ],
   "strengths": [
    "MUST",
@@ -13650,6 +13655,142 @@
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
   },
   {
+   "id": "orchestration.authority-narrowing.not-dispatched-suppressed-or-paused",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `not_dispatched` step the re-evaluation now denies MUST be suppressed or paused",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a mission.lifecycle-change event carrying authority_changed true at unchanged state, after rematerializing the Effective Authority Set, a not_dispatched step the re-evaluation now denies is suppressed or paused",
+    "local": "reEvaluateStepOnAuthorityNarrowing (src/packages/orchestration/src/authority-narrowing.ts) returns orchestration_decision 'suppress' and requires_evidence true for a denied not_dispatched step, and leaves a still-authorized step untouched (no decision, no evidence). Coverage stays 'partial': this is the per-step decision logic only. The signal consumption, the Mission Status rematerialization call, and the fresh PDP evaluation (or authorizing_entry/entry_digest comparison) that produce the stillAuthorized input are integration concerns this dependency-free package takes as an injected predicate; no orchestrator in this repo wires a live authority_changed event to this function."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: still authorized proceeds untouched (no decision, no evidence, no dispatch)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1, which asked for truthful per-facet rows and manifest-linked tests rather than one todo row covering three facets."
+  },
+  {
+   "id": "orchestration.authority-narrowing.dispatched-not-committed-follows-in-flight-behavior",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `dispatched_not_committed` step the re-evaluation now denies MUST follow its unwind plan's existing `in_flight_behavior`",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dispatched_not_committed step the authority-narrowing re-evaluation now denies follows its unwind plan's existing in_flight_behavior; this trigger re-gates already-dispatched work rather than additionally stopping it",
+    "local": "reEvaluateStepOnAuthorityNarrowing reuses the same in_flight_behavior -> OrchestrationDecision mapping as the non-active sequence's fromInFlight (cancel_if_possible->cancel, continue_to_safe_point unchanged, wait_then_review/human_review->human_review), so a denied dispatched_not_committed step is never assigned a decision outside that existing range: this trigger adds no new machinery. Coverage stays 'partial' for the same integration-wiring reason as the sibling not_dispatched row."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > dispatched_not_committed: denied follows the step's EXISTING in_flight_behavior (re-gated, not additionally stopped)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > dispatched_not_committed: still authorized proceeds (this trigger does not stop already-dispatched work by itself)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1."
+  },
+  {
+   "id": "orchestration.authority-narrowing.committed-not-compensated",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "authority-narrowing",
+   "text": "a `committed` step MUST NOT be compensated merely because authority narrowed after it committed",
+   "role": "orchestrator",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a committed step is never compensated merely because authority narrowed after it committed; the authority-narrowing trigger does not treat a completed action as denied",
+    "local": "reEvaluateStepOnAuthorityNarrowing short-circuits a committed step BEFORE calling the caller's stillAuthorized resolver: the resolver is asserted never invoked (vi.fn spy), and the step's own result always carries still_authorized true with no orchestration_decision. This makes 'no double-commit'/'no compensation on narrowing alone' structural: there is no code path from this function that can emit a compensate decision for a committed step, fully covered by the unit test with no further wiring needed to verify this specific claim."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > committed: MUST NOT be compensated merely because authority narrowed (resolver never consulted, no double-commit possible)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1. Unlike its sibling rows, this claim is a restraint (an absence of action) fully decidable from the pure function alone, with no missing integration piece, so coverage is 'tested' rather than 'partial'."
+  },
+  {
+   "id": "orchestration.authority-narrowing.evidence-step-id-required",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "orchestration-evidence",
+   "text": "OPTIONAL, and REQUIRED when the record reports a re-evaluation under",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Orchestration Evidence record reporting a re-evaluation under the authority-narrowing trigger carries step_id, naming the affected step, even though step_id is otherwise OPTIONAL",
+    "local": "buildAuthorityNarrowingEvidence (src/packages/orchestration/src/evidence.ts) narrows BuildOrchestrationEvidenceInput's optional step_id to a required string at the type level and throws at runtime when it is empty, delegating to buildOrchestrationEvidence for every other rule (compensate-member enforcement, envelope signing) unchanged."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > evidence: step_id is REQUIRED on an authority-narrowing record (fail closed when absent)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > evidence: a valid authority-narrowing record carries step_id, state_source signal, and mission_state active",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Split from the single #670 row per PR #683 review 1, which named conditional step_id as one of the observable facets the original row omitted.",
    "id": "template.dispatch.idempotent-retry-returns-committed",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
