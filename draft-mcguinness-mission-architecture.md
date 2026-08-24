@@ -393,15 +393,25 @@ delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
 and several bindings; this document is the single structural view.
 
-The bindings are peers of one another. OAuth is the family's
-first-authored binding, and OAuth 2.0 is the substrate with the most
-deployed infrastructure; that is a deployment fact, not a maturity
-ranking, and no production Mission deployment is known today on any
-binding. Adopting Missions on OAuth requires the changes the OAuth
-binding defines. Peer standing implies neither identical
-capabilities nor identical adoption cost: AAuth, natively
-contextual, adds no new wire members, and each binding's Mission
-Substrate Statement declares what it supplies.
+Peer standing among the bindings is a deployment-topology claim, not
+a data-model-independence claim: each attaches to its own protocol as
+an equally adoptable unit, and OAuth is the family's first-authored
+binding with the most deployed infrastructure, a deployment fact and
+not a maturity ranking (no production Mission deployment is known
+today on any binding). Adopting Missions on OAuth requires the
+changes the OAuth binding defines. The two axes diverge for the
+standalone binding: the Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}) is a normative
+standalone-controller binding over the OAuth Mission data model,
+a peer deployment topology but not an independent authorization
+model, since it normatively imports the OAuth Mission record and
+issuance profile. AAuth demonstrates model independence:
+it maps the shared kernel onto its own protocol's native Mission
+Context without importing the OAuth Authority Set
+({{I-D.draft-mcguinness-mission-aauth}}). Peer standing implies
+neither identical capabilities nor identical adoption cost: AAuth,
+natively contextual, adds no new wire members, and each binding's
+Mission Substrate Statement declares what it supplies.
 
 Read as one system, the family defines a **delegated-authority
 layer** with OAuth 2.0, the standalone Mission Authority Server, and
@@ -1750,8 +1760,12 @@ properties the strong class requires are its conformance rule's:
 
 Only the third earns the term: a `mission` claim alone is a reference,
 not Mission-bound authorization. The family reserves "Mission-bound"
-for that class, and a binding earns it through the capability claims
-of its Mission Substrate Statement, not by protocol lineage.
+for that class. {{binding-properties}}'s `credential-mission-bound`
+equivalence is the definition; a binding earns the term by evidencing
+those properties through the capability claims of its Mission
+Substrate Statement, not by protocol lineage; and the OAuth binding's
+Conformance gates ({{I-D.draft-mcguinness-oauth-mission}}) are that
+binding's discharge of the definition.
 
 The definition itself is the Mission Binding Properties vector's
 `credential-mission-bound` property ({{binding-properties}}), whose
@@ -2709,8 +2723,11 @@ requires a property on a path, its absence denies; nothing falls
 back silently to a weaker binding.
 
 **Credential-mission-bound** is defined by equivalence, not by one
-artifact. For the covered path the credential establishes all of
-these conditions:
+artifact, and is the family's authoritative definition of what earns
+the term "Mission-bound" (see also {{token-classes}}'s Mission-bound
+token class, which this equivalence backs, and the OAuth binding's
+Conformance gates, which discharge it for that binding). For the
+covered path the credential establishes all of these conditions:
 
 1. a trusted issuer authorized to issue for the Mission;
 2. the canonical (`mission.issuer`, `mission.id`) pair identifying
@@ -3443,6 +3460,21 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Reworded the blanket "the bindings are peers of one another"
+  sentence in the Introduction to name two independent axes, deployment
+  topology and data-model independence, and to classify the Mission
+  Authority Server as a normative standalone-controller binding over
+  the OAuth Mission data model: a peer deployment topology, not
+  evidence of model independence (#704). Cross-referenced the three
+  previously uncross-referenced accounts of what earns "Mission-bound"
+  ({{token-classes}} and {{binding-properties}}, and the OAuth
+  binding's Conformance gates): {{binding-properties}}'s
+  `credential-mission-bound` equivalence is now the stated definition,
+  a binding's Mission Substrate Statement is how it evidences the
+  properties, and the OAuth binding's gates are its discharge of the
+  definition (#663). No normative content, anchor, or table row
+  changed.
+
 - Cross-referenced the three previously separate accounts of what
   earns the "Mission-bound" term: {{token-classes}} now names the
   Mission Binding Properties vector's `credential-mission-bound`
@@ -3454,12 +3486,14 @@ This document makes no IANA request.
   (the auditable derivation link) names the OAuth binding's retained
   Mission Record explicitly rather than asserting an unspecified
   discharge (#663).
+
 - Non-goal reworded (#637): "a new authority format, or a new grant
   protocol" narrowed to "a new grant protocol," naming the OAuth
   binding's Mission Resource Access Profile as the family's one
   cross-resource `authorization_details` type, since RFC 9396 leaves
   type semantics to the type and the family now defines one. Document
   Map gains the profile's row under "The substrate and the bindings."
+
 - Editorial density pass on this Informational document: the
   aggregate-ceiling and artifact-plane (non-transitive work-product)
   composition readings under {{invariants}} tightened to a summary

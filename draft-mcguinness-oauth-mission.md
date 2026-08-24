@@ -4333,16 +4333,13 @@ a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
-This binding's Mission Substrate Statement, the kernel mapping and
-capability table these surfaces supply to the family's substrate
-contract, is published in the substrate companion's family appendix
-({{I-D.draft-mcguinness-mission-substrate}}, Section "OAuth Binding
-Mapping Assessment"), the substrate contract's own normative
-assessment of this binding's mapping, made and maintained there. It
-is not this document's conformance result: this document makes no
-substrate-conformance claim, takes no requirement from the
-substrate, and remains self-contained, and this pointer is
-informative.
+This binding publishes its own Mapping Assessment of how the surfaces
+above realize the Mission Substrate contract's kernel and
+capabilities ({{oauth-statement}}). It is not this document's
+conformance result: this document makes no substrate-conformance
+claim, takes no requirement from the substrate, and remains
+self-contained; its reference to the substrate contract
+({{I-D.draft-mcguinness-mission-substrate}}) is informative.
 
 # Security Considerations {#security-considerations}
 
@@ -5579,17 +5576,175 @@ base64url with no padding ({{integrity-anchors}}) reproduces these
 anchors exactly. A divergence indicates a JCS or encoding difference to
 resolve before interoperating.
 
+# OAuth Binding Mapping Assessment {#oauth-statement}
+
+<!-- assessed-substrate-digest: 4dc2c1c78354e96e -->
+
+This section is this document's own Mapping Assessment of itself
+against the Mission Substrate contract's kernel and capabilities
+({{I-D.draft-mcguinness-mission-substrate}}, Section "Mission
+Substrate Statement"). The assessment is normative as this
+document's own content: this document asserts, and maintains against
+its own text, the kernel mapping and capability claims below. It is
+not a claim of substrate conformance: this document makes no
+substrate-conformance claim and takes no requirement from the
+substrate; its reference to the substrate is informative, and the
+substrate's own reference back to this document is informative in
+turn, so neither document takes a normative dependency on the other.
+It applies to the substrate edition published from the same
+repository revision as this document (the two editions revise and
+publish in lockstep, so the assessed revision is exact; for a copy
+obtained independently of the repository, the family's conformance
+manifest publishes the assessed substrate's content digest in its
+`source.specs` entry, identifying the exact assessed bytes), in this
+document's base single-domain mode with the OPTIONAL capabilities as
+the activation conditions below state, and to the kernel and
+capability vocabulary of the substrate document as of that revision.
+
+For the kernel:
+
+1. The Mission Reference is `mission_id`: high-entropy, unambiguous
+   within the issuer namespace, compared by exact string equality
+   together with `mission.issuer`, never reassigned, retained for the
+   audit horizon, and disclosed beyond the issuer only on this
+   document's authorized surfaces.
+2. The Controller is the Mission Issuer (the Authorization Server),
+   established through `mission.issuer` and the deployment's issuer
+   trust (AS metadata and published keys).
+3. The Actor handle is the authenticated OAuth client at approval;
+   the external Subject is fixed by this document's injective mapping;
+   delegates ride the `act` chain; child and successor lineage is
+   recorded through the parent and predecessor members; actor-type
+   classification uses `sub_profile` and instance assertions where
+   deployed.
+4. The Approved Context is the Mission Intent recorded verbatim, the
+   recorded authority proposal where one was submitted, and the
+   derived Authority Set; the immutable boundary is the record's
+   immutable members; commitments are the typed integrity anchors
+   (`intent_hash`, `proposal_hash`, `authority_hash`); a material
+   change obtains a new approval through an expansion successor.
+5. The approval ceremony is this document's approval event:
+   authenticated Approver, the distinct-approver rule for
+   write-bearing Missions, rendering of the derived Authority Set and
+   the effective expiry, and atomic record commit, with deferred,
+   interactive, and dispatch realizations.
+6. The active predicate is stored `state` equal to `active` with
+   the decision time strictly before the record's effective
+   `expires_at`, the issuer materializing the resulting `expired`
+   transition lazily where it chooses; any other stored value,
+   recognized or not, is non-active; transitions are authenticated
+   lifecycle operations; a non-active Mission refuses issuance and
+   derivation.
+7. The reliance bound is the record's effective `expires_at` (never
+   later than the requested ceiling), which caps every derived
+   credential's `exp`; the maximum residual after a Mission becomes
+   non-active is the outstanding credential lifetime, bounded by the
+   deployment's declared access-token TTL.
+8. The propagation and join surfaces are: the `mission` claim
+   (artifact issuance under the Mission, authority derivation, and
+   lifecycle-gated issuance); the `mission_id` and
+   `mission_expires_at` response members (correlation only); the
+   introspection projection (state as of the response, caller
+   authorization and minimization applying); the Status surfaces
+   (state as of a signed observation with explicit freshness); and
+   the grant binding (the issuer's native association of Mission,
+   Subject, client, and credential).
+9. The governance record is the Mission Record with its approval
+   evidence and lifecycle history, retained for the audit horizon,
+   with integrity resting on record custody and the typed anchors.
+
+The capability table:
+
+| Capability | Claim | Activation | Scope and defining sections | Limitations |
+| --- | --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | supplied | always | State-gated issuance and every derivation gate | Outstanding credentials run to their own `exp`; the residual is bounded, not zero |
+| State-Observable | supplied | Status, introspection, or Signals companion active | Those surfaces | Staleness bounded by each surface's declared freshness |
+| Structured Authority | supplied | always | `authorization_details` of AS-supported types ({{other-types}}), each type's own specification defining semantics (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints, {{I-D.draft-mcguinness-oauth-mission-resource-access}}) | Semantics exist per supported type, not universally |
+| Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
+| Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
+| Authorized Context Correlation | supplied | the Delegation role active ({{delegation}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
+| Independently Verifiable | supplied | Mandate, signed Status, or audit companion active | Anchor recomputation and signed artifacts per those profiles | Signature verification never establishes current state |
+| Portable Evidence | supplied | Evidence, Mandate, or audit companion active | Per those profiles | The governance record is otherwise issuer-local |
+{: title="OAuth Mission binding capability table"}
+
+Temporal elements: every issued credential's `exp` is capped by the
+record's effective `expires_at`; state observations carry their
+surface's declared freshness; the residual after non-active is the
+outstanding credential lifetime under the deployment's declared TTL.
+Failure behavior: an unknown lifecycle state is non-active; an
+unresolvable reference, a failed anchor verification, and an unknown
+`authorization_details` type fail closed; where a row's activation
+condition does not hold, the property is not supplied and a consumer
+MUST NOT rely on it.
+
+This document's three OPTIONAL implementation roles, which its
+Conformance section names OPTIONAL capabilities ({{conformance}}),
+are surfaces an implementation may or may not offer, each independent
+of the others. The capability table above states scoped guarantee
+claims: properties this document supplies and the conditions under
+which each is supplied. The two vocabularies answer different
+questions and are not equivalent; the entries below relate them
+without collapsing one into the other. Declaring an OPTIONAL role
+never creates a claim beyond the eight already stated above.
+
+Introspection:
+: Exercises State-Observable. One of State-Observable's three named
+  activation surfaces, alongside Status and Signals; declaring it
+  activates that otherwise-conditional claim.
+
+Delegation:
+: Exercises Lifecycle-Gated Authorization, Structured Authority,
+  Monotonic Derivation, Credential-Bound, and Authorized Context
+  Correlation. This document's delegation subset-checks
+  `authorization_details`, carries the `mission` claim unchanged,
+  sender-constrains the delegated credential to the delegate's own
+  key, and refuses issuance unless the Mission is active. The Token
+  Exchange that issues the delegated credential associates, at
+  issuance, the Mission and Subject carried by the Mission-bound
+  `subject_token` with the delegate identity established by the
+  `actor_token` or the delegate's own client authentication, binding
+  all three to the newly issued credential without itself
+  establishing a new grant binding: an access-token-only delegated
+  exchange is a derived token under the `subject_token`'s existing
+  binding, not a second binding of its own ({{grant-binding}}). Four
+  of the five claims are supplied always, and Delegation exercises
+  them rather than creating them; Authorized Context Correlation is
+  the exception, activated by this role, whose Token Exchange join
+  is its supplier. The `act` chain itself supplies none of them: it
+  is attribution, never authority.
+
+Cross-Domain:
+: Exercises Lifecycle-Gated Authorization, Structured Authority,
+  Monotonic Derivation, and Credential-Bound. Carries these four
+  always-supplied guarantees across the domain hop: the Mission
+  reference and `authority_hash` intact, authority that only
+  narrows, and projection gated on active state, while adding an
+  interoperable projection surface the guarantees alone do not
+  provide. It does not become Portable Evidence by crossing a
+  domain: that claim activates only when an Evidence, Mandate, or
+  audit companion is active, and Cross-Domain is not among them.
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
 
 -01
 
+- Added an OAuth Binding Mapping Assessment appendix
+  ({{oauth-statement}}): this document's own self-assessment against
+  the Mission Substrate contract's kernel and capabilities, relocated
+  here from the substrate document so the substrate carries no
+  binding-specific discharge (#708); its reference to the substrate
+  remains informative, and replaces the prior pointer to the
+  substrate's family appendix. No requirement on a Mission Issuer,
+  Resource Server, or Client changed.
+
 - Informative pointer from the Conformance section's Mission-bound
   gates to the architecture's Mission Binding Properties vector,
   naming this document's discharge as its `credential-mission-bound`
   property; the core's own gates remain authoritative and the
   document remains self-contained (#663).
+
 - Mission Resource Access Profile split (#637, #645, #698): the
   `mission_resource_access` type definition, its resource and action
   matching, generic constraints, the Common Constraints registry, the
@@ -5636,6 +5791,7 @@ resolve before interoperating.
   Join) never becomes a grant binding. The unredeemed-authorization-code
   fork is now one deployment policy applied consistently, with
   idempotent replay (#700).
+
 - Reader-program normative follow-ups: each supported
   `authorization_details` type's transformation boundary (subset
   relation and delegation semantics understood, or

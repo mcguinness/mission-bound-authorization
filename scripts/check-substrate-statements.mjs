@@ -48,24 +48,24 @@ const CAPABILITIES = [
   "Portable Evidence",
 ];
 
-// Every registered Statement is a Mission binding: publishing a capability
-// table here is what "binding" means architecturally (the README says as
-// much: new bindings are authored against the substrate and claim their
-// capabilities through a Statement). `slug` names the family-manifest.json
-// draft the Statement is FOR, which is not always the file it lives in: the
-// OAuth binding's own table is hosted in the substrate document's Mapping
-// Assessment rather than in draft-mcguinness-oauth-mission.md itself.
-// scripts/generate-drafts-index.mjs imports this array as the single source
-// of truth for "which manifest slugs are bindings," so this list is
-// exhaustive by construction: the tripwires below (statement-unregistered)
-// already fail CI the moment a sixth Statement table appears anywhere in the
-// corpus without a matching entry here.
+// Every registered Statement or Assessment is a Mission binding: publishing
+// a capability table here is what "binding" means architecturally (the
+// README says as much: new bindings are authored against the substrate and
+// claim their capabilities through a Statement, or, for a non-claiming
+// specification, are assessed through an Assessment). `slug` names the
+// family-manifest.json draft the table is FOR, which is not always the
+// file it lives in. scripts/generate-drafts-index.mjs imports this array as
+// the single source of truth for "which manifest slugs are bindings," so
+// this list is exhaustive by construction: the tripwires below
+// (statement-unregistered) already fail CI the moment a new Statement or
+// Assessment table appears anywhere in the corpus without a matching entry
+// here.
 export const REGISTRY = [
-  { file: "draft-mcguinness-mission-substrate.md", title: "OAuth Mission binding capability table", slug: "draft-mcguinness-oauth-mission" },
-  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities", slug: "draft-mcguinness-mission-authority-server" },
-  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities", slug: "draft-mcguinness-mission-aauth" },
-  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities", slug: "draft-mcguinness-mission-uma" },
-  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities", slug: "draft-mcguinness-mission-gnap" },
+  { file: "draft-mcguinness-oauth-mission.md", title: "OAuth Mission binding capability table", slug: "draft-mcguinness-oauth-mission", kind: "assessment" },
+  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities", slug: "draft-mcguinness-mission-authority-server", kind: "statement" },
+  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities", slug: "draft-mcguinness-mission-aauth", kind: "statement" },
+  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities", slug: "draft-mcguinness-mission-uma", kind: "statement" },
+  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities", slug: "draft-mcguinness-mission-gnap", kind: "statement" },
 ];
 
 const HEADER = "| Capability | Claim | Activation | Scope and defining sections | Limitations |";
