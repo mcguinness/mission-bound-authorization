@@ -449,8 +449,10 @@ Authorization Server (Mission Issuer):
   Approver is authenticated and the agent is untrusted. Its compromise
   voids the model ({{documenting}} names the key-custody statement a
   deployment publishes for this assumption): a compromised issuer can
-  mint arbitrary authority. This is the strongest trust assumption in
-  the suite
+  mint arbitrary authority, including a forged Mandate over a real
+  Mission that a verifier cannot reject on artifact-level checks alone
+  ({{I-D.draft-mcguinness-mission-mandate}}). This is the strongest
+  trust assumption in the suite
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Resource Authorization Server (cross-domain):
@@ -471,7 +473,7 @@ Mission Authority Server (standalone binding):
   faithfully, keep the Mission record and its anchors intact, and
   serve accurate Mission state. Its compromise is equivalent to
   Mission Issuer compromise (forged approvals, altered records, false
-  state), with one addition. In this mode the PDP's
+  state), plus one addition: in this mode the PDP's
   credential-to-Mission join is the only binding between a presented
   credential and a Mission, so a compromised Mission Authority Server
   combined with the PDP's trust in it yields arbitrary attribution of
@@ -767,10 +769,12 @@ active-state freshness for the high-consequence classes and the
 no-unmediated-path rule for mediated classes (which covers both a path
 to those actions and a path to fresh usable credentials for them) are
 already base-profile requirements; a deployment that leaves any of the
-five conditions unmet does not obtain the guarantee. This
-matches the suite's front-door framing: adopting the profiles does not by
-itself make a deployment resistant to a compromised agent. The model
-makes misuse bounded and, where evidence is produced, attributable.
+five conditions unmet does not obtain the guarantee.
+
+This matches the suite's front-door framing: adopting the profiles
+does not by itself make a deployment resistant to a compromised
+agent. The model makes misuse bounded and, where evidence is
+produced, attributable.
 
 Earned is also not provable at the wire. The High-Assurance Agent
 claims name conditions a deployment satisfies, not something a token
@@ -780,10 +784,12 @@ statement they rest on is self-declared
 {{I-D.draft-mcguinness-mission-harness}}), and absent independent
 evidence, a relying party cannot distinguish, from the protocol
 artifacts alone, a deployment that built the claimed isolation from
-one that merely published the claim. Execution-environment
-attestation is what closes that gap; the runtime profile requires it
-for the two High-Assurance Agent claims specifically, not for base
-conformance ({{I-D.draft-mcguinness-mission-runtime}}). Retained
+one that merely published the claim.
+
+Execution-environment attestation is what closes that gap; the
+runtime profile requires it for the two High-Assurance Agent claims
+specifically, not for base conformance
+({{I-D.draft-mcguinness-mission-runtime}}). Retained
 negative-conformance evidence is the complementary recommendation:
 it does not prove the claim at decision time, but it lets an auditor
 check afterward that the deployment ran the tests the claim implies
@@ -1105,9 +1111,10 @@ limits most likely to matter and most often overstated away elsewhere:
   questionable: a translation floor over the rendered authority and
   Disclosure Interrogation
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
-- **Single-service equivocation.** Transparency is non-equivocating only
-  per service; a deployment that needs that property checked registers
-  with more than one independent service.
+- **Single-service equivocation.** Transparency's non-equivocation
+  guarantee is per-service, stated in full at the Transparency
+  Service trusted-base entry
+  ({{trusted-base}}; {{I-D.draft-mcguinness-mission-audit}}).
 - **Offline breadth.** Offline attenuation
   ({{I-D.draft-mcguinness-oauth-mission-attenuation}}) bounds each child
   to a narrowing of its parent, but the issuer does not observe how many
@@ -1209,8 +1216,7 @@ class, which components must be intact for the class's guarantee to hold.
 The statement covers key custody: for each key class the deployment
 operates (issuer signing, evidence signing, agent sender-constraint,
 mediating-PEP custody, attenuation roots), where the key is held, at
-what custody grade, and the compromise-recovery procedure, since the
-model's strongest assumption reduces to those keys
+what custody grade, and the compromise-recovery procedure
 ({{trusted-base}}).
 This documentation is what lets a relying party or auditor reason about
 the deployment's actual security posture rather than the model's
@@ -1353,6 +1359,23 @@ model and pipeline layers, and saying so is the point:
 | LLM08 Vector and Embedding Weaknesses | Retrieval pipeline security; what retrieval returns is untrusted content, and the taint response treats it that way | Delegated |
 | LLM09 Misinformation | Content truth is semantic, and the gate is structural | Delegated |
 | LLM10 Unbounded Consumption | Expiry on every Mission and metering (experimental) on spend | Bounded |
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Editorial density pass on this Informational document: the
+  Transparency Service entry of {{trusted-base}} kept as the one
+  full statement of the single-service-equivocation point, with the
+  Ten Residuals restatement compressed to a pointer at it; the
+  Documenting section's echo of the Authorization Server entry's
+  "strongest trust assumption" phrasing dropped in favor of its
+  existing {{trusted-base}} cross-reference, and that entry given an
+  explicit citation to the Mission Mandate document it shares the
+  issuer-key-compromise concern with. Several over-long paragraphs in
+  {{guarantees}} split for one idea per paragraph. No normative
+  content, anchor, or adversary-model row, mitigation, or residual
+  changed.
 
 # Acknowledgments
 {:numbered="false"}
