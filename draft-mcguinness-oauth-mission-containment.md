@@ -523,22 +523,23 @@ the issuance profile's subset rule unchanged:
   that revocation carries, bounded the same way by their own `exp`
   and the deployment's freshness rules ({{propagation}}).
 
-The same bound applies wherever authority leaves the Mission, for every
-derivation gated after the transition. A Child Mission attenuates from
-the parent's Effective Authority Set, so a contained capability is
-absent from every child derivation gated after the transition; a
-contain transition also propagates entry-wise to every Child Mission
-already justified by the contained entry, so an existing child does not
-keep deriving it either
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-"Child Mission State"). A cross-domain projection issued after the
-transition projects the Effective Authority Set, so a contained
-capability is absent from it
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). An offline
-attenuation root issued after the transition is derived from the
-Effective Authority Set, so no offline chain minted from it can narrow
-its way back to contained capability
-({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+The same bound applies wherever authority leaves the Mission, for
+every derivation gated after the transition:
+
+- A Child Mission attenuates from the parent's Effective Authority
+  Set, so a contained capability is absent from every child
+  derivation gated after the transition; a contain transition also
+  propagates entry-wise to every Child Mission already justified by
+  the contained entry, so an existing child does not keep deriving it
+  either ({{I-D.draft-mcguinness-oauth-mission-child-delegation}},
+  Section "Child Mission State").
+- A cross-domain projection issued after the transition projects the
+  Effective Authority Set, so a contained capability is absent from
+  it ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+- An offline attenuation root issued after the transition is derived
+  from the Effective Authority Set, so no offline chain minted from
+  it can narrow its way back to contained capability
+  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
 
 What derivation gating and propagation do not reach is authority
 already materialized, before the transition, into a standing minting
@@ -1004,13 +1005,15 @@ cannot be spent, delegated, or projected in any derivation gated after
 the transition, and propagation carries it to every Child Mission the
 contained entry already justified
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-"Child Mission State"). The exception is the same one any adversary
-faces: the materialized-capability residual
-({{materialized-residual}}), bounded by the affected artifact's own
-lifetime regardless of which event forced the transition. Recovery is
-bounded too: the poisoned Missions are enumerable from their
-Containment Evidence, and each restores only through an approval that
-sees the containment history ({{restoration}}).
+"Child Mission State").
+
+The exception is the same one any adversary faces: the
+materialized-capability residual ({{materialized-residual}}), bounded
+by the affected artifact's own lifetime regardless of which event
+forced the transition. Recovery is bounded too: the poisoned Missions
+are enumerable from their Containment Evidence, and each restores
+only through an approval that sees the containment history
+({{restoration}}).
 
 ## Containment History at Expansion {#history-at-expansion}
 

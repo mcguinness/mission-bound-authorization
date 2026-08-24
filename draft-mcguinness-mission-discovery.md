@@ -543,12 +543,14 @@ Encountered Resource object matches an existing entry, its `origin`
 within the entry's `resource` and its declaration digest equal to
 the one recorded for that binding, is not a new encounter: no
 adjudication runs, no drawdown is spent, and the runtime layer
-enforces as usual. An encounter whose declaration digest differs
-from the recorded one is a new encounter for any authority not yet
-bound, and a drift signal for what is. A deployment SHOULD
-re-adjudicate a bound resource whose declaration changed before
-further use in a consequential class. The capability-source rules
-already refuse drifted catalog capabilities at the PDP
+enforces as usual.
+
+A deployment SHOULD re-adjudicate a bound resource whose declaration
+changed before further use in a consequential class. An encounter
+whose declaration digest differs from the recorded one is a new
+encounter for any authority not yet bound, and a drift signal for
+what is. The capability-source rules already refuse drifted catalog
+capabilities at the PDP
 ({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 The taint floor ({{injection-discovery}}) is applied only at binding.
@@ -620,11 +622,12 @@ progressive profile's prohibited set requires and this profile
 inherits unchanged
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}). The
 irreversible, external-commitment, and privileged-administration
-classes are likewise never policy's to bind on any encounter. In an
-untainted session, policy may bind up to that floor. Taint removes
-every remaining class from policy's reach: under the first rule
-above, no encounter binds by policy and every binding routes to a
-human.
+classes are likewise never policy's to bind on any encounter.
+
+In an untainted session, policy may bind up to that floor. Taint
+removes every remaining class from policy's reach: under the first
+rule above, no encounter binds by policy and every binding routes to
+a human.
 
 # Discovery Evidence {#discovery-evidence}
 

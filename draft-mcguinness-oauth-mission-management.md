@@ -154,10 +154,12 @@ operator consoles and incident-response tooling in the Mission
 Issuer's own trust domain, explicitly authorized for existence
 knowledge over a declared filter scope, compensated not by
 indistinguishability but by explicit authorization and mandatory audit
-of every call ({{filter-scope}}). The surface is never agent-facing:
-the Agent executing a Mission has no role here
-({{management-authentication}}). Fleet enumeration and bulk lifecycle
-are the operator surface of the family's delegated-authority layer
+of every call ({{filter-scope}}).
+
+The surface is never agent-facing: the Agent executing a Mission has
+no role here ({{management-authentication}}). Fleet enumeration and
+bulk lifecycle are the operator surface of the family's
+delegated-authority layer
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
 Both capabilities share one endpoint, one request shape, one
@@ -375,8 +377,9 @@ member matches no Mission that has none ({{filter}}), so creating the
 object after issuance, deleting it, or deleting and recreating it
 redraws scope as surely as changing a value. Every post-issuance
 transition of the administrative metadata (a value change, absent to
-present, or present to absent) is therefore a **re-home**. A
-deployment that supports re-homing MUST gate it on an explicit
+present, or present to absent) is therefore a **re-home**.
+
+A deployment that supports re-homing MUST gate it on an explicit
 authority distinct from its enumeration and lifecycle grants, MUST
 require the caller's filter scope to cover the Mission both before
 and after the change (a Mission without administrative metadata is
@@ -939,8 +942,9 @@ audit systems MUST treat them as untrusted input.
 
 The status profile makes Mission existence unobservable to the
 unauthorized; this document makes it queryable by the authorized. The
-two compose safely only if the boundary between them holds. A
-deployment MUST NOT satisfy a management request with a credential
+two compose safely only if the boundary between them holds.
+
+A deployment MUST NOT satisfy a management request with a credential
 authorized only for status or lifecycle calls. The filter-scope check
 of {{filter-scope}} MUST run before any Mission data is touched, so a
 refusal is data-independent. The audit rule of {{filter-scope}} is
