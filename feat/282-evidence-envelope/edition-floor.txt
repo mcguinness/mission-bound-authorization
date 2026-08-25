@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-25T04:05:10Z
-Source repository commit: ebcbc624cd03f6041b6995180847be8e293cc84b
+Generated: 2026-08-25T07:26:55Z
+Source repository commit: e426317c76b7eb280b7faef503a35fa8ec04f2be
 Member count: 7
 
 Reading order:
