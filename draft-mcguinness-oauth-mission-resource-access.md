@@ -377,7 +377,7 @@ registered Common Constraint key present in the ceiling entry that the
 AS does not implement narrowing for MUST NOT be dropped while the
 entry survives. The AS MUST instead fail closed: refuse the whole
 derivation, or omit the entry from the result, exactly as an
-unrecognized `resources` value already may be; the granted
+unrecognized `target_resources` value already may be; the granted
 `authorization_details` echo reflects any such omission
 ({{I-D.draft-mcguinness-oauth-mission}}). Carrying the entry forward with the
 key dropped would widen effective authority past the ceiling exactly
@@ -966,6 +966,14 @@ registry.
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Controls taxonomy retirement (#636): the AS-side no-registered-
+  narrowing failure-closed cross-reference updated from an
+  unrecognized `resources` value to an unrecognized `target_resources`
+  value, matching the issuance profile's rename. No entry-level
+  `constraints` reference changed; this document's own `constraints`
+  is the RAR entry-level object, unaffected by the retirement of the
+  Mission Intent's separate `controls` bucket.
 
 - Review response (#637): relocated the Resource Server enforcement
   duties (exact/prefix resource matching, action matching,

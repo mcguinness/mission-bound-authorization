@@ -356,9 +356,10 @@ discovery metadata ({{iana}}). The Grant Minter MUST observe:
    named consuming AS serves. The requester MAY request a narrower
    subset. The requester MUST NOT obtain a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
-   Where the Mission carries a consented `controls.max_derivations`,
-   the MAS MUST count grants against it atomically and refuse beyond
-   it, which gives that control a binding locus under the standalone
+   Where the Mission's established `derivation_limit`
+   ({{I-D.draft-mcguinness-oauth-mission}}) is set, the MAS MUST count
+   grants against it atomically and refuse beyond
+   it, which gives that ceiling a binding locus under the standalone
    binding.
 5. **Evidence.** Each minting is recorded with the Mission record:
    the `jti`, audience, requested and granted entries, and time.
@@ -436,7 +437,7 @@ endpoint uses:
 | `invalid_audience` | 400 | `audience` names no AS this MAS mints for. |
 | `mission_not_active` | 409 | The Mission is not `active` ({{minting}}). |
 | `invalid_authorization_details` | 400 | The requested subset is not a subset of the consented Authority Set, or exceeds the audience scope. |
-| `max_derivations_exhausted` | 409 | A consented `controls.max_derivations` is reached ({{minting}}). |
+| `derivation_limit_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting}}). |
 
 `not_found` covers both an unknown Mission and a requester that is not
 the recorded client, so the split never becomes a membership oracle;

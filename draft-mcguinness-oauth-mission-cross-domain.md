@@ -491,7 +491,7 @@ local policy ({{validation-at-resource-as}}).
 Because each grant lives at most 300 seconds, steady-state partner
 work re-issues grants on a lease cadence and consumes at least 12
 derivations per hour per audience; a deployment sizes the Mission's
-`max_derivations` control ({{I-D.draft-mcguinness-oauth-mission}}) as
+`derivation_limit` ({{I-D.draft-mcguinness-oauth-mission}}) as
 a function of that cadence times the projected audiences times the
 Mission's duration.
 
@@ -1350,7 +1350,7 @@ Scenario: agent `s6BhdRkqt3`, acting for `alice`
 under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`. Stage 0 (agent
 identity) and Stage 1 (Mission creation at the home AS) are the base
 profile's single-domain walkthrough, extended here in one way: the
-Mission Intent's `resources` also names the partner ERP
+Mission Intent's `target_resources` also names the partner ERP
 `https://erp.partner.example.com`, so the approved Authority Set
 additionally carries, for that resource, an `invoices.read` entry
 (delegable to `ai_agent` actors at depth 1) and a
@@ -1587,6 +1587,13 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Controls taxonomy retirement (#636): `max_derivations` renamed
+  `derivation_limit` at its one normative reference (Issuing the
+  Cross-Domain Grant). The Document History entry below is left
+  unchanged: it is a historical record of the disclosure pattern this
+  document mirrored at the time, under that pattern's then-current
+  name.
 
 - Reshaped Per-Domain Delegation Depth's disclosure from a flat
   SHOULD to a conditional, interface-addressed MUST, mirroring the
