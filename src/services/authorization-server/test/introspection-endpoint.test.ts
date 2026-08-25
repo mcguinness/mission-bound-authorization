@@ -447,6 +447,23 @@ describe("RFC 9068 + Mission claim-set enforcement (@spec mission#introspection 
     expect(res.body.active).toBe(true);
   });
 
+  it("@spec mission#the-mission-claim (#702): a baseline {id, issuer} mission claim, with no authority_hash at all, still introspects active", async () => {
+    const crafted = await craftToken({
+      jti: flow1.jti,
+      mission: { id: flow1.missionId, issuer: ISSUER },
+    });
+    const res = await introspect(crafted, { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+  });
+
+  it("a present-but-empty-string authority_hash on the mission claim -> bare active:false (typed-when-present, not merely truthy-checked)", async () => {
+    const crafted = await craftToken({
+      jti: flow1.jti,
+      mission: { id: flow1.missionId, issuer: ISSUER, authority_hash: "" },
+    });
+    expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+  });
+
   it("missing exp -> bare active:false", async () => {
     const crafted = await craftToken(baselineFields(), { omitExp: true });
     expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });

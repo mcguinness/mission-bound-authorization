@@ -197,6 +197,35 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
     ).rejects.toThrow(/accepted origin Mission Issuer/);
   });
 
+  it("@spec mission#the-mission-claim (#702), cross-org-delegation -- this profile REQUIRES authority_hash as its own lineage anchor: a root whose mission claim omits it is refused, never silently downgraded", async () => {
+    const derived = await deriveCrossOrgRoot(kernel, asKeys.privateKey, "as-token", {
+      missionId, aud: RESOURCE, clientId: "agent-a", cnfJwk: await pub(agentA),
+      actor: { iss: "https://id.org1.test", sub: "wl-agent-a" }, mappingVersion: "map-1",
+    });
+    // A structurally valid root, signed by the trusted origin issuer, whose
+    // `mission` object carries only the issuance profile's baseline
+    // {id, issuer} plus `subject` -- exactly what a baseline-claim
+    // consumer would consider complete, but this profile's own root
+    // REQUIRES authority_hash too (@spec cross-org-delegation#root-issuance).
+    const forgedRoot = await new SignJWT({
+      mission: { id: missionId, issuer: ORIGIN_ISS, subject: { iss: "https://id.org1.test", sub: "p-alice" } },
+      cnf: { jwk: await pub(agentA) },
+      act: { iss: "https://id.org1.test", sub: "wl-agent-a" },
+      del_depth: 0,
+      del_max_depth: 1,
+      authorization_details: [{ type: "attenuating_agent_token", tools: derived.tools }],
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "as-token", typ: "aat+jwt" })
+      .setIssuer(ORIGIN_ISS)
+      .setAudience(RESOURCE)
+      .setIssuedAt(nowS)
+      .setExpirationTime(nowS + 300)
+      .sign(asKeys.privateKey);
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present([forgedRoot]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/root mission claim is incomplete/);
+  });
+
   it("refuses a named hop whose actor credential is missing", async () => {
     const { chain } = await buildChain();
     await expect(
