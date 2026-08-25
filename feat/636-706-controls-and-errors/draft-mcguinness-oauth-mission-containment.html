@@ -1445,7 +1445,7 @@ metadata-only lifecycle event carries the change in the interim
 (<a href="#propagation" class="auto internal xref">Section 15</a>);<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-4.4">
-          <p id="section-4-4.4.1">the content of the <code>controls.containment</code> Mission Intent member; it
+          <p id="section-4-4.4.1">the content of a <code>containment</code> Mission Intent member; it
 is named as an extension point only (<a href="#containment-policy" class="auto internal xref">Section 17</a>); or<a href="#section-4-4.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-4.5">
@@ -2078,8 +2078,8 @@ an intent-shaping component does not write it: a compromised agent,
 client, or shaping component <span class="bcp14">MUST NOT</span> be able to select which events
 contain or how far a containment narrows.<a href="#section-17-1" class="pilcrow">¶</a></p>
 <p id="section-17-2">A deployment may want the Approver to consent to tightened
-containment behavior at approval time. <code>controls.containment</code>, a
-member of the Mission Intent's <code>controls</code> object under the issuance
+containment behavior at approval time. <code>containment</code>, a
+named top-level Mission Intent member under the issuance
 profile's extensibility rules, is named here as that extension point;
 its content is explicitly not defined by this document. An
 Approver-consented member can only tighten what the issuer-held

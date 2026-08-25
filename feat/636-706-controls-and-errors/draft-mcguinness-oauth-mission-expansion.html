@@ -1730,9 +1730,9 @@ act chain afresh under its own approval.<a href="#section-5.1-2.10.1" class="pil
 successor's Mission Intent, and its <span class="bcp14">OPTIONAL</span> <code>evidence</code> array
 carries Intent Submission Evidence under that profile's dispatch,
 refusal, and never-authority rules. The Intent describes the
-broadened task: the <code>goal</code>, <code>resources</code>, <code>constraints</code>, and
-<code>controls</code> the successor needs, including the authority the denied
-action required. The Mission Issuer derives the successor's
+broadened task: the <code>goal</code>, <code>target_resources</code>, <code>task_bounds</code>, and
+any other Mission Intent member the successor needs, including the
+authority the denied action required. The Mission Issuer derives the successor's
 Authority Set from this Intent and bounds it by policy exactly as
 for any Mission; this document adds no authority-derivation rule.<a href="#section-5.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2034,8 +2034,10 @@ is the experimental progressive authorization companion's concern
 drawdown completes through the retained interactive path with the
 approval prompt skipped, as that companion defines.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.2-4">Whichever mode completes, obtaining the fresh approval means the Mission
-Issuer authenticates the Approver, obtains fresh consent for the
-derived Authority Set, satisfies any <code>controls.acr</code>, and renders the
+Issuer authenticates the Approver against the published approval-
+authentication floor, obtains fresh consent for the
+derived Authority Set, satisfies any requested <code>acr_values</code>/<code>max_age</code>
+strength, and renders the
 Subject when the Approver is not the Subject, per the issuance profile's
 approval event. The consent disclosure <span class="bcp14">MUST</span> reflect the successor's
 authority being adjudicated. Expansion never widens authority without a

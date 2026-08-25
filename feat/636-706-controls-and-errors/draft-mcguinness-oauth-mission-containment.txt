@@ -229,8 +229,8 @@ Table of Contents
       metadata-only lifecycle event carries the change in the interim
       (Section 15);
 
-   *  the content of the controls.containment Mission Intent member; it
-      is named as an extension point only (Section 17); or
+   *  the content of a containment Mission Intent member; it is named as
+      an extension point only (Section 17); or
 
    *  how a deployment detects a tainted read or an anomaly; detection
       belongs to the harness, runtime, and discovery layers (Section 9).
@@ -774,12 +774,12 @@ Table of Contents
    events contain or how far a containment narrows.
 
    A deployment may want the Approver to consent to tightened
-   containment behavior at approval time. controls.containment, a member
-   of the Mission Intent's controls object under the issuance profile's
-   extensibility rules, is named here as that extension point; its
-   content is explicitly not defined by this document.  An Approver-
-   consented member can only tighten what the issuer-held policy would
-   do, never loosen it.
+   containment behavior at approval time. containment, a named top-level
+   Mission Intent member under the issuance profile's extensibility
+   rules, is named here as that extension point; its content is
+   explicitly not defined by this document.  An Approver-consented
+   member can only tighten what the issuer-held policy would do, never
+   loosen it.
 
 18.  Containment Evidence
 
