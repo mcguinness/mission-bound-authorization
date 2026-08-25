@@ -7,16 +7,20 @@
     "content_sha256": "57bc7d306a5ad716a5648a6b478c82985641bb5a4a597b4a0f5dc781782e4441"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
-    "content_sha256": "24347d4b1e9934cc8d05037d7880fa0df20be0a54d053b5f625370588b5310d2"
+    "revision": "2cabef2d531b7a635ba17e6d0b99ed0129031984",
+    "content_sha256": "06d5e934b637a380c864feeb6bf957de3e4bd5604c2a672dfb024d1c34afed62"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "cd7e9288c01d88dc60bae5549dc9cc7f9a403573",
     "content_sha256": "25ec453cab44545ca7d15eabc948bbc5cf5c53b9d37ff9c5eda9ad3454a1930a"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
-    "content_sha256": "82b15a77a57d40b169d134307d3230afc5ffa224910425739c152a902378ef36"
+    "revision": "2cabef2d531b7a635ba17e6d0b99ed0129031984",
+    "content_sha256": "ff42a300a97b6653bd2b897f6c10e88b4bd2a3c112d045d0d8b43d84a48a689d"
+   },
+   "draft-mcguinness-mission-runtime-oauth.md": {
+    "revision": "2cabef2d531b7a635ba17e6d0b99ed0129031984",
+    "content_sha256": "6538ee1824ef9878ed4b55d5eccd57a39d01818e69beb68a82c710184a580870"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "a28ce7de5bd4c0372fc442a3727ceec93c6341e6",
@@ -162,7 +166,11 @@
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
-   "core.local-approved-set-verification"
+   "core.local-approved-set-verification",
+   "authzen.runtime-evidence",
+   "authzen.obligations",
+   "authzen.arap",
+   "authzen.batch"
   ]
  },
  "profiles": [
@@ -4913,7 +4921,7 @@
    "id": "runtime.conformance.no-claim-outside-declared-scope",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "runtime-conformance",
-   "text": "A deployment MUST NOT claim runtime enforcement for a resource, action class, `authorization_details` type, or execution path outside that declared scope.",
+   "text": "A deployment MUST NOT claim runtime enforcement for a resource, action class, authority-entry type, or execution path outside that declared scope.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -4931,6 +4939,29 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Deployment-declaration duty (AS role): no Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against (`grep -rln \"Enforcement Scope Statement\" src` finds only comments referencing the concept, never a config, schema, or module implementing one). Nothing to assert without fabricating the artifact this row presupposes."
+  },
+  {
+   "id": "runtime.conformance.remote-channel-trust-mode-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "the remote decision-channel trust mode for every PEP/PDP boundary that is not co-resident: the mutual authentication or signed request/response mechanism satisfying {{decision-channel}}",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment's Enforcement Scope Statement names the remote decision-channel trust mode for every PEP/PDP boundary that is not co-resident (#238/#703: the minimal core declaration this profile's Enforcement Scope Statement requires of every conforming deployment, replacing the twelve-item universal list)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against, the same gap runtime.conformance.no-claim-outside-declared-scope already records."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -4972,7 +5003,7 @@
    "id": "runtime.classification.no-lowering-below-resource-floor",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "classification",
-   "text": "A Mission's `purpose` or deployment policy MUST NOT lower an action below any minimum classification the Resource policy ({{decision}}) sets for it, including a floor the resource owner publishes in its protected resource metadata ({{class-floors}}).",
+   "text": "A Mission's `purpose` or deployment policy MUST NOT lower an action below any minimum classification the Resource policy ({{decision}}) sets for it, including a floor the resource owner publishes through its own metadata mechanism (the OAuth binding's realization, `mission_action_class_floors` in OAuth protected resource metadata, is defined by {{I-D.draft-mcguinness-mission-runtime-oauth}}).",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -5047,7 +5078,7 @@
   },
   {
    "id": "runtime.classification.class-floor-metadata-not-lowered",
-   "spec": "draft-mcguinness-mission-runtime.md",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "class-floors",
    "text": "A PDP with access to the resource's metadata MUST NOT classify a mapped action below its floor.",
    "role": "PDP",
@@ -5071,7 +5102,7 @@
   },
   {
    "id": "runtime.classification.unknown-floor-value-high-consequence",
-   "spec": "draft-mcguinness-mission-runtime.md",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "class-floors",
    "text": "A PDP that does not recognize a mapped value MUST treat it as naming a high-consequence class.",
    "role": "PDP",
@@ -5621,7 +5652,7 @@
    "id": "runtime.rs-profile.must-publish",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
-   "text": "An OAuth Resource Server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
+   "text": "A Resource Server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -5665,7 +5696,7 @@
    "id": "runtime.rs-profile.no-claim-without-pep",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
-   "text": "A Resource Server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after token validation and before execution.",
+   "text": "A Resource Server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after credential validation and before execution.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -5699,7 +5730,7 @@
   },
   {
    "id": "runtime.token-validation.establish-validity-before-use",
-   "spec": "draft-mcguinness-mission-runtime.md",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "token-validation",
    "text": "Before using a token's Mission, authority, subject, client, actor, or confirmation-key values as decision inputs, the PEP MUST establish that the access token is valid for the protected resource and request.",
    "role": "PEP",
@@ -5741,7 +5772,7 @@
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
-   "spec": "draft-mcguinness-mission-runtime.md",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "token-validation",
    "text": "a Resource Server PEP MUST refuse a token whose audience is not intended for that Resource Server, and MUST verify the proof-of-possession check for a sender-constrained token before treating its `cnf` binding as authenticated.",
    "role": "PEP",
@@ -5783,7 +5814,7 @@
   },
   {
    "id": "runtime.token-validation.no-unverified-claims-and-missing-mission-refusal",
-   "spec": "draft-mcguinness-mission-runtime.md",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "token-validation",
    "text": "A PEP MUST NOT ask a PDP to authorize an action from unverified token claims. If token validation fails, the PEP MUST refuse before runtime Mission evaluation.",
    "role": "PEP",
@@ -5820,8 +5851,8 @@
   {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
    "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "token-validation",
-   "text": "the decision request and response MUST be integrity-protected and the parties MUST authenticate each other. The PDP MUST accept token-derived inputs only from a PEP authorized for the declared enforcement scope.",
+   "anchor": "decision-channel",
+   "text": "the decision request and response MUST be integrity-protected and the parties MUST authenticate each other. The PDP MUST accept credential-derived inputs only from a PEP authorized for the declared enforcement scope.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -5843,8 +5874,8 @@
   {
    "id": "runtime.token-validation.minimize-claims-sent-should",
    "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "token-validation",
-   "text": "The PEP SHOULD send the PDP the minimum token-derived claims needed for the decision rather than the presented access token.",
+   "anchor": "decision-channel",
+   "text": "The PEP SHOULD send the PDP the minimum credential-derived attributes needed for the decision rather than the presented credential itself.",
    "role": "PEP",
    "strength": "SHOULD",
    "applicability": {
@@ -5859,6 +5890,28 @@
     "normative": "the PEP sends the PDP the minimum token-derived claims the decision needs, not the raw access token"
    },
    "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.decision-channel.no-unverified-credential-claims",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "decision-channel",
+   "text": "A PEP MUST NOT ask a PDP to authorize an action from unverified credential claims: a decision evaluates only what the PEP has already established as authenticated.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP never forwards an unverified credential claim to the PDP as a decision input; the binding-neutral restatement of the OAuth adapter's unverified-token-claims rule (runtime.token-validation.no-unverified-claims-and-missing-mission-refusal)"
+   },
+   "level": "endpoint",
    "coverage": "todo",
    "tests": []
   },
@@ -5997,7 +6050,7 @@
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "The action MUST be authorized by an applicable `authorization_details` entry the Mission-bound token carries, or that is otherwise available to the PEP or PDP for that token",
+   "text": "The action MUST be authorized by an applicable authority entry the Mission-bound credential carries, or that is otherwise available to the PEP or PDP for that credential",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -6118,7 +6171,7 @@
    "id": "runtime.decision-inputs.unknown-authorization-details-type-refusal",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "For any other `authorization_details` type, the PDP MUST evaluate the action under that type's documented runtime semantics and MUST refuse if it does not understand or cannot enforce those semantics.",
+   "text": "For any other authority-entry type, the PDP MUST evaluate the action under that type's documented runtime semantics and MUST refuse if it does not understand or cannot enforce those semantics.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -6243,7 +6296,7 @@
    "id": "runtime.decision-inputs.actor-context-required-and-not-shortcut",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-actor",
-   "text": "When delegation is in effect, the PDP MUST evaluate the authenticated `act` chain as part of the runtime actor context and refuse a chain that is missing or malformed.",
+   "text": "When delegation is in effect, the PDP MUST evaluate the authenticated actor-delegation chain as part of the runtime actor context and refuse a chain that is missing or malformed.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -6273,7 +6326,7 @@
    "id": "runtime.decision-inputs.no-authority-expansion-via-actor",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-actor",
-   "text": "The runtime decision MUST NOT expand authority beyond the issued `authorization_details`.",
+   "text": "The runtime decision MUST NOT expand authority beyond the issued authority.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -6292,10 +6345,10 @@
    "tests": []
   },
   {
-   "id": "runtime.decision-inputs.token-expiry-refusal",
+   "id": "runtime.decision-inputs.credential-expiry-refusal",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-time",
-   "text": "The PDP MUST refuse if the decision context indicates the token is expired.",
+   "text": "The PDP MUST refuse if the decision context indicates the credential is expired.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -6318,7 +6371,7 @@
    "id": "runtime.decision-inputs.mission-expires-at-refusal",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-time",
-   "text": "where a Mission state source does expose it (or reports the Mission `expired`), the PDP MUST refuse on it independent of the token's own `exp`.",
+   "text": "where a Mission state source does expose it (or reports the Mission `expired`), the PDP MUST refuse on it independent of the credential's own expiry.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -6391,7 +6444,7 @@
    "id": "runtime.decision-inputs.history-no-expand-authority",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-history",
-   "text": "A history predicate MUST NOT expand authority beyond the issued `authorization_details`.",
+   "text": "A history predicate MUST NOT expand authority beyond the issued authority.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -8623,7 +8676,7 @@
    "id": "authzen.pdp-request.subject-shape-and-issuer-presence",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "`subject.type` is `user` unless the deployment profiles another value. `subject.id` is the token's authenticated `sub`. `subject.properties.iss` is REQUIRED when known",
+   "text": "`subject.type` is `user` unless the deployment profiles another value. `subject.id` is the credential's authenticated subject identifier (the OAuth realization is the token's `sub` claim). `subject.properties.iss` is REQUIRED when known",
    "role": "PEP",
    "strength": "stated",
    "applicability": {
@@ -10033,18 +10086,18 @@
    "id": "authzen.execution-evidence.exactly-one-per-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "execution-evidence-requirement",
-   "text": "Independent of anything the PDP returns, the PEP MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
+   "text": "independent of anything the PDP returns, a PEP that claims Runtime Evidence MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.transaction-assurance-tier"
+    "capability": "authzen.runtime-evidence"
    },
    "profiles": [],
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the executing PEP emits exactly one Execution Evidence Object for the final disposition of every consequential permit the transaction-assurance tier covers, including a suppressed permit whose action never released"
+    "normative": "a PEP claiming the Runtime Evidence profile emits exactly one Execution Evidence Object per consequential permit, keyed on the stable execution_id, for every completed/failed/suppressed disposition; this requirement is meaningful only where the deployment also claims Transaction Assurance for the class, since that profile is what makes execution outcome reverification and single-use disposition tracking load-bearing (runtime.transaction-assurance-tier)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -10066,13 +10119,13 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.transaction-assurance-tier"
+    "capability": "authzen.runtime-evidence"
    },
    "profiles": [],
    "surface": "evidence-emission",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "if Execution Evidence emission fails after an irreversible effect, the PEP durably records the emission failure and surfaces it on its operational alarm path rather than retroactively altering the effect"
+    "normative": "if Execution Evidence emission fails after an irreversible effect, the PEP durably records the emission failure and surfaces it on its operational alarm path rather than retroactively altering the effect. Applies only to a PEP claiming Runtime Evidence; meaningful chiefly where the class also claims Transaction Assurance (runtime.transaction-assurance-tier), since that is what makes the recorded execution outcome load-bearing."
    },
    "level": "unit",
    "coverage": "todo",
@@ -10087,13 +10140,13 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.transaction-assurance-tier"
+    "capability": "authzen.runtime-evidence"
    },
    "profiles": [],
    "surface": "evidence-emission",
    "assertion": "refusal",
    "observation": {
-    "normative": "where transaction assurance depends on later evidence, the PEP durably reserves evidence capacity before acting and fails closed when it cannot make the reservation"
+    "normative": "where transaction assurance depends on later evidence, the PEP durably reserves evidence capacity before acting and fails closed when it cannot make the reservation. Applies only to a PEP claiming Runtime Evidence, and is load-bearing precisely when the deployment also claims Transaction Assurance for the class (runtime.transaction-assurance-tier), since that is what makes later evidence a precondition for the execution's own assurance claim."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -10125,7 +10178,7 @@
    "id": "authzen.conformance.pep-checklist",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "conformance",
-   "text": "A PEP conforming to this binding MUST:",
+   "text": "A PEP conforming to the Decision Base MUST:",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -10137,7 +10190,28 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a conforming PEP carries validated-token-only decision inputs matched on resource.properties.audience, supplies parameter_digest where required, processes obligations correctly, honors every decision condition under its own classification floor, emits Execution Evidence for the transaction-assurance tier's classes, keeps requesting and executing identity the same, keys permit caches on the cache key, and emits a Refusal Record for a pre-decision refusal"
+    "normative": "a conforming PEP carries validated-token-only decision inputs matched on resource.properties.audience, supplies parameter_digest where required, processes obligations correctly, honors every decision condition under its own classification floor, keeps requesting and executing identity the same, and keys permit caches on the cache key; Execution Evidence and Refusal Record emission are Runtime Evidence profile duties, not Decision Base ones (#703)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.conformance.pep-checklist-runtime-evidence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conformance",
+   "text": "A PEP additionally claiming the Runtime Evidence profile ({{profiles-and-capabilities}}) MUST emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for a pre-decision refusal, and, for the classes the runtime profile's transaction-assurance tier covers, an Execution Evidence Object for the final disposition of every consequential permit",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.runtime-evidence"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and, for transaction-assurance-tier classes, an Execution Evidence Object for the final disposition of every consequential permit; a PEP claiming only the Decision Base is not required to (#703, closing the unconditional-adoption-gate defect #703 identified)"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -10147,7 +10221,7 @@
    "id": "authzen.conformance.pdp-checklist",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "conformance",
-   "text": "A PDP conforming to this binding MUST:",
+   "text": "A PDP conforming to the Decision Base MUST:",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -10159,7 +10233,28 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a conforming PDP refuses an in-scope request lacking Mission decision context and performs the consistency checks, classifies every denial per the runtime-denial-classification, returns the full decision context, advertises the mission-runtime capability URN, and emits the runtime evidence companion's records including a Refusal Record for a pre-evaluation refusal"
+    "normative": "a conforming PDP refuses an in-scope request lacking Mission decision context and performs the consistency checks, classifies every denial per the runtime-denial-classification, returns the full decision context, and advertises the mission-runtime capability URN; emitting the runtime evidence companion's records is a Runtime Evidence profile duty, not a Decision Base one (#703)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.conformance.pdp-checklist-runtime-evidence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conformance",
+   "text": "A PDP additionally claiming the Runtime Evidence profile ({{profiles-and-capabilities}}) MUST emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}} for every decision, and a Refusal Record for an in-scope request it refuses before evaluation",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.runtime-evidence"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP claiming the Runtime Evidence profile emits the runtime evidence companion's records, including a Refusal Record, for every decision and pre-evaluation refusal; a PDP claiming only the Decision Base records decisions and refusals in its own internal form (#703, closing the unconditional-adoption-gate defect #703 identified)"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -10257,7 +10352,7 @@
    "id": "authzen.iana.pdp-must-advertise-full-urn",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "iana",
-   "text": "A PDP conforming to this binding MUST advertise the full URN, `urn:ietf:params:authzen:mission-runtime`, never the bare capability name, so a PEP can discover profile support in-band before it evaluates a Mission-bound request",
+   "text": "A PDP conforming to the Decision Base MUST advertise the full URN `urn:ietf:params:authzen:mission-runtime`, never the bare capability name.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -10269,12 +10364,78 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a conforming PDP's metadata capabilities array advertises the full urn:ietf:params:authzen:mission-runtime URN, never the bare capability name"
+    "normative": "a conforming PDP's metadata capabilities array advertises the full urn:ietf:params:authzen:mission-runtime URN for the Decision Base, never the bare capability name"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
    "notes": "The base AuthZEN Authorization API 1.0 is pinned in notes/external-pins.json (id AUTHZEN, openid/authzen commit 2b07366d2dfd7ad9e2dedf44b97bd41e8a2b8c63, status established at Ship 3), so this row's upstream registry surface is verifiable against that snapshot."
+  },
+  {
+   "id": "authzen.iana.pdp-must-advertise-feature-profile-urn",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "iana",
+   "text": "A PDP that additionally conforms to a feature profile MUST advertise that profile's own capability URN as well; a PDP MUST NOT advertise a feature-profile URN it does not conform to.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP's advertised capabilities array carries a feature-profile URN if and only if the PDP actually conforms to that feature profile"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.iana.pep-no-reliance-on-unadvertised-profile",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "iana",
+   "text": "A PEP MUST NOT rely on a feature profile whose URN the PDP's advertised `capabilities` does not include: an unadvertised profile fails closed exactly as an absent one does elsewhere in this document ({{profiles-and-capabilities}}).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP treats a feature profile absent from the PDP's advertised capabilities the same as a profile the deployment never composed: it fails closed rather than assuming the profile's behavior"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "authzen.iana.no-requester-selected-profile",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "iana",
+   "text": "Capability advertisement is PDP-declared, never requester-selected: nothing in a PEP's request selects, enables, or negotiates a feature profile, and a requester cannot omit a required profile to downgrade enforcement ({{profiles-and-capabilities}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no PEP request member selects, enables, or negotiates a feature profile; profile composition is fixed by deployment/PDP configuration, not by anything the requester supplies on a given request"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "substrate.reference.stable-unambiguous-non-reassigned",
@@ -14941,7 +15102,9 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "This RAS's client_id is minted only from a matched entry in its own jkt-keyed registration (RasConfig.registeredClients / registerClient()), never a config constant and never the grant's own client_id or the presenter key alone. The two-client mcp-saas test proves neither registered client's key nor identifier leaks onto the other's minted token.",
+   "notes": "This RAS's client_id is minted only from a matched entry in its own jkt-keyed registration (RasConfig.registeredClients / registerClient()), never a config constant and never the grant's own client_id or the presenter key alone. The two-client mcp-saas test proves neither registered client's key nor identifier leaks onto the other's minted token."
+  },
+  {
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
