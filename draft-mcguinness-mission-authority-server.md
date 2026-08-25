@@ -592,7 +592,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "intent": {
     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-    "resources": ["https://erp.example.com"],
+    "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
@@ -652,9 +652,9 @@ body:
 `error_reason`:
 : OPTIONAL. A string. A machine-readable refinement of `error`: for
   `invalid_mission_intent`, the name of the offending top-level
-  member; for `invalid_authority`, the `resources` entry no authority
-  could be derived for. It reflects the client's own input and MUST
-  NOT disclose policy internals.
+  member; for `invalid_authority`, the `target_resources` entry no
+  authority could be derived for. It reflects the client's own input
+  and MUST NOT disclose policy internals.
 
 A consumer MUST ignore members it does not recognize.
 
@@ -1038,7 +1038,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "intent": {
     "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
-    "resources": ["https://erp.example.com"],
+    "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
   "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -2524,7 +2524,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "intent": {
     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-    "resources": ["https://erp.example.com"],
+    "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
