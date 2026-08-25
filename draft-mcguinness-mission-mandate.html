@@ -1592,13 +1592,21 @@ published key material (<a href="#mission-substrate" class="auto internal xref">
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.8">
             <p id="section-5.2-1.8.1"><span class="bcp14">REQUIRED</span>. An object in the <code>mission</code> claim shape of the issuance
-profile, extended per its extensibility rules: <code>id</code>, <code>issuer</code>, and
-<code>authority_hash</code>, plus <code>intent_hash</code> committing the approved Mission
-Intent, and <code>expires_at</code>, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time
-mirroring the Mission record's <code>expires_at</code> (the <code>mission</code> claim
-member the issuance-grant profile defines,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>). All five
-members are <span class="bcp14">REQUIRED</span> here. <code>mission.issuer</code> <span class="bcp14">MUST</span> equal <code>iss</code>.<a href="#section-5.2-1.8.1" class="pilcrow">¶</a></p>
+profile (<code>id</code> and <code>issuer</code>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+extended per its extensibility rules with three members this
+document requires beyond that baseline: <code>authority_hash</code>,
+reintroduced as this document's own integrity anchor since a
+Mandate travels to a verifier with no further channel back to the
+Mission Issuer (mirroring the issuance-grant profile's own
+reintroduction for the same reason,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>); <code>intent_hash</code>,
+committing the approved Mission Intent; and <code>expires_at</code>, an RFC
+3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time mirroring the Mission record's
+<code>expires_at</code>, elevated to <span class="bcp14">REQUIRED</span> here the same way the
+issuance-grant profile elevates it for the credentials it governs
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>). All five
+members (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>, <code>intent_hash</code>,
+<code>expires_at</code>) are <span class="bcp14">REQUIRED</span> here. <code>mission.issuer</code> <span class="bcp14">MUST</span> equal <code>iss</code>.<a href="#section-5.2-1.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-1.9">

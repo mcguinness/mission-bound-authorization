@@ -1645,10 +1645,9 @@ Cache-Control: no-store
   "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-" }
 </pre><a href="#section-7-6" class="pilcrow">¶</a>
 </div>
-<p id="section-7-7">The token carries the <code>mission</code> claim and its <code>authority_hash</code> as the
-issuance profile defines; the response also surfaces the optional
-<code>mission_id</code> parameter (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for
-correlation. Had <code>alice</code> approved only a subset, the deferral would
+<p id="section-7-7">The token carries the <code>mission</code> claim as the issuance profile defines
+it; the response also surfaces the optional <code>mission_id</code> parameter
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for correlation. Had <code>alice</code> approved only a subset, the deferral would
 resolve to <code>access_denied</code> and the agent would submit a fresh, narrower
 Mission Intent, unless the deployment runs the experimental revision
 companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>).<a href="#section-7-7" class="pilcrow">¶</a></p>

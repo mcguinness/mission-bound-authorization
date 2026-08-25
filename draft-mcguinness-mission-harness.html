@@ -1806,8 +1806,10 @@ task graph node to a Mission reference:<a href="#section-7-1" class="pilcrow">¶
 <dt id="section-7-2.5">
 <code>authority_hash</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.6">
-          <p id="section-7-2.6.1"><span class="bcp14">REQUIRED</span> when known. The Authority Set commitment from the Mission
-claim.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.6.1"><span class="bcp14">REQUIRED</span> when known. The Mission's Authority Set commitment,
+recorded on the Mission and not part of the issuance profile's
+baseline <code>mission</code> claim; a harness holds it only where a companion
+profile discloses it to it.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.7">
@@ -2863,9 +2865,13 @@ non-normative summary of what a record carries:<a href="#section-16-2" class="pi
           <p id="section-16-3.1.1"><code>event_id</code>;<a href="#section-16-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-3.2">
-          <p id="section-16-3.2.1">the <code>mission</code> object (<code>id</code>, <code>issuer</code>, and, when known,
-<code>authority_hash</code>), the same shape as the <code>mission</code> claim of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-16-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-16-3.2.1">the <code>mission</code> object (<code>id</code> and <code>issuer</code>, the same members as the
+<code>mission</code> claim of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, plus
+<code>authority_hash</code> when known: <span class="bcp14">OPTIONAL</span>, not carried on that
+baseline claim, and recorded here as this evidence record's own
+audit extension only when the harness holds it, e.g. from
+introspection's disclosure privilege or a companion profile's own
+copy);<a href="#section-16-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-3.3">
           <p id="section-16-3.3.1"><code>session_id</code>;<a href="#section-16-3.3.1" class="pilcrow">¶</a></p>
@@ -2890,9 +2896,11 @@ non-normative summary of what a record carries:<a href="#section-16-2" class="pi
 </li>
       </ul>
 <p id="section-16-4">A Harness Evidence record carries the Mission as the nested <code>mission</code>
-object, mirroring the <code>mission</code> claim; the flat <code>mission_id</code> and
-<code>issuer</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 7</a>) are a binding
-key, whereas the evidence record mirrors the claim shape.<a href="#section-16-4" class="pilcrow">¶</a></p>
+object, mirroring the <code>mission</code> claim's <code>id</code>/<code>issuer</code> members; the
+flat <code>mission_id</code> and <code>issuer</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 7</a>)
+are a binding key, whereas the evidence record adds <code>authority_hash</code>
+as its own extension, per the preceding paragraph, never inherited
+from the claim.<a href="#section-16-4" class="pilcrow">¶</a></p>
 <p id="section-16-5">Harness Evidence complements runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). It records
 execution-continuity decisions, not Resource Server authorization.<a href="#section-16-5" class="pilcrow">¶</a></p>

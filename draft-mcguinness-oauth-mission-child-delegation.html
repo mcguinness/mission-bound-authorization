@@ -1428,8 +1428,9 @@ and is unaffected by that rule.<a href="#section-3-3" class="pilcrow">¶</a></p>
 two additions: it is created under a parent grant rather than a
 first-party approval, and its record and tokens carry the <code>parent</code>
 member (<a href="#parent-member" class="auto internal xref">Section 7</a>). The child's own <code>authority_hash</code> remains
-the authority commitment for its tokens; the <code>parent</code> member is lineage
-and audit data only.<a href="#section-3-4" class="pilcrow">¶</a></p>
+the authority commitment on its record, on the same baseline terms as
+any Mission's (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the <code>parent</code>
+member is lineage and audit data only.<a href="#section-3-4" class="pilcrow">¶</a></p>
 <p id="section-3-5">Where this document refers to "the issuance profile" without a section,
 it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-3-5" class="pilcrow">¶</a></p>
 <div id="child-vs-token">
@@ -2214,8 +2215,6 @@ parent. The decoded child access token:<a href="#section-6.9-3" class="pilcrow">
   "mission": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
@@ -2229,10 +2228,13 @@ parent. The decoded child access token:<a href="#section-6.9-3" class="pilcrow">
 }
 </pre><a href="#section-6.9-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6.9-5"><code>mission.id</code> is the Child Mission and <code>mission.authority_hash</code> commits
-the child Authority Set; the <code>parent</code> object is lineage, with <code>depth</code> 1
-for a child of a root Mission. The <code>cnf</code> key is the sub-agent's own
-(<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>).<a href="#section-6.9-5" class="pilcrow">¶</a></p>
+<p id="section-6.9-5"><code>mission.id</code> is the Child Mission, on the issuance profile's baseline
+<code>{id, issuer}</code> claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the
+child's own <code>authority_hash</code>, which commits its Authority Set, is
+recorded on its Mission record and is not carried on the claim by
+default. The <code>parent</code> object is lineage, this profile's own member,
+with <code>depth</code> 1 for a child of a root Mission. The <code>cnf</code> key is the
+sub-agent's own (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>).<a href="#section-6.9-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-reasons">
@@ -2389,7 +2391,7 @@ delegation event.<a href="#section-7-2.2.2.10.1" class="pilcrow">¶</a></p>
 </dl>
 <p id="section-7-3">The <code>parent</code> member is lineage and audit data. It does not grant
 authority. The Child Mission's own <code>authority_hash</code> is the authority
-commitment for child tokens.<a href="#section-7-3" class="pilcrow">¶</a></p>
+commitment for the child, on its record.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4"><code>parent.depth</code> counts upward from 1 across generations, while the parent
 entry's <code>children.max_child_depth</code> (<a href="#fanout" class="auto internal xref">Section 9</a>) is a per-entry ceiling
 that decrements at each generation, so <code>parent.depth</code> never exceeds the
@@ -2401,8 +2403,6 @@ depth the ancestor entries allowed.<a href="#section-7-4" class="pilcrow">¶</a>
   "mission": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",

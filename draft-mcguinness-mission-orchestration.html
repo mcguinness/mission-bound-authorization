@@ -2304,9 +2304,12 @@ members:<a href="#section-12-1" class="pilcrow">¶</a></p>
 <code>mission</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-12-2.4">
           <p id="section-12-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission whose orchestration state changed, as the
-nested <code>mission</code> object (<code>id</code>, <code>issuer</code>, and, when known,
-<code>authority_hash</code>), the same shape as the <code>mission</code> claim of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Harness Evidence object
+nested <code>mission</code> object: <code>id</code> and <code>issuer</code>, the same members as the
+<code>mission</code> claim of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, plus
+<code>authority_hash</code> when known (<span class="bcp14">OPTIONAL</span>, not carried on that baseline
+claim, and recorded here as this evidence record's own audit
+extension only when the orchestrator holds it), the same footing
+the Harness Evidence object uses
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>

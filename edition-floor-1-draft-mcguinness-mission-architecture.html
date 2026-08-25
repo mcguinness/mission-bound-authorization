@@ -3117,20 +3117,22 @@ together.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
         <h3 id="name-the-mission-bound-credentia">
 <a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-the-mission-bound-credentia" class="section-name selfRef">The Mission-Bound Credential</a>
         </h3>
-<p id="section-10.3-1">A credential carrying the <code>mission</code> claim (<code>id</code>, <code>issuer</code>,
-<code>authority_hash</code>) and Mission-derived authorization details, issued
-only while the Mission is <code>active</code>. Home: the OAuth binding's Mission-Bound
-Access Tokens and The Mission Claim sections.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-1">A credential carrying the <code>mission</code> claim (<code>id</code>, <code>issuer</code>) and
+Mission-derived authorization details, issued only while the Mission
+is <code>active</code>. Home: the OAuth binding's Mission-Bound Access Tokens and
+The Mission Claim sections. The claim's <code>id</code> and <code>issuer</code> are the
+Mission-identity condition; a token-carried Authority Set commitment
+is never required for it, per condition 2 of
+<code>credential-mission-bound</code> above.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
 <p id="section-10.3-2">This is the binding-dependent primitive, and it is exactly where the
 bindings split. The OAuth binding provides it. The standalone binding
 does not: the MAS's Mission Substrate section states that a MAS provides
 neither this credential nor issuance gating
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). An AAuth auth token
 can carry the native <code>{approver, s256}</code> mission reference, but it does
-not carry the OAuth <code>authority_hash</code> or Mission-derived authorization
-details and therefore is Mission-referenced, not a Mission-bound
-credential in the strong sense defined above
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+not carry Mission-derived authorization details and therefore is
+Mission-referenced, not a Mission-bound credential in the strong sense
+defined above (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-10.3-2" class="pilcrow">¶</a></p>
 <p id="section-10.3-3">For profiles that compose with it, the seam is the runtime profile's
 Mission binding establishment step
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): the credential carries

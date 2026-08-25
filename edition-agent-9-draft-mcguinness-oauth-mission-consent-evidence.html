@@ -2175,10 +2175,13 @@ present), matching that disclosure's
           </ul>
 <p id="section-8-2.4.3">This descriptor follows the evidence-descriptor convention of the
 issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): it is the
-<code>mission</code> claim shape extended with the collision-resistantly named
-audit members <code>intent_hash</code>, <code>consent_rendering_hash</code>, and, where
-present, <code>proposal_hash</code>, and it is
-not authority-bearing on its own.<a href="#section-8-2.4.3" class="pilcrow">¶</a></p>
+<code>mission</code> claim shape (<code>id</code> and <code>issuer</code>) extended with the
+collision-resistantly named audit members <code>authority_hash</code>,
+reintroduced here as this document's own audit anchor since a
+Consent Evidence object is retained and correlated independently of
+any token, <code>intent_hash</code>, <code>consent_rendering_hash</code>, and, where
+present, <code>proposal_hash</code>, and it is not authority-bearing on its
+own.<a href="#section-8-2.4.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-2.5">

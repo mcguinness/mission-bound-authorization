@@ -2755,8 +2755,10 @@ harness records exactly this,
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) or from deployment
 configuration. In the AuthZEN binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) this is
-<code>context.mission</code>; the PEP populates <code>authority_hash</code> and <code>state</code>
-from the MAS's signed Mission Status response.<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
+<code>context.mission</code>; the PEP additionally populates <code>state</code>, and
+<code>authority_hash</code> where the MAS's signed Mission Status response
+discloses it, as <span class="bcp14">OPTIONAL</span> enrichment beyond the required <code>id</code> and
+<code>issuer</code>.<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-6.2">
           <p id="section-11-6.2.1"><strong>The PDP resolves the Mission at the MAS.</strong> The PDP <span class="bcp14">MUST</span> resolve
@@ -2842,9 +2844,9 @@ the high-consequence action classes they <span class="bcp14">MUST</span> be. Wit
 token, any holder inside the (subject, client) equivalence class
 joins (<a href="#join-spoofing" class="auto internal xref">Section 18.1</a>).<a href="#section-11-8" class="pilcrow">¶</a></p>
 <p id="section-11-9">A successful join, in the AuthZEN binding: the PEP supplies
-<code>context.mission</code> populated from its Mission binding, with
-<code>authority_hash</code> and <code>state</code> taken from the MAS's signed Mission
-Status response, and the other decision inputs per
+<code>context.mission</code> populated from its Mission binding, with <code>state</code>
+(and <code>authority_hash</code> where disclosed) taken from the MAS's signed
+Mission Status response, and the other decision inputs per
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>:<a href="#section-11-9" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-11-10">
 <pre>
@@ -3310,8 +3312,11 @@ claims:<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 <dt id="section-13.2-2.3">
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-13.2-2.4">
-            <p id="section-13.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object containing <code>id</code>, <code>issuer</code>, and
-<code>authority_hash</code>.<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-13.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object containing <code>id</code> and <code>issuer</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The MAS <span class="bcp14">MAY</span> additionally
+include <code>authority_hash</code> as an audit anchor; where included, PDP
+Consumption's cross-check applies to it too
+(<a href="#join-assertion-pdp" class="auto internal xref">Section 13.3</a>).<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-13.2-2.5">
@@ -3405,7 +3410,9 @@ mapping checks of <a href="#mission-join" class="auto internal xref">Section 11<
 </li>
           <li class="normal" id="section-13.3-2.2">
             <p id="section-13.3-2.2.1">that <code>iss</code> and the <code>mission</code> claim match the referenced Mission's
-<code>issuer</code>, <code>id</code>, and <code>authority_hash</code>;<a href="#section-13.3-2.2.1" class="pilcrow">¶</a></p>
+<code>issuer</code> and <code>id</code>; when the assertion's <code>mission</code> also carries
+<code>authority_hash</code>, that it matches the referenced Mission's
+<code>authority_hash</code> too;<a href="#section-13.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.3-2.3">
             <p id="section-13.3-2.3.1">that <code>exp</code> has not passed and any <code>aud</code> names this PDP; and<a href="#section-13.3-2.3.1" class="pilcrow">¶</a></p>
@@ -3693,8 +3700,8 @@ obligation above; a mapping or asserted join never substitutes;<a href="#section
           <li id="section-15.1-2.4">
             <p id="section-15.1-2.4.1">where a propagated Mission-Reference is also present, requires
 exact equality of its issuer and Mission identifier with the
-credential's <code>mission</code> claim and a consistent <code>authority_hash</code>,
-and denies on any mismatch;<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+credential's <code>mission</code> claim, and, where both convey
+<code>authority_hash</code>, a consistent value too, denying on any mismatch;<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-15.1-2.5">
             <p id="section-15.1-2.5.1">applies current Mission state, current authority, the subject,
@@ -4776,9 +4783,10 @@ Cache-Control: no-store
         </h3>
 <p id="appendix-A.3-1">The agent works under an ordinary OAuth token from the unchanged AS,
 which carries no Mission signal. For the first consequential action,
-the PEP supplies the Mission reference, with <code>authority_hash</code> and
-<code>state</code> from the MAS's signed Mission Status response, and the PDP
-verifies the subject and client joins (<a href="#mission-join" class="auto internal xref">Section 11</a>).<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
+the PEP supplies the Mission reference, with <code>state</code> (and
+<code>authority_hash</code> where the response discloses it) from the MAS's
+signed Mission Status response, and the PDP verifies the subject and
+client joins (<a href="#mission-join" class="auto internal xref">Section 11</a>).<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-A.3-2">
 <pre>
 {

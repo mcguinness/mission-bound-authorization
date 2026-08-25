@@ -2080,12 +2080,19 @@ Mission Deployment Profile.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-the-mission-claim" class="section-name selfRef">The Mission Claim</a>
         </h3>
 <p id="section-11.1-1">An access token issued under a Mission names it through the
-<code>mission</code> object: the family members <code>id</code>, <code>issuer</code>, and
-<code>authority_hash</code> as the issuance profile defines them, and it <span class="bcp14">SHOULD</span>
-carry the record's <code>expires_at</code> as the issuance profile defines it
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), a bounding commitment with
-no liveness that the token's own expiry already sits inside
-(<a href="#gating" class="auto internal xref">Section 10.1</a>). The object is delivered on three carriage surfaces:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<code>mission</code> object: the family members <code>id</code> and <code>issuer</code>, as the
+issuance profile's baseline <code>mission</code> claim defines them
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It <span class="bcp14">SHOULD</span> also carry the
+record's <code>expires_at</code> as the issuance profile defines it, a bounding
+commitment with no liveness that the token's own expiry already sits
+inside (<a href="#gating" class="auto internal xref">Section 10.1</a>); the issuance profile's rule that a profile
+minting a further credential downstream, or verifying Mission
+lifetime from retained state, <span class="bcp14">MUST</span> require it applies here unchanged.
+<code>authority_hash</code> is likewise not part of this binding's baseline
+object; it becomes available only on the same disclosure terms the
+issuance profile defines for its own baseline claim (introspection's
+disclosure privilege, or its Local Approved-Set Verification
+profile). The object is delivered on three carriage surfaces:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.1-2.1">
             <p id="section-11.1-2.1.1"><strong>Token-carried</strong>: a deployment issuing structured tokens (for
@@ -2231,8 +2238,6 @@ continuation never widens what assessment would grant without it.<a href="#secti
   "mission": {
     "id": "msn_9Fk2WqLp0Vd5Jh8xTc4nB7r1",
     "issuer": "https://as.example.com/gnap",
-    "authority_hash":
-      "sha-256:x8FvWqLp0Vd5Jh2mTc4nB7r1KdYzQw6aA3f5EMkRb60",
     "expires_at": "2026-12-31T23:59:59Z",
     "state": "active"
   }

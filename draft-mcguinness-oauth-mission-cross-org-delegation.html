@@ -1451,11 +1451,15 @@ the hop is NAMED (<a href="#actor-identity" class="auto internal xref">Section 4
 entirely. The root <span class="bcp14">MUST</span> carry <code>act</code>; and<a href="#section-4.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.2-2.7">
-            <p id="section-4.2-2.7.1">the <code>mission</code> claim, value-invariant across every hop: <code>id</code>,
-<code>issuer</code>, <code>authority_hash</code>, and <code>subject</code>, the origin principal of
-the Origin Principal profile
+            <p id="section-4.2-2.7.1">the <code>mission</code> claim, value-invariant across every hop: <code>id</code> and
+<code>issuer</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and <code>subject</code>,
+the origin principal of the Origin Principal profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), <span class="bcp14">REQUIRED</span> on
-a conforming Chain.<a href="#section-4.2-2.7.1" class="pilcrow">¶</a></p>
+a conforming Chain. This profile additionally REQUIRES
+<code>authority_hash</code> on that claim, reintroducing it beyond the
+issuance profile's baseline as this profile's own lineage anchor: a
+disconnected verifier has no other channel back to the approved
+Mission.<a href="#section-4.2-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.2-3">A hop never carries a nested actor history: the complete actor
