@@ -76,7 +76,14 @@ export interface TokenFacts {
   mission: {
     id: string;
     issuer: string;
-    authority_hash: string;
+    /**
+     * @spec mission#the-mission-claim (#702) — NOT on the baseline `mission`
+     * claim; carried into the AuthZEN envelope only when the validated token
+     * happens to carry it (a companion profile's own extension member).
+     * Present-then-check downstream ({@link evaluate.ts}'s view-consistency
+     * rule 1), never required.
+     */
+    authority_hash?: string;
     /**
      * @spec cross-domain#mission-subject — the verified token's immutable
      * origin principal, present only where the Origin Principal profile
@@ -653,7 +660,13 @@ export class Pep {
         mission: {
           id: view.id,
           issuer: token.mission.issuer,
-          authority_hash: token.mission.authority_hash,
+          // @spec mission#the-mission-claim, authzen#context-mission (#702) —
+          // NOT on the baseline claim; carried into the envelope only when
+          // the verified token's own profile added it. Present-then-check
+          // downstream (evaluate.ts's view-consistency rule 1).
+          ...(token.mission.authority_hash !== undefined
+            ? { authority_hash: token.mission.authority_hash }
+            : {}),
           // @spec cross-domain#mission-subject, authzen#context-mission — the
           // verified token's immutable origin principal, carried unchanged;
           // never populated from `args` or any other unverified request value.
@@ -953,11 +966,17 @@ export class Pep {
   }
 
   private recordRefusal(token: TokenFacts, reason: string, action: string, view?: MissionView): void {
+    // @spec runtime-evidence#refusal-record (#702) — `authority_hash` where
+    // the refusing component holds it: the resolved `MissionView` when one
+    // was loaded, else the verified token's own (now OPTIONAL) copy, else
+    // omitted entirely (exactOptionalPropertyTypes forbids an explicit
+    // `undefined` value on an optional member).
+    const authorityHash = view?.authority_hash ?? token.mission.authority_hash;
     this.deps.evidence.record({
       kind: "refusal",
       refusal_reason: reason,
       mission_id: token.mission.id,
-      authority_hash: view?.authority_hash ?? token.mission.authority_hash,
+      ...(authorityHash !== undefined ? { authority_hash: authorityHash } : {}),
       action,
       instance_epoch: this.deps.instanceEpoch,
       emitter: { id: CANONICAL_RESOURCE, role: "pep" },

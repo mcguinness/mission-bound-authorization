@@ -759,11 +759,21 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     expect(child.authority_hash).toBe(authorityHash(child.issuer, child.authority_set as never));
   });
 
-  it("carries approval_basis.type on the child mission claim", () => {
+  it("the child mission claim carries id, issuer, and parent, never approval_basis (#702)", () => {
     const parent = approveParent();
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
     const claim = childMissionClaim(kernel, kernel.get(child.id) as MissionRecord);
-    expect((claim as { approval_basis: unknown }).approval_basis).toEqual({ type: "policy_drawdown" });
+    expect(Object.keys(claim).sort()).toEqual(["id", "issuer", "parent"]);
+  });
+
+  it("discloses the child's approval_basis.type via introspection only to a privileged caller", () => {
+    const parent = approveParent();
+    const { child } = createChild(parent.id, ["payments:invoice.read"]);
+    const fresh = kernel.get(child.id) as MissionRecord;
+    const privileged = kernel.introspectionProjection(fresh, { disclose: new Set(["provenance"]) });
+    expect(privileged.approval_basis).toEqual({ type: "policy_drawdown" });
+    const unprivileged = kernel.introspectionProjection(fresh, { disclose: new Set() });
+    expect(unprivileged.approval_basis).toBeUndefined();
   });
 
   it("uses the justifying entry's child_creation_policy reference as root_commitment when the entry carries one", () => {

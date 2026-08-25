@@ -265,7 +265,9 @@ export class McpPaymentsServer {
       mission: {
         id: mission.id,
         issuer: mission.issuer,
-        authority_hash: mission.authority_hash,
+        // @spec mission#the-mission-claim (#702) — NOT on the baseline claim;
+        // carried only when the source token's own profile added it.
+        ...(mission.authority_hash !== undefined ? { authority_hash: mission.authority_hash } : {}),
         ...(mission.subject ? { subject: mission.subject } : {}),
       },
       missionClaim: mission,
@@ -307,7 +309,9 @@ export class McpPaymentsServer {
       mission: {
         id: mission.id,
         issuer: mission.issuer,
-        authority_hash: mission.authority_hash,
+        // @spec mission#the-mission-claim (#702) — NOT on the baseline claim;
+        // carried only when the source token's own profile added it.
+        ...(mission.authority_hash !== undefined ? { authority_hash: mission.authority_hash } : {}),
         ...(mission.subject ? { subject: mission.subject } : {}),
       },
       missionClaim: mission,
@@ -459,7 +463,9 @@ export class McpPaymentsServer {
         mission: {
           id: mission.id,
           issuer: mission.issuer,
-          authority_hash: mission.authority_hash,
+          // @spec mission#the-mission-claim (#702) — NOT on the baseline
+          // claim; carried only when the source token's own profile added it.
+          ...(mission.authority_hash !== undefined ? { authority_hash: mission.authority_hash } : {}),
           ...(mission.subject ? { subject: mission.subject } : {}),
         },
         missionClaim: mission,
@@ -811,7 +817,12 @@ export class McpPaymentsServer {
       outcome: commit.deduped ? "deduped" : "committed",
       decision_id: permitId,
       mission_id: token.mission.id,
-      authority_hash: token.mission.authority_hash,
+      // @spec runtime-evidence#execution-evidence (#702) — carried only when
+      // the executing credential's own copy is present (#the-mission-claim:
+      // not on the baseline claim).
+      ...(token.mission.authority_hash !== undefined
+        ? { authority_hash: token.mission.authority_hash }
+        : {}),
       action: res.effective.action,
       parameter_digest: digest,
       instance_epoch: tx.engine.instanceEpoch,

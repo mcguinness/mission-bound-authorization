@@ -239,9 +239,12 @@ describe("M1 tracer slice", () => {
     const claims = JSON.parse(
       Buffer.from((accessToken.split(".")[1] as string), "base64url").toString(),
     ) as Record<string, never>;
-    const mission = claims.mission as { id: string; issuer: string; authority_hash: string };
+    const mission = claims.mission as { id: string; issuer: string; authority_hash?: string };
     expect(mission.issuer).toBe(ISSUER);
-    expect(mission.authority_hash).toMatch(/^sha-256:/);
+    // @spec mission#the-mission-claim (#702) — the baseline claim is exactly
+    // {id, issuer}; authority_hash is not carried here (no companion profile
+    // is in play on this plain authorization_code exchange).
+    expect(mission.authority_hash).toBeUndefined();
     expect((claims.cnf as { jkt: string }).jkt).toBe(dpopJkt);
     expect(claims.aud).toBe(CANONICAL_RESOURCE);
     missionId = mission.id;

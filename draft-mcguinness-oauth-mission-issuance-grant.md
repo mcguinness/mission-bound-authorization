@@ -280,9 +280,13 @@ Claims:
   consuming AS. Only this authenticated client redeems the grant.
 
 `mission`:
-: REQUIRED. The issuance profile's `mission` claim object (`id`, `issuer`,
-  `authority_hash`), exactly as recorded, extended with the
-  `expires_at` member of {{expires-at-member}}.
+: REQUIRED. The issuance profile's `mission` claim object (`id` and
+  `issuer`, {{I-D.draft-mcguinness-oauth-mission}}), extended with the
+  `expires_at` member of {{expires-at-member}}. This profile REQUIRES
+  `authority_hash` on that object too, reintroducing it beyond the
+  issuance profile's baseline as this profile's own lineage anchor for
+  the consuming AS, which has no further channel back to the Mission
+  Issuer once it holds the grant.
 
 `authorization_details`:
 : REQUIRED. The `mission_resource_access` entries {{RFC9396}} the

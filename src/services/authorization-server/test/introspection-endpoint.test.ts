@@ -447,6 +447,31 @@ describe("RFC 9068 + Mission claim-set enforcement (@spec mission#introspection 
     expect(res.body.active).toBe(true);
   });
 
+  it("@spec mission#the-mission-claim (#702): a baseline {id, issuer} mission claim, with no authority_hash at all, still introspects active", async () => {
+    const crafted = await craftToken({
+      jti: flow1.jti,
+      mission: { id: flow1.missionId, issuer: ISSUER },
+    });
+    const res = await introspect(crafted, { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+  });
+
+  it("a present-but-empty-string authority_hash on the mission claim -> bare active:false (typed-when-present, not merely truthy-checked)", async () => {
+    const crafted = await craftToken({
+      jti: flow1.jti,
+      mission: { id: flow1.missionId, issuer: ISSUER, authority_hash: "" },
+    });
+    expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+  });
+
+  it("@spec mission#the-mission-claim (#702): a real mission.id with a MISMATCHED mission.issuer is never silently repaired to the record's issuer -> bare active:false", async () => {
+    const crafted = await craftToken({
+      jti: flow1.jti,
+      mission: { id: flow1.missionId, issuer: "https://evil.example" },
+    });
+    expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+  });
+
   it("missing exp -> bare active:false", async () => {
     const crafted = await craftToken(baselineFields(), { omitExp: true });
     expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
@@ -548,14 +573,15 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     expect((res.body.cnf as { jkt?: string }).jkt).toBeDefined();
 
     const mission = res.body.mission as Record<string, unknown>;
-    // Core members + derivations_remaining (requested_derivation_limit in force) +
-    // proposal_hash (provenance privilege). NO authorization_details: it now
-    // lives at the top level only (@spec mission#541 P1-1).
+    // Core members ({id, issuer} baseline #702) + derivations_remaining
+    // (requested_derivation_limit in force) + proposal_hash, authority_hash,
+    // approval_basis (all provenance privilege). NO authorization_details: it
+    // now lives at the top level only (@spec mission#541 P1-1). NO
+    // expires_at: introspection never carries it (@spec mission#introspection).
     expect(Object.keys(mission).sort()).toEqual([
       "approval_basis",
       "authority_hash",
       "derivations_remaining",
-      "expires_at",
       "id",
       "issuer",
       "proposal_hash",
@@ -593,15 +619,10 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     const res = await introspect(flow1.at, { principal: RS_PAYMENTS_BASIC });
     expect(res.body.active).toBe(true);
     const mission = res.body.mission as Record<string, unknown>;
-    expect(Object.keys(mission).sort()).toEqual([
-      "approval_basis",
-      "authority_hash",
-      "expires_at",
-      "id",
-      "issuer",
-      "state",
-      "version",
-    ]);
+    // (#702) `authority_hash`/`approval_basis` share the same "provenance"
+    // disclosure privilege as `proposal_hash`; a privilege-less principal
+    // sees none of them.
+    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
   });
 
   it("issuer-only members are disclosure-gated: a privilege-less principal never sees them", async () => {
@@ -615,15 +636,7 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     const res = await introspect(flow3.at, { principal: RS_SAAS });
     expect(res.body.active).toBe(true);
     const mission = res.body.mission as Record<string, unknown>;
-    expect(Object.keys(mission).sort()).toEqual([
-      "approval_basis",
-      "authority_hash",
-      "expires_at",
-      "id",
-      "issuer",
-      "state",
-      "version",
-    ]);
+    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
     for (const entry of res.body.authorization_details as AuthorityEntry[]) {
       expect(entry.resource).toBe(SAAS);
     }
@@ -759,16 +772,10 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     const mission = res.body.mission as Record<string, unknown>;
     expect("derivations_remaining" in mission).toBe(false);
     expect("proposal_hash" in mission).toBe(false);
+    expect("authority_hash" in mission).toBe(false);
+    expect("approval_basis" in mission).toBe(false);
     expect(mission.state).toBe("revoked");
-    expect(Object.keys(mission).sort()).toEqual([
-      "approval_basis",
-      "authority_hash",
-      "expires_at",
-      "id",
-      "issuer",
-      "state",
-      "version",
-    ]);
+    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
   });
 
   it("Mission-expired composite: active:false with state expired", async () => {

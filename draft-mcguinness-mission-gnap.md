@@ -877,12 +877,19 @@ Mission Deployment Profile.
 ## The Mission Claim {#mission-claim}
 
 An access token issued under a Mission names it through the
-`mission` object: the family members `id`, `issuer`, and
-`authority_hash` as the issuance profile defines them, and it SHOULD
-carry the record's `expires_at` as the issuance profile defines it
-({{I-D.draft-mcguinness-oauth-mission}}), a bounding commitment with
-no liveness that the token's own expiry already sits inside
-({{gating}}). The object is delivered on three carriage surfaces:
+`mission` object: the family members `id` and `issuer`, as the
+issuance profile's baseline `mission` claim defines them
+({{I-D.draft-mcguinness-oauth-mission}}). It SHOULD also carry the
+record's `expires_at` as the issuance profile defines it, a bounding
+commitment with no liveness that the token's own expiry already sits
+inside ({{gating}}); the issuance profile's rule that a profile
+minting a further credential downstream, or verifying Mission
+lifetime from retained state, MUST require it applies here unchanged.
+`authority_hash` is likewise not part of this binding's baseline
+object; it becomes available only on the same disclosure terms the
+issuance profile defines for its own baseline claim (introspection's
+disclosure privilege, or its Local Approved-Set Verification
+profile). The object is delivered on three carriage surfaces:
 
 - **Token-carried**: a deployment issuing structured tokens (for
   example the `jwt-signed` format of {{RFC9767}}) carries the
@@ -1009,8 +1016,6 @@ The introspection response for the finance-service token of
   "mission": {
     "id": "msn_9Fk2WqLp0Vd5Jh8xTc4nB7r1",
     "issuer": "https://as.example.com/gnap",
-    "authority_hash":
-      "sha-256:x8FvWqLp0Vd5Jh2mTc4nB7r1KdYzQw6aA3f5EMkRb60",
     "expires_at": "2026-12-31T23:59:59Z",
     "state": "active"
   }

@@ -282,11 +282,15 @@ Each hop carries the substrate's members and this profile's:
   present (`sub_profile` as profiled). `act` is present exactly when
   the hop is NAMED ({{actor-identity}}); a key-only hop omits `act`
   entirely. The root MUST carry `act`; and
-* the `mission` claim, value-invariant across every hop: `id`,
-  `issuer`, `authority_hash`, and `subject`, the origin principal of
-  the Origin Principal profile
+* the `mission` claim, value-invariant across every hop: `id` and
+  `issuer` ({{I-D.draft-mcguinness-oauth-mission}}), and `subject`,
+  the origin principal of the Origin Principal profile
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), REQUIRED on
-  a conforming Chain.
+  a conforming Chain. This profile additionally REQUIRES
+  `authority_hash` on that claim, reintroducing it beyond the
+  issuance profile's baseline as this profile's own lineage anchor: a
+  disconnected verifier has no other channel back to the approved
+  Mission.
 
 A hop never carries a nested actor history: the complete actor
 history is the validated root-to-leaf Chain itself, reconstructed at

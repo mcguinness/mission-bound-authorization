@@ -3,40 +3,40 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "b618c6145ea466492872ccfd92fc635ac8daf78a",
-    "content_sha256": "c478453979437940b1bfa3180c84adf02d81261a1e74ccd1843d9b42d1f52051"
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
+    "content_sha256": "57bc7d306a5ad716a5648a6b478c82985641bb5a4a597b4a0f5dc781782e4441"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "a206dbf8a37c7b3e0b0759ce083440e6ae97a448",
-    "content_sha256": "ad935c8bd6b7ed6b701211ffb1a2b88aee44cfdda215d529bba89f47a29b355c"
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
+    "content_sha256": "24347d4b1e9934cc8d05037d7880fa0df20be0a54d053b5f625370588b5310d2"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
-    "content_sha256": "05be78b62a5f9cc093fbe42d86f7d6a4e982e7e51cec807744de96f7bf50d7a2"
+    "revision": "cd7e9288c01d88dc60bae5549dc9cc7f9a403573",
+    "content_sha256": "25ec453cab44545ca7d15eabc948bbc5cf5c53b9d37ff9c5eda9ad3454a1930a"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "62ea026ba25f890063e2263bb8baa9238d4efcb9",
-    "content_sha256": "04407562503c3d6a534efb46cd61499fe55aa665160b21b94d91d139bc06bb94"
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
+    "content_sha256": "82b15a77a57d40b169d134307d3230afc5ffa224910425739c152a902378ef36"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "a28ce7de5bd4c0372fc442a3727ceec93c6341e6",
     "content_sha256": "016a26b031d0ae200fff6770bff42cc0b1d591c7c8be624ae74ea2d8b1948f53"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "992650454f9537af61a8e6273e5dd6c1464b32b4",
-    "content_sha256": "94f27fb07357fba93989a05797d4798e0d662eeccdbbca2e549f217d8ce6af37"
+    "revision": "ef4e4857c146904fa2549e776ee7037ecd854623",
+    "content_sha256": "aa2fd0a45a2931c6cfcca034dcae0d8596279af199dc7f468717cbeb5bf2e45e"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
-    "content_sha256": "e20df038a265d17f17a43ec066abe65e45877e4c01b2ce889ce4140cd9f1c003"
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
+    "content_sha256": "02956ff6ccac4de784da54da99fabbdf90e78d9de8c23bd45b7d55ea4d8ecea8"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "a914b3a4530cb25d50399448c43096afac40da48",
     "content_sha256": "8094922e4076b1c7a6ea036bc952e3c3f767ef617d3b38e6da7756430b705730"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "8c57e0e098b94006f00245aa5327ffd62c89802f",
-    "content_sha256": "31d4c8938fd34632ed3cce445b5af953cb365487cf65923cf3feb45d8ea253dd"
+    "revision": "16dba773b88fd61094ffcccdcdc15229accdad35",
+    "content_sha256": "9d3c26d1dd783992c117e9e8bbafeade3c2df3038669dff9c1a17ec64d62b9cb"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "2be3bda0d2b9fc8bd8dc32168a76af29233c6cbe",
@@ -47,24 +47,24 @@
     "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4010f759762247e0d4358fdfad6dd5d2ba0607e6",
-    "content_sha256": "f51c68adb7527cf1b610149fb80bbfd296f8570c37dd98207a16a1076f7fa3d1"
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
+    "content_sha256": "98ca534802e7678dc8b2e6fe3454223b8dce8c77bf8eacd9ef3aa2a10c2b330e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
     "content_sha256": "701867aef29b8172fe390559729f61644d4dde670cadd65c4b07618d5b246c98"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
-    "content_sha256": "e64973f7561410b2f6f68d97662a5366ed15bc3da5999750dc01f2be934f92e0"
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
+    "content_sha256": "406a29b4886d0c2e147bc68a05f837c0e042b356780647798106912fd2338b2c"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "5c12717f3cad29785f2f6797c5bcd1fcf15cae89",
     "content_sha256": "671ab7f989082b81a7b94e0fb09cccb0d6efe8f4170eb452e81bd480d5fc85d8"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "a914b3a4530cb25d50399448c43096afac40da48",
-    "content_sha256": "2d240e5ee151eac0c88b2d1afdc28e81b932b027c58dc57fbc6c8d1b669245cb"
+    "revision": "5c793f0e9410b7d28b8ab05fbe10ce5b464ec7f6",
+    "content_sha256": "e33ccac94c949bd12bf9e0e802ce07bdd731eabef2aaf336f5c897da6450eb72"
    }
   }
  },
@@ -161,7 +161,8 @@
    "core.standing-consent-recency",
    "template.dispatch",
    "progressive.ceiling-drawdown",
-   "cross-domain.projection"
+   "cross-domain.projection",
+   "core.local-approved-set-verification"
   ]
  },
  "profiles": [
@@ -1784,6 +1785,145 @@
      "surface": "verification"
     }
    ]
+  },
+  {
+   "id": "core.local-approved-set-verification.tier1-retrieval-recompute-subset-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{rs-enforcement}}, never falls back to trusting the token signature alone as if this profile were not claimed.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.local-approved-set-verification"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Tier 1: a verifying party recomputes authority_hash over the retrieved Authority Set and rejects on mismatch; verifies every carried entry is a subset of a retrieved entry via a type-owned predicate; fails closed (throws) on either failure rather than returning a partial or best-effort result"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > a carried entry that is a subset of a retrieved, correctly-committed entry verifies (permits)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects when the retrieved set does not recompute to the retrieved authority_hash (commitment_mismatch)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry that is NOT a subset of any retrieved entry (not_subset)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy."
+  },
+  {
+   "id": "core.local-approved-set-verification.tier2-independent-pinning",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "the verifying party additionally holds an expected `authority_hash` obtained from a source independent of the Tier 1 retrieval channel, never re-derived from the same call being verified, and MUST reject unless the retrieved (and recomputed-matching) value also equals that independently held one.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.local-approved-set-verification"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Tier 2: a retrieval that passes Tier 1 (recomputes correctly, subset holds) is still rejected when it disagrees with an independently retained expected authority_hash, catching a post-approval substitution that is internally self-consistent and so undetectable by Tier 1 alone"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > a Tier-1-passing retrieval that matches the independently retained authority_hash verifies",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > @spec mission#the-mission-claim, mission#lasv-retrieval (#702/#725 review) -- a SUBSTITUTED set that is internally self-consistent (recomputes correctly under Tier 1) is still refused once an independently retained approval-time root disagrees: Tier 1 alone would have permitted this",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "core.local-approved-set-verification.retrieval-transport-and-disclosure-gate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "its authorization gate MUST be at least as strong as the disclosure privilege for every audience the Mission has issued to, not any single audience's own.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.local-approved-set-verification"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the retrieval endpoint/transport a deployment provisions for this capability gates authorization at least as strongly as the disclosure privilege for every audience the Mission has issued to"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "review #725 P1-3: disputed as untestable in this repo by the spec's own design, not merely unimplemented. The document explicitly does not mandate a retrieval endpoint or transport (deployment-provisioned), so there is no concrete surface here to gate-check against; a conformance row can only restate the requirement, which this row does, pending a deployment that actually provisions such a surface."
+  },
+  {
+   "id": "core.local-approved-set-verification.status-not-compatible-retrieval-surface",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "Recomputing `authority_hash` over a Status response therefore fails by construction for any multi-audience Mission, and fails after any containment or discharge even for a single-audience one.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status response is audience-scoped and, once containment has applied, reflects the current EFFECTIVE set rather than the complete immutable approved set authority_hash commits, so recomputing authority_hash over it fails by construction for a multi-audience Mission and after any containment"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "authority_hash immutability + projections > keeps authority_hash byte-identical while signedStatus omits the contained entry and carries containment_version",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "review #725 P1-2: this existing (pre-dating the review) test already demonstrates the exact defect the review flagged -- signedStatus's response omits the contained entry and diverges from the full approved set authority_hash commits -- so it is wired here as direct evidence that Status is not a compatible retrieval surface, rather than writing a new redundant test."
   },
   {
    "id": "evidence.compromise.no-self-timestamp",
@@ -3584,7 +3724,7 @@
    "id": "mas.join.credential-mission-equality",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "high-consequence-binding",
-   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim and a consistent `authority_hash`, and denies on any mismatch",
+   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, and, where both convey `authority_hash`, a consistent value too, denying on any mismatch",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -3595,7 +3735,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a propagated Mission-Reference co-present with a Mission-bound credential must equal the credential's own mission claim exactly; any divergence denies"
+    "normative": "a propagated Mission-Reference co-present with a Mission-bound credential must equal the credential's own mission claim's id and issuer exactly, and its authority_hash too when both sides carry one; any divergence denies (#702: authority_hash left the baseline mission claim, so this check no longer assumes it is always present)"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -8265,10 +8405,10 @@
    ]
   },
   {
-   "id": "authzen.pdp-request.consistency-view-id-and-authority-hash-equal",
+   "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "The `id` and `authority_hash` in `context.mission` equal the `mission_id` and `authority_hash` committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
+   "text": "The `id` and `issuer` in `context.mission` equal the `mission_id` and issuer committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -8280,7 +8420,37 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request whose context.mission id or authority_hash disagrees with the loaded materialized view's committed values is denied view_inconsistent"
+    "normative": "a request whose context.mission id or issuer disagrees with the loaded materialized view's committed values is denied view_inconsistent"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec authzen#pdp-request consistency-id-and-issuer-equal -- view inconsistency (issuer mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. services/pdp/src/evaluate.ts's rule 1 now checks id/issuer unconditionally and authority_hash present-then-check, matching this split."
+  },
+  {
+   "id": "authzen.pdp-request.consistency-authority-hash-equal-when-present",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "When `context.mission.authority_hash` is also present, it MUST equal the view's committed `authority_hash`, with the same `view_inconsistent` result on inequality",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a supplied context.mission.authority_hash that disagrees with the PDP's loaded view's committed authority_hash is denied view_inconsistent; its omission alone never denies (see consistency-no-fail-on-optional-omission)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8293,12 +8463,12 @@
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > a supplied mission reference that mismatches the loaded view is refused, never silently accepted",
-     "level": "unit",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial",
+     "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "The endpoint-level test needs live OpenFGA and sandbox-skips locally; the unit-level test runs unconditionally against a stub Fga and proves the same authority_hash-mismatch -> view_inconsistent rule without it, so this row has non-skipping local coverage too."
+   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission."
   },
   {
    "id": "authzen.pdp-request.consistency-policy-view-id-equal",
@@ -8355,7 +8525,7 @@
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id` or `policy_version` was omitted; the view the PDP loaded is authoritative.",
+   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id`, `policy_version`, or `authority_hash` was omitted; the view the PDP loaded is authoritative.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -8367,11 +8537,12 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "omitting the optional policy_view_id or policy_version never by itself fails a decision; the PDP's own loaded view is authoritative"
+    "normative": "omitting the optional policy_view_id, policy_version, or authority_hash never by itself fails a decision; the PDP's own loaded view is authoritative"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#702: authority_hash left context.mission's baseline (formerly REQUIRED) member set and joined policy_view_id/policy_version as an optional member whose omission this rule already covered; extended to name it explicitly rather than leaving the extension implicit."
   },
   {
    "id": "authzen.pdp-request.consistency-parameter-digest-presence-and-match",
@@ -8642,7 +8813,7 @@
    "id": "authzen.context-mission.identity-members-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-mission",
-   "text": "REQUIRED. A string. The Authority Set integrity anchor, in the integrity-anchor encoded form ({{I-D.draft-mcguinness-oauth-mission}}).",
+   "text": "REQUIRED. A string. The Mission's `id`.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -8654,7 +8825,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "context.mission always carries id, issuer, and authority_hash, the Mission's required identity and Authority Set integrity anchor, and carries policy_version when known (a PEP not co-located with the Mission record omits it and relies on policy_view_id for view correlation)"
+    "normative": "context.mission always carries id and issuer, the Mission's required identity; authority_hash is OPTIONAL (#702) and carried only where the PEP holds it under the issuance profile's Local Approved-Set Verification profile or introspection disclosure privilege; policy_version is carried when known (a PEP not co-located with the Mission record omits it and relies on policy_view_id for view correlation)"
    },
    "level": "unit",
    "coverage": "partial",
@@ -8664,9 +8835,21 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec authzen#pdp-request consistency-id-and-issuer-equal -- view inconsistency (issuer mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Tested indirectly through authority_hash's consistency-check consequence; id/issuer presence itself is not separately asserted by a test."
+   "notes": "#702 narrowed this row's observation from authority_hash-as-required to id/issuer-as-required (authority_hash is now OPTIONAL, tracked separately by consistency-authority-hash-equal-when-present and consistency-no-fail-on-optional-omission). The issuer-mismatch test directly asserts id/issuer as the required identity members and the baseline-permits test confirms their presence alone (authority_hash absent) suffices, but both are endpoint-level PDP calls, not a dedicated unit-level test of context.mission construction itself, so coverage stays partial against this row's unit level."
   },
   {
    "id": "authzen.context-mission.origin-principal-only-from-verified-source",
@@ -10697,7 +10880,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "The Controller is the Mission Issuer/AS ({{oauth-mission#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-view-id-and-authority-hash-equal), not this Controller-role row."
+   "notes": "The Controller is the Mission Issuer/AS ({{oauth-mission#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-id-and-issuer-equal), not this Controller-role row."
   },
   {
    "id": "substrate.basic-gate.decision-only-while-active",

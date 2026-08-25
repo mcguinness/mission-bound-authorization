@@ -519,9 +519,14 @@ The members are:
   claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "The
   Mission Claim") with status members added. It carries:
   - `id`, `issuer`: the subject Mission's identifier and issuer.
-  - `authority_hash`: the issuance profile's consent commitment over
-    the Authority Set ({{I-D.draft-mcguinness-oauth-mission}}, Section
-    "Integrity Anchors").
+  - `authority_hash`: OPTIONAL. The issuance profile's consent
+    commitment over the Authority Set ({{I-D.draft-mcguinness-oauth-mission}},
+    Section "Integrity Anchors"), disclosed at the AS's discretion to
+    a caller it authorizes for audit or correlation use, on the same
+    minimization footing as the issuance profile's introspection
+    disclosure privilege ({{I-D.draft-mcguinness-oauth-mission}},
+    Section "Caller Authorization and Minimization"). Not carried on
+    the issuance profile's baseline `mission` claim.
   - `state`: the current Mission lifecycle state. The authoritative
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
@@ -746,10 +751,11 @@ Introspection {{RFC7662}} projection of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission State via
 Token Introspection"). That section already
 defines a `mission` member on the introspection response carrying
-`id`, `issuer`, `authority_hash`, and (from the Mission's issuer) the
-lifecycle `state`, together with the caller-authorization,
-minimization, and issuer-only-reports-state rules. This document does
-not restate those rules.
+`id` and `issuer`, and (from the Mission's issuer) the lifecycle
+`state`, with `authority_hash` disclosed only to a caller holding
+that member's disclosure privilege, together with the
+caller-authorization, minimization, and issuer-only-reports-state
+rules. This document does not restate those rules.
 
 This extension adds the following to that projection:
 
@@ -2293,12 +2299,12 @@ covers privacy specific to the extensions here.
 
 The Mission Status operation ({{mission-status}}) and the
 introspection projection ({{introspection-projection}}) disclose
-Mission state, the
-`authority_hash`, and the audience-scoped `authorization_details` to
-the authenticated, authorized requester. A deployment MUST treat both
-as Mission information-disclosure surfaces with the same privacy
-posture, audience-filtering the disclosed authority so a consumer
-never sees entries addressed to other audiences
+Mission state and the audience-scoped `authorization_details` to the
+authenticated, authorized requester, and MAY additionally disclose
+`authority_hash` to a requester authorized for it. A deployment MUST
+treat both as Mission information-disclosure surfaces with the same
+privacy posture, audience-filtering the disclosed authority so a
+consumer never sees entries addressed to other audiences
 ({{mission-status-response}}).
 
 ## Status Audit Logging

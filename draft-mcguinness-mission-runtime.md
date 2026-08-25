@@ -327,7 +327,7 @@ Mission under {{mission-binding}}. It does not place any new
 requirement back on the issuance profile; it reads only fields that
 profile already defines:
 
-- the `mission` claim (`id`, `issuer`, `authority_hash`);
+- the `mission` claim (`id`, `issuer`);
 - the token's `authorization_details`, including entries of type
   `mission_resource_access` (`resource`, `actions`, `constraints`,
   and any `delegation` member) and any other entry type the deployment
@@ -999,11 +999,14 @@ A record MUST contain:
 A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
 
-- the Mission reference (`mission.id`, `mission.issuer`) and the
-  `authority_hash` (and `intent_hash` when known: it is carried in
-  neither the `mission` claim nor introspection, so it is available only
-  to a PDP with direct Mission-record access, and most deployments
-  record `authority_hash` alone) it operated under;
+- the Mission reference (`mission.id`, `mission.issuer`) and, when
+  available, the `authority_hash` and `intent_hash` it operated under:
+  neither is carried on the issuance profile's baseline `mission`
+  claim or default introspection projection
+  ({{I-D.draft-mcguinness-oauth-mission}}), so both are available only
+  to a PDP with direct Mission-record access, one holding
+  introspection's `authority_hash` disclosure privilege, or one
+  participating in the Local Approved-Set Verification profile;
 - the token issuer and audience or protected-resource identifier when
   available;
 - the authenticated `sub`, `client_id`, a client-instance identifier

@@ -431,10 +431,9 @@ Cache-Control: no-store
   "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-" }
 ~~~
 
-The token carries the `mission` claim and its `authority_hash` as the
-issuance profile defines; the response also surfaces the optional
-`mission_id` parameter ({{I-D.draft-mcguinness-oauth-mission}}) for
-correlation. Had `alice` approved only a subset, the deferral would
+The token carries the `mission` claim as the issuance profile defines
+it; the response also surfaces the optional `mission_id` parameter
+({{I-D.draft-mcguinness-oauth-mission}}) for correlation. Had `alice` approved only a subset, the deferral would
 resolve to `access_denied` and the agent would submit a fresh, narrower
 Mission Intent, unless the deployment runs the experimental revision
 companion ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}).

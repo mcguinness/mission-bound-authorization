@@ -354,20 +354,21 @@ authorization artifact. The contribution is a single chain:
    the authority as an **`authority_hash`** and records a durable
    **Mission**.
 4. Every access token the agent obtains under the Mission carries the
-   derived authorization details and a **`mission` claim** bearing
-   the `authority_hash`. A Resource Server enforces statelessly from
-   the token.
+   derived authorization details and a **`mission` claim** identifying
+   the Mission (`id`, `issuer`) it was derived under. A Resource
+   Server enforces statelessly from the token.
 5. Token issuance and refresh are **gated on Mission state**, so
    revoking or expiring the Mission stops the agent from obtaining
    further authority.
 
 The result is that a user approves a task once, and that approval,
 not a per-request scope grant, bounds and outlives every token the
-agent derives. Each token carries an `authority_hash` audit anchor back
-to the consented authority; a holder of the full Authority Set can
-verify it, and a holder of only a narrowed subset (a downstream or
-cross-domain party) treats it as an audit anchor it cannot recompute
-({{consent-binding}}).
+agent derives. The consented authority is committed once, as
+`authority_hash`, on the Mission record; a party holding the full
+Authority Set can independently verify it, and a deployment that
+needs that verification from a token holding only a narrowed subset
+adopts the Local Approved-Set Verification profile
+({{local-approved-set-verification}}, {{consent-binding}}).
 
 This chain is the first of two deliberate enforcement layers. It gives
 task-bound issuance, auditability, and a revocation gate over future
@@ -635,16 +636,18 @@ considered and where it belongs, not that it was overlooked.
   approved-task artifact those identities act within, not the
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
-  Identifier and the `authority_hash` it shares deliberately let any
-  party correlate a
+  Identifier deliberately lets any party holding a token correlate a
   Mission's activity across audiences and resources. This is a design
-  choice, not an omission: a stable, correlatable anchor is what lets a
-  Resource Server, a cross-domain Resource AS, and an auditor bind
-  evidence to one approved Mission, which is a core goal of this
-  document and its companion profiles.
-  Pairwise or unlinkable presentation of Mission-bound authority works
-  against that anchor and is therefore future work
-  ({{mission-identifier-correlation}}).
+  choice, not an omission: a stable, correlatable identifier is what
+  lets a Resource Server, a cross-domain Resource AS, and an auditor
+  bind evidence to one approved Mission, which is a core goal of this
+  document and its companion profiles. `authority_hash` is no longer
+  part of that baseline correlation surface: it stays on the Mission
+  record and the audit and profile surfaces that carry it by
+  disclosure privilege ({{mission-claim}}), rather than traveling by
+  default on every token. Pairwise or unlinkable presentation of
+  Mission-bound authority works against the identifier and is
+  therefore future work ({{mission-identifier-correlation}}).
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -1904,18 +1907,12 @@ The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved. It
 commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
-disclosure object (see {{consent-binding}}). Every token derived under
-the Mission carries this value ({{mission-bound-tokens}}).
-
-A party
-holding the full Authority Set can recompute the commitment,
-confirming the set is the approved one, and then apply the subset
-rule to the token's carried authority. A party
-holding only a narrowed subset cannot recompute the commitment and
-treats it as an audit anchor. For that party, `authority_hash` alone
-does not prove that the carried entries belong to the approved set;
-the relationship is asserted by the AS's signed token and depends on
-the AS applying the subset rule correctly (see {{consent-binding}}).
+disclosure object (see {{consent-binding}}). It is recorded on the
+Mission; the baseline token derived under the Mission does not carry
+it by default ({{mission-claim}}). A party verifying the carried
+authority against it independently of the token signature does so
+under the Local Approved-Set Verification profile
+({{local-approved-set-verification}}, {{consent-binding}}).
 
 If the task, the authority proposal, the derived Authority Set, the
 effective `expires_at`, or a policy input establishing any of them
@@ -2464,7 +2461,12 @@ this profile defines:
 
 `authority_hash`:
 : REQUIRED. A string. The consent commitment over
-  the Authority Set ({{integrity-anchors}}).
+  the Authority Set ({{integrity-anchors}}). Like `proposal_hash`, it
+  is surfaced on the record and through introspection
+  ({{introspection}}) to a caller holding that member's disclosure
+  privilege, and is not carried on the baseline `mission` claim
+  ({{mission-claim}}); a profile that needs it on the claim carries
+  its own copy ({{mission-claim}}, {{local-approved-set-verification}}).
 
 `intent_hash`:
 : REQUIRED. A string. The integrity commitment over
@@ -2684,10 +2686,12 @@ this profile defines:
   and is not folded into `intent_hash` or `authority_hash`
   ({{integrity-anchors}}). Neither anchor commits it, and it MUST NOT
   be added to either digest; a profile that commits the Mission
-  Record itself covers it under that profile's own anchor. The
-  `mission` claim MAY carry `approval_basis.type` ({{mission-claim}})
-  as a wire signal; it MUST NOT be relied on to grant or widen
-  authority.
+  Record itself covers it under that profile's own anchor. Token
+  introspection MAY disclose `approval_basis.type` to a caller holding
+  that member's disclosure privilege ({{introspection}}); it is not
+  carried on the baseline `mission` claim ({{mission-claim}}), and it
+  MUST NOT be relied on to grant or widen authority wherever it does
+  appear.
 
 `authority_source`:
 : REQUIRED. An object. The source of the authority the approval
@@ -3129,10 +3133,28 @@ The `mission` claim is a JSON object:
   deliberately differ for tokens minted in another trust domain
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
-`authority_hash`:
-: REQUIRED. A string. The Mission's
-  `authority_hash`, the commitment over the complete consented
-  Authority Set ({{rs-enforcement}}).
+`id` and `issuer` identify the Mission and carry no authority of
+their own; the token's own signature authenticates the pair, and the
+carried `authorization_details` remains the token's concrete
+authority.
+
+This document does not carry `authority_hash` or `approval_basis` on
+the baseline claim. Neither is an enforcement input a narrowed-token
+Resource Server can exercise: `authority_hash` commits the complete
+Authority Set, which such a Resource Server does not hold
+({{rs-enforcement}}); `approval_basis.type` is provenance, not
+authority ({{mission-record}}). Both stay available elsewhere: the
+Authority Set commitment lives on the Mission Record and the audit
+surfaces that already carry it, an authorized introspection caller
+MAY receive `authority_hash` and `approval_basis.type`
+({{caller-authorization-and-minimization}}), and a deployment needing
+local verification of the approved set, not merely its audit trail,
+adopts the Local Approved-Set Verification profile
+({{local-approved-set-verification}}). A companion profile needing a
+stable per-token audit or lineage anchor across tokens it mints or
+carries (offline attenuation, a cross-trust-domain grant) defines
+that as its own claim member under the extensibility rule below; the
+baseline supplies none for it to inherit.
 
 `expires_at`:
 : OPTIONAL. A string. The Mission's `expires_at`
@@ -3143,13 +3165,14 @@ The `mission` claim is a JSON object:
   a state surface does not, since expiry is not revocation and only
   `active` permits reliance ({{lifecycle}}).
 
-`approval_basis`:
-: OPTIONAL. An object carrying `type` only: the Mission's
-  `approval_basis.type` ({{mission-record}}), as a wire signal of
-  which authorization basis the Mission is rooted in. The record's
-  other `approval_basis` members are not carried on the token. It
-  MUST NOT be relied on to grant or widen authority; the carried
-  `authorization_details` and `authority_hash` remain authoritative.
+A consumer that relies only on the presented token's own validity
+needs nothing further: the token's `exp` already bounds it. A profile
+that mints a further credential downstream of this one, or that
+verifies a Mission's remaining lifetime from retained state rather
+than a live token, MUST require `expires_at` and MUST treat its
+absence as an error; it MUST NOT substitute the token's own `exp`,
+which bounds only that one credential, for a member that bounds every
+credential the Mission may still yield.
 
 The `mission` claim is an open object ({{extensibility}}): additional
 members MAY appear alongside the members above. This document defines no
@@ -3207,9 +3230,7 @@ Example decoded token payload:
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+    "issuer": "https://as.example.com"
   }
 }
 ~~~
@@ -3268,16 +3289,10 @@ standing as the claims source under these same rules
 - SHOULD, when serving Mission-bound requests, log the `mission`
   claim's `id` and the token `jti` with each served request, so its
   access logs join to Mission evidence.
-- MAY recompute `authority_hash` ({{integrity-anchors}}): a Resource
-  Server that performs it recomputes the anchor over the full
-  Authority Set it independently holds, compares the result to
-  `mission.authority_hash`, and MUST reject on mismatch. It
-  additionally verifies that each carried `authorization_details`
-  entry is a subset ({{subset}}) of that held set.
-- MUST NOT recompute `authority_hash` from a token's carried subset:
-  the anchor is computed only over the full Authority Set, and a
-  narrowed token matches by the subset test, never by hashing its
-  carried entries.
+- MAY implement the Local Approved-Set Verification profile
+  ({{local-approved-set-verification}}) to verify a carried entry
+  against the complete approved Authority Set rather than the token
+  signature alone.
 - MAY, where the AS offers it, introspect the token ({{introspection}})
   to observe the Mission's current state per request rather than
   relying on the token lifetime to bound revocation latency.
@@ -3310,45 +3325,18 @@ A type-defined constraint narrows authority, so treating an
 unenforceable key or member as absent, or reducing it to
 disclosure-only, would silently widen the grant; that is why an
 entry whose type-defined enforcement a Resource Server cannot
-complete fails closed. A Resource Server that holds only a
-narrowed token MUST treat `mission.authority_hash` as an audit
-correlator, not an enforcement input, and MUST NOT treat it as a
-cryptographic proof that the carried entries are a subset of the
-approved set. That subset relationship is an assertion by the AS,
-authenticated by the token signature, and depends on the AS applying
-the subset rule correctly.
-
-A worked contrast, using the two-entry Authority Set of the test
-vectors ({{test-vectors}}), shows what each party can verify. A
-single-audience token carries one narrowed entry:
-`journal-entries.write` with the approved `max_amount` of `500.00`
-USD tightened to `250.00`.
-
-The Resource Server verifies the token
-signature and `cnf`, checks `aud`, enforces the carried entry,
-checks the anchor's algorithm prefix ({{integrity-anchors}}), and
-logs the `mission` claim for correlation. It cannot recompute
-`authority_hash`: hashing the carried entry digests a one-entry
-array the anchor never committed, and the tightened `max_amount`
-makes the entry a semantic narrowing, not a byte-level member, of
-the approved set. Whether `250.00` sits within the approved ceiling
-is the subset test ({{subset}}), and that test needs the approved
-entry to compare against.
-
-A party holding the full Authority Set (a
-Resource Server provisioned with it, or a policy decision point
-holding the Mission record) recomputes the commitment over the held
-two-entry set, matches `mission.authority_hash`, and verifies the
-carried entry as a subset of the held `journal-entries.write` entry:
-containment verified relative to the authenticated committed set.
-For that verification to be independent of the issuer, the
-deployment provisions the set together with its provenance: the full
-Authority Set, the Mission `id` and issuer it belongs to, the
-expected `authority_hash`, and an authenticated approval-time source
-for all three (trusted Mission or consent evidence, or an audit
-commitment recorded before any compromise). Without that pinning, a
-compromised issuer signs a token carrying a replacement set's hash,
-and recomputation confirms the replacement.
+complete fails closed. The baseline token carries no `authority_hash`
+for a Resource Server to consult at all; where a deployment discloses
+it to that Resource Server all the same (through introspection's
+disclosure privilege, {{caller-authorization-and-minimization}}, or a
+companion profile that carries its own copy), the Resource Server
+MUST treat it as an audit correlator, not an enforcement input, and
+MUST NOT treat it as a cryptographic proof that the carried entries
+are a subset of the approved set. That subset relationship is an
+assertion by the AS, authenticated by the token signature, and
+depends on the AS applying the subset rule correctly. A Resource
+Server that needs more than that assertion adopts the Local
+Approved-Set Verification profile ({{local-approved-set-verification}}).
 
 A Resource Server denial falls into one of four cases, each riding
 the OAuth-standard challenge for its own failure class
@@ -3421,6 +3409,175 @@ over-grant on ({{scope-projection}}). A deployment that needs
 constrained authority enforced where no safe projection exists MUST
 route the protected operation through a Resource Server that enforces
 `authorization_details` (or the runtime layer that evaluates them).
+
+## Local Approved-Set Verification {#local-approved-set-verification}
+
+This OPTIONAL profile lets a verifying party check a token's carried
+authority against the Mission's complete approved Authority Set,
+rather than relying on the token signature and the AS's subset
+assertion alone ({{rs-enforcement}}). A deployment adopts it when a
+Resource Server, a policy decision point, or an auditor needs that
+independent check; a deployment that does not is unaffected and
+remains fully conformant to the baseline.
+
+A worked contrast, using the two-entry Authority Set of the test
+vectors ({{test-vectors}}), shows what each party can verify. A
+single-audience token carries one narrowed entry:
+`journal-entries.write`, with the approved `max_amount` of `500.00`
+USD tightened to `250.00`.
+
+A party outside this profile verifies the token signature and `cnf`,
+checks `aud`, and enforces the carried entry ({{rs-enforcement}}). It
+cannot recompute `authority_hash`: hashing the carried entry digests
+a one-entry array the anchor never committed, and the tightened
+`max_amount` makes the entry a semantic narrowing, not a byte-level
+member, of the approved set. Whether `250.00` sits within the
+approved ceiling is the subset test ({{subset}}), and that test needs
+the approved entry to compare against.
+
+A party claiming this profile holds, or retrieves, the full Authority
+Set (a Resource Server provisioned with it, or a policy decision
+point holding the Mission record), recomputes the commitment over the
+held two-entry set, matches it against the Mission's `authority_hash`
+independently obtained, and verifies the carried entry as a subset of
+the held `journal-entries.write` entry: containment verified relative
+to the authenticated committed set.
+
+A conforming implementation claims this capability
+({{conformance}}) through authenticated complete-set retrieval,
+declaring which of the two tiers below it supports. This document
+also identifies a typed selective-inclusion proof as a future
+composition point ({{lasv-proof-future}}); it is not, by itself, an
+alternative a conforming implementation can claim today.
+
+### Authenticated Complete-Set Retrieval {#lasv-retrieval}
+
+The verifying party retrieves the complete Authority Set, and the
+`authority_hash` it expects to match, over a channel authenticated to
+the Mission `issuer`, never from an unauthenticated or self-reported
+source, and:
+
+- MUST recompute the commitment over the retrieved set
+  ({{integrity-anchors}}) and reject on mismatch, rather than trust
+  the retrieval channel alone;
+- MUST verify each carried `authorization_details` entry is a subset
+  ({{subset}}) of an entry in the retrieved set, and MUST NOT treat
+  commitment match alone as sufficient; and
+- MUST fail closed: a retrieval failure, an unauthenticated response,
+  a commitment mismatch, or a subset-test failure refuses the request
+  under {{rs-enforcement}}, never falls back to trusting the token
+  signature alone as if this profile were not claimed.
+
+That much is **Tier 1**, and it has a specific limit: it does not by
+itself establish that the retrieved set is the set the Approver
+consented to. The same `issuer` supplies both the retrieved set and
+the `authority_hash` Tier 1 checks it against, so an issuer that
+returns a substituted set together with a digest recomputed to match
+it passes Tier 1 undetected. Tier 1 defends against a projection bug,
+a stale or corrupted materialization, or a compromised link between
+the record store and the retrieval endpoint; it does not defend
+against an issuer dishonest at the moment of retrieval, nor against a
+signing key compromised after approval.
+
+**Tier 2** adds that defense: the verifying party additionally holds
+an expected `authority_hash` obtained from a source independent of
+the Tier 1 retrieval channel, never re-derived from the same call
+being verified, and MUST reject unless the retrieved (and
+recomputed-matching) value also equals that independently held one.
+A deployment claiming Tier 2 declares:
+
+- a **retention point**: which party retains the expected
+  `authority_hash` and where, independent of the retrieval channel
+  above (for example, a Resource Server's own durable copy of the
+  value disclosed to it under introspection's `authority_hash`
+  disclosure privilege at the time it first received the Mission's
+  tokens, {{caller-authorization-and-minimization}});
+- a **trust basis**: how the retaining party authenticated that value
+  when it captured it, which is the same issuer-authenticated channel
+  any disclosure under this document requires, never an unauthenticated
+  or self-reported source; and
+- a **retention rule**: how long the retained value is held and
+  under what conditions, if any, it is replaced, which MUST NOT
+  include re-deriving it from the Tier 1 channel it is meant to check.
+
+A conforming implementation MAY claim Tier 1 alone or Tier 1 with
+Tier 2, and states which it claims ({{conformance}}): a
+"verified" result means different things under each, and a caller
+relying on it needs to know which.
+
+The approved Authority Set and its `authority_hash` are immutable for
+the Mission's life ({{mission-record}}). Once retrieved and verified
+under the tier(s) claimed, a verifying party MAY retain them for as
+long as it relies on the Mission; this profile imposes no re-retrieval
+requirement of its own. Freshness applies instead to what does
+change: the Mission's current `active` state and its current
+effective (containment-filtered) authority, already governed by the
+runtime profile's state-freshness rules
+({{I-D.draft-mcguinness-mission-runtime}}). A verifying party that
+also needs those observes that profile's rules directly, rather than
+treating a re-retrieval of the immutable approved set as if it were
+itself a freshness signal.
+
+This document does not mandate a specific retrieval endpoint or
+transport; a deployment provisions one, discoverable and
+authorization-gated more strongly than the introspection disclosure
+privilege it otherwise parallels
+({{caller-authorization-and-minimization}}): introspection minimizes
+its response to one audience at a time, while a complete-set
+retrieval response necessarily discloses every audience's entries to
+the retrieving party, so its authorization gate MUST be at least as
+strong as the disclosure privilege for every audience the Mission has
+issued to, not any single audience's own.
+
+Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) is
+**not** a compatible retrieval surface for this profile. Its
+authenticated, `mission_id`-keyed lookup returns only the requesting
+audience's own entries
+({{I-D.draft-mcguinness-oauth-mission-status}}), and, once
+containment has applied, the Mission's current effective set rather
+than its complete immutable approved set. Recomputing `authority_hash`
+over a Status response therefore fails by construction for any
+multi-audience Mission, and fails after any containment or discharge
+even for a single-audience one. A deployment claiming this profile
+provisions a retrieval surface distinct from Status, meeting the
+stronger disclosure gate above.
+
+### A Typed Selective-Inclusion Proof: a Future Composition Point {#lasv-proof-future}
+
+Rather than retrieving the complete set, a future profile MAY instead
+define a proof type under which the verifying party holds, per
+carried entry, a proof that entry's unnarrowed approved parent entry
+is included in the Mission's committed Authority Set, and applies the
+type-owned subset test ({{subset}}) between that disclosed parent
+entry and the carried, possibly narrowed, entry, exactly as
+{{consent-binding}} states: never a proof of the carried entry
+directly, since a narrowed entry was never itself an array member
+`authority_hash` committed.
+
+A concrete proof type would need to: cover every carried entry, not
+merely one; authenticate its own proof root as the Mission's
+approval-time commitment, under a collision-resistant `typ` distinct
+from `authority_hash`'s own ({{integrity-anchors}}); define the
+verifier's processing, so a party lacking the proof type's software
+cannot misread it as a plain digest; reject an unrecognized proof
+`typ` rather than skip verification; and define no downgrade path
+back to bare digest equality.
+
+The middle requirement is the open problem: this document's flat
+`authority_hash` digests a single array and by itself authenticates
+nothing about a differently structured proof root (a Merkle root or
+an accumulator, for example), so a concrete proof type would need its
+own construction binding that root to the Mission, for example the
+Mission Issuer signing or committing to it alongside `authority_hash`
+at the approval event. Until a concrete proof type supplies that
+construction, this mechanism remains a composition point for a future
+companion profile, not an alternative this document lets an
+implementation claim today.
+
+Under Authenticated Complete-Set Retrieval, what verification buys
+depends on when the issuer is compromised, and Tier 2's independent
+pinning is what defends against post-approval substitution; that
+analysis is stated once, in {{consent-binding}}.
 
 ## Remediation Grains {#remediation-grains}
 
@@ -3711,18 +3868,23 @@ rules below ({{caller-authorization-and-minimization}}).
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a
 token carries, in addition to the standard members, a `mission`
-member: `id`, `issuer`, and `authority_hash` (as in the `mission`
-claim, {{mission-claim}}) plus, when the responding AS is the Mission
+member: `id` and `issuer` (as in the `mission` claim,
+{{mission-claim}}) plus, when the responding AS is the Mission
 `issuer`, the current lifecycle `state` (string); when
 `derivation_limit` ({{derivation-issuance-policy}}) is established,
 `derivations_remaining` (a
 number): the derivations left under the cap at the time of the
 response, counting committed issuances ({{lifecycle}}), so a harness
-can plan refreshes against the budget; and, when the Mission records
-an authority proposal, `proposal_hash` (string): the Mission's
-`proposal_hash` ({{mission-record}}), surfaced for audit. Like
-`state`, only the issuer reports `derivations_remaining` and
-`proposal_hash`
+can plan refreshes against the budget; when the Mission records an
+authority proposal, `proposal_hash` (string): the Mission's
+`proposal_hash` ({{mission-record}}), surfaced for audit; and
+`authority_hash` (string) and `approval_basis` (an object carrying
+`type` only): the Mission's own Authority Set commitment and
+provenance signal ({{mission-record}}), surfaced the same way for an
+audit or correlation consumer, never as an enforcement input
+({{rs-enforcement}}). Like `state`, only the issuer reports
+`derivations_remaining`, `proposal_hash`, `authority_hash`, and
+`approval_basis`
 ({{only-issuer-reports-state}}).
 
 The core states are `active`, `revoked`,
@@ -3774,12 +3936,13 @@ authorization and minimization to that data and MUST NOT reveal
 Mission detail to an unauthorized introspection caller.
 
 Disclosure is member-scoped as well as caller-scoped:
-`derivations_remaining` and `proposal_hash` serve the issuance-budget
-and audit consumers, not Resource Server enforcement, and the AS
-MUST disclose each only to a caller the deployment has granted that
-member's disclosure privilege; an audience-authorized Resource
-Server receives the ordinary audience-filtered enforcement
-projection defined above, without them, by default.
+`derivations_remaining`, `proposal_hash`, `authority_hash`, and
+`approval_basis` serve the issuance-budget, audit, and correlation
+consumers, not Resource Server enforcement, and the AS MUST disclose
+each only to a caller the deployment has granted that member's
+disclosure privilege; an audience-authorized Resource Server receives
+the ordinary audience-filtered enforcement projection defined above,
+without them, by default.
 
 ## Composite Active State {#composite-active}
 
@@ -3856,7 +4019,10 @@ observation, never a cacheable authority record.
 
 While the Mission is `active`, the response is the standard
 {{RFC7662}} body plus the `mission` member. The canonical ERP token
-({{mission-claim}}), introspected at the issuer AS:
+({{mission-claim}}), introspected at the issuer AS by a caller holding
+this deployment's audit-and-correlation disclosure privilege (hence
+`authority_hash` and `proposal_hash` below, absent from the default
+audience-filtered enforcement projection):
 
 ~~~ json
 {
@@ -3962,9 +4128,10 @@ the following:
   delegating token's authority, hence of the Mission Authority Set.
   Delegation MUST NOT add authority.
 - **The Mission binding rides unchanged.** The delegated token
-  carries the same `mission` claim ({{mission-claim}}), its
-  `id`, `issuer`, and `authority_hash`, so every actor in the chain
-  operates under the one consented authority.
+  carries the same `mission` claim ({{mission-claim}}), its `id` and
+  `issuer` (and any further member the baseline or an adopted profile
+  carries) unchanged, so every actor in the chain operates under the
+  one consented authority.
 - **Each delegate is bound to its own key.** The delegated token MUST
   be sender-constrained ({{mission-bound-tokens}}) to the **delegate's
   own** key: its `cnf` is the delegate's DPoP or mTLS key, not the
@@ -4140,9 +4307,7 @@ narrows out. The decoded delegated access token:
   "cnf": { "jkt": "qVx7y2N0p4Lq9Md3sZJ8b8mZ3rN2xT5pV4lE6sQqYY" },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+    "issuer": "https://as.example.com"
   }
 }
 ~~~
@@ -4175,8 +4340,7 @@ expected to extend. Extensions build alongside the stable interface
 below; they MUST NOT redefine it. An extension MAY rely on these
 remaining stable across revisions of this profile:
 
-- the `mission` claim members `id`, `issuer`, and `authority_hash`
-  ({{mission-claim}});
+- the `mission` claim members `id` and `issuer` ({{mission-claim}});
 - the `authorization_details` carriage and its type-agnostic subset
   discipline ({{other-types}}, {{subset}}); and
 - the `act` delegation chain ({{delegation}}).
@@ -4477,7 +4641,7 @@ A **Mission Client** implements the client surfaces:
   reference, never a credential.
 
 Beyond these mandatory roles, an implementation MAY additionally claim
-three OPTIONAL capabilities. Each is independent, and an implementation
+four OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
 
 - **Delegation** ({{delegation}}): issuing and consuming derived tokens
@@ -4500,6 +4664,21 @@ that supports none of them is still conformant:
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies the
   interoperable mechanism that satisfies it, and implementations that
   interoperate across the hop implement that companion.
+- **Local Approved-Set Verification** ({{local-approved-set-verification}}):
+  a Mission-aware Resource Server or policy decision point
+  independently recomputing and subset-checking a Mission's complete
+  approved Authority Set, rather than relying on the token signature
+  and the AS's subset assertion alone. An implementation claiming
+  this capability states which tier it supports, Tier 1 alone or
+  Tier 1 with Tier 2 ({{lasv-retrieval}}), and fails closed under
+  {{rs-enforcement}} whenever the retrieval, recomputation, or subset
+  check it depends on cannot complete for a given request, never
+  treating that one request as though the capability were unclaimed.
+  This capability's activation, and which tier and retrieval surface
+  a deployment has provisioned, are established out of band between
+  the claiming party and the Mission Issuer, the same way the
+  retrieval surface itself is ({{lasv-retrieval}}); this document
+  defines no discovery metadata for it.
 
 A conforming implementation names the optional capabilities it supports
 (for example, "Mission Issuer with Delegation and Cross-Domain"); each
@@ -4534,7 +4713,12 @@ introspection, and `grant_types_supported` containing
 for the companion's cross-domain grant issuance. Absent such a signal,
 a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
-fails if the issuer does not support it.
+fails if the issuer does not support it. Local Approved-Set
+Verification has no OAuth metadata signal of its own: it is a
+Resource Server or policy decision point's own claimed capability,
+never something an Authorization Server advertises, so its activation
+is established out of band by construction, not merely absent a
+signal ({{local-approved-set-verification}}).
 
 This binding publishes its own Mapping Assessment of how the surfaces
 above realize the Mission Substrate contract's kernel and
@@ -4552,12 +4736,15 @@ self-contained; its reference to the substrate contract
 
 The security goal of this document is that a user's approval of a
 task bounds every token derived for it. The `authority_hash` commits
-the exact Authority Set the Approver consented to, and every derived
-token carries it in the `mission` claim. The complete mechanism also
-requires the AS to issue only subsets of that set and the Resource
-Server to verify the AS's token signature and enforce the carried
-authority. The hash alone does not prove containment of a narrowed
-token's authority.
+the exact Authority Set the Approver consented to, recorded on the
+Mission ({{mission-record}}); the security goal rests on the AS
+deriving only subsets of that set and signing every token
+accordingly, not on every token carrying the commitment itself
+({{mission-claim}}). The complete mechanism also requires the AS to
+issue only subsets of that set and the Resource Server to verify the
+AS's token signature and enforce the carried authority. The hash
+alone, where a token or a profile carries it, does not prove
+containment of a narrowed token's authority.
 
 The requirements that uphold the commitment live at the approval
 event ({{approval-event}}): the AS computes `authority_hash` over
@@ -4566,56 +4753,61 @@ re-consents if that set changes.
 
 `authority_hash` commits the full Authority Set, while a derived
 token may carry a narrowed subset, so a Resource Server cannot in
-general recompute it from the token alone. Recomputation is
-optional, and its rules live with the Resource Server's other duties
-({{rs-enforcement}}); a Resource Server that does not hold the full
-set treats `authority_hash` as a whole-Mission audit and correlation
-anchor ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) while
-enforcing the token's `authorization_details` directly
-({{mission-bound-tokens}}). It relies on the signed token as the AS's
-assertion that the carried authority was correctly projected from the
-approved set; `authority_hash` supplies no independent subset proof.
+general recompute it from the token alone. Recomputation, where a
+Resource Server undertakes it, is the Local Approved-Set Verification
+profile ({{local-approved-set-verification}}); a Resource Server
+outside that profile enforces the token's `authorization_details`
+directly ({{mission-bound-tokens}}) and, where the deployment
+discloses `authority_hash` to it at all (introspection's disclosure
+privilege, {{caller-authorization-and-minimization}}, or a companion
+profile's own copy, such as cross-domain's,
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}}), treats it as a
+whole-Mission audit and correlation anchor. It relies on the signed
+token as the AS's assertion that the carried authority was correctly
+projected from the approved set; `authority_hash` supplies no
+independent subset proof by itself.
 
 This document's flat Authority Set commitment defines no selective
-inclusion-proof mechanism: `authority_hash` digests the complete set
-as a single array ({{integrity-anchors}}), recomputation therefore
-needs the full set, and the baseline defines neither a retrieval
-surface for that set nor a proof format for anything less. Both are
-undefined here, not impossible. Retrieval carries a real privacy and
+inclusion-proof mechanism by itself: `authority_hash` digests the
+complete set as a single array ({{integrity-anchors}}), so
+recomputing it needs the full set. The Local Approved-Set
+Verification profile ({{local-approved-set-verification}}) defines
+the retrieval and fail-closed rules for a party that recomputes it
+this way, split into the Tier 1 projection-error check and the Tier
+2 independently-pinned check ({{lasv-retrieval}}), and identifies the
+minimum properties a typed selective-inclusion proof would need as a
+future composition point, without defining such a type itself
+({{lasv-proof-future}}). Retrieval carries a real privacy and
 authorization burden rather than an architectural prohibition: the
 minimization rules of {{caller-authorization-and-minimization}} keep
-other audiences' entries out of token introspection, so a distinct
-control-plane surface serving a policy decision point, auditor, or
-privileged Resource Server needs authorization at least that strong.
+other audiences' entries out of token introspection, so that
+profile's retrieval surface needs authorization at least that strong.
 
-A selective proof composes with the existing subset rules: a profile
-could commit the approved entries to a structure that supports
-inclusion proofs, prove the approved parent entry against that
-approval-time root, and apply the type-specific subset test
+A future selective proof would compose with the existing subset
+rules: it would commit the approved entries to a structure that
+supports inclusion proofs, prove the approved parent entry against
+that approval-time root, and apply the type-specific subset test
 ({{subset}}) between the carried narrowed entry and the disclosed
 parent; the cryptography stays generic, and only the semantic
-comparison is type-owned, the division this document uses
-throughout. Either mechanism is a future profile with privacy,
-commitment, and trust-bootstrap requirements to meet.
+comparison is type-owned, the division this document uses throughout.
 
-Under the
-baseline, a deployment that needs assurance independent of the token
-signature provisions the verifying party out of band, the Resource
-Server itself or a policy decision point holding a materialized view
-of the Mission record, and uses the recomputation path of
-{{rs-enforcement}}.
+A deployment that needs assurance independent of the token signature
+provisions the verifying party out of band, the Resource Server
+itself or a policy decision point holding a materialized view of the
+Mission record, and adopts the Local Approved-Set Verification
+profile ({{local-approved-set-verification}}).
 
 What such verification buys depends on when the issuer is
-compromised. A proof or retrieval response issued under the same
-trust root as the token adds nothing against an issuer malicious at
-approval time: that issuer can approve and commit arbitrary
-authority, and no containment mechanism changes that. The same
-checks do defend against projection implementation errors, against
-corruption of the record after an independently anchored approval
-commitment, and against post-approval signing-key compromise where
-the original commitment is pinned outside the issuer. The pinning is
-what makes the difference; the worked example in {{rs-enforcement}}
-lists what a deployment provisions to get it.
+compromised. Tier 1 retrieval issued under the same trust root as the
+token adds nothing against an issuer malicious at approval time: that
+issuer can approve and commit arbitrary authority, and no containment
+mechanism changes that. The same checks do defend against projection
+implementation errors, against corruption of the record after an
+independently anchored approval commitment, and against post-approval
+signing-key compromise where the original commitment is pinned
+outside the issuer under Tier 2. The pinning is what makes the
+difference; {{lasv-retrieval}} lists the retention point, trust
+basis, and retention rule a deployment declares to get it.
 
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
@@ -5269,8 +5461,8 @@ registry:
 
 - Claim Name: `mission`
 - Claim Description: Reference to the Mission a token was derived
-  under, with the consent-commitment `authority_hash`. An open object;
-  additional members may be present and are ignored if unknown.
+  under. An open object; additional members may be present and are
+  ignored if unknown.
 - Change Controller: IESG
 - Specification Document(s): this document, {{mission-claim}}
 
@@ -5282,9 +5474,11 @@ Introspection Response" registry ({{RFC7662}}):
 - Description: The Mission a token was derived under. Same object shape
   as the `mission` JWT claim ({{mission-claim}}); a response from the
   Mission's issuer additionally carries a `state` member giving the
-  current lifecycle state, where a derivation cap is in force a
-  `derivations_remaining` member, and where the Mission records an
-  authority proposal a `proposal_hash` member ({{introspection}}).
+  current lifecycle state, and, to a caller holding the disclosure
+  privilege for the member, `derivations_remaining` where a derivation
+  cap is in force, `proposal_hash` where the Mission records an
+  authority proposal, and `authority_hash` and `approval_basis`
+  ({{introspection}}).
 - Change Controller: IESG
 - Specification Document(s): this document, {{introspection}}
 
@@ -5610,16 +5804,14 @@ The decoded token:
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+    "issuer": "https://as.example.com"
   }
 }
 ~~~
 
 Everything enforcement needs is in the token: the audience, the
 sender-constraint (`cnf`), the authority with its constraints, and the
-`mission` claim carrying the `authority_hash` consent anchor. The
+`mission` claim identifying the Mission it was derived under. The
 token is short-lived (300 s) and its `exp` is far below
 `expires_at`; revoking the Mission stops further derivation, and
 this token dies at its own expiry ({{revocation}}).
@@ -6011,6 +6203,61 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- PR #725 review round: split Local Approved-Set Verification's
+  authenticated complete-set retrieval into two explicit tiers
+  ({{lasv-retrieval}}): Tier 1 (recompute and subset-check against a
+  retrieved set, detecting projection errors under continuing trust
+  in the issuer) and Tier 2 (additionally require the expected
+  `authority_hash` to come from an independently retained,
+  separately authenticated source, defending against post-approval
+  substitution). Removed the claim that Mission Status is a
+  compatible retrieval surface: Status returns only the requesting
+  audience's, and only the current effective (containment-filtered),
+  entries, never the complete immutable approved set. Corrected the
+  typed selective-inclusion proof from a claimable alternative to a
+  future composition point ({{lasv-proof-future}}), pending a
+  concrete proof type that authenticates its own root as the
+  Mission's approval-time commitment, and fixed its description to
+  prove the approved parent entry, never the carried narrowed entry
+  directly. Added the capability to the Conformance section's
+  OPTIONAL capabilities list ({{conformance}}). Closed a mismatched-
+  issuer gap in token introspection and child-grant redemption: both
+  resolved a Mission by `id` alone without checking the presented
+  `mission.issuer` against the resolved record's, now that
+  `(id, issuer)` is the complete Mission identity. Clarified that
+  Harness Evidence and Orchestration Evidence carry `authority_hash`
+  as their own optional audit extension, not inherited from the
+  baseline claim.
+
+- Minimal Mission claim (#702, coordinated with #699): the baseline
+  `mission` claim shrinks to exactly `id` and `issuer`.
+  `authority_hash` and `approval_basis` leave the baseline claim; both
+  stay on the Mission record and become available through token
+  introspection's member-scoped disclosure privilege, alongside
+  `derivations_remaining` and `proposal_hash`. Added the Local
+  Approved-Set Verification profile
+  ({{local-approved-set-verification}}), an OPTIONAL profile defining
+  authenticated complete-set retrieval, commitment recomputation, and
+  a subset check, or a typed selective-inclusion proof this document
+  does not itself define, for a party that needs to verify a token's
+  carried authority against the complete approved Authority Set
+  independently of the token signature. `expires_at` on the claim is
+  now explicitly profile-scoped: a consumer relying only on the
+  presented token's own validity needs nothing further, while a
+  profile minting a further credential downstream, or verifying
+  Mission lifetime from retained state, MUST require it and MUST
+  treat its absence as an error, never a silent fall back to the
+  token's own `exp`. The Extensibility section's documented stability
+  list narrows from `id`, `issuer`, `authority_hash` to `id` and
+  `issuer`; an extension that relied on `authority_hash`'s baseline
+  presence adopts the new profile or introspection's disclosure
+  privilege instead. A companion document that carries the recurring
+  `{id, issuer, authority_hash}` micro-descriptor as its own lineage
+  or audit anchor (offline attenuation, the cross-domain and cross-org
+  grants, the Mission Authority Server's Join Assertion) now carries
+  it as its own profile-owned extension member, never inherited from
+  this baseline.
 
 - Controls taxonomy retired and error codes reused per typical OAuth
   patterns (#636, #706, #117; one coordinated breaking cut). The

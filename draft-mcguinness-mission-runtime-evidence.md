@@ -235,7 +235,7 @@ names consequential read, consequential write, irreversible action,
 external commitment, and privileged administration), high-consequence
 classes, and parameter-bound are used as defined in
 {{I-D.draft-mcguinness-mission-runtime}}. The Mission claim (`id`,
-`issuer`, `authority_hash`) and the integrity anchors (`intent_hash`,
+`issuer`) and the integrity anchors (`intent_hash`,
 `authority_hash`) are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}; `authorization_details`
 entries of type `mission_resource_access` are used as defined in its
@@ -358,17 +358,20 @@ canonicalization, and integrity envelope a deployment emits.
   object, extended with the facts below, so the evidence chains back
   to the exact approved Mission. Sub-members:
 
-    `id`, `issuer`, `authority_hash`:
+    `id`, `issuer`:
     : REQUIRED. From the request's Mission reference.
 
     `policy_view_id`:
     : REQUIRED. The PDP's own view identifier; the PDP always knows
       and populates it, whatever the request carried.
 
-    `intent_hash`:
-    : OPTIONAL. It is carried in neither the `mission` claim nor
-      introspection, so only a PDP with direct Mission-record access
-      can record it.
+    `authority_hash`, `intent_hash`:
+    : OPTIONAL. Neither is carried on the baseline `mission` claim or
+      default introspection projection ({{I-D.draft-mcguinness-oauth-mission}}),
+      so a PDP records either only when it has direct Mission-record
+      access, holds introspection's `authority_hash` disclosure
+      privilege, or the request carried it under the Local
+      Approved-Set Verification profile.
 
     `policy_version`:
     : OPTIONAL. From the request's Mission reference, when known.
@@ -653,9 +656,10 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   and no permit.
 
 `mission`:
-: OPTIONAL. An object. The Mission reference (`id`, `issuer`,
-  `authority_hash`), present only when the refusing component
-  established it before the failure: for a PEP, for example, on
+: OPTIONAL. An object. The Mission reference (`id`, `issuer`, and
+  `authority_hash` where the refusing component holds it), present
+  only when the refusing component established it before the failure:
+  for a PEP, for example, on
   `pdp_unreachable`; for a PDP refusing on
   `mission_context_missing`, the reference is typically absent,
   since that is exactly what the request lacked.
@@ -724,9 +728,7 @@ that failed closed:
   "refusal_id": "ref_3VtM9kQ2xN7rB4sL8eP1jY5wZc",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+    "issuer": "https://as.example.com"
   },
   "audience": "https://erp.example.com",
   "action": { "name": "journal-entries.write" },
@@ -2023,10 +2025,13 @@ Evidence `result_summary` MUST NOT carry user-content payloads.
 
 The `actor` member carries the delegation chain, which MAY reveal
 service accounts, client instances, and organizational structure.
-Evidence carrying the same Mission `id` and `authority_hash` across
-resource boundaries can correlate a subject's activity; this is
-inherent to the Mission's role as a governance handle. Deployments that
-require unlinkability need an additional privacy design outside this
+Evidence carrying the same Mission `id` across resource boundaries can
+correlate a subject's activity; this is inherent to the Mission's role
+as a governance handle. Where a record also carries `authority_hash`
+(a PDP with direct Mission-record access, or a disclosure-privileged
+introspection caller), the same correlation extends to it, unlike the
+issuance profile's default disclosure. Deployments that require
+unlinkability need an additional privacy design outside this
 document.
 
 ## Mission Receipt {#receipt-privacy-considerations}

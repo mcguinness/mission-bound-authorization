@@ -620,21 +620,41 @@ export interface LifecycleCommit {
   containment_version?: number;
 }
 
-/** @spec mission#the-mission-claim — the token projection of the record. */
+/**
+ * @spec mission#the-mission-claim (#702) — the baseline token projection of
+ * the record is exactly `{id, issuer}`; they identify the Mission and carry
+ * no authority of their own. `authority_hash`, `expires_at`, and
+ * `approval_basis` are NOT part of the baseline claim — they are added only
+ * by a companion profile that owns them as its own extension member (e.g.
+ * child-delegation's `parent` ref, the attenuation/cross-domain/cross-org
+ * lineage anchor, or issuance-grant), never inherited here. A caller that
+ * needs the Mission's remaining lifetime reads the token's own `exp`, or
+ * introspects for the record's `expires_at` under the profile that requires
+ * it.
+ */
 export interface MissionClaim {
   id: string;
   issuer: string;
-  authority_hash: string;
   /**
-   * @spec mission#the-mission-claim — an RFC 3339 date-time STRING, the same
-   * form the Mission Record and every other family surface render it in. Epoch
-   * seconds here would be a second representation of one value on one wire.
+   * @spec mission#the-mission-claim (#702) — NOT carried on the baseline
+   * claim. Present only where a companion profile adds it as its own
+   * extension member (see the type doc above); do not set it here.
    */
-  expires_at: string;
+  authority_hash?: string;
+  /**
+   * @spec mission#the-mission-claim (#702) — an RFC 3339 date-time STRING,
+   * profile-scoped: NOT carried on the baseline claim. A profile that mints a
+   * further credential downstream of this one, or that verifies remaining
+   * lifetime from retained state rather than a live token, MUST require it
+   * and MUST treat its absence as an error, never a silent downgrade.
+   */
+  expires_at?: string;
   /**
    * @spec mission#approval-basis — the read-only wire signal of the basis
    * type. MUST NOT be relied on to grant authority; the full
-   * {@link ApprovalBasis} lives on the Mission Record only.
+   * {@link ApprovalBasis} lives on the Mission Record only. NOT carried on
+   * the baseline claim (#702); disclosed only via introspection under the
+   * caller's disclosure privilege.
    */
-  approval_basis: { type: ApprovalBasisType };
+  approval_basis?: { type: ApprovalBasisType };
 }

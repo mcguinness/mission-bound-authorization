@@ -319,8 +319,8 @@ action-class names (consequential read, consequential write,
 irreversible action, external commitment, and privileged
 administration) are used as defined in
 {{I-D.draft-mcguinness-mission-runtime}}. The Mission claim
-(`id`, `issuer`, `authority_hash`) and the integrity anchors
-(`intent_hash`, `authority_hash`) are used as defined in
+(`id`, `issuer`) and the integrity anchors (`intent_hash`,
+`authority_hash`) are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}; `authorization_details`
 entries of type `mission_resource_access` are used as defined in its
 Mission Resource Access Profile
@@ -371,11 +371,14 @@ policy view. The materialized policy view, its trusted-compiler and
 reproducibility rules, its bounded-fidelity property, and the
 content-addressed `policy_view_id` with its `mission-policy-view`
 integrity envelope are defined by the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}). That envelope's
-committed manifest binds the Mission's `mission_id` and `authority_hash`,
-alongside `policy_version` and the compiler identity that produced it,
-so a consistency check between a decision request and the loaded view
-is an equality test on `mission_id` and `authority_hash` alone
+({{I-D.draft-mcguinness-mission-runtime}}). The trusted compiler
+computes that envelope, and the `authority_hash` it binds, from its
+own held Mission record; the issuance profile's baseline `mission`
+claim does not carry `authority_hash` on the wire
+({{I-D.draft-mcguinness-oauth-mission}}), so a consistency check
+between a decision request and the loaded view is an equality test on
+`mission_id` and `issuer` alone, with `policy_view_id` as the
+optional, stronger content check where the requesting PEP holds it
 ({{pdp-request}}). Nothing in this
 binding requires the PDP to be remote: a PDP embedded in or colocated
 with its PEP, evaluating against a loaded materialized policy view,
@@ -474,9 +477,16 @@ so a change in state never mints a new `policy_view_id`
 : REQUIRED. A string containing a URI. The Mission's `issuer`.
 
 `authority_hash`:
-: REQUIRED. A string. The Authority Set integrity
-  anchor, in the integrity-anchor encoded form
-  ({{I-D.draft-mcguinness-oauth-mission}}).
+: OPTIONAL. A string. The Authority Set integrity anchor, in the
+  integrity-anchor encoded form ({{I-D.draft-mcguinness-oauth-mission}}).
+  Not carried on the issuance profile's baseline `mission` claim or
+  default introspection projection; a PEP includes it only where it
+  holds it under that profile's Local Approved-Set Verification
+  profile or introspection's disclosure privilege
+  ({{I-D.draft-mcguinness-oauth-mission}}). The mandatory identity
+  check of {{pdp-request}} does not depend on it; a PDP that receives
+  it and independently verifies it MAY use it as a further audit
+  correlator, never as a substitute for that check.
 
 `policy_version`:
 : REQUIRED when known. A string. The `policy_version` recorded at the
@@ -511,7 +521,11 @@ so a change in state never mints a new `policy_view_id`
   to be equal.
 
 This context anchors the Mission's approved Authority Set through
-`authority_hash`. Where a Mission runs a narrowing mechanism, the
+`id` and `issuer`, resolved against the materialized policy view the
+PDP loads for that Mission ({{mission-to-policy-materialization}});
+`authority_hash`, where a PEP carries it, is an additional audit
+correlator, not the anchor itself. Where a Mission runs a narrowing
+mechanism, the
 PDP evaluates the request against the Effective Authority Set
 ({{I-D.draft-mcguinness-oauth-mission-status}}), not the approved
 set alone, per the runtime profile's Authority decision input
@@ -963,8 +977,6 @@ Authorization: ...
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
-      "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "policy_version": "deploy-policy:v17",
       "policy_view_id":
         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
@@ -1026,11 +1038,14 @@ self-consistent:
    `mission_inactive` when its view disagrees with the PEP-supplied
    state. PEP-supplied state is a floor, never a substitute for a state
    source the PDP can itself consult.
-2. The `id` and `authority_hash` in `context.mission` equal the
-   `mission_id` and `authority_hash` committed in the materialized
-   policy view the PDP has loaded for this Mission
-   ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns
-   `view_inconsistent` on any inequality.
+2. The `id` and `issuer` in `context.mission` equal the `mission_id`
+   and issuer committed in the materialized policy view the PDP has
+   loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}});
+   the PDP returns `view_inconsistent` on any inequality. When
+   `context.mission.authority_hash` is also present, it MUST equal
+   the view's committed `authority_hash`, with the same
+   `view_inconsistent` result on inequality (its omission is covered
+   by rule 5 below).
 3. When `context.mission.policy_view_id` is present, it MUST equal
    the loaded view's `policy_view_id`, and the PDP returns
    `view_inconsistent` on inequality.
@@ -1042,8 +1057,8 @@ self-consistent:
    ({{mission-to-policy-materialization}}), and treats a mismatch as
    staleness (`stale_state`): one side has missed a committed change.
 5. A PDP MUST NOT fail a decision solely because the optional
-   `policy_view_id` or `policy_version` was omitted; the view the PDP
-   loaded is authoritative.
+   `policy_view_id`, `policy_version`, or `authority_hash` was
+   omitted; the view the PDP loaded is authoritative.
 6. When `context.credential.expires_at` is present, it has not passed;
    otherwise the PDP returns `credential_invalid`.
 7. The freshness conveyed in `context.mission_state_observation` the
@@ -1187,9 +1202,7 @@ Authorization: ...
       "context": {
         "mission": {
           "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-          "issuer": "https://as.example.com",
-          "authority_hash":
-            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+          "issuer": "https://as.example.com"
         },
         "mission_state_observation": {
           "state": "active",
@@ -1225,9 +1238,7 @@ Authorization: ...
       "context": {
         "mission": {
           "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-          "issuer": "https://as.example.com",
-          "authority_hash":
-            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+          "issuer": "https://as.example.com"
         },
         "mission_state_observation": {
           "state": "active",
@@ -1671,11 +1682,11 @@ carried in Decision Evidence:
   staleness bound (a freshness-window violation). While the condition
   is expected to clear on a fresh read, the PDP SHOULD mark the denial
   transient with `next_action: retry` ({{response-context}}).
-- `view_inconsistent`: the request's Mission `id`, `authority_hash`, or
-  `policy_view_id` does not equal the committed values in the
-  materialized policy view the PDP loaded, so the request and the loaded
-  view disagree on which Mission or view is in force. This is a view
-  inconsistency, not staleness.
+- `view_inconsistent`: the request's Mission `id` or `issuer`, or (when
+  carried) `authority_hash` or `policy_view_id`, does not equal the
+  committed values in the materialized policy view the PDP loaded, so
+  the request and the loaded view disagree on which Mission or view is
+  in force. This is a view inconsistency, not staleness.
 - `mission_inactive`: the Mission state is not `active`.
 - `mission_binding_failed`: in externally-established Mission binding
   mode ({{I-D.draft-mcguinness-mission-runtime}}), the PDP could not
@@ -1958,7 +1969,7 @@ carrier's extensibility rule.
 | Required action-bound approval absent (first evaluation) | PDP denial | `approval_required` |
 | Re-evaluation's presented approval fails a Mission or ARAP check | PDP denial | ARAP's `approval_expired`, `out_of_scope`, `grant_pending`, `policy_denied`, or `approval_unverifiable` ({{ARAP}}) |
 | Mission state stale (freshness-window violation) | PDP denial | `stale_state` |
-| Request Mission `id`, `authority_hash`, or `policy_view_id` inconsistent with the loaded view | PDP denial | `view_inconsistent` |
+| Request Mission `id` or `issuer`, or (when carried) `authority_hash` or `policy_view_id`, inconsistent with the loaded view | PDP denial | `view_inconsistent` |
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |

@@ -394,11 +394,14 @@ describe("approval basis (@spec mission#approval-basis, mission-template#templat
     expect(mission.authority_hash).toBe(authorityHash(ISS, mission.authority_set as never));
   });
 
-  it("carries approval_basis.type on the mission claim", () => {
+  it("discloses approval_basis.type via introspection only to a privileged caller (#702: not on the baseline claim)", () => {
     const t = mkTemplate();
     const { mission } = dispatch(t.id);
-    const claim = kernel.missionClaim(kernel.get(mission.id) as MissionRecord);
-    expect(claim.approval_basis).toEqual({ type: "template" });
+    const fresh = kernel.get(mission.id) as MissionRecord;
+    const claim = kernel.missionClaim(fresh);
+    expect(Object.keys(claim).sort()).toEqual(["id", "issuer"]);
+    const privileged = kernel.introspectionProjection(fresh, { disclose: new Set(["provenance"]) });
+    expect(privileged.approval_basis).toEqual({ type: "template" });
   });
 });
 

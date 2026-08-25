@@ -1219,8 +1219,10 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    {{I-D.draft-mcguinness-mission-harness}}) or from deployment
    configuration. In the AuthZEN binding
    ({{I-D.draft-mcguinness-mission-authzen}}) this is
-   `context.mission`; the PEP populates `authority_hash` and `state`
-   from the MAS's signed Mission Status response.
+   `context.mission`; the PEP additionally populates `state`, and
+   `authority_hash` where the MAS's signed Mission Status response
+   discloses it, as OPTIONAL enrichment beyond the required `id` and
+   `issuer`.
 2. **The PDP resolves the Mission at the MAS.** The PDP MUST resolve
    the referenced Mission through the MAS's Mission Status operation
    and MUST treat the MAS as the Mission state source under the
@@ -1295,9 +1297,9 @@ token, any holder inside the (subject, client) equivalence class
 joins ({{join-spoofing}}).
 
 A successful join, in the AuthZEN binding: the PEP supplies
-`context.mission` populated from its Mission binding, with
-`authority_hash` and `state` taken from the MAS's signed Mission
-Status response, and the other decision inputs per
+`context.mission` populated from its Mission binding, with `state`
+(and `authority_hash` where disclosed) taken from the MAS's signed
+Mission Status response, and the other decision inputs per
 {{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
@@ -1688,8 +1690,11 @@ claims:
 : REQUIRED. The MAS's issuer URL.
 
 `mission`:
-: REQUIRED. An object containing `id`, `issuer`, and
-  `authority_hash`.
+: REQUIRED. An object containing `id` and `issuer`
+  ({{I-D.draft-mcguinness-oauth-mission}}). The MAS MAY additionally
+  include `authority_hash` as an audit anchor; where included, PDP
+  Consumption's cross-check applies to it too
+  ({{join-assertion-pdp}}).
 
 `token`:
 : REQUIRED. An object containing `sha256`, the token digest as in
@@ -1760,7 +1765,9 @@ mapping checks of {{mission-join}} steps 3 and 4:
 - the signature, under a key from the MAS's `jwks_uri`, and the
   `mission-join+jwt` header `typ`;
 - that `iss` and the `mission` claim match the referenced Mission's
-  `issuer`, `id`, and `authority_hash`;
+  `issuer` and `id`; when the assertion's `mission` also carries
+  `authority_hash`, that it matches the referenced Mission's
+  `authority_hash` too;
 - that `exp` has not passed and any `aud` names this PDP; and
 - the token binding: the presented credential's digest equals
   `token.sha256` and its `cnf` key's thumbprint equals `token.jkt`.
@@ -2002,8 +2009,8 @@ PDP:
    `mission` claim, never from an external selection;
 4. where a propagated Mission-Reference is also present, requires
    exact equality of its issuer and Mission identifier with the
-   credential's `mission` claim and a consistent `authority_hash`,
-   and denies on any mismatch;
+   credential's `mission` claim, and, where both convey
+   `authority_hash`, a consistent value too, denying on any mismatch;
 5. applies current Mission state, current authority, the subject,
    client, and actor checks, and the sender proof, as elsewhere in
    this profile; and
@@ -2575,9 +2582,10 @@ Cache-Control: no-store
 
 The agent works under an ordinary OAuth token from the unchanged AS,
 which carries no Mission signal. For the first consequential action,
-the PEP supplies the Mission reference, with `authority_hash` and
-`state` from the MAS's signed Mission Status response, and the PDP
-verifies the subject and client joins ({{mission-join}}).
+the PEP supplies the Mission reference, with `state` (and
+`authority_hash` where the response discloses it) from the MAS's
+signed Mission Status response, and the PDP verifies the subject and
+client joins ({{mission-join}}).
 
 ~~~ json
 {

@@ -70,6 +70,12 @@ export {
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {
+  type LocalApprovedSetRetrieval,
+  LocalApprovedSetVerificationError,
+  type LocalApprovedSetVerificationReason,
+  verifyLocalApprovedSet,
+} from "./local-approved-set-verification.js";
+export {
   MCP_REFERENCE_META_KEY,
   MISSION_REFERENCE_HEADER,
   type PropagatedMissionReference,

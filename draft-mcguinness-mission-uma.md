@@ -773,11 +773,18 @@ The RPT is this binding's Mission-bound credential.
 ## The Mission Claim {#mission-claim}
 
 An RPT issued under a Mission names it through the `mission` claim:
-the family members `id`, `issuer`, and `authority_hash` as the
-issuance profile defines them, and it SHOULD carry the `expires_at`
-member as the issuance profile defines it
-({{I-D.draft-mcguinness-oauth-mission}}), a bounding commitment with
-no liveness. The claim is delivered on one of two carriage surfaces:
+the family members `id` and `issuer`, as the issuance profile's
+baseline `mission` claim defines them
+({{I-D.draft-mcguinness-oauth-mission}}). It SHOULD also carry the
+`expires_at` member as the issuance profile defines it, a bounding
+commitment with no liveness; the issuance profile's rule that a
+profile minting a further credential downstream, or verifying Mission
+lifetime from retained state, MUST require it applies here unchanged.
+`authority_hash` is likewise not part of this binding's baseline
+claim; it becomes available only on the same disclosure terms the
+issuance profile defines for its own baseline claim (introspection's
+disclosure privilege, or its Local Approved-Set Verification
+profile). The claim is delivered on one of two carriage surfaces:
 
 - **Token-carried**: a deployment issuing JWT-format RPTs carries
   the claim in the token per the issuance profile.
@@ -886,8 +893,6 @@ the document-service drawdown:
   "mission": {
     "id": "msn_4Xq7NvR2pTb8Kd1zYw6mA3f5",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:Qm4dSrX0kJc2uJ9pVzWfY7hTgD1eN8oLxCAiRb63EMk",
     "expires_at": "2026-12-31T23:59:59Z",
     "state": "active"
   }

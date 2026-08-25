@@ -328,13 +328,21 @@ The protected header MUST carry:
 
 `mission`:
 : REQUIRED. An object in the `mission` claim shape of the issuance
-  profile, extended per its extensibility rules: `id`, `issuer`, and
-  `authority_hash`, plus `intent_hash` committing the approved Mission
-  Intent, and `expires_at`, an RFC 3339 {{RFC3339}} date-time
-  mirroring the Mission record's `expires_at` (the `mission` claim
-  member the issuance-grant profile defines,
-  {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). All five
-  members are REQUIRED here. `mission.issuer` MUST equal `iss`.
+  profile (`id` and `issuer`, {{I-D.draft-mcguinness-oauth-mission}}),
+  extended per its extensibility rules with three members this
+  document requires beyond that baseline: `authority_hash`,
+  reintroduced as this document's own integrity anchor since a
+  Mandate travels to a verifier with no further channel back to the
+  Mission Issuer (mirroring the issuance-grant profile's own
+  reintroduction for the same reason,
+  {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}); `intent_hash`,
+  committing the approved Mission Intent; and `expires_at`, an RFC
+  3339 {{RFC3339}} date-time mirroring the Mission record's
+  `expires_at`, elevated to REQUIRED here the same way the
+  issuance-grant profile elevates it for the credentials it governs
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). All five
+  members (`id`, `issuer`, `authority_hash`, `intent_hash`,
+  `expires_at`) are REQUIRED here. `mission.issuer` MUST equal `iss`.
 
 `subject`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's
