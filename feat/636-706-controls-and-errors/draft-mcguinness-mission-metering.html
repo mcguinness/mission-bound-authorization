@@ -2576,18 +2576,23 @@ the humans adjudicating it.<a href="#section-14-2" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document has no IANA actions. <code>max_budget</code>, <code>max_calls</code>,
-<code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> are named
-top-level Mission Intent
-members defined by this
-profile under the issuance profile's Mission-Intent extension seam
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);
-<code>context.prior_evaluation_id</code> is AuthZEN extension data carried per
-the AuthZEN profile's conventions
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); <code>measured_duration</code> and
+<p id="section-15-1">This document registers the following in the issuance profile's
+"Mission Intent Members" registry: <code>max_budget</code>, <code>max_calls</code>,
+<code>max_duration</code>, and <code>max_egress_volume</code> as <code>stable</code>, and <code>exclusive</code>
+as <code>experimental</code> (not promoted; a 2026-08 assessment against this
+document's own promotion criteria, <a href="#promotion-criteria" class="auto internal xref">Section 2.1</a>, found every
+applicable gate unmet). Each is a named top-level Mission Intent
+member this profile defines, produces, and enforces in full under the
+issuance profile's Mission-Intent extension seam
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the registration records
+ownership only. <code>context.prior_evaluation_id</code> is AuthZEN extension
+data carried per the AuthZEN profile's conventions
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), needing no separate
+registration; <code>measured_duration</code> and
 <code>metering</code> are coordinated evidence members under the runtime
 evidence companion's extension conventions
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-15-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), likewise outside
+this registry.<a href="#section-15-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">

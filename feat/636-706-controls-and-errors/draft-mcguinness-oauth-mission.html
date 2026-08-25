@@ -1499,6 +1499,9 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20.2.7">
                 <p id="section-toc.1-1.20.2.7.1"><a href="#section-20.7" class="auto internal xref">20.7</a>.  <a href="#name-mission-lifecycle-states-re" class="internal xref">Mission Lifecycle States Registry</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20.2.8">
+                <p id="section-toc.1-1.20.2.8.1"><a href="#section-20.8" class="auto internal xref">20.8</a>.  <a href="#name-mission-intent-members-regi" class="internal xref">Mission Intent Members Registry</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
@@ -3436,19 +3439,26 @@ and conjunctive with anything a client requests below, and is never
 narrowed by a client's request.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">For the direct flow, a client <span class="bcp14">MAY</span> additionally request an
 approval-authentication strength on the authorization request using
-the standard <code>acr_values</code> and <code>max_age</code> parameters (<span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>,
-whose definition of both parameters refers to <span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span> Section
-3.1.2.1). In a Mission approval interaction these parameters describe
+the standard <code>acr_values</code> and <code>max_age</code> parameters, defined by
+<span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span> Section 3.1.2.1. This profiles their request-carriage
+syntax only, for a purpose distinct from <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>'s own exchange:
+that RFC associates the same parameters with the token's own Subject
+authentication and has the AS carry the achieved <code>acr</code>/<code>auth_time</code> on
+the resulting access token; this document uses that exchange
+unchanged, on its own terms, at <a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>, for a Resource
+Server's challenge against the token-associated user authentication.
+In a Mission approval interaction these parameters instead describe
 the requested authentication of the <strong>Approver</strong>, never of the
 token's Subject, who <span class="bcp14">MAY</span> be a different principal
 (<a href="#approval-event" class="auto internal xref">Section 6</a>, step 2); requesting them carries no inference
 about which principal an issued token's own authentication claims
-describe. <code>acr_values</code> is a space-separated, preference-ordered list,
-not a single required class: the Approver's authentication satisfies
-the request when it matches any one listed value, under the
-deployment's own policy mapping (this document defines no global
-ordering of <code>acr</code> values); <code>max_age</code> bounds the elapsed time since
-that authentication.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+describe, and this document does not adopt <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>'s
+token-claim-carriage behavior for them (see below). <code>acr_values</code> is a
+space-separated, preference-ordered list, not a single required
+class: the Approver's authentication satisfies the request when it
+matches any one listed value, under the deployment's own policy
+mapping (this document defines no global ordering of <code>acr</code> values);
+<code>max_age</code> bounds the elapsed time since that authentication.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 <p id="section-6.1-3">Approval authentication for a high-risk Mission (<a href="#approval-event" class="auto internal xref">Section 6</a>)
 <span class="bcp14">MUST</span> satisfy both the published floor and, where the client requested
 one, the <code>acr_values</code>/<code>max_age</code> carriage above; the floor is never
@@ -5111,9 +5121,16 @@ satisfying one satisfies the other.<a href="#section-9.3-10.1.1" class="pilcrow"
 </li>
           <li class="normal" id="section-9.3-10.2">
             <p id="section-9.3-10.2.1"><strong>Sender-constraint or key-binding failure.</strong> The token's proof of
-possession is missing or invalid: the RS challenges with the
-applicable Bearer, DPoP (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>), or mTLS (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>)
-<code>invalid_token</code> error. This is never a step-up: no fresh user
+possession is missing or invalid: the RS challenges with
+<code>invalid_token</code>. A DPoP-bound token (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) uses the <code>DPoP</code>
+              <code>WWW-Authenticate</code> scheme, with <code>error="invalid_token"</code> for a
+missing, invalid, or mismatched proof and <code>error="use_dpop_nonce"</code>
+where the RS requires a fresh nonce the client omitted or replayed
+(<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> Section 9); a certificate-bound token (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>)
+defines no challenge scheme of its own, and a presented client
+certificate that fails to match the token's confirmed thumbprint is
+denied under the ordinary Bearer <code>invalid_token</code> error (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>),
+per <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> Section 3. This is never a step-up: no fresh user
 authentication repairs a missing or wrong key.<a href="#section-9.3-10.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-9.3-10.3">
@@ -5330,9 +5347,21 @@ applies this mapping and does not restate it.<a href="#section-9.5-1" class="pil
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Protected resource: sender-constraint or key-binding failure</td>
-              <td class="text-left" rowspan="1" colspan="1">the applicable Bearer, DPoP (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>), or mTLS (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) <code>invalid_token</code> challenge</td>
-              <td class="text-left" rowspan="1" colspan="1">scheme-defined parameters</td>
+              <td class="text-left" rowspan="1" colspan="1">Protected resource: DPoP proof missing, invalid, or mismatched</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>DPoP</code> <code>invalid_token</code> challenge (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Protected resource: DPoP nonce required, missing, or stale</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>DPoP</code> <code>use_dpop_nonce</code> challenge (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">fresh nonce</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Protected resource: certificate-bound token's presented certificate mismatch</td>
+              <td class="text-left" rowspan="1" colspan="1">Bearer <code>invalid_token</code> challenge (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>, per <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> Section 3)</td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Protected resource: insufficient carried authority, or an unenforceable constraint</td>
@@ -5443,9 +5472,10 @@ lifecycle event where a state-distribution companion is deployed,
 always AS-established operational policy; a client <span class="bcp14">MAY</span> additionally
 request a ceiling narrower than that policy through the Mission
 Intent's <code>requested_derivation_limit</code> member (<a href="#mission-intent" class="auto internal xref">Section 4</a>).
-Omission of <code>requested_derivation_limit</code> does not mean unbounded: it
-means the client states no preference, and the effective limit is set
-entirely by AS policy.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+Omission of <code>requested_derivation_limit</code> means no client-requested
+ceiling, not necessarily a bounded effective result: the effective
+limit is set entirely by AS policy, which <span class="bcp14">MAY</span> itself impose no
+ceiling.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 <p id="section-10.1-2">The Mission Record's <code>derivation_limit</code> (<a href="#mission-record" class="auto internal xref">Section 8</a>) is the
 immutable, AS-established <strong>effective</strong> ceiling. At the approval
 event the AS establishes it as the minimum of the deployment's own
@@ -6168,19 +6198,22 @@ than ignoring it.<a href="#section-13-4.2.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-13-4.3">
           <p id="section-13-4.3.1"><strong>Mission Intent members.</strong> The Mission Intent's top level
 (<a href="#mission-intent" class="auto internal xref">Section 4</a>) is open to additional members beyond those
-this document defines: a companion profile <span class="bcp14">MAY</span> use a short member
-name coordinated with it, as the metering companion's
-consumption-bound members do
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), or a
-collision-resistant name otherwise. Each such member is defined,
-produced, and enforced entirely by its owning specification; this
-document defines no generic extension container for them. An AS's
-closed-top-level validation (<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>) recognizes
+this document defines: a companion profile registers a short member
+name in the Mission Intent Members registry (<a href="#iana-intent-members" class="auto internal xref">Section 20.8</a>)
+before using it, as the metering companion's consumption-bound
+members do (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), or uses a
+collision-resistant name without registering it. Each such member is
+defined, produced, and enforced entirely by its owning specification;
+this document defines no generic extension container for them. An
+AS's closed-top-level validation (<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>) recognizes
 exactly the members this document defines plus those of the
 companion profiles it implements, and refuses any other top-level
 member; a recognized member never grants or widens authority beyond
 what its owning specification states, and an AS ignores none of the
-members it recognizes.<a href="#section-13-4.3.1" class="pilcrow">¶</a></p>
+members it recognizes. The registry resolves which specification
+owns a given short name before two independently implemented
+companions can collide on it; it does not itself make an AS
+implement, recognize, or trust any member, registered or not.<a href="#section-13-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-4.4">
           <p id="section-13-4.4.1"><strong>Integrity anchors.</strong> Additional committed objects use the same
@@ -7624,6 +7657,222 @@ Internet-Draft reference as a publication dependency under this
 registry's policy until it is published.<a href="#section-20.7-7" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="iana-intent-members">
+<section id="section-20.8">
+        <h3 id="name-mission-intent-members-regi">
+<a href="#section-20.8" class="section-number selfRef">20.8. </a><a href="#name-mission-intent-members-regi" class="section-name selfRef">Mission Intent Members Registry</a>
+        </h3>
+<p id="section-20.8-1">IANA is requested to create the "Mission Intent Members" registry.
+The registration policy is Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>. A
+Designated Expert reviews a submission for: a <code>Name</code> not already
+registered by a different owning specification; and a <code>Semantics</code>
+sentence naming what the member means and which specification defines
+its schema, production, and enforcement in full. This registry
+resolves ownership of a short top-level name so two independently
+implemented companions cannot assign it incompatible schemas; it does
+not itself define member semantics, and registering a name confers no
+authority and does not make any AS recognize, implement, or trust it
+(<a href="#extensibility" class="auto internal xref">Section 13</a>). A companion profile <span class="bcp14">MAY</span> instead use a
+collision-resistant name and skip registration entirely; registration
+is how a <em>short</em> name stays available for reuse across the family.
+Registration does not require IETF review or a Standards Track
+document; a Specification Required reference a Designated Expert can
+review against these criteria suffices.<a href="#section-20.8-1" class="pilcrow">¶</a></p>
+<p id="section-20.8-2">Each registration records:<a href="#section-20.8-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-20.8-3.1">
+            <p id="section-20.8-3.1.1"><strong>Name</strong>: the member's top-level key in the Mission Intent.<a href="#section-20.8-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-20.8-3.2">
+            <p id="section-20.8-3.2.1"><strong>Status</strong>: <code>stable</code> or <code>experimental</code>. An <code>experimental</code> entry's
+owning specification has not completed that specification's own
+promotion criteria for the member; a Designated Expert <span class="bcp14">MUST NOT</span>
+register a member <code>stable</code> on a specification's unverified say-so,
+and <span class="bcp14">MUST NOT</span> treat registration itself as a promotion event for an
+experimental member.<a href="#section-20.8-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-20.8-3.3">
+            <p id="section-20.8-3.3.1"><strong>Semantics</strong>: one sentence stating what the member means and
+pointing to the section that fully defines it.<a href="#section-20.8-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-20.8-3.4">
+            <p id="section-20.8-3.4.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-20.8-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-20.8-3.5">
+            <p id="section-20.8-3.5.1"><strong>Reference</strong>: the specification defining the member.<a href="#section-20.8-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-20.8-4">This document seeds the registry with the members it defines itself:<a href="#section-20.8-4" class="pilcrow">¶</a></p>
+<span id="name-core-defined-mission-intent"></span><table class="center" id="table-7">
+          <caption>
+<a href="#table-7" class="selfRef">Table 7</a>:
+<a href="#name-core-defined-mission-intent" class="selfRef">Core-defined Mission Intent members</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Name</th>
+              <th class="text-left" rowspan="1" colspan="1">Status</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>goal</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission's plain-language objective.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>goal_lang</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">BCP 47 language tag for <code>goal</code>.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>target_resources</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Client-requested derivation ceiling and template-mode lookup source.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>task_bounds</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Non-machine-readable prose bounds on the task.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>purpose</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Prose purpose statement.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expires_at</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Requested Mission expiry ceiling.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>requested_derivation_limit</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Client-requested derivation-count ceiling (<a href="#derivation-issuance-policy" class="auto internal xref">Section 10.1</a>).</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-intent" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-20.8-6">It further seeds the registry with the metering companion's members,
+registered on that profile's behalf; the companion's own document
+owns each member's schema, production, and enforcement in full, and
+this table records ownership only:<a href="#section-20.8-6" class="pilcrow">¶</a></p>
+<span id="name-metering-owned-mission-inte"></span><table class="center" id="table-8">
+          <caption>
+<a href="#table-8" class="selfRef">Table 8</a>:
+<a href="#name-metering-owned-mission-inte" class="selfRef">Metering-owned Mission Intent members</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Name</th>
+              <th class="text-left" rowspan="1" colspan="1">Status</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>max_budget</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Consumption ceiling on a currency-denominated spend bound.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>max_calls</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Consumption ceiling on a call-count bound.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>max_duration</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Consumption ceiling on an elapsed-duration bound.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>max_egress_volume</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">stable</td>
+              <td class="text-left" rowspan="1" colspan="1">Consumption ceiling on a data-egress bound.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>exclusive</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">experimental</td>
+              <td class="text-left" rowspan="1" colspan="1">Consented exclusivity groups over Authority Set selectors, latched PDP-side; NOT promoted (2026-08 assessment against the companion's own promotion criteria found every applicable gate unmet).</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-20.8-8">Each further document that defines a Mission Intent member requests
+that member's registration in its own IANA considerations, carrying
+its Internet-Draft reference as a publication dependency under this
+registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -8501,9 +8750,9 @@ with integrity resting on record custody and the typed anchors.<a href="#appendi
 </li>
       </ol>
 <p id="appendix-C-4">The capability table:<a href="#appendix-C-4" class="pilcrow">¶</a></p>
-<span id="name-oauth-mission-binding-capab"></span><table class="center" id="table-7">
+<span id="name-oauth-mission-binding-capab"></span><table class="center" id="table-9">
         <caption>
-<a href="#table-7" class="selfRef">Table 7</a>:
+<a href="#table-9" class="selfRef">Table 9</a>:
 <a href="#name-oauth-mission-binding-capab" class="selfRef">OAuth Mission binding capability table</a>
         </caption>
 <thead>

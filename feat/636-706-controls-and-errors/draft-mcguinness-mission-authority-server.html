@@ -1895,7 +1895,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "intent": {
     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-    "resources": ["https://erp.example.com"],
+    "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
@@ -2004,8 +2004,9 @@ body:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-5.3-2.6">
             <p id="section-5.3-2.6.1"><span class="bcp14">OPTIONAL</span>. A string. A machine-readable refinement of <code>error</code>: for
 <code>invalid_mission_intent</code>, the name of the offending top-level
-member; for <code>invalid_authority</code>, the <code>resources</code> entry no authority
-could be derived for. It reflects the client's own input and <span class="bcp14">MUST NOT</span> disclose policy internals.<a href="#section-5.3-2.6.1" class="pilcrow">¶</a></p>
+member; for <code>invalid_authority</code>, the <code>target_resources</code> entry no
+authority could be derived for. It reflects the client's own input
+and <span class="bcp14">MUST NOT</span> disclose policy internals.<a href="#section-5.3-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2531,7 +2532,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "intent": {
     "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
-    "resources": ["https://erp.example.com"],
+    "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
   "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -4713,7 +4714,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "intent": {
     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-    "resources": ["https://erp.example.com"],
+    "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
