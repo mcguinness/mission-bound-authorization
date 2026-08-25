@@ -207,8 +207,8 @@ which this document imports normatively
 digest ({{envelope}}) is a canonical-object digest.
 
 The terms Mission, Mission Issuer, Approver, approval event, Mission
-Intent, `approval_event_id`, `intent_hash`, `authority_hash`, and
-`controls` are used as defined in
+Intent, `approval_event_id`, `intent_hash`, and `authority_hash`
+are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}.
 
 Approval Governance Record (AGR):
@@ -480,7 +480,7 @@ decision.
 
 At evaluation, the issuer MUST classify the committed Mission's
 consequence classes from the derived Authority Set and from any
-consumption bound Mission Intent `controls` carries
+consumption bound the Mission Intent carries
 ({{I-D.draft-mcguinness-mission-metering}}). The issuer MUST select,
 across every class either source carries, the strictest maximum age
 that applies, accounting for any declared exception. This is a
@@ -525,7 +525,7 @@ Four conditions are the high-risk classes the issuance profile
 defines: irreversible action, external commitment, privileged
 administration, and a consumption bound
 ({{I-D.draft-mcguinness-oauth-mission}}). Where the committed
-Mission's derived Authority Set or Mission Intent `controls`
+Mission's derived Authority Set or Mission Intent
 ({{I-D.draft-mcguinness-mission-metering}}) carries one, the
 assertion satisfying the accountable-approver rule of
 {{assertion-requirements}} MUST be `kind: human`, unless a committed,
@@ -831,11 +831,11 @@ A **Recording Issuer** MUST:
 - evaluate under the retained policy version;
 - enforce the strictest applicable policy-approval maximum age across
   the consequence classes the committed Mission's derived Authority
-  Set and Mission Intent `controls` carry, from a committed ceiling
+  Set and Mission Intent carry, from a committed ceiling
   and any committed exception ({{policy-approval-recency}});
 - require `kind: human` for the accountable-approver assertion where
   the committed Mission's derived Authority Set or Mission Intent
-  `controls` carries a high-risk class, unless a committed
+  carries a high-risk class, unless a committed
   class-named exception applies ({{policy-approval-recency}});
 - commit the record atomically with Mission creation and let failure
   prevent activation ({{atomic-commitment}});

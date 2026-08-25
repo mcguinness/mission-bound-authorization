@@ -286,7 +286,7 @@ Termination:
   issuance, not on tokens already in flight.
 
 Continuation is bounded in time by the Mission's expiry; that expiry is
-the continuity ceiling. The Mission's `max_derivations`, where present,
+the continuity ceiling. The Mission's `derivation_limit`, where established,
 remains a bound on distinct derivations and is not a separate continuity
 ceiling. A continuation that issues a distinct new grant (for example, an
 Identity Continuation hop that mints a new audience-scoped credential)
@@ -297,7 +297,7 @@ each count again.
 This counts derivations within one Mission; it does
 not bound how many derivations a subtree of Child Missions performs in
 aggregate, which the child delegation profile's own local, per-Mission
-`max_derivations` warning addresses
+`derivation_limit` warning addresses
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
 "Derivation Budget Is Not Inherited").
 
@@ -378,7 +378,7 @@ the trigger.
 This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
-against `max_derivations` ({{authorization-continuity}}).
+against `derivation_limit` ({{authorization-continuity}}).
 
 Establishing the family is a delegation-family-creating exchange, and a
 client that loses the response retries with a fresh, valid proof; without
