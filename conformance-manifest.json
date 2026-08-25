@@ -3,11 +3,11 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "6dda8ffc4d4c6ad60f8fd1cb251a01dac49cbd31",
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
     "content_sha256": "57bc7d306a5ad716a5648a6b478c82985641bb5a4a597b4a0f5dc781782e4441"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "6dda8ffc4d4c6ad60f8fd1cb251a01dac49cbd31",
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
     "content_sha256": "24347d4b1e9934cc8d05037d7880fa0df20be0a54d053b5f625370588b5310d2"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
@@ -15,7 +15,7 @@
     "content_sha256": "25ec453cab44545ca7d15eabc948bbc5cf5c53b9d37ff9c5eda9ad3454a1930a"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "6dda8ffc4d4c6ad60f8fd1cb251a01dac49cbd31",
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
     "content_sha256": "82b15a77a57d40b169d134307d3230afc5ffa224910425739c152a902378ef36"
    },
    "draft-mcguinness-mission-substrate.md": {
@@ -27,7 +27,7 @@
     "content_sha256": "aa2fd0a45a2931c6cfcca034dcae0d8596279af199dc7f468717cbeb5bf2e45e"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "6dda8ffc4d4c6ad60f8fd1cb251a01dac49cbd31",
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
     "content_sha256": "02956ff6ccac4de784da54da99fabbdf90e78d9de8c23bd45b7d55ea4d8ecea8"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
@@ -47,7 +47,7 @@
     "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "6dda8ffc4d4c6ad60f8fd1cb251a01dac49cbd31",
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
     "content_sha256": "98ca534802e7678dc8b2e6fe3454223b8dce8c77bf8eacd9ef3aa2a10c2b330e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
@@ -55,7 +55,7 @@
     "content_sha256": "701867aef29b8172fe390559729f61644d4dde670cadd65c4b07618d5b246c98"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "6dda8ffc4d4c6ad60f8fd1cb251a01dac49cbd31",
+    "revision": "e320800686f61cb25a08f75757723d3b2a49af81",
     "content_sha256": "406a29b4886d0c2e147bc68a05f837c0e042b356780647798106912fd2338b2c"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
