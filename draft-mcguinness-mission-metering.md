@@ -1101,18 +1101,23 @@ the humans adjudicating it.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions. `max_budget`, `max_calls`,
-`max_duration`, `max_egress_volume`, and `exclusive` are named
-top-level Mission Intent
-members defined by this
-profile under the issuance profile's Mission-Intent extension seam
-({{I-D.draft-mcguinness-oauth-mission}});
-`context.prior_evaluation_id` is AuthZEN extension data carried per
-the AuthZEN profile's conventions
-({{I-D.draft-mcguinness-mission-authzen}}); `measured_duration` and
+This document registers the following in the issuance profile's
+"Mission Intent Members" registry: `max_budget`, `max_calls`,
+`max_duration`, and `max_egress_volume` as `stable`, and `exclusive`
+as `experimental` (not promoted; a 2026-08 assessment against this
+document's own promotion criteria, {{promotion-criteria}}, found every
+applicable gate unmet). Each is a named top-level Mission Intent
+member this profile defines, produces, and enforces in full under the
+issuance profile's Mission-Intent extension seam
+({{I-D.draft-mcguinness-oauth-mission}}); the registration records
+ownership only. `context.prior_evaluation_id` is AuthZEN extension
+data carried per the AuthZEN profile's conventions
+({{I-D.draft-mcguinness-mission-authzen}}), needing no separate
+registration; `measured_duration` and
 `metering` are coordinated evidence members under the runtime
 evidence companion's extension conventions
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), likewise outside
+this registry.
 
 --- back
 

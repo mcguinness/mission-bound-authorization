@@ -1947,19 +1947,26 @@ narrowed by a client's request.
 
 For the direct flow, a client MAY additionally request an
 approval-authentication strength on the authorization request using
-the standard `acr_values` and `max_age` parameters ({{RFC9470}},
-whose definition of both parameters refers to {{OpenID.Core}} Section
-3.1.2.1). In a Mission approval interaction these parameters describe
+the standard `acr_values` and `max_age` parameters, defined by
+{{OpenID.Core}} Section 3.1.2.1. This profiles their request-carriage
+syntax only, for a purpose distinct from {{RFC9470}}'s own exchange:
+that RFC associates the same parameters with the token's own Subject
+authentication and has the AS carry the achieved `acr`/`auth_time` on
+the resulting access token; this document uses that exchange
+unchanged, on its own terms, at {{rs-enforcement}}, for a Resource
+Server's challenge against the token-associated user authentication.
+In a Mission approval interaction these parameters instead describe
 the requested authentication of the **Approver**, never of the
 token's Subject, who MAY be a different principal
 ({{approval-event}}, step 2); requesting them carries no inference
 about which principal an issued token's own authentication claims
-describe. `acr_values` is a space-separated, preference-ordered list,
-not a single required class: the Approver's authentication satisfies
-the request when it matches any one listed value, under the
-deployment's own policy mapping (this document defines no global
-ordering of `acr` values); `max_age` bounds the elapsed time since
-that authentication.
+describe, and this document does not adopt {{RFC9470}}'s
+token-claim-carriage behavior for them (see below). `acr_values` is a
+space-separated, preference-ordered list, not a single required
+class: the Approver's authentication satisfies the request when it
+matches any one listed value, under the deployment's own policy
+mapping (this document defines no global ordering of `acr` values);
+`max_age` bounds the elapsed time since that authentication.
 
 Approval authentication for a high-risk Mission ({{approval-event}})
 MUST satisfy both the published floor and, where the client requested
@@ -3358,9 +3365,16 @@ failure-stage mapping normatively):
   ({{approval-authentication}}); a client MUST NOT infer that
   satisfying one satisfies the other.
 - **Sender-constraint or key-binding failure.** The token's proof of
-  possession is missing or invalid: the RS challenges with the
-  applicable Bearer, DPoP ({{RFC9449}}), or mTLS ({{RFC8705}})
-  `invalid_token` error. This is never a step-up: no fresh user
+  possession is missing or invalid: the RS challenges with
+  `invalid_token`. A DPoP-bound token ({{RFC9449}}) uses the `DPoP`
+  `WWW-Authenticate` scheme, with `error="invalid_token"` for a
+  missing, invalid, or mismatched proof and `error="use_dpop_nonce"`
+  where the RS requires a fresh nonce the client omitted or replayed
+  ({{RFC9449}} Section 9); a certificate-bound token ({{RFC8705}})
+  defines no challenge scheme of its own, and a presented client
+  certificate that fails to match the token's confirmed thumbprint is
+  denied under the ordinary Bearer `invalid_token` error ({{RFC6750}}),
+  per {{RFC8705}} Section 3. This is never a step-up: no fresh user
   authentication repairs a missing or wrong key.
 - **Insufficient carried authority.** The action is outside the
   token's carried authority: the RS challenges with
@@ -3474,7 +3488,9 @@ applies this mapping and does not restate it.
 | Token endpoint: the Mission is revoked, expired, superseded, or its `derivation_limit` is exhausted | `invalid_grant` | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{RFC9396}}) | safe detail |
 | Protected resource: weak or stale token-associated user authentication | `insufficient_user_authentication` ({{RFC9470}}) | `acr_values`/`max_age` |
-| Protected resource: sender-constraint or key-binding failure | the applicable Bearer, DPoP ({{RFC9449}}), or mTLS ({{RFC8705}}) `invalid_token` challenge | scheme-defined parameters |
+| Protected resource: DPoP proof missing, invalid, or mismatched | `DPoP` `invalid_token` challenge ({{RFC9449}}) | none |
+| Protected resource: DPoP nonce required, missing, or stale | `DPoP` `use_dpop_nonce` challenge ({{RFC9449}}) | fresh nonce |
+| Protected resource: certificate-bound token's presented certificate mismatch | Bearer `invalid_token` challenge ({{RFC6750}}, per {{RFC8705}} Section 3) | none |
 | Protected resource: insufficient carried authority, or an unenforceable constraint | `insufficient_scope` ({{RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}) | `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Endpoint x parameter x failure-stage error mapping"}
 
@@ -3535,9 +3551,10 @@ A Mission's derivation limit bounds the number of derivations
 always AS-established operational policy; a client MAY additionally
 request a ceiling narrower than that policy through the Mission
 Intent's `requested_derivation_limit` member ({{mission-intent}}).
-Omission of `requested_derivation_limit` does not mean unbounded: it
-means the client states no preference, and the effective limit is set
-entirely by AS policy.
+Omission of `requested_derivation_limit` means no client-requested
+ceiling, not necessarily a bounded effective result: the effective
+limit is set entirely by AS policy, which MAY itself impose no
+ceiling.
 
 The Mission Record's `derivation_limit` ({{mission-record}}) is the
 immutable, AS-established **effective** ceiling. At the approval
@@ -4181,19 +4198,22 @@ new machinery:
   than ignoring it.
 - **Mission Intent members.** The Mission Intent's top level
   ({{mission-intent}}) is open to additional members beyond those
-  this document defines: a companion profile MAY use a short member
-  name coordinated with it, as the metering companion's
-  consumption-bound members do
-  ({{I-D.draft-mcguinness-mission-metering}}), or a
-  collision-resistant name otherwise. Each such member is defined,
-  produced, and enforced entirely by its owning specification; this
-  document defines no generic extension container for them. An AS's
-  closed-top-level validation ({{submission-via-par}}) recognizes
+  this document defines: a companion profile registers a short member
+  name in the Mission Intent Members registry ({{iana-intent-members}})
+  before using it, as the metering companion's consumption-bound
+  members do ({{I-D.draft-mcguinness-mission-metering}}), or uses a
+  collision-resistant name without registering it. Each such member is
+  defined, produced, and enforced entirely by its owning specification;
+  this document defines no generic extension container for them. An
+  AS's closed-top-level validation ({{submission-via-par}}) recognizes
   exactly the members this document defines plus those of the
   companion profiles it implements, and refuses any other top-level
   member; a recognized member never grants or widens authority beyond
   what its owning specification states, and an AS ignores none of the
-  members it recognizes.
+  members it recognizes. The registry resolves which specification
+  owns a given short name before two independently implemented
+  companions can collide on it; it does not itself make an AS
+  implement, recognize, or trust any member, registered or not.
 - **Integrity anchors.** Additional committed objects use the same
   domain-separated, issuer-bound envelope with a new `typ`
   ({{integrity-anchors}}). A consent-disclosure commitment, an
@@ -5334,6 +5354,72 @@ This document seeds the registry with the states it defines:
 Each further document that defines a lifecycle state requests that
 state's registration in its own IANA considerations, carrying its
 Internet-Draft reference as a publication dependency under this
+registry's policy until it is published.
+
+## Mission Intent Members Registry {#iana-intent-members}
+
+IANA is requested to create the "Mission Intent Members" registry.
+The registration policy is Specification Required {{RFC8126}}. A
+Designated Expert reviews a submission for: a `Name` not already
+registered by a different owning specification; and a `Semantics`
+sentence naming what the member means and which specification defines
+its schema, production, and enforcement in full. This registry
+resolves ownership of a short top-level name so two independently
+implemented companions cannot assign it incompatible schemas; it does
+not itself define member semantics, and registering a name confers no
+authority and does not make any AS recognize, implement, or trust it
+({{extensibility}}). A companion profile MAY instead use a
+collision-resistant name and skip registration entirely; registration
+is how a *short* name stays available for reuse across the family.
+Registration does not require IETF review or a Standards Track
+document; a Specification Required reference a Designated Expert can
+review against these criteria suffices.
+
+Each registration records:
+
+- **Name**: the member's top-level key in the Mission Intent.
+- **Status**: `stable` or `experimental`. An `experimental` entry's
+  owning specification has not completed that specification's own
+  promotion criteria for the member; a Designated Expert MUST NOT
+  register a member `stable` on a specification's unverified say-so,
+  and MUST NOT treat registration itself as a promotion event for an
+  experimental member.
+- **Semantics**: one sentence stating what the member means and
+  pointing to the section that fully defines it.
+- **Change Controller**: IETF, or the registrant for any other
+  registration.
+- **Reference**: the specification defining the member.
+
+This document seeds the registry with the members it defines itself:
+
+| Name | Status | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `goal` | stable | The Mission's plain-language objective. | IETF | this document, {{mission-intent}} |
+| `goal_lang` | stable | BCP 47 language tag for `goal`. | IETF | this document, {{mission-intent}} |
+| `target_resources` | stable | Client-requested derivation ceiling and template-mode lookup source. | IETF | this document, {{mission-intent}} |
+| `task_bounds` | stable | Non-machine-readable prose bounds on the task. | IETF | this document, {{mission-intent}} |
+| `purpose` | stable | Prose purpose statement. | IETF | this document, {{mission-intent}} |
+| `expires_at` | stable | Requested Mission expiry ceiling. | IETF | this document, {{mission-intent}} |
+| `requested_derivation_limit` | stable | Client-requested derivation-count ceiling ({{derivation-issuance-policy}}). | IETF | this document, {{mission-intent}} |
+{: title="Core-defined Mission Intent members"}
+
+It further seeds the registry with the metering companion's members,
+registered on that profile's behalf; the companion's own document
+owns each member's schema, production, and enforcement in full, and
+this table records ownership only:
+
+| Name | Status | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `max_budget` | stable | Consumption ceiling on a currency-denominated spend bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
+| `max_calls` | stable | Consumption ceiling on a call-count bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
+| `max_duration` | stable | Consumption ceiling on an elapsed-duration bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
+| `max_egress_volume` | stable | Consumption ceiling on a data-egress bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
+| `exclusive` | experimental | Consented exclusivity groups over Authority Set selectors, latched PDP-side; NOT promoted (2026-08 assessment against the companion's own promotion criteria found every applicable gate unmet). | IETF | {{I-D.draft-mcguinness-mission-metering}} |
+{: title="Metering-owned Mission Intent members"}
+
+Each further document that defines a Mission Intent member requests
+that member's registration in its own IANA considerations, carrying
+its Internet-Draft reference as a publication dependency under this
 registry's policy until it is published.
 
 --- back
