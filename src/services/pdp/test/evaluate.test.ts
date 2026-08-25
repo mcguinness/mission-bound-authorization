@@ -285,6 +285,15 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.context.denial_reason).toBe("view_inconsistent");
   });
 
+  it("@spec authzen#pdp-request consistency-id-and-issuer-equal -- view inconsistency (issuer mismatch) -> deny view_inconsistent", async () => {
+    const dec = await evaluate(
+      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://evil.test" } } }),
+      opts(view()),
+    );
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("view_inconsistent");
+  });
+
   it("@spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial", async () => {
     const dec = await evaluate(
       req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test" } } }),

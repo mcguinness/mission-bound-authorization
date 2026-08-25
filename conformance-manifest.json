@@ -8134,9 +8134,16 @@
     "normative": "a request whose context.mission id or issuer disagrees with the loaded materialized view's committed values is denied view_inconsistent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. The prior tests exercised an authority_hash mismatch specifically; the same-PR src update to services/pdp/src/evaluate.ts (dropping the unconditional authority_hash comparison) rewrites them to exercise an id/issuer mismatch and re-wires coverage here."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec authzen#pdp-request consistency-id-and-issuer-equal -- view inconsistency (issuer mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. services/pdp/src/evaluate.ts's rule 1 now checks id/issuer unconditionally and authority_hash present-then-check, matching this split."
   },
   {
    "id": "authzen.pdp-request.consistency-authority-hash-equal-when-present",
@@ -8157,9 +8164,22 @@
     "normative": "a supplied context.mission.authority_hash that disagrees with the PDP's loaded view's committed authority_hash is denied view_inconsistent; its omission alone never denies (see consistency-no-fail-on-optional-omission)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission. Test wiring pending the same-PR src update to services/pdp/src/evaluate.ts."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission."
   },
   {
    "id": "authzen.pdp-request.consistency-policy-view-id-equal",
@@ -8526,9 +8546,21 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > view inconsistency (authority_hash mismatch) -> deny view_inconsistent",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec authzen#pdp-request consistency-id-and-issuer-equal -- view inconsistency (issuer mismatch) -> deny view_inconsistent",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > @spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#702 narrowed this row's observation from authority_hash-as-required to id/issuer-as-required (authority_hash is now OPTIONAL, tracked separately by consistency-authority-hash-equal-when-present and consistency-no-fail-on-optional-omission). The wired test predates the #702 src update and currently exercises an authority_hash mismatch; id/issuer presence itself is still not separately asserted by a test, so coverage remains partial pending the same-PR src update."
+   "notes": "#702 narrowed this row's observation from authority_hash-as-required to id/issuer-as-required (authority_hash is now OPTIONAL, tracked separately by consistency-authority-hash-equal-when-present and consistency-no-fail-on-optional-omission). The issuer-mismatch test directly asserts id/issuer as the required identity members and the baseline-permits test confirms their presence alone (authority_hash absent) suffices, but both are endpoint-level PDP calls, not a dedicated unit-level test of context.mission construction itself, so coverage stays partial against this row's unit level."
   },
   {
    "id": "authzen.context-mission.origin-principal-only-from-verified-source",
