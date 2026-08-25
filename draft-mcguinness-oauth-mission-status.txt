@@ -205,12 +205,13 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: active.  Adopt when: You must observe
-   or change Mission state beyond token expiry (revoke, suspend,
-   complete).  Requires: Mission-Bound Authorization for OAuth 2.0.
-   Also requires, conditionally: Mission Resource Access Profile for
-   OAuth 2.0 (when the completion capability's terminal_when Common
-   Constraint is used).
+   Role: companion.  Spec maturity: experimental.  Maintenance: active.
+   Implementation: 21 conformance rows in conformance-manifest.json (18
+   tested, 2 partial, 1 todo).  Adopt when: You must observe or change
+   Mission state beyond token expiry (revoke, suspend, complete).
+   Requires: Mission-Bound Authorization for OAuth 2.0.  Also requires,
+   conditionally: Mission Resource Access Profile for OAuth 2.0 (when
+   the completion capability's terminal_when Common Constraint is used).
 
 3.  Conventions and Terminology
 

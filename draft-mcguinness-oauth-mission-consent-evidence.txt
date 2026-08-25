@@ -184,11 +184,12 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: active.  Adopt when: You must prove
-   what the Approver actually saw, not only what was approved.
-   Requires: Mission-Bound Authorization for OAuth 2.0.  Also requires,
-   conditionally: Mission Approval Governance (when an Approval
-   Governance Record is recorded).
+   Role: companion.  Spec maturity: experimental.  Maintenance: active.
+   Implementation: not yet in the conformance ledger (conformance-
+   manifest.json).  Adopt when: You must prove what the Approver
+   actually saw, not only what was approved.  Requires: Mission-Bound
+   Authorization for OAuth 2.0.  Also requires, conditionally: Mission
+   Approval Governance (when an Approval Governance Record is recorded).
 
 3.  Scope
 

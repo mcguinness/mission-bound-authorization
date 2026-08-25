@@ -214,9 +214,10 @@ Table of Contents
 
 2.  Status: An Experimental Sketch
 
-   Maturity: sketch.  Maintenance: lab-best-effort.  Adopt when:
-   Evaluating a UMA 2.0 deployment only.  Requires: Mission Substrate
-   Requirements.
+   Role: adapter-binding.  Spec maturity: sketch.  Maintenance: lab-
+   best-effort.  Implementation: not yet in the conformance ledger
+   (conformance-manifest.json).  Adopt when: Evaluating a UMA 2.0
+   deployment only.  Requires: Mission Substrate Requirements.
 
 3.  Conventions and Terminology
 

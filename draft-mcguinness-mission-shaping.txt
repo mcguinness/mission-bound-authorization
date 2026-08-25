@@ -182,12 +182,14 @@ Table of Contents
 
 2.  Status: An Informative Companion
 
-   Maturity: informational.  Maintenance: active.  Adopt when: You need
-   a defined client-side path from user prompt to candidate Mission
-   Intent.  Requires: nothing beyond its listed references.  Also
-   requires, conditionally: Mission Substrate Requirements (when shaping
-   evidence digests are produced); Mission-Bound Authorization for OAuth
-   2.0 (when the OAuth binding is the substrate).
+   Role: guide.  Spec maturity: not applicable.  Maintenance: active.
+   Implementation: not yet in the conformance ledger (conformance-
+   manifest.json).  Adopt when: You need a defined client-side path from
+   user prompt to candidate Mission Intent.  Requires: nothing beyond
+   its listed references.  Also requires, conditionally: Mission
+   Substrate Requirements (when shaping evidence digests are produced);
+   Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is
+   the substrate).
 
 3.  Relationship to the Issuance Profile
 

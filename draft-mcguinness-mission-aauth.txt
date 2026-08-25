@@ -195,9 +195,11 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: frozen-until-upstream-release.  Adopt
-   when: The substrate is AAuth: Mission context on its native propose/
-   approve flow.  Requires: Mission Substrate Requirements.
+   Role: adapter-binding.  Spec maturity: experimental.  Maintenance:
+   frozen-until-upstream-release.  Implementation: not yet in the
+   conformance ledger (conformance-manifest.json).  Adopt when: The
+   substrate is AAuth: Mission context on its native propose/approve
+   flow.  Requires: Mission Substrate Requirements.
 
 3.  Conventions and Terminology
 

@@ -230,8 +230,10 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: active.  Adopt when: The AS cannot
-   change: run Mission governance as a standalone control plane.
+   Role: adapter-binding.  Spec maturity: experimental.  Maintenance:
+   active.  Implementation: 18 conformance rows in conformance-
+   manifest.json (4 tested, 1 partial, 13 todo).  Adopt when: The AS
+   cannot change: run Mission governance as a standalone control plane.
    Requires: Mission Substrate Requirements; Mission-Bound Authorization
    for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.  Also
    requires, conditionally: Mission Approval Governance (when an

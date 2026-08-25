@@ -143,9 +143,11 @@ Table of Contents
    model places on a deployment that claims the suite, realized by the
    referenced profile, not a new conformance requirement of its own.
 
-   Maturity: informational.  Maintenance: active.  Adopt when: Reviewing
-   or auditing: the one consolidated trust and blast-radius view.
-   Requires: nothing beyond its listed references.
+   Role: guide.  Spec maturity: not applicable.  Maintenance: active.
+   Implementation: not yet in the conformance ledger (conformance-
+   manifest.json).  Adopt when: Reviewing or auditing: the one
+   consolidated trust and blast-radius view.  Requires: nothing beyond
+   its listed references.
 
 3.  Conventions and Terminology
 

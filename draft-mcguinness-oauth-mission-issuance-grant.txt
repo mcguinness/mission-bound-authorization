@@ -144,12 +144,13 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: active.  Adopt when: A MAS-governed
-   estate wants Mission-bound gated tokens without full intake at each
-   AS.  Requires: Mission Authority Server; Mission-Bound Authorization
-   for OAuth 2.0.  Also requires, conditionally: Mission Status and
-   Lifecycle for OAuth 2.0 (when Status supplies state and the Effective
-   Authority Set).
+   Role: companion.  Spec maturity: experimental.  Maintenance: active.
+   Implementation: 13 conformance rows in conformance-manifest.json (4
+   tested, 3 partial, 6 todo).  Adopt when: A MAS-governed estate wants
+   Mission-bound gated tokens without full intake at each AS.  Requires:
+   Mission Authority Server; Mission-Bound Authorization for OAuth 2.0.
+   Also requires, conditionally: Mission Status and Lifecycle for OAuth
+   2.0 (when Status supplies state and the Effective Authority Set).
 
 3.  Conventions and Terminology
 

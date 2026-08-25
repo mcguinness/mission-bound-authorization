@@ -476,9 +476,11 @@ Table of Contents
    receives terminated.  Polling is a freshness mechanism, not the
    safety floor: every PS endpoint still enforces mission state itself.
 
-   Maturity: stable.  Maintenance: frozen-until-upstream-release.  Adopt
-   when: Alongside the AAuth binding: status, termination, delegation-
-   tree queries.  Requires: nothing beyond its listed references.
+   Role: companion.  Spec maturity: experimental.  Maintenance: frozen-
+   until-upstream-release.  Implementation: not yet in the conformance
+   ledger (conformance-manifest.json).  Adopt when: Alongside the AAuth
+   binding: status, termination, delegation-tree queries.  Requires:
+   nothing beyond its listed references.
 
 7.  Terminate Operation
 

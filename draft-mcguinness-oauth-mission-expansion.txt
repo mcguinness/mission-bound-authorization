@@ -244,9 +244,11 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: active.  Adopt when: Approved
-   authority will predictably need to widen mid-task via fresh approval.
-   Requires: Mission-Bound Authorization for OAuth 2.0.
+   Role: companion.  Spec maturity: experimental.  Maintenance: active.
+   Implementation: not yet in the conformance ledger (conformance-
+   manifest.json).  Adopt when: Approved authority will predictably need
+   to widen mid-task via fresh approval.  Requires: Mission-Bound
+   Authorization for OAuth 2.0.
 
 3.  Conventions and Terminology
 

@@ -229,10 +229,11 @@ Table of Contents
    compromise degrades the guarantees.  Each profile's own Security
    Considerations remain normative over both.
 
-   Maturity: informational.  Maintenance: active.  Adopt when: Before
-   adopting anything: the Mission model, invariants, and assurance
-   levels the rest cite.  Requires: nothing beyond its listed
-   references.
+   Role: guide.  Spec maturity: not applicable.  Maintenance: active.
+   Implementation: not yet in the conformance ledger (conformance-
+   manifest.json).  Adopt when: Before adopting anything: the Mission
+   model, invariants, and assurance levels the rest cite.  Requires:
+   nothing beyond its listed references.
 
 3.  Conventions and Terminology
 
@@ -3810,7 +3811,17 @@ Table of Contents
    |                                         | decision contract:     |
    |                                         | parameter binding,     |
    |                                         | custody, fail-closed   |
-   |                                         | behavior.              |
+   |                                         | behavior; binding-     |
+   |                                         | neutral.               |
+   +-----------------------------------------+------------------------+
+   | mission-runtime-oauth                   | The OAuth 2.0          |
+   |                                         | realization of the     |
+   |                                         | runtime core's         |
+   |                                         | contract: token        |
+   |                                         | validation, the claim  |
+   |                                         | mapping, and the       |
+   |                                         | authority-entry        |
+   |                                         | mapping.               |
    +-----------------------------------------+------------------------+
    | mission-authzen                         | The concrete decision- |
    |                                         | API binding: the       |
@@ -3892,18 +3903,28 @@ Table of Contents
 
    *Proof and portability:*
 
-    +=================+==============================================+
-    | Document        | Role                                         |
-    +=================+==============================================+
-    | mission-mandate | A signed, portable statement of a Mission's  |
-    |                 | committed facts; evidence, not a credential. |
-    +-----------------+----------------------------------------------+
-    | mission-audit   | Registration of Mission evidence in a SCITT  |
-    |                 | Transparency Service; receipts verifiable    |
-    |                 | offline.                                     |
-    +-----------------+----------------------------------------------+
+     +===========================+===================================+
+     | Document                  | Role                              |
+     +===========================+===================================+
+     | mission-mandate           | A signed, portable statement of a |
+     |                           | Mission's committed facts;        |
+     |                           | evidence, not a credential.       |
+     +---------------------------+-----------------------------------+
+     | mission-audit             | Registration of Mission evidence  |
+     |                           | in a SCITT Transparency Service;  |
+     |                           | receipts verifiable offline.      |
+     +---------------------------+-----------------------------------+
+     | mission-evidence-envelope | Experimental: a generic, binding- |
+     |                           | neutral evidence envelope and     |
+     |                           | payload-type registry a future    |
+     |                           | evidence kind may register into;  |
+     |                           | seeds Intent Admission Evidence   |
+     |                           | as its first payload type,        |
+     |                           | migrating none of the family's    |
+     |                           | existing evidence kinds.          |
+     +---------------------------+-----------------------------------+
 
-                                 Table 21
+                                  Table 21
 
    *Security model:*
 

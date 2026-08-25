@@ -157,11 +157,13 @@ Table of Contents
 
 2.  Status: An Optional Profile
 
-   Maturity: stable.  Maintenance: active.  Adopt when: Consumers need
-   push notice of state changes instead of polling per Mission.
-   Requires: Mission Status and Lifecycle for OAuth 2.0.  Also requires,
-   conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
-   OAuth binding is the substrate).
+   Role: companion.  Spec maturity: experimental.  Maintenance: active.
+   Implementation: 6 conformance rows in conformance-manifest.json (5
+   tested, 1 partial).  Adopt when: Consumers need push notice of state
+   changes instead of polling per Mission.  Requires: Mission Status and
+   Lifecycle for OAuth 2.0.  Also requires, conditionally: Mission-Bound
+   Authorization for OAuth 2.0 (when the OAuth binding is the
+   substrate).
 
 3.  Conventions and Terminology
 

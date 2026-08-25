@@ -1483,7 +1483,8 @@ document describes components, interfaces, and data flows; the
 security model describes the trusted base and how each component's
 compromise degrades the guarantees. Each profile's own Security
 Considerations remain normative over both.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">Maturity: informational. Maintenance: active.
+<p id="section-2-3">Role: guide. Spec maturity: not applicable. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Before adopting anything: the Mission model, invariants, and assurance levels the rest cite.
 Requires: nothing beyond its listed references.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
@@ -5445,7 +5446,13 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#section-17-3" clas
             <td class="text-left" rowspan="1" colspan="1">
               <code>mission-runtime</code>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">The per-action decision contract: parameter binding, custody, fail-closed behavior.</td>
+            <td class="text-left" rowspan="1" colspan="1">The per-action decision contract: parameter binding, custody, fail-closed behavior; binding-neutral.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>mission-runtime-oauth</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">The OAuth 2.0 realization of the runtime core's contract: token validation, the claim mapping, and the authority-entry mapping.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
@@ -5548,6 +5555,12 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#section-17-3" clas
               <code>mission-audit</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">Registration of Mission evidence in a SCITT Transparency Service; receipts verifiable offline.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>mission-evidence-envelope</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Experimental: a generic, binding-neutral evidence envelope and payload-type registry a future evidence kind may register into; seeds Intent Admission Evidence as its first payload type, migrating none of the family's existing evidence kinds.</td>
           </tr>
         </tbody>
       </table>
