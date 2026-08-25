@@ -1409,7 +1409,7 @@ issuance, not on tokens already in flight.<a href="#section-5-2.10.1" class="pil
       <dd class="break"></dd>
 </dl>
 <p id="section-5-3">Continuation is bounded in time by the Mission's expiry; that expiry is
-the continuity ceiling. The Mission's <code>max_derivations</code>, where present,
+the continuity ceiling. The Mission's <code>derivation_limit</code>, where established,
 remains a bound on distinct derivations and is not a separate continuity
 ceiling. A continuation that issues a distinct new grant (for example, an
 Identity Continuation hop that mints a new audience-scoped credential)
@@ -1419,7 +1419,7 @@ each count again.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">This counts derivations within one Mission; it does
 not bound how many derivations a subtree of Child Missions performs in
 aggregate, which the child delegation profile's own local, per-Mission
-<code>max_derivations</code> warning addresses
+<code>derivation_limit</code> warning addresses
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
 "Derivation Budget Is Not Inherited").<a href="#section-5-4" class="pilcrow">¶</a></p>
 </section>
@@ -1516,7 +1516,7 @@ the trigger.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2-2">This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
-against <code>max_derivations</code> (<a href="#authorization-continuity" class="auto internal xref">Section 5</a>).<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+against <code>derivation_limit</code> (<a href="#authorization-continuity" class="auto internal xref">Section 5</a>).<a href="#section-7.2-2" class="pilcrow">¶</a></p>
 <p id="section-7.2-3">Establishing the family is a delegation-family-creating exchange, and a
 client that loses the response retries with a fresh, valid proof; without
 an idempotency identifier that retry mints a second live refresh-token

@@ -319,10 +319,10 @@ Table of Contents
        a narrower subset.  The requester MUST NOT obtain a wider one.
 
    4.  *Derivation event.* Each grant minted is a derivation event.
-       Where the Mission carries a consented controls.max_derivations,
-       the MAS MUST count grants against it atomically and refuse beyond
-       it, which gives that control a binding locus under the standalone
-       binding.
+       Where the Mission's established derivation_limit
+       ([I-D.draft-mcguinness-oauth-mission]) is set, the MAS MUST count
+       grants against it atomically and refuse beyond it, which gives
+       that ceiling a binding locus under the standalone binding.
 
    5.  *Evidence.* Each minting is recorded with the Mission record: the
        jti, audience, requested and granted entries, and time.
@@ -412,9 +412,9 @@ Table of Contents
    |                               |      | or exceeds the audience   |
    |                               |      | scope.                    |
    +-------------------------------+------+---------------------------+
-   | max_derivations_exhausted     | 409  | A consented               |
-   |                               |      | controls.max_derivations  |
-   |                               |      | is reached (Section 6).   |
+   | derivation_limit_exhausted    | 409  | The Mission's established |
+   |                               |      | derivation_limit is       |
+   |                               |      | reached (Section 6).      |
    +-------------------------------+------+---------------------------+
 
                                  Table 1

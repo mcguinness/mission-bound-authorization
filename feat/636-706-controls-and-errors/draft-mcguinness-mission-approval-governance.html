@@ -1338,8 +1338,8 @@ which this document imports normatively
 <code>approval_policy.digest</code> is an envelope anchor, and the record
 digest (<a href="#envelope" class="auto internal xref">Section 9</a>) is a canonical-object digest.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <p id="section-3-4">The terms Mission, Mission Issuer, Approver, approval event, Mission
-Intent, <code>approval_event_id</code>, <code>intent_hash</code>, <code>authority_hash</code>, and
-<code>controls</code> are used as defined in
+Intent, <code>approval_event_id</code>, <code>intent_hash</code>, and <code>authority_hash</code>
+are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-3-4" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3-5">
         <dt id="section-3-5.1">Approval Governance Record (AGR):</dt>
@@ -1692,7 +1692,7 @@ of <a href="#record" class="auto internal xref">Section 5</a> that the retained 
 decision.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <p id="section-8-3">At evaluation, the issuer <span class="bcp14">MUST</span> classify the committed Mission's
 consequence classes from the derived Authority Set and from any
-consumption bound Mission Intent <code>controls</code> carries
+consumption bound the Mission Intent carries
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The issuer <span class="bcp14">MUST</span> select,
 across every class either source carries, the strictest maximum age
 that applies, accounting for any declared exception. This is a
@@ -1742,7 +1742,7 @@ or the policy's freshness does not narrow or terminate it.<a href="#section-8-7"
 defines: irreversible action, external commitment, privileged
 administration, and a consumption bound
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Where the committed
-Mission's derived Authority Set or Mission Intent <code>controls</code>
+Mission's derived Authority Set or Mission Intent
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) carries one, the
 assertion satisfying the accountable-approver rule of
 <a href="#assertion-requirements" class="auto internal xref">Section 6</a> <span class="bcp14">MUST</span> be <code>kind: human</code>, unless a committed,
@@ -2237,13 +2237,13 @@ assertion (<a href="#assertion-requirements" class="auto internal xref">Section 
         <li class="normal" id="section-17-2.5">
           <p id="section-17-2.5.1">enforce the strictest applicable policy-approval maximum age across
 the consequence classes the committed Mission's derived Authority
-Set and Mission Intent <code>controls</code> carry, from a committed ceiling
+Set and Mission Intent carry, from a committed ceiling
 and any committed exception (<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>);<a href="#section-17-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-17-2.6">
           <p id="section-17-2.6.1">require <code>kind: human</code> for the accountable-approver assertion where
 the committed Mission's derived Authority Set or Mission Intent
-<code>controls</code> carries a high-risk class, unless a committed
+carries a high-risk class, unless a committed
 class-named exception applies (<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>);<a href="#section-17-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-17-2.7">

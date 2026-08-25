@@ -1420,10 +1420,11 @@ Table of Contents
    predecessor cross-check does not match the subject_token-resolved
    Mission, or whose predecessor is not active, fails with invalid_grant
    (Section 5.2, Section 5.3); an expansion Mission Intent the Mission
-   Issuer cannot parse or cannot derive a valid Authority Set from fails
-   with invalid_request or, where the issuance profile uses it,
-   invalid_authorization_details ([RFC9396]), exactly as for any Mission
-   creation.
+   Issuer cannot parse fails with invalid_request; one it can parse but
+   cannot derive a valid Authority Set from fails with
+   invalid_authorization_details ([RFC9396]) where the client submitted
+   a proposal alongside it, or access_denied where it did not, exactly
+   as for any Mission creation.
 
 14.  Worked Example
 

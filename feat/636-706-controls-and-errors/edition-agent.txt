@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-25T00:43:33Z
-Source repository commit: 96088c8a2a264b3a7785622e58285d895acfbcfb
+Generated: 2026-08-25T01:07:51Z
+Source repository commit: 111e75cfc7f565b44a27c477482ab6f4733740c9
 Member count: 9
 
 Reading order:
@@ -18238,10 +18238,10 @@ Table of Contents
    What this document fixes is the failure posture.  As with all
    constraints, an unmetered or unrecognized consumption bound MUST
    cause refusal rather than silent pass-through: when an applicable
-   entry's constraints, or the Mission's controls, carries a bound that
-   expresses cumulative consumption and the deployment does not meter
-   it, the PDP MUST refuse a consequential action governed by it.  A
-   deployment MUST NOT advertise consumption enforcement it does not
+   entry's constraints, or the Mission Intent itself, carries a bound
+   that expresses cumulative consumption and the deployment does not
+   meter it, the PDP MUST refuse a consequential action governed by it.
+   A deployment MUST NOT advertise consumption enforcement it does not
    perform.
 
 13.  Runtime Enforcement Evidence

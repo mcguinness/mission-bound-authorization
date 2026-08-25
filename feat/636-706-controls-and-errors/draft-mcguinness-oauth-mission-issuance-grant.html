@@ -1563,9 +1563,10 @@ subset. The requester <span class="bcp14">MUST NOT</span> obtain a wider one.<a 
 </li>
         <li id="section-6-2.4">
           <p id="section-6-2.4.1"><strong>Derivation event.</strong> Each grant minted is a derivation event.
-Where the Mission carries a consented <code>controls.max_derivations</code>,
-the MAS <span class="bcp14">MUST</span> count grants against it atomically and refuse beyond
-it, which gives that control a binding locus under the standalone
+Where the Mission's established <code>derivation_limit</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) is set, the MAS <span class="bcp14">MUST</span> count
+grants against it atomically and refuse beyond
+it, which gives that ceiling a binding locus under the standalone
 binding.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.5">
@@ -1716,10 +1717,10 @@ endpoint uses:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>max_derivations_exhausted</code>
+                <code>derivation_limit_exhausted</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">409</td>
-              <td class="text-left" rowspan="1" colspan="1">A consented <code>controls.max_derivations</code> is reached (<a href="#minting" class="auto internal xref">Section 6</a>).</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission's established <code>derivation_limit</code> is reached (<a href="#minting" class="auto internal xref">Section 6</a>).</td>
             </tr>
           </tbody>
         </table>

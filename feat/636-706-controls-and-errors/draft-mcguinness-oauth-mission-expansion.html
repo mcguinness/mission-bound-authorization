@@ -2987,9 +2987,10 @@ profile's error vocabulary directly: an expansion request whose
 Mission, or whose predecessor is not <code>active</code>, fails with
 <code>invalid_grant</code> (<a href="#request-binding" class="auto internal xref">Section 5.2</a>, <a href="#predecessor-active" class="auto internal xref">Section 5.3</a>); an
 expansion Mission
-Intent the Mission Issuer cannot parse or cannot derive a valid
-Authority Set from fails with <code>invalid_request</code> or, where the issuance
-profile uses it, <code>invalid_authorization_details</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), exactly
+Intent the Mission Issuer cannot parse fails with <code>invalid_request</code>; one
+it can parse but cannot derive a valid Authority Set from fails with
+<code>invalid_authorization_details</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) where the client submitted
+a proposal alongside it, or <code>access_denied</code> where it did not, exactly
 as for any Mission creation.<a href="#section-13-6" class="pilcrow">¶</a></p>
 </section>
 </div>

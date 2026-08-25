@@ -1625,7 +1625,7 @@ registered Common Constraint key present in the ceiling entry that the
 AS does not implement narrowing for <span class="bcp14">MUST NOT</span> be dropped while the
 entry survives. The AS <span class="bcp14">MUST</span> instead fail closed: refuse the whole
 derivation, or omit the entry from the result, exactly as an
-unrecognized <code>resources</code> value already may be; the granted
+unrecognized <code>target_resources</code> value already may be; the granted
 <code>authorization_details</code> echo reflects any such omission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Carrying the entry forward with the
 key dropped would widen effective authority past the ceiling exactly
@@ -2540,7 +2540,16 @@ registry.<a href="#section-8.3-6" class="pilcrow">¶</a></p>
 <p id="section-9-2">-00<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-3.1">
-          <p id="section-9-3.1.1">Review response (#637): relocated the Resource Server enforcement
+          <p id="section-9-3.1.1">Controls taxonomy retirement (#636): the AS-side no-registered-
+narrowing failure-closed cross-reference updated from an
+unrecognized <code>resources</code> value to an unrecognized <code>target_resources</code>
+value, matching the issuance profile's rename. No entry-level
+<code>constraints</code> reference changed; this document's own <code>constraints</code>
+is the RAR entry-level object, unaffected by the retirement of the
+Mission Intent's separate <code>controls</code> bucket.<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.2">
+          <p id="section-9-3.2.1">Review response (#637): relocated the Resource Server enforcement
 duties (exact/prefix resource matching, action matching,
 per-entry <code>constraints</code> enforcement) and the
 <code>mission_constraints_supported</code> protected-resource metadata member
@@ -2551,10 +2560,10 @@ role (Authorization Server vs. Resource Server) so an RS is not
 measured against issuer-only duties (subset/intersection, delegate
 eligibility, Transformation Capabilities declaration) it has no
 reason to implement. Adds this document's conformance-manifest
-source pin and its own requirement rows.<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+source pin and its own requirement rows.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-3.2">
-          <p id="section-9-3.2.1">Initial version: <code>mission_resource_access</code>, its resource and action
+        <li class="normal" id="section-9-3.3">
+          <p id="section-9-3.3.1">Initial version: <code>mission_resource_access</code>, its resource and action
 matching, generic constraints, the Common Constraints registry, the
 delegation policy and delegate-matching rules, the subset and
 intersection algebra, and the Resource Boundary Canonicalization
@@ -2563,7 +2572,7 @@ security analysis, relocated without change from
 defined inline (#637). Adds this type's concrete Scope Projection
 safety conditions and issuance-algorithm interlock (#698), and its
 Transformation Capabilities declaration for the issuance profile's
-machine-readable per-type capability map (#645).<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+machine-readable per-type capability map (#645).<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
