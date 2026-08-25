@@ -5,6 +5,9 @@ normative dependency outside the repository stands, and which of them
 are not yet ratified. [README.md](README.md) keeps only the pointer;
 the per-document catalog is in [DRAFTS.md](DRAFTS.md).
 
+The author's proposed initial OAuth WG submission set is recorded
+separately in [notes/oauth-wg-submission-set.md](notes/oauth-wg-submission-set.md).
+
 ## Dependency stability
 
 <!-- external-normative-ids: BEGIN (generated; validated by scripts/check-family-manifest.mjs) -->
