@@ -33,7 +33,15 @@ export interface EvidenceBase {
    */
   evaluation_id?: string;
   mission_id: string;
-  authority_hash: string;
+  /**
+   * @spec runtime-evidence#decision-evidence-object, #refusal-record (#702) —
+   * OPTIONAL: `authority_hash` is no longer on the baseline `mission` claim,
+   * so a Refusal Record emitted before the PEP resolves a `MissionView` (no
+   * verified token copy either) carries no `authority_hash`. A Decision
+   * Evidence record, produced only after the PEP loads its own `MissionView`,
+   * always has one to carry (see the `view.authority_hash` call site).
+   */
+  authority_hash?: string;
   action: string;
   parameter_digest?: string;
   instance_epoch: string;

@@ -109,7 +109,14 @@ export interface EvaluationRequest {
     mission: {
       id: string;
       issuer: string;
-      authority_hash: string;
+      /**
+       * @spec mission#the-mission-claim, authzen#context-mission (#702) —
+       * NOT part of the baseline `mission` claim; carried only where a
+       * companion profile or the PEP's own view adds it. When present, rule
+       * 1 below checks it for strict equality against the loaded view;
+       * absence is never itself a denial (authzen#pdp-request rule 5).
+       */
+      authority_hash?: string;
       policy_view_id?: string;
       /**
        * @spec cross-domain#mission-subject, authzen#pdp-request rule 10 —
@@ -290,11 +297,16 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     context: base({ denial_reason, reason: denial_reason }),
   });
 
-  // 1. View consistency (@spec: view_inconsistent).
+  // 1. View consistency (@spec: view_inconsistent). `id`/`issuer` are the
+  // mandatory identity check; `authority_hash` and `policy_view_id` (#702:
+  // authority_hash is no longer on the baseline claim) are present-then-check
+  // — a caller that supplies either MUST match, but neither's absence is
+  // itself a denial (@spec authzen#pdp-request rule 5).
   if (
     req.context.mission.id !== view.id ||
     req.context.mission.issuer !== view.issuer ||
-    req.context.mission.authority_hash !== view.authority_hash ||
+    (req.context.mission.authority_hash !== undefined &&
+      req.context.mission.authority_hash !== view.authority_hash) ||
     (req.context.mission.policy_view_id !== undefined && req.context.mission.policy_view_id !== pvid)
   ) {
     return deny("view_inconsistent");

@@ -23,7 +23,12 @@ export const SAAS_TOOLS: SaasTool[] = [
 
 interface SaasToken {
   sub: string;
-  mission: { id: string; issuer: string; authority_hash: string };
+  /**
+   * @spec mission#the-mission-claim (#702) — the baseline claim is exactly
+   * `{id, issuer}`; this token-only enforcement path (no PDP, no
+   * introspection) never reads `authority_hash`, so it is not typed here.
+   */
+  mission: { id: string; issuer: string };
   authorizationDetails: Array<{ resource: string; actions: string[] }>;
   cnfJkt: string;
 }
