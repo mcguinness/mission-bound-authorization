@@ -24,6 +24,30 @@
   "703": {
    "title": "Runtime: extract the OAuth Runtime Adapter; AuthZEN base plus feature profiles",
    "slugs": ["draft-mcguinness-mission-runtime", "draft-mcguinness-mission-authzen", "draft-mcguinness-mission-runtime-oauth"]
+  },
+  "708": {
+   "title": "Substrate: remove the normative OAuth dependency (assessment placement, bridge tier, neutral vectors)",
+   "slugs": ["draft-mcguinness-mission-substrate"]
+  },
+  "705": {
+   "title": "Status: availability state vs terminal cause (active/suspended/terminal + reason)",
+   "slugs": ["draft-mcguinness-oauth-mission-status"]
+  },
+  "242": {
+   "title": "Status: extract Status List and completion into optional extensions",
+   "slugs": ["draft-mcguinness-oauth-mission-status"]
+  },
+  "663": {
+   "title": "Family: three uncross-referenced accounts of what earns 'Mission-bound'",
+   "slugs": ["draft-mcguinness-oauth-mission"]
+  },
+  "660": {
+   "title": "Approval-time: template/progressive prohibited sets diverge from the core's high-risk classification",
+   "slugs": ["draft-mcguinness-oauth-mission-template", "draft-mcguinness-oauth-mission-progressive"]
+  },
+  "648": {
+   "title": "Impl: transaction-assurance idempotency claim states, idempotency_conflict, tombstones, active reconciliation (S-6 disposition stale)",
+   "slugs": ["draft-mcguinness-mission-runtime", "draft-mcguinness-mission-authzen"]
   }
  },
  "documents": {
