@@ -3366,7 +3366,8 @@ bound profiled by `aauth-mission-expiry`.
 
 | Document | Role |
 |---|---|
-| `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior. |
+| `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior; binding-neutral. |
+| `mission-runtime-oauth` | The OAuth 2.0 realization of the runtime core's contract: token validation, the claim mapping, and the authority-entry mapping. |
 | `mission-authzen` | The concrete decision-API binding: the AuthZEN request and response mapping and the denial classification. |
 | `mission-runtime-evidence` | The binding-neutral Decision Evidence, Execution Evidence, and Refusal Record objects a decision-API binding's PDP and PEP emit, their integrity envelope, and retention. |
 | `mission-metering` | Experimental: cumulative consumption bounds and the metering that enforces them. |

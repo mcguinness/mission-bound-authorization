@@ -29,25 +29,22 @@ author:
 normative:
   RFC9711:
   RFC3339:
-  RFC6749:
-  RFC6750:
   RFC6234:
-  RFC7662:
   RFC8785:
-  RFC9068:
-  RFC9700:
-  RFC9728:
-  I-D.draft-mcguinness-oauth-mission:
-    title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-substrate:
-    title: "Mission Substrate Requirements"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+
+informative:
+  RFC9700:
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -61,8 +58,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
+  I-D.draft-mcguinness-mission-runtime-oauth:
+    title: "Mission Runtime OAuth Adapter"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-transaction-authorization:
     title: "Mission Transaction Authorization Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
@@ -200,14 +203,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-issuance-grant:
-    title: "Mission Issuance Grant for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
@@ -275,7 +270,7 @@ inside its envelope.
 
 This document is the runtime layer that closes that gap: the
 enforcement half of the model, and the profile that makes a
-Mission-bound token more than governance metadata. Its substance is
+Mission-bound credential more than governance metadata. Its substance is
 one contract, stated once here and elaborated by the rest of the
 document.
 
@@ -302,12 +297,12 @@ specifies that binding likewise ({{authzen}}). This document is the
 architecture and invariant layer; the binding is the interoperability
 layer.
 
-## Relationship to the Issuance Profile {#relationship}
+## Relationship to Issuance and Derivation {#relationship}
 
-The seam between the two documents is exact. This document delivers
-the four things the issuance profile names as out of scope, plus
-enforcement of the constraints that profile carries but does not
-evaluate:
+The seam between an issuance-and-derivation layer and this document is
+exact. This document delivers four things an issuance-and-derivation
+layer names as out of scope, plus enforcement of the constraints that
+layer carries but does not evaluate:
 
 1. evaluation of a request's parameters against the Mission at the
    point of use ({{decision}}, {{parameter-binding}});
@@ -320,32 +315,29 @@ evaluate:
 and, additionally, the fail-closed treatment of consumption bounds
 ({{metering}}).
 
-This document depends normatively on the issuance profile and is not
-implementable alone: it consumes the Mission-bound access tokens that
-profile defines, or access tokens joined to an externally established
-Mission under {{mission-binding}}. It does not place any new
-requirement back on the issuance profile; it reads only fields that
-profile already defines:
+This document depends normatively on the Mission Substrate
+({{mission-substrate}}) and is not implementable alone: it consumes the
+Mission-bound credential a substrate-conforming binding derives, or a
+credential joined to an externally established Mission under
+{{mission-binding}}. It does not place any new requirement back on the
+issuance-and-derivation layer; it reads only the credential's
+established Mission reference, effective authority, subject and actor
+context, and sender-constraint confirmation, each realized concretely
+by the binding's own adapter. It obtains any value the credential does
+not carry (the current Mission lifecycle state, or a materialized
+policy-view version) at runtime as described below, never by requiring
+the issuance-and-derivation layer to add a field.
 
-- the `mission` claim (`id`, `issuer`);
-- the token's `authorization_details`, including entries of type
-  `mission_resource_access` (`resource`, `actions`, `constraints`,
-  and any `delegation` member) and any other entry type the deployment
-  supports under the issuance profile's rules;
-- the `act` chain, when delegation is in effect;
-- the standard `iss`, `aud`, `sub`, `client_id`, and `exp` claims, when
-  present in the token format; and
-- any `cnf` sender-constraint binding.
-
-Where this document needs a value the token does not carry (the
-current Mission lifecycle state, or a materialized policy-view
-version), it obtains it at runtime as described below, never by
-requiring the issuance profile to add a field.
-
+For the OAuth binding, that issuance-and-derivation layer is
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"), and
+the concrete claim mapping (`mission`, `authorization_details`, `act`,
+`iss`, `aud`, `sub`, `client_id`, `exp`, and `cnf`) is defined by the
+OAuth Runtime Adapter ({{I-D.draft-mcguinness-mission-runtime-oauth}}).
 The Resource Server enforcement rules in the issuance profile remain
-the baseline for every Mission-bound access token. This document adds
+the baseline for every Mission-bound access token; this document adds
 an optional runtime conformance profile for deployments that claim
-execution-time Mission enforcement; it does not weaken the issuance
+execution-time Mission enforcement, and does not weaken the issuance
 profile's stateless token-validation, subset, delegation, or
 constraint-enforcement requirements.
 
@@ -363,7 +355,7 @@ state, and the applicable Resource policy. The permit is bound to
 the parameters the action executes with, and every decision and
 refusal path leaves evidence.
 
-Mission-bound tokens bound what authority may exist; the contract
+Mission-bound credentials bound what authority may exist; the contract
 fixes where and how that authority is re-checked before
 consequential effects occur. The order is the point: approve the
 bounded work, then authorize every consequential action against
@@ -439,21 +431,27 @@ Levels ({{I-D.draft-mcguinness-mission-architecture}}).
 Every decision evaluates one Mission: the **established Mission**. A
 deployment establishes it in one of two modes:
 
-- **Credential-carried.** The acting token's `mission` claim
-  identifies the Mission, under the issuance profile's binding
-  ({{I-D.draft-mcguinness-oauth-mission}}). The PEP takes the Mission
-  reference from the validated token ({{token-validation}}).
-- **Externally established.** The token carries no `mission` claim,
-  and the PEP supplies a Mission reference from the deployment's
-  Mission binding source. The PDP MUST verify that reference against
-  the acting credential under a join a binding profile defines; an
-  unverified reference MUST NOT establish the Mission. The Mission
-  Authority Server profile defines the concrete join for this mode
+- **Credential-carried.** The acting credential's Mission reference
+  identifies the Mission, under the binding's own credential
+  representation (the OAuth realization is the `mission` claim,
+  {{I-D.draft-mcguinness-oauth-mission}}). The PEP takes the Mission
+  reference from the validated credential, after establishing the
+  credential's validity for the protected resource and request under
+  the binding's own credential-validation rules (the OAuth realization
+  is defined by {{I-D.draft-mcguinness-mission-runtime-oauth}}).
+- **Externally established.** The acting credential carries no
+  Mission reference of its own, and the PEP supplies a Mission
+  reference from the deployment's Mission binding source. The PDP
+  MUST verify that reference against the acting credential under a
+  join a binding profile defines; an unverified reference MUST NOT
+  establish the Mission. The Mission Authority Server profile defines
+  the concrete join for this mode
   ({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
   binding's reference propagation supplies the externally carried
   reference for such a join
   ({{I-D.draft-mcguinness-mission-aauth}}), as the MAS profile's
-  Mission Reference Propagation channel does in token-less MAS mode.
+  Mission Reference Propagation channel does in credential-less MAS
+  mode.
 
 The mode each enforcement scope uses is part of its Enforcement
 Scope Statement ({{runtime-conformance}}). In either mode, the
@@ -462,17 +460,39 @@ established Mission is the Mission every input of {{decision-inputs}}
 evaluated against, and the Mission reference the permit and the
 evidence record bind.
 
+## Remote Decision Channel {#decision-channel}
+
+A PEP MUST NOT ask a PDP to authorize an action from unverified
+credential claims: a decision evaluates only what the PEP has already
+established as authenticated. Where the PEP and PDP are separate
+components, the decision request and response MUST be
+integrity-protected and the parties MUST authenticate each other. The
+PDP MUST accept credential-derived inputs only from a PEP authorized
+for the declared enforcement scope. A deployment can satisfy this with
+a mutually authenticated channel, a signed decision request and
+response, or another mechanism with equivalent security properties. A
+co-resident PDP and PEP, sharing one trust boundary, satisfy this
+requirement structurally and need no separate channel mechanism; the
+requirement is not optional for a boundary that is not co-resident.
+
+The PEP SHOULD send the PDP the minimum credential-derived attributes
+needed for the decision rather than the presented credential itself.
+Where a deployment instead sends the credential itself to the PDP, the
+PDP MUST treat it as a credential, protect it against disclosure, and
+MUST NOT use it outside the declared enforcement scope.
+
 ## Mission State and Freshness {#state-freshness}
 
-A Mission-aware decision needs the Mission's current state, which a
-token alone does not convey. A runtime deployment MUST define the
-Mission state source it trusts for each enforcement scope. Examples
-include issuer AS token introspection, a local Mission database, an
-authenticated status or event feed from the Mission `issuer`, or a
-short-lived cross-domain credential
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) whose lifetime
-is the deployment's accepted state lease. The materialized policy
-view ({{policy-view}}) is not a state source: it commits the
+A Mission-aware decision needs the Mission's current state, which the
+acting credential alone does not convey. A runtime deployment MUST
+define the Mission state source it trusts for each enforcement scope.
+A state source is a component, reachable under the deployment's own
+trust rules, from which the PDP establishes the Mission's lifecycle
+state and the freshness of that observation. Examples include a query
+to the Mission issuer, a local Mission database, an authenticated
+status or event feed, or a short-lived derived credential whose
+lifetime is the deployment's accepted state lease. The materialized
+policy view ({{policy-view}}) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.
 
@@ -504,20 +524,19 @@ class whose bound demands that.
   published staleness bound. The observation time alone, without
   adding the staleness bound, is never a permit's expiry.
 - When the credential issuer also holds the Mission, the PDP can learn
-  state through token introspection ({{RFC7662}}) at the issuer per
-  {{I-D.draft-mcguinness-oauth-mission}}. A non-issuer Resource AS
-  introspecting a local token
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) cannot report
-  current Mission state; it can establish local token validity, but not
-  issuer-side Mission freshness.
-- This document defines no cross-issuer by-Mission status query.
-  Deployments that need tighter freshness than the token or
-  cross-domain grant
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) lifetime
-  provides use the Mission Status profile
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) or Mission Lifecycle
-  Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}), or an
-  out-of-band trusted status feed.
+  state directly from the issuer through the binding's own state-query
+  mechanism. A non-issuer PDP validating a locally accepted credential
+  cannot report current Mission state that way; it can establish local
+  credential validity, but not issuer-side Mission freshness, absent a
+  separate cross-domain arrangement its binding defines
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}} for the OAuth
+  binding).
+- This document defines no cross-issuer by-Mission status query of its
+  own. Deployments that need tighter freshness than the credential's
+  own lifetime, or a cross-domain grant's lifetime, provides use an
+  active freshness mechanism their binding defines: a status query, a
+  status list, an event-driven signal feed, or an out-of-band trusted
+  status feed.
 - The maximum staleness bound per action class and state source is
   declared in the Enforcement Scope Statement
   ({{runtime-conformance}}), together with the revocation latency it
@@ -525,24 +544,24 @@ class whose bound demands that.
   non-conformant. For a PDP-gated class, a Mission's revocation
   takes effect, in the worst case, after the staleness bound plus
   the permit validity window plus the class's execution bound
-  ({{parameter-binding}}); the derived token's lifetime is the bound
-  only for paths outside PDP gating. This document imposes no
+  ({{parameter-binding}}); the derived credential's lifetime is the
+  bound only for paths outside PDP gating. This document imposes no
   universal value because the acceptable latency is deployment- and
   consequence-specific; the bound is the number that determines the
   profile's headline revocation property. The per-class budgets
   below are the RECOMMENDED defaults for the value.
 - For the high-consequence classes, the state source MUST be an active
   freshness mechanism that can reflect a revocation within the staleness
-  bound: token introspection at the issuer ({{RFC7662}}), the Mission Status
-  profile ({{I-D.draft-mcguinness-oauth-mission-status}}), a Mission
-  Status List whose Status List Token TTL is within the bound (the
-  status profile's swarm-scale pull floor,
-  {{I-D.draft-mcguinness-oauth-mission-status}}), or Mission
-  Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}).
-  Token-lifetime expiry alone is not an acceptable state source for
-  these classes: it bounds staleness only by the lifetime, so a revoked
-  Mission keeps deriving consequence until tokens age out, which is the
-  ambient-authority gap this profile exists to close.
+  bound: one that is queried or pushed at a frequency independent of
+  the credential's own lifetime, rather than a mechanism whose only
+  signal is that lifetime expiring. Credential-lifetime expiry alone
+  is not an acceptable state source for these classes: it bounds
+  staleness only by the lifetime, so a revoked Mission keeps deriving
+  consequence until credentials age out, which is the ambient-authority
+  gap this profile exists to close. {{I-D.draft-mcguinness-mission-runtime-oauth}}
+  catalogs the OAuth binding's active mechanisms (token introspection,
+  the Mission Status profile, Mission Status Lists, and Mission
+  Lifecycle Signals) and their exposure bounds.
 
 An informative worked example of the latency arithmetic: for a
 PDP-gated class with a published staleness bound of 60 seconds and a
@@ -560,49 +579,44 @@ counts the permit validity window as its own term because a state
 source reporting an explicit lease end can leave a permit window
 beyond the staleness bound; under observation-time reporting the
 permit cap collapses that term. A path outside PDP gating keeps only
-the derived token's lifetime as its bound.
+the derived credential's lifetime as its bound.
 
-For a deployment whose access tokens are short-lived and whose
-issuance and refresh are state-gated per the OAuth binding
-({{I-D.draft-mcguinness-oauth-mission}}), the refresh cycle itself is
-a conforming active freshness source for any action class whose
-published staleness bound the token lifetime meets: the issuance gate
-is an active check, and a token that exists is evidence the Mission
-was `active` within the lifetime. This source's revocation latency
-floor is the token lifetime, so it conforms only for classes whose
-bound admits that floor, and the higher-frequency sources (Status,
-introspection, Signals) remain the path to tighter bounds.
+For a deployment whose Mission-bound credentials are short-lived and
+whose issuance and refresh are themselves gated on live Mission state,
+the refresh cycle itself is a conforming active freshness source for
+any action class whose published staleness bound the credential
+lifetime meets: the issuance gate is an active check, and a credential
+that exists is evidence the Mission was `active` within the lifetime.
+This source's revocation latency floor is the credential lifetime, so
+it conforms only for classes whose bound admits that floor, and a
+higher-frequency source remains the path to tighter bounds.
 
-**Token-lifetime freshness.** Below the high-consequence floor, token
-expiry is itself a conforming state source: derivation and refresh
-are gated on `active` ({{I-D.draft-mcguinness-oauth-mission}}), so a
-token's remaining lifetime bounds the staleness of the authority it
-carries, and the published staleness bound for a class relying on it
-is the maximum token lifetime. Expiry is a state check performed by
-the clock: no status call, no introspection, no change at the
-consuming resource. A deployment declares it per class in its
-Enforcement Scope Statement like any other source; what it cannot do
-is reflect a revocation faster than the lifetime, which is why the
-high-consequence classes require an active source.
+**Credential-lifetime freshness.** Below the high-consequence floor,
+credential expiry is itself a conforming state source where derivation
+and refresh are gated on `active`, so a credential's remaining
+lifetime bounds the staleness of the authority it carries, and the
+published staleness bound for a class relying on it is the maximum
+credential lifetime. Expiry is a state check performed by the clock:
+no status call, no query, no change at the consuming resource. A
+deployment declares it per class in its Enforcement Scope Statement
+like any other source; what it cannot do is reflect a revocation
+faster than the lifetime, which is why the high-consequence classes
+require an active source.
 
 Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
-estate. The comparison, informative:
-
-| State source | Capability | Exposure bound | Per-action cost | Depends on | Cannot provide |
-|---|---|---|---|---|---|
-| Token-lifetime expiry | lifecycle-gated | maximum token lifetime | local clock check | nothing beyond the token | suspend, complete, or any revocation inside the lifetime |
-| State-gated refresh | lifecycle-gated | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
-| Mission Status List | state-observable | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
-| Status operation or introspection | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Lifecycle Signals | state-observable | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
-
-No position on this dial requires a per-request issuer call: the
-tightest posture costs one lookup per staleness bound, amortized by
-caching, and the loosest costs a clock. The dial is the architecture's
-freshness dial made concrete
+estate: from credential-lifetime expiry at one pole, through
+state-gated refresh, to a queried or event-driven active source at
+the other. No position on this dial requires a per-request issuer
+call: the tightest posture costs one lookup per staleness bound,
+amortized by caching, and the loosest costs a clock. The dial is the
+architecture's freshness dial made concrete
 ({{I-D.draft-mcguinness-mission-architecture}}), and the Enforcement
-Scope Statement records the chosen position per class.
+Scope Statement records the chosen position per class. A binding's
+adapter catalogs its concrete state sources against this dial, each
+with its capability class, exposure bound, per-action cost, and what
+it cannot provide; the OAuth binding's catalog is in
+{{I-D.draft-mcguinness-mission-runtime-oauth}}.
 
 The following are the RECOMMENDED default freshness postures per
 class, adopted absent a documented, consequence-specific analysis:
@@ -702,18 +716,20 @@ deployment declares it.
 
 ### Authority {#input-authority}
 
-The action MUST be authorized by an applicable
-`authorization_details` entry the Mission-bound token carries, or
-that is otherwise available to the PEP or PDP for that token under
-the issuance profile (for example, through introspection when the
-authority is not represented inline).
+The action MUST be authorized by an applicable authority entry the
+Mission-bound credential carries, or that is otherwise available to
+the PEP or PDP for that credential under the binding's own rules (for
+example, through introspection when the authority is not represented
+inline).
 
-This input is the Mission's current Effective Authority Set
-({{I-D.draft-mcguinness-oauth-mission-status}}), not the approved
-set the token's `authorization_details` entry names at face value. A
-deployment that runs no narrowing mechanism evaluates an Effective
-Authority Set equal to the approved set. A deployment that runs one,
-for example discharge or the Containment profile, does not.
+This input is the Mission's current effective authority: the approved
+set the credential's authority entry names at face value, narrowed by
+whatever narrowing mechanism the deployment runs. A deployment that
+runs no narrowing mechanism evaluates an effective authority equal to
+the approved set. A deployment that runs one, for example discharge or
+the Containment profile, does not. The OAuth binding formalizes this
+as the Effective Authority Set, defined by its Status profile
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 Where the deployment runs discharge
 ({{I-D.draft-mcguinness-oauth-mission-status}}), this input excludes
@@ -738,17 +754,16 @@ The decision-API binding provides the
 extension point through which a companion profile carries which
 evaluated set the PDP used ({{authzen}}).
 
-For an entry of type `mission_resource_access`, the action's
-`resource` and invoked action or tool identity MUST be within that
-entry's `resource` and `actions`, under the subset rule of
-{{I-D.draft-mcguinness-oauth-mission}}. The PEP asserts the
-capability identity (for example, the tool or function name) it will
-invoke. The PDP MUST refuse an identity outside the approved
-`actions`.
+The PEP asserts the capability identity (for example, the tool or
+function name) it will invoke, and the PDP MUST refuse an identity
+outside the entry's approved actions. The OAuth binding's realization
+of an authority entry, including the `mission_resource_access` entry
+type's `resource` and `actions` subset rule, is defined by
+{{I-D.draft-mcguinness-mission-runtime-oauth}}.
 
-For any other `authorization_details` type, the PDP MUST evaluate
-the action under that type's documented runtime semantics and MUST
-refuse if it does not understand or cannot enforce those semantics.
+For any other authority-entry type, the PDP MUST evaluate the action
+under that type's documented runtime semantics and MUST refuse if it
+does not understand or cannot enforce those semantics.
 
 The identity of the executing component that serves a capability
 (for example, an MCP server instance) is a request-time fact the
@@ -781,7 +796,7 @@ identity remain out of scope ({{deferred}}).
 ### Resource Policy {#input-resource-policy}
 
 The runtime decision MUST include any applicable Resource policy. A
-Mission-bound token and runtime permit are an upper bound on
+Mission-bound credential and runtime permit are an upper bound on
 authority, not a command for the Resource Server to perform the
 action. Resource policy MAY be evaluated by the PDP, by the Resource
 Server or PEP as a composed local authorization step, or by both.
@@ -803,22 +818,24 @@ disclosure-only treatment.
 
 ### Actor {#input-actor}
 
-When delegation is in effect, the PDP MUST evaluate the
-authenticated `act` chain as part of the runtime actor context and
-refuse a chain that is missing or malformed. When an `act` chain is
-present, the PDP MUST NOT treat `client_id` alone as the immediate
-actor.
+When delegation is in effect, the PDP MUST evaluate the authenticated
+actor-delegation chain as part of the runtime actor context and refuse
+a chain that is missing or malformed. When an actor-delegation chain
+is present, the PDP MUST NOT treat the client or immediate-actor
+identity alone as the immediate actor. The binding's realization of
+the actor-delegation chain and the client or immediate-actor identity
+is defined by its own adapter (the OAuth realization is `act` and
+`client_id`, {{I-D.draft-mcguinness-mission-runtime-oauth}}).
 
 Runtime enforcement consumes the actor context that results from the
 issuance profile's delegation checks; it does not recompute the
 issuance-time subset validation. The runtime decision MUST NOT
-expand authority beyond the issued `authorization_details`. The
-issuance profile's delegation constraints are not re-applied here
-unless the deployment documents them as runtime Resource policy, but
-a deployment MAY apply additional actor-sensitive Resource policy
-({{input-resource-policy}}).
+expand authority beyond the issued authority. The issuance profile's
+delegation constraints are not re-applied here unless the deployment
+documents them as runtime Resource policy, but a deployment MAY apply
+additional actor-sensitive Resource policy ({{input-resource-policy}}).
 
-Token claims the AS verified under an attested-instance profile,
+Credential claims the AS verified under an attested-instance profile,
 such as `agent_instance_id` and `agent_model`
 ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), are verified
 actor context a deployment's Resource policy MAY evaluate; unlike a
@@ -840,13 +857,16 @@ a non-active Mission
 
 ### Time {#input-time}
 
-The PDP MUST refuse if the decision context indicates the token is
-expired. The issuance profile caps a derived token's `exp` at the
-Mission's `expires_at`, so the `exp` check enforces the Mission's
-expiry transitively. The standard `mission` claim and introspection
-do not surface `expires_at`; where a Mission state source does
-expose it (or reports the Mission `expired`), the PDP MUST refuse on
-it independent of the token's own `exp`.
+The PDP MUST refuse if the decision context indicates the credential
+is expired. The issuance-and-derivation layer caps a derived
+credential's expiry at the Mission's `expires_at`, so the
+credential-expiry check enforces the Mission's expiry transitively
+(the OAuth realization is the `exp` claim,
+{{I-D.draft-mcguinness-mission-runtime-oauth}}). The Mission reference
+and its state source do not themselves surface `expires_at`; where a
+Mission state source does expose it (or reports the Mission
+`expired`), the PDP MUST refuse on it independent of the credential's
+own expiry.
 
 The PDP sets the permit's validity window from these inputs. That
 the action actually executes within that window is the executing
@@ -877,8 +897,8 @@ component supplies facts or an evidence reference, never the choice
 of predicate.
 
 History is a decision input, never a grant. A history predicate
-MUST NOT expand authority beyond the issued
-`authorization_details`. Where deployment or Resource policy
+MUST NOT expand authority beyond the issued authority. Where
+deployment or Resource policy
 requires a history predicate, the PDP MUST fail closed when the
 predicate cannot be established or the evidence store cannot be
 consulted.
@@ -932,15 +952,15 @@ that digest immediately before acting
 Beyond the `parameter_digest`, the permit MUST also bind:
 
 - the Mission reference;
-- the token issuer, when available;
-- the token audience or protected resource;
-- `sub`;
-- `client_id`;
+- the credential issuer, when available;
+- the credential audience or protected resource;
+- the authenticated subject identifier;
+- the client or immediate-actor identity;
 - the actor context;
 - the sender-constraint confirmation key, when present;
 - the action;
 - the resource;
-- the authorizing `authorization_details` entry, or an entry digest;
+- the authorizing authority entry, or an entry digest;
 - the PDP's policy-view version; and
 - a permit lifetime control bounded by the Mission state freshness
   requirement ({{state-freshness}}).
@@ -949,7 +969,10 @@ A permit is bound to the full set of authorization-relevant inputs it
 was issued for: the authorization binding, which a decision-API
 binding realizes as one normalized projection over those inputs,
 never as an enumerated subset of fields
-({{I-D.draft-mcguinness-mission-authzen}}).
+({{I-D.draft-mcguinness-mission-authzen}}). The OAuth binding's
+realization of the subject, client/actor, and confirmation roles is
+`sub`, `client_id`, and `cnf`
+({{I-D.draft-mcguinness-mission-runtime-oauth}}).
 
 The permit lifetime control is set by action class:
 
@@ -976,12 +999,12 @@ refusal.
 | A required evidence record cannot be signed or emitted for a consequential decision or refusal | Fail closed, or durably commit the record for signing and publication under a declared recovery bound ({{agent-isolated-evidence-emission}}) |
 | Mission not `active` | Refuse; work already initiated reconciles under {{evidence}}, never re-executes |
 | The Mission's `expires_at` passed, when known from the Mission state source | Refuse |
-| Unsupported `authorization_details` type for the action | Refuse |
+| Unsupported authority-entry type for the action | Refuse |
 | Unknown or unmetered constraint on the applicable entry | Refuse |
 | Consumption bound would be exceeded | Refuse |
 | `parameter_digest` mismatch at the executing PEP | Refuse |
 | Re-presentation of a consumed single-use decision identifier | Refuse (fail closed) |
-| Required `act` chain missing or malformed | Refuse |
+| Required actor-delegation chain missing or malformed | Refuse |
 | Invoked capability identity outside the approved `actions` | Refuse |
 | Resource policy refuses the action | Refuse |
 | Request would broaden the Mission's authority | Refuse (expansion is out of scope) |
@@ -1007,17 +1030,18 @@ and trusted for the refusal or decision path:
   to a PDP with direct Mission-record access, one holding
   introspection's `authority_hash` disclosure privilege, or one
   participating in the Local Approved-Set Verification profile;
-- the token issuer and audience or protected-resource identifier when
-  available;
-- the authenticated `sub`, `client_id`, a client-instance identifier
-  (a deployment-defined correlator) when present, the sender-constraint
-  confirmation key when present, and the `act` chain projection when
+- the credential issuer and audience or protected-resource identifier
+  when available;
+- the authenticated subject identifier, the client or immediate-actor
+  identity, a client-instance identifier (a deployment-defined
+  correlator) when present, the sender-constraint confirmation key
+  when present, and the actor-delegation chain projection when
   delegation applies;
 - the action and resource identifiers (and the asserted capability
   identity when applicable);
-- the `authorization_details` type and authorizing entry, or a digest
-  of that entry when recording the full entry would disclose excess
-  authority or sensitive policy;
+- the authority-entry type and authorizing entry, or a digest of that
+  entry when recording the full entry would disclose excess authority
+  or sensitive policy;
 - the decision identifier, when the PDP produced one;
 - the PDP's policy-view version;
 - the identity and role of the emitting enforcement component; and
@@ -1025,6 +1049,12 @@ and trusted for the refusal or decision path:
   compensating action's decision to the original evaluation
   identifier it reverses, so a compensation can be reconciled against
   the action it undoes.
+
+The OAuth binding's realization of the subject, client/actor,
+sender-constraint, and authority-entry roles above is `sub`,
+`client_id`, `cnf`, the `act` chain, and `authorization_details`
+({{I-D.draft-mcguinness-mission-runtime-oauth}}); the Mission
+reference is `mission.id` and `mission.issuer`.
 
 For a token-validation failure, the record MUST NOT describe
 unverified token claims as authenticated facts. It MAY include a digest
@@ -1042,21 +1072,24 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 Maturity: stable. Maintenance: active.
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
-Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
-This specification uses the terms "access token", "Authorization
-Server", "client", "protected resource", "resource owner", and
-"Resource Server" from OAuth 2.0 {{RFC6749}} through the terminology
-incorporated by {{I-D.draft-mcguinness-oauth-mission}}. It also uses
-the Mission, Mission Intent, Mission Issuer, Authority Set,
-Approver, delegation, and `mission` claim terminology from
-{{I-D.draft-mcguinness-oauth-mission}}, and Effective Authority Set
-and discharge from {{I-D.draft-mcguinness-oauth-mission-status}}.
+This specification defines its own architectural roles (PEP, PDP,
+Resource Server, Resource policy) rather than importing them from a
+credential binding, so that the contract it states is readable
+without reference to any one binding's wire format. It uses the
+Mission, Mission Intent, Mission Issuer, and Authority Set
+terminology of {{I-D.draft-mcguinness-mission-substrate}}. Where a
+binding realizes these roles concretely, this document says so: the
+OAuth binding realizes them per {{I-D.draft-mcguinness-oauth-mission}}
+and {{I-D.draft-mcguinness-mission-runtime-oauth}}, including its
+`client`, `resource owner`, `authorization_details`, `mission` claim,
+Effective Authority Set, and discharge terms.
 
 Policy Enforcement Point (PEP):
 : The component that can prevent a consequential action and that
@@ -1090,7 +1123,7 @@ Decision:
 
 Established Mission:
 : The single Mission a decision is evaluated against, established
-  from the credential's `mission` claim or externally
+  from the credential's own Mission reference or externally
   ({{mission-binding}}).
 
 Policy-view version:
@@ -1113,7 +1146,7 @@ Runtime enforcement evidence:
 
 Enforcement scope:
 : The set of resources, action classes, execution paths, PEP
-  placements, supported authorization details, state sources, and
+  placements, supported authority-entry types, state sources, and
   evidence mechanisms for which a deployment claims conformance to this
   profile.
 
@@ -1133,10 +1166,12 @@ Mission state source:
   Mission lifecycle state or the freshness of that state
   ({{state-freshness}}).
 
-Mission-bound token:
-: An access token issued under a Mission per
-  {{I-D.draft-mcguinness-oauth-mission}}, carrying
-  `authorization_details` and a `mission` claim.
+Mission-bound credential:
+: A credential issued or derived under a Mission, carrying an
+  authority entry and a Mission reference or the means to establish
+  one ({{mission-binding}}). The OAuth realization is an access token
+  carrying `authorization_details` and a `mission` claim
+  ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # Mission Substrate {#mission-substrate}
 
@@ -1213,22 +1248,22 @@ statement that a binding supports Missions.
    |<- execute/refuse-|                        |
 ~~~
 
-The PEP first validates the token as described in {{token-validation}}.
-On permit the PEP reverifies the parameter binding, then executes; on
-deny it refuses. The inputs the decision evaluates are defined in
-{{decision}}.
+The PEP first validates the acting credential (for the OAuth binding,
+{{I-D.draft-mcguinness-mission-runtime-oauth}}). On permit the PEP
+reverifies the parameter binding, then executes; on deny it refuses.
+The inputs the decision evaluates are defined in {{decision}}.
 
 ## Enforcement Scope and Conformance {#runtime-conformance}
 
-This profile is implemented by a runtime deployment, not by an OAuth
+This profile is implemented by a runtime deployment, not by an issuing
 Authorization Server alone. Three things conform, at different
 granularities: the **runtime deployment** (this section), the
-**Resource Server runtime profile** for OAuth-protected resources
-({{rs-runtime-profile}}), and the **PEP/PDP decision path** for each
-consequential action ({{decision}}). Conformance is not global to a
-product, Authorization Server, Resource Server, or PDP: a deployment
-conforms to this profile only for the resources, action classes,
-execution paths, and authorization-detail types named in its
+**Resource Server runtime profile** for the protected resources it
+mediates ({{rs-runtime-profile}}), and the **PEP/PDP decision path**
+for each consequential action ({{decision}}). Conformance is not global
+to a product, Authorization Server, Resource Server, or PDP: a
+deployment conforms to this profile only for the resources, action
+classes, execution paths, and authority-entry types named in its
 enforcement scope.
 
 A deployment that claims conformance to this profile MUST publish an
@@ -1237,60 +1272,60 @@ declaration of its enforcement scope that auditors, procurement, and
 interop tests key on. This statement is what earns the
 Runtime-Enforced level of the Mission Assurance Levels, and it feeds
 the Mission Deployment Profile, the deployment-level manifest the
-architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST include:
+architecture defines ({{I-D.draft-mcguinness-mission-architecture}}).
+
+The statement's baseline declaration, required of every conforming
+deployment regardless of which named claims or assurance extensions it
+also carries, MUST include:
 
 - the protected resources, action classes, and execution paths it
-  mediates, and the Mission-establishment mode each enforcement scope
-  uses;
-- the PEP locations that can prevent those actions, and the unmediated
-  paths explicitly excluded from the claim (the harness profile's
-  execution-environment scope statement supplies these for a
-  harness-run deployment, {{I-D.draft-mcguinness-mission-harness}});
-- the credential custody mode for each mediated class (mediated
-  custody in the PEP, or agent-held, {{custody}});
-- the conformance tier claimed for each mediated action class: the
-  core enforcement tier, or the transaction-assurance tier where
-  claimed or required (the tier vocabulary below);
+  mediates, the PEP locations that can prevent those actions and the
+  unmediated paths explicitly excluded from the claim (the harness
+  profile's execution-environment scope statement supplies these for a
+  harness-run deployment, {{I-D.draft-mcguinness-mission-harness}}),
+  and the Mission-establishment mode each enforcement scope uses;
+- the supported authority-entry types, action identifiers, and
+  constraint vocabularies, and the evaluator for each supported type
+  ({{input-authority}});
 - the PDP or PDPs that evaluate Mission-bound decisions;
-- the `authorization_details` types, action identifiers, and constraint
-  vocabularies it supports;
-- any Resource Server runtime profile and Operation Profiles it uses
-  ({{rs-runtime-profile}});
 - the Mission state source and maximum staleness bound used for each
-  action class ({{state-freshness}});
-- for the transaction-assurance tier's idempotency claim, the Exact
-  enforcement domain (a single serializing PDP, a shared linearizable
-  store, or structurally exact claim domains) named per mediated
-  action class or idempotency scope, not enumerated per dynamic claim
-  ({{idempotency}});
-- the PDP-unavailability posture per mediated action class: the
-  maximum outage the deployment rides through on unexpired,
-  unconsumed permits ({{failure-modes}}), and whether work suppressed
-  by fail-closed is queued for resume or dropped;
-- the runtime enforcement evidence mechanism and retention window
-  ({{evidence}});
-- the locations of the deployment-published evidence signing key sets
-  (the runtime evidence companion's PDP and PEP key sets,
-  {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve here),
-  and, where the agent-isolated evidence-emission condition is
-  claimed, its per-emitter declaration
-  ({{agent-isolated-evidence-emission}});
-- where a High-Assurance Agent claim rests on EAT evidence
-  ({{compromise-resistant}}, {{trifecta-containment}}), the per-row
-  selections the evidence table requires: the claim or profile
-  identifiers, the expected measurements or reference values, the
-  appraisal policy, the attester identity, and the freshness rule;
-- the reconciliation window for matching execution-outcome evidence to
-  decisions, the component responsible for orphaned-evidence and
-  sequence-gap detection and for actively reconciling each unresolved
-  outcome within the window, and that component's alerting obligation
-  ({{evidence}}).
+  action class, including the PDP-unavailability posture the
+  deployment rides through on unexpired, unconsumed permits
+  ({{state-freshness}}, {{failure-modes}}); and
+- the remote decision-channel trust mode for every PEP/PDP boundary
+  that is not co-resident: the mutual authentication or signed
+  request/response mechanism satisfying {{decision-channel}}; and
+- the append-only, integrity-protection mechanism for its records (a
+  hash-linked log, signed segments, a transparency anchor, or
+  equivalent), which every record MUST have regardless of which
+  evidence extension, if any, the deployment also claims
+  ({{record-integrity}}).
+
+A named assurance extension or enforcement claim attaches its own
+declaration requirement to the baseline statement, rather than adding a
+universal item every deployment carries whether or not it claims the
+extension: the credential custody mode for a mediated class
+({{custody}}); the transaction-assurance tier's Exact idempotency-claim
+domain per mediated action class or idempotency scope
+({{idempotency}}); the runtime enforcement evidence mechanism,
+retention window, and the locations of the deployment-published
+evidence signing key sets (the runtime evidence companion's PDP and
+PEP key sets, {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve
+here), together with the agent-isolated evidence-emission condition's
+per-emitter declaration where that condition is claimed
+({{evidence}}, {{agent-isolated-evidence-emission}}); the per-row EAT
+evidence selections a High-Assurance Agent claim rests on
+({{compromise-resistant}}, {{trifecta-containment}}); and the
+reconciliation window, responsible component, and alerting obligation
+for outcome reconciliation ({{evidence}}). A deployment claiming none
+of these carries only the baseline declaration above; the baseline
+declaration is never optional.
 
 A deployment MUST NOT claim runtime enforcement for a resource, action
-class, `authorization_details` type, or execution path outside that
-declared scope. A Mission Issuer conforms to the issuance profile; it
+class, authority-entry type, or execution path outside that declared
+scope. A Mission Issuer conforms to the issuance profile; it
 does not become a runtime-conforming deployment merely by issuing
-Mission-bound tokens. The converse is a stated posture, not a
+Mission-bound credentials. The converse is a stated posture, not a
 failure: a resource or class outside the declared scope relies on
 issuance gating and token-lifetime freshness ({{state-freshness}}),
 and the Enforcement Scope Statement says so. This profile does not
@@ -1416,7 +1451,10 @@ by its predicate is not a basis to leave the invocation ungated.
 3. A Mission's `purpose` or deployment policy MUST NOT lower an
    action below any minimum classification the Resource policy
    ({{decision}}) sets for it, including a floor the resource owner
-   publishes in its protected resource metadata ({{class-floors}}).
+   publishes through its own metadata mechanism (the OAuth binding's
+   realization, `mission_action_class_floors` in OAuth protected
+   resource metadata, is defined by
+   {{I-D.draft-mcguinness-mission-runtime-oauth}}).
 4. In any case, a Mission's `purpose` or deployment policy MUST NOT
    classify an irreversible, external-commitment, or
    privileged-administration action as non-consequential.
@@ -1429,42 +1467,6 @@ execution-outcome evidence ({{evidence}}), each as specified in its
 own section). A deployment that leaves such an action ungated does
 not enforce this profile for that action's class
 ({{pep-placement}}).
-
-### Resource-Owner Class Floors {#class-floors}
-
-A resource owner can carry its classification minimums to any PDP
-through its protected resource metadata {{RFC9728}}:
-
-`mission_action_class_floors`:
-: OPTIONAL JSON object. Each member name is an action identifier from
-  the resource's `actions` vocabulary
-  ({{I-D.draft-mcguinness-oauth-mission}}); an action-family
-  identifier, in the issuance profile's action-family form, sets the
-  floor for every action in the family. Each value is the minimum
-  runtime action class for the mapped action: one of
-  `consequential_read`, `consequential_write`, `irreversible_action`,
-  `external_commitment`, or `privileged_administration`, naming the
-  classes of this section.
-
-A PDP with access to the resource's metadata MUST NOT classify a
-mapped action below its floor. The member is the interoperable
-carriage of the Resource-policy minimum the classification floor above
-already binds; it raises, and never lowers, an action's class. A PDP
-that does not recognize a mapped value MUST treat it as naming a
-high-consequence class.
-
-For the ERP resource of the worked examples
-({{parameter-digest-example}}):
-
-~~~ json
-{
-  "resource": "https://erp.example.com",
-  "mission_action_class_floors": {
-    "journal-entries.read": "consequential_read",
-    "journal-entries.write": "irreversible_action"
-  }
-}
-~~~
 
 ## Action-Bound Approval {#action-approval}
 
@@ -1591,10 +1593,11 @@ and runtime gates do not make the agent trustworthy; they bound what it
 can do. A deployment lowers that bound further by not letting the agent
 hold the authority whose misuse is unacceptable.
 
-Mission-bound tokens are sender-constrained
+Mission-bound credentials are sender-constrained
 ({{I-D.draft-mcguinness-oauth-mission}}): whoever holds the
-sender-constraint private key the token's `cnf` binds can present the
-token. **Mediated execution** is a PEP placement that uses this: for the
+sender-constraint private key the credential's confirmation binds can
+present the credential. **Mediated execution** is a PEP placement that
+uses this: for the
 action classes a deployment mediates, the sender-constraint private key
 is held by the PEP that sits at the last controllable boundary
 ({{pep-placement}}), not by the agent component. The agent therefore
@@ -1648,7 +1651,7 @@ harness establishes that execution environment
 
 Mediated custody's realizable form today is **gateway custody**: a
 server-side gateway, an LLM gateway, an MCP gateway, or an egress
-proxy, holds the sender-constraint key and the Mission-bound tokens,
+proxy, holds the sender-constraint key and the Mission-bound credentials,
 and the agent receives no bearer credential at all. That shape is the
 claim's home: the custody properties above belong to a deployment
 built this way, and a developer laptop with a shell is outside them
@@ -1693,18 +1696,18 @@ high-consequence classes in its mediated set; the protection is only as
 broad as that set.
 
 Custody has a lifecycle. A deployment SHOULD prefer per-class
-credentials with distinct `cnf` keys over sharing one key across
-mediating PEPs, so that compromise of one mediating PEP does not expose
-the authority of another. On compromise of a mediating PEP's key, the
-deployment revokes the affected tokens and re-derives. A
+credentials with distinct sender-constraint keys over sharing one key
+across mediating PEPs, so that compromise of one mediating PEP does not
+expose the authority of another. On compromise of a mediating PEP's
+key, the deployment revokes the affected credentials and re-derives. A
 sender-constraint private key is never published; rotation is
-re-derivation with a new `cnf` binding plus revocation or expiry of
-the tokens bound to the old key.
+re-derivation with a new sender-constraint binding plus revocation or
+expiry of the credentials bound to the old key.
 
 The Enforcement Scope Statement
 SHOULD state the custody replica topology (a shared HSM-held key
-versus per-replica keys): replicating one `cnf` key across a PEP
-fleet widens the exposure custody exists to shrink.
+versus per-replica keys): replicating one sender-constraint key across
+a PEP fleet widens the exposure custody exists to shrink.
 
 Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
@@ -1852,7 +1855,7 @@ never replaces per-action authorization.
 
 # Resource Server Runtime Profile {#rs-runtime-profile}
 
-An OAuth Resource Server that claims conformance to this runtime
+A Resource Server that claims conformance to this runtime
 profile MUST publish or otherwise make available a Resource Server
 runtime profile for the protected resources and operations in scope.
 The Resource Server runtime profile is a deployment conformance
@@ -1897,68 +1900,16 @@ MUST define:
 
 A Resource Server MUST NOT claim this runtime profile for an operation
 unless the operation's consequential effects pass through a PEP that
-can refuse the operation after token validation and before execution.
-A Resource Server that only validates the access token and checks
-static token audience or scope claims does not implement this runtime
-profile.
+can refuse the operation after credential validation and before
+execution. A Resource Server that only validates the acting credential
+and checks static authorization claims on it, without a per-action
+PDP decision, does not implement this runtime profile.
 
 The Resource Server runtime profile MAY be documented in Resource
 Server configuration, resource-server metadata defined elsewhere, a
 contractual deployment profile, or another deployment-specific
 mechanism. This document does not define a discovery document,
 registry, or wire format for publishing it.
-
-# Token Presentation and Validation {#token-validation}
-
-The runtime decision is downstream of ordinary access token validation.
-Before using a token's Mission, authority, subject, client, actor, or
-confirmation-key values as decision inputs, the PEP MUST establish that
-the access token is valid for the protected resource and request. For
-the Mission-bound JWT access tokens defined by the issuance profile,
-this means validating the JWT per {{RFC9068}}, verifying the issuer and
-audience, checking token expiry, and verifying any sender-constraint
-binding (`cnf`) under the proof-of-possession rules of the issuance
-profile ({{I-D.draft-mcguinness-oauth-mission}}); this profile defines
-no proof-of-possession mechanism of its own.
-
-Where the validated token's `mission` claim carries the `expires_at`
-member ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the
-PEP or PDP MAY refuse actions past that instant without consulting a
-state source: the value is an immutable commitment and a ceiling
-only. It carries no liveness; the only-`active` rule and the
-freshness requirements of {{state-freshness}} apply unchanged.
-
-The underlying OAuth deployment MUST follow the applicable security
-best current practice in {{RFC9700}}. In particular, a Resource Server
-PEP MUST refuse a token whose audience is not intended for that
-Resource Server, and MUST verify the proof-of-possession check for a
-sender-constrained token before treating its `cnf` binding as
-authenticated.
-
-A PEP MUST NOT ask a PDP to authorize an action from unverified token
-claims. If token validation fails, the PEP MUST refuse before runtime
-Mission evaluation. If the deployment requires Mission governance for
-the protected operation and the token lacks a `mission` claim, the PEP
-MUST likewise refuse, unless the deployment establishes the Mission
-binding externally ({{mission-binding}}); in that case the absence of
-the claim is not a refusal condition, and the join's verification of
-the supplied Mission reference applies instead. When the PEP is an
-OAuth Resource Server, it uses the
-normal OAuth error behavior for the protected resource (for example,
-Bearer token errors under {{RFC6750}}); this profile defines no new
-OAuth error code.
-
-Where the PEP and PDP are separate components, the decision request and
-response MUST be integrity-protected and the parties MUST authenticate
-each other. The PDP MUST accept token-derived inputs only from a PEP
-authorized for the declared enforcement scope. A deployment can satisfy
-this with a mutually authenticated channel, a signed decision request
-and response, or another mechanism with equivalent security properties.
-The PEP SHOULD send the PDP the minimum token-derived claims needed for
-the decision rather than the presented access token. If a deployment
-sends the access token itself to the PDP, the PDP MUST treat it as a
-credential, protect it against disclosure, and MUST NOT use it outside
-the declared enforcement scope.
 
 # The Runtime Decision {#decision}
 
@@ -3142,19 +3093,20 @@ deployment MUST NOT relax those bindings in a way that would let a
 permit cross a resource, audience, tenant, or operation boundary it
 was not issued for.
 
-## Decision Channel and Token Disclosure
+## Decision Channel and Credential Disclosure
 
 A separate PDP becomes part of the Resource Server's trusted
-authorization path for the operations in its enforcement scope. The
-PEP/PDP channel therefore needs mutual authentication, integrity
-protection, and authorization for the declared scope
-({{token-validation}}). Passing full access tokens to a PDP also
-extends credential exposure beyond the Resource Server boundary; a
-deployment that does so needs the same credential handling, retention,
-and disclosure controls it applies at the Resource Server.
+authorization path for the operations in its enforcement scope, which
+is why mutual authentication, integrity protection, and authorization
+for the declared scope are baseline requirements on that channel
+({{decision-channel}}), not deployment advice. Passing full credentials
+to a PDP also extends credential exposure beyond the Resource Server
+boundary; a deployment that does so needs the same credential handling,
+retention, and disclosure controls it applies at the Resource Server.
 
 General OAuth security guidance {{RFC9700}} applies to the underlying
-credentials.
+OAuth credentials, where the binding is OAuth
+({{I-D.draft-mcguinness-mission-runtime-oauth}}).
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -3176,20 +3128,10 @@ unlinkability need an additional privacy design outside this profile.
 
 # IANA Considerations
 
-## OAuth Protected Resource Metadata Registration
-
-This document registers the following in the "OAuth Protected Resource
-Metadata" registry ({{RFC9728}}):
-
-- Metadata Name: `mission_action_class_floors`
-- Metadata Description: JSON object mapping a protected resource's
-  action identifiers to minimum runtime action classes.
-- Change Controller: IETF
-- Reference: this document, {{class-floors}}
-
-The Mission-bound token claims this
-profile consumes are registered by {{I-D.draft-mcguinness-oauth-mission}};
-any decision-API wire members are defined by the binding
+This document defines no wire format and requests no IANA action. The
+protected resource metadata registration for a Resource-Owner Class
+Floor is the OAuth binding's ({{I-D.draft-mcguinness-mission-runtime-oauth}});
+any decision-API wire members are defined by the decision-API binding
 ({{authzen}}, {{I-D.draft-mcguinness-mission-authzen}}).
 
 --- back

@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 42,
+ "count": 43,
  "drafts": [
   {
    "file": "draft-mcguinness-aauth-mission-expiry.md",
@@ -483,7 +483,6 @@
    "pull_when": "The PDP speaks AuthZEN and needs the decision-contract wire mapping.",
    "normative_references": [
     "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-cross-domain",
@@ -492,7 +491,6 @@
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate"
    ],
    "requires_when": [
@@ -513,14 +511,22 @@
      "requires": [
       "draft-mcguinness-oauth-mission-status"
      ]
+    },
+    {
+     "when": "the deployment claims the Runtime Evidence feature profile, rather than the Decision Base alone",
+     "requires": [
+      "draft-mcguinness-mission-runtime-evidence"
+     ]
     }
    ],
    "references": [
+    "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-runtime-oauth",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-containment",
@@ -975,6 +981,49 @@
    ]
   },
   {
+   "file": "draft-mcguinness-mission-runtime-oauth.md",
+   "slug": "draft-mcguinness-mission-runtime-oauth",
+   "title": "Mission Runtime OAuth Adapter",
+   "category": "std",
+   "maturity": "stable",
+   "maintenance": "active",
+   "group": "runtime-enforcement",
+   "verbs": [
+    "enforce"
+   ],
+   "summary": "The OAuth 2.0 realization of the runtime core's binding-neutral contract: token presentation and validation, the `mission`/`act`/`cnf`/`aud` claim mapping, the `authorization_details` and `mission_resource_access` authority-entry mapping, and Resource-Owner Class Floors through OAuth protected resource metadata.",
+   "pull_when": "The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization.",
+   "normative_references": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "requires_when": [
+    {
+     "when": "the deployment maps a mission_resource_access authorization_details entry",
+     "requires": [
+      "draft-mcguinness-oauth-mission-resource-access"
+     ]
+    }
+   ],
+   "references": [
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-issuance-grant",
+    "draft-mcguinness-oauth-mission-resource-access",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ]
+  },
+  {
    "file": "draft-mcguinness-mission-runtime.md",
    "slug": "draft-mcguinness-mission-runtime",
    "title": "Mission-Bound Runtime Enforcement",
@@ -985,12 +1034,10 @@
    "verbs": [
     "enforce"
    ],
-   "summary": "A decision contract for enforcing a Mission-bound token at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission.",
+   "summary": "A binding-neutral decision contract for enforcing a Mission-bound credential at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission.",
    "pull_when": "Actions need a point-of-use check, not just issuance-time gating.",
    "normative_references": [
-    "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-mission-substrate"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
@@ -999,7 +1046,8 @@
     {
      "when": "the OAuth binding is the substrate",
      "requires": [
-      "draft-mcguinness-oauth-mission"
+      "draft-mcguinness-oauth-mission",
+      "draft-mcguinness-mission-runtime-oauth"
      ]
     }
    ],
@@ -1014,6 +1062,7 @@
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-runtime-oauth",
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-mission-substrate",
@@ -1022,7 +1071,6 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
-    "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-transaction-authorization"

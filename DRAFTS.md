@@ -36,7 +36,8 @@ hand-authored.
 | [Mission Consumption Metering](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html) | experimental | govern | Runtime enforcement | Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire binding that enforce them. | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
 | [Mission Orchestration and Unwinding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) | experimental | run | Agent runtime | How a multi-step or multi-Mission workflow assigns a reversibility class to each step, records an unwind plan before dispatch, and unwinds in-flight work safely when a Mission stops. | In-flight work must unwind safely if the Mission ends mid-workflow. |
 | [Mission Runtime Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html) | stable | enforce, prove | Runtime enforcement | The binding-neutral Decision Evidence, Execution Evidence, and Refusal Record objects a decision-API binding's PDP and PEP emit: their members, canonicalization, integrity envelope, media types, and retention. | Runtime enforcement is deployed and decisions need durable, verifiable records. |
-| [Mission-Bound Runtime Enforcement](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html) | stable | enforce | Runtime enforcement | A decision contract for enforcing a Mission-bound token at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission. | Actions need a point-of-use check, not just issuance-time gating. |
+| [Mission Runtime OAuth Adapter](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-oauth.html) | stable | enforce | Runtime enforcement | The OAuth 2.0 realization of the runtime core's binding-neutral contract: token presentation and validation, the `mission`/`act`/`cnf`/`aud` claim mapping, the `authorization_details` and `mission_resource_access` authority-entry mapping, and Resource-Owner Class Floors through OAuth protected resource metadata. | The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization. |
+| [Mission-Bound Runtime Enforcement](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html) | stable | enforce | Runtime enforcement | A binding-neutral decision contract for enforcing a Mission-bound credential at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission. | Actions need a point-of-use check, not just issuance-time gating. |
 | [Mission Transaction Authorization Profile for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html) | experimental | enforce | Runtime enforcement | Profiles the OAuth transaction authorization challenge for the Mission cross-domain case: a Transaction Authorization Server runs a fresh decision with a governed approval as input and issues a sender-constrained, single-use transaction token the resource verifies offline. | One action needs a fresh, portable, cross-org authorization with no live callback. |
 | [Mission Security Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) | guide | analyze | Security model | A cross-cutting, Informational consolidation of the suite's trusted base. | Reviewing or auditing: the one consolidated trust and blast-radius view. |
 | [Mission Intent Shaping](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html) | guide | propose | Approval time | How a client-side "shaper" turns a user's request into a candidate Mission Intent before it is submitted. | You need a defined client-side path from user prompt to candidate Mission Intent. |
@@ -372,6 +373,20 @@ bar, and the Mission Receipt makes a single action's evidence
 portable.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html)
+
+#### Mission Runtime OAuth Adapter
+
+The OAuth 2.0 realization of the runtime core's binding-neutral
+contract: token presentation and validation, the `mission`/`act`/`cnf`/
+`aud` claim mapping onto the runtime core's abstract subject, actor,
+sender-constraint, and audience roles, the `authorization_details` and
+`mission_resource_access` mapping onto the runtime core's
+effective-authority-set input, and Resource-Owner Class Floors carried
+through OAuth protected resource metadata. Adds no enforcement
+invariant of its own; every requirement it mentions is the runtime
+core's, cited and mapped.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-oauth.html)
 
 #### Mission Runtime Evidence
 
