@@ -75,7 +75,7 @@ describe("proposal_hash anchor (@spec mission#integrity-anchors, test vector 5)"
 
 const TASK_INTENT = {
   goal: "Pay Acme invoices for Q3",
-  resources: [RESOURCE],
+  target_resources: [RESOURCE],
   expires_at: "2027-01-01T00:00:00Z",
 };
 
@@ -178,7 +178,7 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     // ordinary intake) and derive under the ordinary narrowing rules.
     const proposal = validateAuthorityProposal(
       JSON.stringify(decoded.authorization_details),
-      TASK_INTENT.resources,
+      TASK_INTENT.target_resources,
     );
     expect(proposal).toEqual(PROPOSAL);
     const record = approve(proposal);
@@ -190,13 +190,13 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     expect(() =>
       validateAuthorityProposal(
         JSON.stringify([{ type: "payment_initiation", resource: RESOURCE, actions: ["x"] }]),
-        TASK_INTENT.resources,
+        TASK_INTENT.target_resources,
       ),
     ).toThrowError(/unsupported authorization details type/);
     try {
       validateAuthorityProposal(
         JSON.stringify([{ type: "mission_resource_access", resource: RESOURCE, actions: [] }]),
-        TASK_INTENT.resources,
+        TASK_INTENT.target_resources,
       );
       expect.unreachable("schema failure must refuse");
     } catch (e) {
@@ -207,7 +207,7 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
         JSON.stringify([
           { type: "mission_resource_access", resource: "https://other.example", actions: ["a"] },
         ]),
-        TASK_INTENT.resources,
+        TASK_INTENT.target_resources,
       );
       expect.unreachable("foreign resource must refuse");
     } catch (e) {

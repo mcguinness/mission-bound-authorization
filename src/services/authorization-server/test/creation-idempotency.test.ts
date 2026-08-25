@@ -120,7 +120,7 @@ const authority = (actions: string[]) => [
 
 // @spec mission#submission-via-par — the wire value is the Submission envelope.
 const intentJson = (goal: string): string =>
-  JSON.stringify({ intent: { goal, resources: [RESOURCE], expires_at: FAR_EXP } });
+  JSON.stringify({ intent: { goal, target_resources: [RESOURCE], expires_at: FAR_EXP } });
 
 /** Full PAR -> approval -> code -> token dance: an ACTIVE Mission + its
  *  DPoP-bound (dpopKeys) Mission ACCESS token (parent or predecessor role). */
@@ -382,7 +382,7 @@ describe("evidence vs recovery ordering (@spec mission#intent-submission-evidenc
   const evidenceChildParams = (subjectToken: string, crid: string): Record<string, string> => ({
     ...childParams(subjectToken, crid),
     mission_intent: JSON.stringify({
-      intent: { goal: "Extract Acme invoices", resources: [RESOURCE], expires_at: FAR_EXP },
+      intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
       evidence: [IDEM_ENTRY],
     }),
   });

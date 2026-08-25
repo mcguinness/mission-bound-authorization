@@ -556,9 +556,13 @@ executes the issuance profile's approval steps:
 
 1. Authenticate the Approver: the resource owner at the
    authorization server, or the principal whose pre-registered
-   policy the deployment authorizes to decide. When the Intent
-   carries `controls.acr`, the authentication MUST be one the
-   deployment's policy maps as satisfying the named class.
+   policy the deployment authorizes to decide. This authentication
+   MUST satisfy the deployment's published approval-authentication
+   floor ({{I-D.draft-mcguinness-oauth-mission}}); this document
+   defines no UMA-native carriage for a client-requested Approver
+   authentication strength (the OAuth binding's direct flow carries
+   one on `acr_values`/`max_age`, a request-parameter shape this
+   binding does not share), so the floor alone governs here.
 2. Establish the Subject: the requesting party, from claims the
    authorization server itself gathered and verified (pushed
    identity claim tokens, interactive claims gathering, or a PCT it
@@ -682,10 +686,11 @@ On that precondition the authorization server MUST NOT complete a
 ticket exchange, upgrade an RPT, or otherwise extend authority under
 a Mission that is not `active`, and the `active` check MUST be
 atomic with issuance. Each RPT issuance and each upgrade counts as
-one derivation under the Mission; where the Intent's
-`controls.max_derivations` is present, the authorization server MUST
+one derivation under the Mission; where the Mission's effective
+`derivation_limit` is established, the authorization server MUST
 refuse the derivation that would exceed it, per the issuance
-profile's count-and-gate rule. An RPT issued under a Mission MUST
+profile's count-and-gate rule ({{I-D.draft-mcguinness-oauth-mission}}).
+An RPT issued under a Mission MUST
 NOT expire later than the Mission's `expires_at`, and the `exp` of
 each permission within it is likewise capped, so no credential
 outlives the Mission.

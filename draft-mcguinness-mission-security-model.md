@@ -903,9 +903,11 @@ Approver approves more than was shown:
   or understood.
 
 Approver account, session, or authenticator compromised:
-: Addressed by the approval-event authentication floor and the Intent's
-  `controls.acr` step-up hook, which a deployment raises for
-  high-consequence Missions ({{I-D.draft-mcguinness-oauth-mission}}).
+: Addressed by the approval-event authentication floor, conjunctive
+  with any standard step-up authentication strength (`acr_values`,
+  `max_age`) the client requests for the Approver, which a deployment
+  raises for high-consequence Missions
+  ({{I-D.draft-mcguinness-oauth-mission}}).
   Residual: a phished, hijacked, or coerced Approver approves a hostile
   Mission, and the evidence machinery then faithfully attests the
   attacker's Mission; account security and step-up strength are the
@@ -1008,7 +1010,7 @@ Materialized-capability containment escape (Mission Containment):
 Effective-ceiling composition (depth, cross-domain hops, and child
 generations):
 : Addressed by each dimension bounding itself: per-domain depth
-  reset at a cross-domain hop, per-Mission `max_derivations` that a
+  reset at a cross-domain hop, per-Mission `derivation_limit` that a
   child does not inherit from its parent, and issuer adjudication at
   each child generation
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
@@ -1363,6 +1365,12 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Controls taxonomy retirement (#636): the Approver-compromise row's
+  `controls.acr` reference updated to the standard `acr_values`/`max_age`
+  step-up request carriage; the effective-ceiling-composition row's
+  `max_derivations` renamed `derivation_limit`. No adversary-model
+  change.
 
 - Editorial density pass on this Informational document: the
   Transparency Service entry of {{trusted-base}} kept as the one

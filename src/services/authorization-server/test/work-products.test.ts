@@ -41,7 +41,11 @@ const POLICY = {
 
 const intent = () =>
   validateMissionIntent(
-    JSON.stringify({ goal: "Reconcile Acme invoices", resources: [RESOURCE], expires_at: EXPIRES_AT }),
+    JSON.stringify({
+      goal: "Reconcile Acme invoices",
+      target_resources: [RESOURCE],
+      expires_at: EXPIRES_AT,
+    }),
   );
 
 let key: CryptoKey;

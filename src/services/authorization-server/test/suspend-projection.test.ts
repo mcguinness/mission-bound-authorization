@@ -69,7 +69,7 @@ const approveParent = () =>
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: PARENT_EXP,
       }),
     ),
@@ -92,7 +92,7 @@ const createChild = (
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Extract Acme invoices",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: PARENT_EXP,
         ...intentOver,
       }),

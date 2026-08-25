@@ -522,7 +522,10 @@ map to this endpoint's error codes ({{submission-errors}}):
   reject-unknown-top-level-member).
 - A well-formed Intent from which the MAS cannot derive a valid
   Authority Set under policy MUST be refused with `invalid_authority`
-  (the MAS equivalent of `invalid_authorization_details`), so a client
+  (the MAS's single equivalent of the issuance profile's two
+  derivation-failure outcomes, `invalid_authorization_details` for a
+  submitted proposal and `access_denied` for configured-mapping mode,
+  {{I-D.draft-mcguinness-oauth-mission}}), so a client
   can distinguish a syntax error from an authority-derivation failure.
 - An Intent Submission Evidence entry of an unsupported type, an
   entry that fails its type's verification, or a policy-required
@@ -548,14 +551,15 @@ carrying a proposal records `proposed_authority` and `proposal_hash`
 as the issuance profile's Mission record defines them.
 
 A MAS has no derivation event: no token is issued under the Mission,
-so `controls.max_derivations` binds nothing here (a MAS
+so a requested `requested_derivation_limit` binds nothing here (a MAS
 implementing the issuance-grant companion has one, each grant
 minted, and applies that profile's counting rule,
 {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). A MAS SHOULD refuse
 an Intent that carries it, or record it and ensure the approval
 rendering marks it non-binding, per the issuance profile's rule that
 consent is not given to a limit that binds nowhere. The same
-treatment applies to any future control scoped to an issuance event.
+treatment applies to any future Mission Intent member scoped to an
+issuance event.
 
 On acceptance the MAS derives the Authority Set from the Intent, and
 from the authority proposal where one was submitted, under
@@ -687,10 +691,14 @@ The approval event executes steps 1 through 4 of the issuance
 profile's approval event unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
-1. Authenticate the Approver; when the Intent's `controls.acr` is
-   present, the authentication MUST be one the deployment's policy
-   maps as satisfying the named class (the issuance profile's `acr`
-   mapping rule).
+1. Authenticate the Approver; this authentication MUST satisfy the
+   deployment's published approval-authentication floor
+   ({{I-D.draft-mcguinness-oauth-mission}}). This document defines no
+   MAS-native carriage for a client-requested Approver authentication
+   strength (the OAuth binding's direct flow carries one on
+   `acr_values`/`max_age`, an OAuth authorization-request parameter
+   shape a MAS, having no such request, does not share), so the floor
+   alone governs here.
 2. Establish the Subject under the issuance profile's rules: the MAS
    MUST itself establish the Subject's (`iss`, `sub`) and MUST NOT
    take it from unauthenticated client input.

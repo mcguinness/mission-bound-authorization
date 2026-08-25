@@ -262,7 +262,7 @@ const refreshAdapter = () =>
     adapter: { destroy(id: string): Promise<void> };
   }).adapter;
 
-let flow1: FlowResult; // payments; controls.max_derivations 5; proposal (proposal_hash on record)
+let flow1: FlowResult; // payments; requested_derivation_limit 5; proposal (proposal_hash on record)
 let flow2: FlowResult; // multi-audience: payments + saas
 let flow3: FlowResult; // saas-only (rs-saas positive rows)
 let flow4: FlowResult; // payments; refresh-token rows
@@ -293,9 +293,9 @@ beforeAll(async () => {
   flow1 = await runFlow({
     intent: {
       goal: "Pay Acme invoices for Q3",
-      resources: [PAYMENTS],
+      target_resources: [PAYMENTS],
       expires_at: "2027-01-01T00:00:00Z",
-      controls: { max_derivations: 5 },
+      requested_derivation_limit: 5,
     },
     proposal: PAYMENTS_PROPOSAL,
     resource: PAYMENTS,
@@ -303,7 +303,7 @@ beforeAll(async () => {
   flow2 = await runFlow({
     intent: {
       goal: "Reconcile payments against the ledger",
-      resources: [PAYMENTS, SAAS],
+      target_resources: [PAYMENTS, SAAS],
       expires_at: "2027-01-01T00:00:00Z",
     },
     proposal: [...PAYMENTS_PROPOSAL, ...SAAS_PROPOSAL],
@@ -312,7 +312,7 @@ beforeAll(async () => {
   flow3 = await runFlow({
     intent: {
       goal: "Read ledger vendors",
-      resources: [SAAS],
+      target_resources: [SAAS],
       expires_at: "2027-01-01T00:00:00Z",
     },
     proposal: SAAS_PROPOSAL,
@@ -321,7 +321,7 @@ beforeAll(async () => {
   flow4 = await runFlow({
     intent: {
       goal: "Pay Acme invoices for Q4",
-      resources: [PAYMENTS],
+      target_resources: [PAYMENTS],
       expires_at: "2027-01-01T00:00:00Z",
     },
     proposal: PAYMENTS_PROPOSAL,
@@ -330,7 +330,7 @@ beforeAll(async () => {
   flow5 = await runFlow({
     intent: {
       goal: "Pay Acme invoices for Q1 (dedicated to P1-1/P1-2 fixtures)",
-      resources: [PAYMENTS],
+      target_resources: [PAYMENTS],
       expires_at: "2027-01-01T00:00:00Z",
     },
     proposal: PAYMENTS_PROPOSAL,
@@ -548,7 +548,7 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     expect((res.body.cnf as { jkt?: string }).jkt).toBeDefined();
 
     const mission = res.body.mission as Record<string, unknown>;
-    // Core members + derivations_remaining (max_derivations in force) +
+    // Core members + derivations_remaining (requested_derivation_limit in force) +
     // proposal_hash (provenance privilege). NO authorization_details: it now
     // lives at the top level only (@spec mission#541 P1-1).
     expect(Object.keys(mission).sort()).toEqual([
@@ -564,7 +564,7 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     ]);
     expect(mission.id).toBe(flow1.missionId);
     expect(mission.state).toBe("active");
-    // One committed issuance (this token) against max_derivations 5.
+    // One committed issuance (this token) against requested_derivation_limit 5.
     expect(mission.derivations_remaining).toBe(4);
     const record = as.kernel.get(flow1.missionId);
     expect(mission.proposal_hash).toBe(record?.proposal_hash);
@@ -587,7 +587,7 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
   });
 
   it("budget disclosure is privilege-gated: an authorized RS without the budget privilege never sees derivations_remaining", async () => {
-    // flow1 carries max_derivations, but rs-payments-basic holds no
+    // flow1 carries requested_derivation_limit, but rs-payments-basic holds no
     // disclosure privileges: the enforcement projection arrives without
     // derivations_remaining (and without proposal_hash).
     const res = await introspect(flow1.at, { principal: RS_PAYMENTS_BASIC });
@@ -746,9 +746,9 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     const flowX = await runFlow({
       intent: {
         goal: "Pay Acme invoices for Q3 (inactive-disclosure fixture)",
-        resources: [PAYMENTS],
+        target_resources: [PAYMENTS],
         expires_at: "2027-01-01T00:00:00Z",
-        controls: { max_derivations: 5 },
+        requested_derivation_limit: 5,
       },
       proposal: PAYMENTS_PROPOSAL,
       resource: PAYMENTS,

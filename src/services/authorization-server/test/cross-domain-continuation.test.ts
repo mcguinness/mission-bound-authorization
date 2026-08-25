@@ -48,7 +48,7 @@ const approve = (n: number): MissionRecord =>
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Post journal entries to LedgerCloud",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: "2027-01-01T00:00:00Z",
       }),
     ),

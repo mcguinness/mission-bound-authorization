@@ -132,7 +132,7 @@ function readOnlyIntent(): string {
   return JSON.stringify({
     intent: {
       goal: "reconcile Acme invoices",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: FAR_FUTURE,
     },
   });
@@ -261,7 +261,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     const intent = JSON.stringify({
       intent: {
         goal: "schedule a payment",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: FAR_FUTURE,
       },
     });
@@ -301,7 +301,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     const intent = JSON.stringify({
       intent: {
         goal: "execute a payment",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: FAR_FUTURE,
       },
     });

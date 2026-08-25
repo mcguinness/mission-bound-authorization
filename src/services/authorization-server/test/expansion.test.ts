@@ -44,7 +44,7 @@ const approve = (actions: string[]) =>
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: EXP,
       }),
     ),
@@ -63,7 +63,7 @@ describe("expansion of an uncontained predecessor (regression: unchanged behavio
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices for Q3 (widened)",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: EXP,
         }),
       ),
@@ -98,7 +98,7 @@ describe("expansion of a CONTAINED predecessor (@spec containment#restoration an
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices and send remittance (restored after containment review)",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: EXP,
         }),
       ),
@@ -153,7 +153,7 @@ describe("expansion of a CONTAINED predecessor (@spec containment#restoration an
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Restore after double containment review",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: EXP,
         }),
       ),

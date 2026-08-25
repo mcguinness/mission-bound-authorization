@@ -56,7 +56,7 @@ describe("intersect carries and narrows delegation (@spec mission#authorization-
   it("(a) proposal WITHOUT delegation inherits the ceiling's delegation.children unchanged", () => {
     const intent: MissionIntent = {
       goal: "g",
-      resources: [ceilingEntry.resource],
+      target_resources: [ceilingEntry.resource],
       expires_at: EXP,
     };
     const proposal = [entry()]; // no delegation on the proposal
@@ -73,7 +73,7 @@ describe("intersect carries and narrows delegation (@spec mission#authorization-
     const freePolicy = { policy_version: "t", ceiling: [entry()] }; // ceiling has NO delegation
     const intent: MissionIntent = {
       goal: "g",
-      resources: ["https://r.example/mcp"],
+      target_resources: ["https://r.example/mcp"],
       expires_at: EXP,
     };
     const proposal = [entry({ delegation: delegation(9) })]; // proposal TRIES to add it
@@ -84,7 +84,7 @@ describe("intersect carries and narrows delegation (@spec mission#authorization-
   it("both present -> max_depth narrows to the min and delegates intersect", () => {
     const intent: MissionIntent = {
       goal: "g",
-      resources: [ceilingEntry.resource],
+      target_resources: [ceilingEntry.resource],
       expires_at: EXP,
     };
     const proposal = [
@@ -169,7 +169,7 @@ describe("regression: delegation-free entries are fully additive (unchanged beha
     };
     const intent: MissionIntent = {
       goal: "g",
-      resources: ["https://r.example/mcp"],
+      target_resources: ["https://r.example/mcp"],
       expires_at: EXP,
     };
     const proposal = [entry({ constraints: { vendors: ["acme"] } })];
@@ -216,7 +216,9 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
 
   const approveTemplate = (kernel: MissionKernel, resources: string[]) =>
     kernel.approve({
-      intent: validateMissionIntent(JSON.stringify({ goal: "g", resources, expires_at: EXP })),
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "g", target_resources: resources, expires_at: EXP }),
+      ),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "agent",
@@ -320,7 +322,7 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
       goal: "g",
-      resources: [ceilingEntry.resource],
+      target_resources: [ceilingEntry.resource],
       expires_at: EXP,
     };
     const proposal = [
@@ -339,7 +341,7 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
       goal: "g",
-      resources: [ceilingEntry.resource],
+      target_resources: [ceilingEntry.resource],
       expires_at: EXP,
     };
     const proposal = [entry()];
@@ -353,7 +355,7 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
       goal: "g",
-      resources: [ceilingEntry.resource],
+      target_resources: [ceilingEntry.resource],
       expires_at: EXP,
     };
     const proposal = [
@@ -400,7 +402,7 @@ describe("isSubsetEntry compares max_amount by exact decimal value, not IEEE-754
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
       goal: "g",
-      resources: [ceilingEntry.resource],
+      target_resources: [ceilingEntry.resource],
       expires_at: EXP,
     };
     const proposal = [entry({ constraints: { max_amount: { amount: "1e300", currency: "USD" } } })];

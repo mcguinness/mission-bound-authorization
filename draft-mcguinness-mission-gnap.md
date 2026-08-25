@@ -595,9 +595,13 @@ issuance profile's approval steps:
 1. Authenticate the Approver: the resource owner or other
    accountable principal at the authorization server's interaction
    surface, or establish the standing basis of an adopted companion
-   profile ({{approval-modes}}). When
-   the Intent carries `controls.acr`, the authentication MUST be one
-   the deployment's policy maps as satisfying the named class.
+   profile ({{approval-modes}}). This authentication MUST satisfy the
+   deployment's published approval-authentication floor
+   ({{I-D.draft-mcguinness-oauth-mission}}); this document defines no
+   GNAP-native carriage for a client-requested Approver authentication
+   strength (the OAuth binding's direct flow carries one on
+   `acr_values`/`max_age`, a request-parameter shape this binding does
+   not share), so the floor alone governs here.
 2. Establish the Subject: the issuer-qualified principal on whose
    behalf the Mission runs, per the deployment's authority-source
    policy ({{roles}}), from interaction the
@@ -787,10 +791,11 @@ a continuation response, a modifying request's response, or a token
 rotation), regardless of the number of tokens the response carries;
 an operation that issues none counts zero.
 
-Where the Intent's
-`controls.max_derivations` is
-present, the authorization server MUST refuse the derivation that
-would exceed it, per the issuance profile's count-and-gate rule. An
+Where the Mission's effective
+`derivation_limit` is
+established, the authorization server MUST refuse the derivation that
+would exceed it, per the issuance profile's count-and-gate rule
+({{I-D.draft-mcguinness-oauth-mission}}). An
 access token issued under a Mission MUST NOT expire later than the
 Mission's `expires_at`, so no credential outlives the Mission.
 

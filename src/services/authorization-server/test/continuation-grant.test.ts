@@ -75,7 +75,7 @@ function newLineage(eventId: string, envelope: { authTime?: number; acr?: string
   const intent = validateMissionIntent(
     JSON.stringify({
       goal: "Continue a Mission across an intra-domain hop",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: MISSION_EXP,
     }),
   );
@@ -110,16 +110,15 @@ function newLineage(eventId: string, envelope: { authTime?: number; acr?: string
  * rootMissionContinuation). Returns the mission id and that AUTO-rooted handle, so
  * the lifecycle tests prove approval-time rooting rather than test-only rooting.
  */
-function approveLineage(eventId: string, opts: { acr?: string } = {}): {
+function approveLineage(eventId: string): {
   missionId: string;
   handle: string;
 } {
   const intent = validateMissionIntent(
     JSON.stringify({
       goal: "Continue a Mission across an intra-domain hop",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: MISSION_EXP,
-      ...(opts.acr !== undefined ? { controls: { acr: opts.acr } } : {}),
     }),
   );
   const mission = as.kernel.approve({
@@ -534,13 +533,17 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
  * session-anchored root terminates on session end while a grant anchor survives.
  */
 describe("continuation lifecycle invariants (@spec id-continuation-assertion)", () => {
-  it("approval-time rooting: an approved Mission's AUTO-rooted initial handle mints a continuation ID-JAG, carrying the approval envelope", async () => {
-    // A value UNIQUE to this test, so the assertion proves it travelled
-    // intent.controls.acr -> rootGrantAnchor envelope -> resolve -> ID-JAG (not a
-    // constant that also appears on a manually-rooted anchor elsewhere).
-    const acr = "urn:mace:acr:approval-rooted";
+  it("approval-time rooting: an approved Mission's AUTO-rooted initial handle mints a continuation ID-JAG, carrying auth_time but no acr (@spec mission#approval-authentication)", async () => {
+    // @spec mission#approval-authentication — achieved approval authentication
+    // context (acr/amr) is approval-time PROVENANCE, never a Mission Intent
+    // member and never synthesized onto a derived credential; only auth_time
+    // (the approval instant itself, not a claim about authentication
+    // strength) is auto-rooted here. This replaces the pre-#636 assertion
+    // that `intent.controls.acr` flowed through to this envelope: that
+    // Intent member is retired with no replacement, and rootMissionContinuation
+    // (src/services/authorization-server/src/index.ts) sources no acr/amr.
     const approxNow = Math.floor(Date.now() / 1000);
-    const { missionId, handle } = approveLineage("apev-life-root", { acr });
+    const { missionId, handle } = approveLineage("apev-life-root");
 
     // The assembly rooted exactly one grant anchor + initial handle at approval;
     // no manual rootGrantAnchor/mint ran. The envelope is the approval event.
@@ -548,7 +551,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const resolved = as.continuationStore.resolve(handle);
     expect(resolved?.missionId).toBe(missionId);
     expect(resolved?.anchor.anchorType).toBe("grant");
-    expect(resolved?.authEnvelope.acr).toBe(acr);
+    expect(resolved?.authEnvelope.acr).toBeUndefined();
     expect(resolved?.authEnvelope.authTime).toBeGreaterThanOrEqual(approxNow - 5);
     expect(resolved?.authEnvelope.authTime).toBeLessThanOrEqual(approxNow + 5);
 
@@ -561,8 +564,8 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       audience: RAS_AUD,
     });
     expect((payload.mission as { id?: string }).id).toBe(missionId);
-    // The approval-time envelope reaches the issued ID-JAG.
-    expect(payload.acr).toBe(acr);
+    // The approval-time envelope reaches the issued ID-JAG: auth_time yes, acr no.
+    expect(payload.acr).toBeUndefined();
     expect(payload.auth_time as number).toBeGreaterThanOrEqual(approxNow - 5);
   });
 

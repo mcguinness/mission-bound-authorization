@@ -57,7 +57,7 @@ const intent = () =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Post journal entries to LedgerCloud",
-      resources: [SAAS_RESOURCE],
+      target_resources: [SAAS_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
     }),
   );
@@ -285,7 +285,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Read only",
-          resources: [SAAS_RESOURCE],
+          target_resources: [SAAS_RESOURCE],
           expires_at: "2027-01-01T00:00:00Z",
         }),
       ),
