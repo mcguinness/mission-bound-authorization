@@ -200,7 +200,8 @@ conformance targets it is thereby claiming.
 # Status: An Experimental Sketch {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: sketch. Maintenance: lab-best-effort.
+Role: companion. Spec maturity: sketch. Maintenance: lab-best-effort.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms.
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

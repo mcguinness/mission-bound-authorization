@@ -1,6 +1,6 @@
 {
- "$comment": "Machine-readable inventory of the Mission-Bound Authorization family's draft-*.md files at repo root (see the `count` field below for the current total). Single source of truth for DRAFTS.md's generated catalog index, the architecture document map, and each draft's verb, summary, adoption trigger, and typed reference and adoption edges; reference_stacks transcribes the architecture document's OAuth reference stacks. Validate with scripts/check-family-manifest.mjs.",
- "generated_note": "Hand-curated; re-derive `group` and `maturity` from each draft's front matter and Status section when drafts are added, renamed, or reclassified. `verbs`, `summary`, and `pull_when` are authorial here: `verbs` draws on the architecture document's verb spine, and DRAFTS.md's index block is generated from these fields by scripts/generate-drafts-index.mjs and validated against them, not the other way round. `requires` is re-derived from each draft's front-matter normative references (drift-checked in CI), `references` from its full in-family reference set, and `reference_stacks` transcribes the architecture document's four cumulative stacks.",
+ "$comment": "Machine-readable inventory of the Mission-Bound Authorization family's draft-*.md files at repo root (see the `count` field below for the current total). Single source of truth for DRAFTS.md's generated catalog index, the architecture document map, each draft's role, spec maturity, verb, summary, adoption trigger, and typed reference and adoption edges; reference_stacks transcribes the architecture document's OAuth reference stacks. Validate with scripts/check-family-manifest.mjs.",
+ "generated_note": "Hand-curated; re-derive `role`, `spec_maturity`, and `group` from each draft's front matter and Status section when drafts are added, renamed, or reclassified. `role` (core, adapter-binding, companion, or guide) is architectural: core is the binding-neutral substrate kernel; adapter-binding is any draft publishing a Mission Substrate Statement or Assessment capability table (scripts/check-substrate-statements.mjs's REGISTRY); guide is every category:info document; companion is everything else. `spec_maturity` (candidate, experimental, sketch, or not_applicable) is a five-criteria gate resolved against structured evidence in candidate-gate.json (scripts/generate-drafts-index.mjs's validateCandidateGate()), not a raw coverage percentage and not inferred from a Conformance heading: an attested, commit-verified complete requirement inventory for the claimed interface; no open decide issue scoped to that interface without a recorded resolved_in_tree resolution; a named interoperability/conformance floor; examples/vectors or a recorded waiver; disclosed unstable external normative dependencies. `category` (front matter's std/exp/info) is the document's intended standards category (requested RFC category, never WG adoption, approval, or publication state) and needs no separate axis. Implementation/conformance coverage is derived from conformance-manifest.json per spec at generation time (scripts/generate-drafts-index.mjs's family-status block) and is never hand-written here. `verbs`, `summary`, and `pull_when` are authorial here: `verbs` draws on the architecture document's verb spine, and DRAFTS.md's index block is generated from these fields by scripts/generate-drafts-index.mjs and validated against them, not the other way round. `requires` is re-derived from each draft's front-matter normative references (drift-checked in CI), `references` from its full in-family reference set, and `reference_stacks` transcribes the architecture document's four cumulative stacks.",
  "known_non_family_refs": "draft-mcguinness-mission-architecture.md's Mission Document Map also names oauth-id-continuation-assertion. That is an adjacent, non-family draft (no draft-*.md file in this repo) and is intentionally absent from drafts[] below; do not add a phantom manifest entry for it.",
  "verbs": [
   "propose",
@@ -91,7 +91,8 @@
    "slug": "draft-mcguinness-aauth-mission-expiry",
    "title": "AAuth Mission Expiry",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "frozen-until-upstream-release",
    "group": "lifecycle",
    "verbs": [
@@ -112,7 +113,8 @@
    "slug": "draft-mcguinness-mission-aam",
    "title": "Mission-Bound Authorization for the Agent Access Model",
    "category": "exp",
-   "maturity": "sketch",
+   "role": "companion",
+   "spec_maturity": "sketch",
    "maintenance": "lab-best-effort",
    "group": "architecture",
    "verbs": [
@@ -144,7 +146,8 @@
    "slug": "draft-mcguinness-mission-aauth",
    "title": "Mission Context Binding for AAuth",
    "category": "std",
-   "maturity": "stable",
+   "role": "adapter-binding",
+   "spec_maturity": "experimental",
    "maintenance": "frozen-until-upstream-release",
    "group": "bindings-substrate",
    "verbs": [
@@ -171,7 +174,8 @@
    "slug": "draft-mcguinness-mission-aauth-management",
    "title": "AAuth Mission Management",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "frozen-until-upstream-release",
    "group": "lifecycle",
    "verbs": [
@@ -192,7 +196,8 @@
    "slug": "draft-mcguinness-mission-approval-governance",
    "title": "Mission Approval Governance",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "approval-time",
    "verbs": [
@@ -226,7 +231,8 @@
    "slug": "draft-mcguinness-mission-architecture",
    "title": "An Architecture for Mission-Bound Authorization",
    "category": "info",
-   "maturity": "informational",
+   "role": "guide",
+   "spec_maturity": "not_applicable",
    "maintenance": "active",
    "group": "architecture",
    "verbs": [
@@ -280,7 +286,8 @@
    "slug": "draft-mcguinness-mission-audit",
    "title": "Mission Audit Transparency",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "proof-portability",
    "verbs": [
@@ -393,7 +400,8 @@
    "slug": "draft-mcguinness-mission-authority-server",
    "title": "Mission Authority Server",
    "category": "std",
-   "maturity": "stable",
+   "role": "adapter-binding",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "bindings-substrate",
    "verbs": [
@@ -473,7 +481,8 @@
    "slug": "draft-mcguinness-mission-authzen",
    "title": "Mission-Bound Runtime Enforcement: AuthZEN Profile",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "runtime-enforcement",
    "verbs": [
@@ -542,7 +551,8 @@
    "slug": "draft-mcguinness-mission-capability-binding",
    "title": "Mission Capability Binding",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "agent-runtime",
    "verbs": [
@@ -582,7 +592,8 @@
    "slug": "draft-mcguinness-mission-discovery",
    "title": "Mission Open-World Discovery",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "lifecycle",
    "verbs": [
@@ -639,7 +650,8 @@
    "slug": "draft-mcguinness-mission-evidence-envelope",
    "title": "Mission Evidence Envelope",
    "category": "exp",
-   "maturity": "sketch",
+   "role": "companion",
+   "spec_maturity": "sketch",
    "maintenance": "lab-best-effort",
    "group": "proof-portability",
    "verbs": [
@@ -666,7 +678,8 @@
    "slug": "draft-mcguinness-mission-gnap",
    "title": "Mission-Bound Authorization for GNAP",
    "category": "exp",
-   "maturity": "sketch",
+   "role": "adapter-binding",
+   "spec_maturity": "sketch",
    "maintenance": "lab-best-effort",
    "group": "bindings-substrate",
    "verbs": [
@@ -737,7 +750,8 @@
    "slug": "draft-mcguinness-mission-harness",
    "title": "Mission-Aware Agent Harnesses",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "agent-runtime",
    "verbs": [
@@ -798,7 +812,8 @@
    "slug": "draft-mcguinness-mission-mandate",
    "title": "Mission Mandate",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "proof-portability",
    "verbs": [
@@ -840,7 +855,8 @@
    "slug": "draft-mcguinness-mission-metering",
    "title": "Mission Consumption Metering",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-floor-referenced",
    "group": "runtime-enforcement",
    "verbs": [
@@ -894,7 +910,8 @@
    "slug": "draft-mcguinness-mission-orchestration",
    "title": "Mission Orchestration and Unwinding",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "agent-runtime",
    "verbs": [
@@ -964,7 +981,8 @@
    "slug": "draft-mcguinness-mission-runtime-evidence",
    "title": "Mission Runtime Evidence",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "runtime-enforcement",
    "verbs": [
@@ -1012,7 +1030,8 @@
    "slug": "draft-mcguinness-mission-runtime-oauth",
    "title": "Mission Runtime OAuth Adapter",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "runtime-enforcement",
    "verbs": [
@@ -1055,7 +1074,8 @@
    "slug": "draft-mcguinness-mission-runtime",
    "title": "Mission-Bound Runtime Enforcement",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "runtime-enforcement",
    "verbs": [
@@ -1108,7 +1128,8 @@
    "slug": "draft-mcguinness-oauth-mission-transaction-authorization",
    "title": "Mission Transaction Authorization Profile for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active-experimental",
    "maintenance_owner": "@mcguinness",
    "maintenance_review_after": "2027-02-18",
@@ -1159,7 +1180,8 @@
    "slug": "draft-mcguinness-mission-security-model",
    "title": "Mission Security Model",
    "category": "info",
-   "maturity": "informational",
+   "role": "guide",
+   "spec_maturity": "not_applicable",
    "maintenance": "active",
    "group": "security-model",
    "verbs": [
@@ -1207,7 +1229,8 @@
    "slug": "draft-mcguinness-mission-shaping",
    "title": "Mission Intent Shaping",
    "category": "info",
-   "maturity": "informational",
+   "role": "guide",
+   "spec_maturity": "not_applicable",
    "maintenance": "active",
    "group": "approval-time",
    "verbs": [
@@ -1255,7 +1278,8 @@
    "slug": "draft-mcguinness-mission-substrate",
    "title": "Mission Substrate Requirements",
    "category": "std",
-   "maturity": "stable",
+   "role": "core",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "bindings-substrate",
    "verbs": [
@@ -1284,7 +1308,8 @@
    "slug": "draft-mcguinness-mission-uma",
    "title": "Mission-Bound Authorization for UMA 2.0",
    "category": "exp",
-   "maturity": "sketch",
+   "role": "adapter-binding",
+   "spec_maturity": "sketch",
    "maintenance": "lab-best-effort",
    "group": "bindings-substrate",
    "verbs": [
@@ -1331,7 +1356,8 @@
    "slug": "draft-mcguinness-oauth-mission-approval-revision",
    "title": "Mission Approval Revision for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "approval-time",
    "verbs": [
@@ -1361,7 +1387,8 @@
    "slug": "draft-mcguinness-oauth-mission-approval",
    "title": "Mission Deferred Approval for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "approval-time",
    "verbs": [
@@ -1399,7 +1426,8 @@
    "slug": "draft-mcguinness-oauth-mission-attenuation",
    "title": "Mission Offline Attenuation for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "sub-agents",
    "verbs": [
@@ -1431,7 +1459,8 @@
    "slug": "draft-mcguinness-oauth-mission-child-delegation",
    "title": "Mission Child Delegation for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "sub-agents",
    "verbs": [
@@ -1477,7 +1506,8 @@
    "slug": "draft-mcguinness-oauth-mission-consent-evidence",
    "title": "Mission Consent Evidence for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "approval-time",
    "verbs": [
@@ -1522,7 +1552,8 @@
    "slug": "draft-mcguinness-oauth-mission-containment",
    "title": "Mission Containment for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-floor-referenced",
    "group": "lifecycle",
    "verbs": [
@@ -1573,7 +1604,8 @@
    "slug": "draft-mcguinness-oauth-mission-continuation",
    "title": "Mission Continuation: Authorization Continuity for Mission-Bound Authorization",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "cross-domain-projection",
    "verbs": [
@@ -1615,7 +1647,8 @@
    "slug": "draft-mcguinness-oauth-mission-cross-domain",
    "title": "Mission Cross-Domain Projection for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "cross-domain-projection",
    "verbs": [
@@ -1649,7 +1682,8 @@
    "slug": "draft-mcguinness-oauth-mission-cross-org-delegation",
    "title": "Mission Cross-Organizational Delegation for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active-experimental",
    "maintenance_owner": "@mcguinness",
    "maintenance_review_after": "2027-02-18",
@@ -1705,7 +1739,8 @@
    "slug": "draft-mcguinness-oauth-mission-expansion",
    "title": "Mission Expansion for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "lifecycle",
    "verbs": [
@@ -1740,7 +1775,8 @@
    "slug": "draft-mcguinness-oauth-mission-issuance-grant",
    "title": "Mission Issuance Grant for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "bindings-substrate",
    "verbs": [
@@ -1782,7 +1818,8 @@
    "slug": "draft-mcguinness-oauth-mission-management",
    "title": "Mission Management for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "lifecycle",
    "verbs": [
@@ -1836,7 +1873,8 @@
    "slug": "draft-mcguinness-oauth-mission-progressive",
    "title": "Mission Progressive Authorization for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "lifecycle",
    "verbs": [
@@ -1883,7 +1921,8 @@
    "slug": "draft-mcguinness-oauth-mission-resource-access",
    "title": "Mission Resource Access Profile for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "bindings-substrate",
    "verbs": [
@@ -1907,7 +1946,8 @@
    "slug": "draft-mcguinness-oauth-mission-signals",
    "title": "Mission Lifecycle Signals for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "lifecycle",
    "verbs": [
@@ -1948,7 +1988,8 @@
    "slug": "draft-mcguinness-oauth-mission-status",
    "title": "Mission Status and Lifecycle for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "lifecycle",
    "verbs": [
@@ -1991,7 +2032,8 @@
    "slug": "draft-mcguinness-oauth-mission-template",
    "title": "Mission Template for OAuth 2.0",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "approval-time",
    "verbs": [
@@ -2031,7 +2073,8 @@
    "slug": "draft-mcguinness-oauth-mission-work-products",
    "title": "Mission Work Products",
    "category": "exp",
-   "maturity": "experimental",
+   "role": "companion",
+   "spec_maturity": "experimental",
    "maintenance": "lab-best-effort",
    "group": "security-model",
    "verbs": [
@@ -2061,7 +2104,8 @@
    "slug": "draft-mcguinness-oauth-mission",
    "title": "Mission-Bound Authorization for OAuth 2.0",
    "category": "std",
-   "maturity": "stable",
+   "role": "adapter-binding",
+   "spec_maturity": "experimental",
    "maintenance": "active",
    "group": "bindings-substrate",
    "verbs": [

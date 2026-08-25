@@ -203,7 +203,8 @@ a deployment uses offline attenuation where its substrate dependency is
 acceptable and treats the interface as tracking the substrate.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Deep fan-out makes an AS round-trip per narrowing too costly; mint offline.
 Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

@@ -337,7 +337,8 @@ suite, realized by the referenced profile, not a new conformance
 requirement of its own.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: informational. Maintenance: active.
+Role: guide. Spec maturity: not applicable. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Reviewing or auditing: the one consolidated trust and blast-radius view.
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

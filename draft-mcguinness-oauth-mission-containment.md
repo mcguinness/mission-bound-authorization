@@ -233,7 +233,8 @@ Mission Issuer. Nothing here places a new requirement back on the
 issuance profile.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: lab-floor-referenced.
+Role: companion. Spec maturity: experimental. Maintenance: lab-floor-referenced.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: A live Mission must be narrowed, not ended, on a protected event.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Expansion for OAuth 2.0 (when contained authority is restored via a successor).

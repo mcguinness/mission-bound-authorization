@@ -183,7 +183,8 @@ basis is an Expansion successor or another fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: active-experimental.
+Role: companion. Spec maturity: experimental. Maintenance: active-experimental.
+Implementation: 9 conformance rows in conformance-manifest.json (9 tested).
 Adopt when: An attenuation chain crosses organizational trust domains.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Offline Attenuation for OAuth 2.0; Mission Cross-Domain Projection for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Runtime Evidence (when a local token is minted from a verified Chain).

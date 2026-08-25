@@ -36,15 +36,20 @@
 //   (k) bundle-manifest       - a notes/bundle-manifest.*.json file fails structural or
 //                                registry cross-reference validation, including consuming
 //                                a "pending" external pin (see scripts/check-bundle-manifest.mjs)
-//   (l) drafts-index          - DRAFTS.md's generated index block is stale against the manifest
-//                                (see scripts/generate-drafts-index.mjs --check), or a draft's
-//                                `maturity` has no display word for that index
+//   (l) drafts-index          - DRAFTS.md's generated index or family-counts block is stale
+//                                against the manifest and conformance ledger (see
+//                                scripts/generate-drafts-index.mjs --check; reference-stacks is
+//                                (v), README.md's binding-packages block is (u), and a draft's own
+//                                family-status block is (r)), or a draft's `spec_maturity` has no
+//                                display word for the index
 //   (m) readme-curated        - README.md does not link DRAFTS.md and DEPENDENCIES.md, a
 //                                backtick-quoted `draft-...` token in README.md is not a
-//                                manifest slug, or an editor's-copy link (#go.<slug>.html) in
+//                                manifest slug, an editor's-copy link (#go.<slug>.html) in
 //                                README.md or DRAFTS.md targets a slug that is not a manifest
-//                                draft. README's structure is otherwise unvalidated: it is
-//                                curated prose, and the exhaustive inventory lives in DRAFTS.md.
+//                                draft, or either file hand-types a document count ("42-document",
+//                                "6 documents") outside a generated block. README's structure is
+//                                otherwise unvalidated: it is curated prose, and the exhaustive
+//                                inventory lives in DRAFTS.md.
 //   (n) typed edges           - a draft's edge sets are malformed or drift from the draft itself.
 //                                `normative_references` (extracted: the front matter's normative
 //                                in-family refs) and `references` (extracted: normative plus
@@ -75,6 +80,28 @@
 //                                reference-stacks/assurance-level axis, not just the
 //                                per-document index) is stale against the manifest's
 //                                `reference_stacks` object
+//   (w) role axis             - a draft's `role` is not one of core/adapter-binding/companion/guide,
+//                                does not match its derivation (#707 ruling: core is the substrate
+//                                kernel alone, adapter-binding is exactly the Mission Substrate
+//                                Statement/Assessment registry, guide is exactly every category:info
+//                                document, companion is everything else), or `role` and
+//                                `spec_maturity` disagree on the guide <-> not_applicable pairing
+//   (x) spec-maturity axis    - a draft's `spec_maturity` is not one of
+//                                candidate/experimental/sketch/not_applicable
+//   (y) candidate honesty     - a draft whose `spec_maturity` is "candidate" contains prose in its
+//                                own "# Status" section admitting its own interface is not yet
+//                                stable (the #707 ruling's contradiction class: a manifest claiming
+//                                more than the draft's own text does); a contradiction tripwire on
+//                                top of (z), not the gate itself
+//   (z) candidate gate        - the #723 review response: a draft whose `spec_maturity` is
+//                                "candidate" must resolve, against candidate-gate.json and
+//                                conformance-manifest.json, all of a complete requirement inventory
+//                                (mechanical: a source.specs entry exists; attested: a recorded,
+//                                commit-verified audit reference), every scoped `decide` issue
+//                                recorded resolved_in_tree with a verifiable commit, a named
+//                                Conformance-titled floor, and examples/vectors or a recorded,
+//                                non-empty waiver reason (see
+//                                scripts/generate-drafts-index.mjs's validateCandidateGate())
 
 import fs from "node:fs";
 import path from "node:path";
@@ -83,7 +110,28 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
-import { maturityDisplay, validateDraftsIndex, validateReferenceStacks, validateBindingPackages, GROUP_SECTION_TITLES, GO_LINK_PATTERN } from "./generate-drafts-index.mjs";
+import {
+  maturityDisplay,
+  validateDraftsIndex,
+  validateReferenceStacks,
+  validateBindingPackages,
+  validateFamilyCounts,
+  validateFamilyStatusBlocks,
+  validateCandidateGate,
+  roleFor,
+  CORE_SLUG,
+  BINDING_SLUGS,
+  GROUP_SECTION_TITLES,
+  GO_LINK_PATTERN,
+  START_MARKER,
+  END_MARKER,
+  REFERENCE_STACKS_START,
+  REFERENCE_STACKS_END,
+  FAMILY_COUNTS_START,
+  FAMILY_COUNTS_END,
+  BINDING_PACKAGES_START,
+  BINDING_PACKAGES_END,
+} from "./generate-drafts-index.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -108,7 +156,28 @@ const BARE_SUMMARY_WORDS = new Set([
   "informational",
   "guide",
   "optional",
+  "candidate",
+  "core",
+  "companion",
+  "adapter-binding",
+  "n/a",
+  "not applicable",
+  "not_applicable",
 ]);
+
+// Check (m): a hand-typed document count outside a generated block. Exported
+// so scripts/test-family-manifest.mjs can exercise it directly against
+// string fixtures rather than only through a full-file mutation.
+export const HAND_TYPED_COUNT = /\b\d+-document\b|\b\d+\s+documents?\b/i;
+
+// Check (y): a candidate document's own Status section admitting its
+// interface is not stable, scoped to a self-referential subject so a
+// criterion-5 external-dependency disclosure does not trip it. Exported for
+// the same reason as HAND_TYPED_COUNT above. This is a contradiction
+// tripwire on top of check (z)'s structured candidate-gate, not the gate
+// itself: a fixture test demonstrates its shape-sensitivity rather than
+// hiding it (see the review's own P2 note).
+export const UNSTABLE_SELF_CLAIM = /\bthis (?:document|profile|specification|binding|draft)\b[^.]{0,80}\bis\s+(?:not\s+(?:yet\s+)?a\s+stable\s+interface|unstable|not\s+yet\s+stable|immature)\b/i;
 
 const errors = [];
 const fail = (check, msg) => errors.push(`[${check}] ${msg}`);
@@ -545,12 +614,13 @@ function main() {
   for (const e of validateBundleManifests(ROOT)) fail("bundle-manifest", e);
 
   // (l) Generated index: DRAFTS.md's marker block must be what the manifest
-  // renders today, and every maturity value must have a display word for
-  // that block's Maturity column.
+  // renders today, and every spec_maturity value must have a display word
+  // for that block's Spec maturity column.
   for (const e of validateDraftsIndex(ROOT)) fail("drafts-index", e);
+  for (const e of validateFamilyCounts(ROOT)) fail("drafts-index", e);
   for (const d of drafts) {
-    if (maturityDisplay(d.maturity) === null) {
-      fail("drafts-index", `${d.slug}: maturity "${d.maturity}" has no display word for DRAFTS.md's index`);
+    if (maturityDisplay(d.spec_maturity) === null) {
+      fail("drafts-index", `${d.slug}: spec_maturity "${d.spec_maturity}" has no display word for DRAFTS.md's index`);
     }
   }
 
@@ -583,6 +653,36 @@ function main() {
       if (!manifestSlugs.has(gm[1])) {
         fail("readme-curated", `${label} links the editor's copy of "${gm[1]}", which is not a family-manifest.json draft slug`);
       }
+    }
+  }
+
+  // Hand-typed document counts (#707 ruling item 3: "ALL counts in
+  // README/DRAFTS derived/generated, never hand-written"). A numeral count
+  // belongs in a generated block (family-counts, the index, binding-packages,
+  // reference-stacks) or nowhere; this scans the curated prose OUTSIDE those
+  // blocks for the shape that goes stale the moment a draft is added or
+  // removed ("42-document suite", "6 documents"), so a future author cannot
+  // silently retype a count that the manifest already knows.
+  const GENERATED_BLOCK_MARKERS = [
+    [START_MARKER, END_MARKER],
+    [REFERENCE_STACKS_START, REFERENCE_STACKS_END],
+    [FAMILY_COUNTS_START, FAMILY_COUNTS_END],
+    [BINDING_PACKAGES_START, BINDING_PACKAGES_END],
+  ];
+  function stripGeneratedBlocks(text) {
+    let out = text;
+    for (const [start, end] of GENERATED_BLOCK_MARKERS) {
+      const re = new RegExp(`${start.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${end.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g");
+      out = out.replace(re, "");
+    }
+    return out;
+  }
+  for (const [label, text] of [["README.md", readme], ["DRAFTS.md", draftsDoc]]) {
+    const stripped = stripGeneratedBlocks(text);
+    const m = stripped.match(HAND_TYPED_COUNT);
+    if (m) {
+      const ctx = stripped.slice(Math.max(0, m.index - 40), m.index + m[0].length + 20);
+      fail("readme-curated", `${label}: hand-typed document count "${m[0]}" outside a generated block ("...${ctx}..."); derive it from the manifest instead`);
     }
   }
 
@@ -798,49 +898,101 @@ function main() {
     }
   }
 
-  // (r) Family Status skeleton, manifest-synchronized (#643 review): every
-  // draft except the published core carries a top-level "# Status" section
-  // holding a generated family-status block whose content exact-matches the
-  // manifest's adoption fields (maturity, maintenance, pull trigger,
-  // adoption_requires, conditional requires_when). Bespoke prose lives
-  // outside the block; the block cannot drift from the manifest.
-  {
-    const bySlug = new Map(drafts.map((d) => [d.slug, d]));
-    for (const d of drafts) {
-      if (d.file === "draft-mcguinness-oauth-mission.md") continue;
-      const text = readFile(path.join(ROOT, d.file), d.file);
-      const head = text.match(/^# Status[^\n]*$/m);
-      if (!head) {
-        fail("doc-status", `${d.file}: missing the top-level "# Status" section (family skeleton)`);
-        continue;
-      }
-      const start = text.indexOf(head[0]) + head[0].length;
-      const rest = text.slice(start);
-      const nextHead = rest.search(/^# [^#\n]/m);
-      const section = nextHead === -1 ? rest : rest.slice(0, nextHead);
-      const lines = [
-        "<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->",
-        `Maturity: ${d.maturity}. Maintenance: ${d.maintenance}.`,
-        `Adopt when: ${d.pull_when}`,
-      ];
-      const ar = d.adoption_requires || [];
-      lines.push(ar.length
-        ? `Requires: ${ar.map((s) => bySlug.get(s).title).join("; ")}.`
-        : "Requires: nothing beyond its listed references.");
-      const rw = d.requires_when || [];
-      if (rw.length) {
-        lines.push(`Also requires, conditionally: ${rw.map((e) => e.requires.map((s) => bySlug.get(s).title).join(" and ") + " (when " + e.when + ")").join("; ")}.`);
-      }
-      lines.push("<!-- family-status: END -->");
-      const expected = lines.join("\n");
-      const bm = section.match(/<!-- family-status: BEGIN[\s\S]*?END -->/);
-      if (!bm) {
-        fail("doc-status", `${d.file}: family-status block missing from the Status section`);
-      } else if (bm[0] !== expected) {
-        fail("doc-status", `${d.file}: family-status block does not match the manifest; regenerate it to:\n${expected}`);
-      }
+  // (r) Family Status skeleton, manifest-synchronized (#643 review; #707
+  // extension): every draft except the published core carries a top-level
+  // "# Status" section holding a generated family-status block whose
+  // content exact-matches the manifest's role, spec maturity, derived
+  // conformance-manifest coverage, maintenance, pull trigger,
+  // adoption_requires, and conditional requires_when. Bespoke prose lives
+  // outside the block; the block cannot drift from the manifest. The
+  // rendering itself lives in scripts/generate-drafts-index.mjs
+  // (renderFamilyStatusBlock), shared with its writer, so the checker and
+  // the generator cannot silently disagree on the block's shape.
+  for (const e of validateFamilyStatusBlocks(ROOT)) fail("doc-status", e);
+
+  // (w) Role axis (#707 ruling): `role` must be one of
+  // core/adapter-binding/companion/guide, and must match its derivation
+  // (roleFor(), scripts/generate-drafts-index.mjs) exactly: core is the
+  // substrate kernel alone, adapter-binding is exactly the Mission Substrate
+  // Statement/Assessment registry (BINDING_SLUGS), guide is exactly every
+  // category:info document, companion is everything else. A future draft
+  // that adds itself to a registry, or ships with category: info, therefore
+  // cannot silently carry the wrong role.
+  const VALID_ROLES = new Set(["core", "adapter-binding", "companion", "guide"]);
+  let coreCount = 0;
+  for (const d of drafts) {
+    if (!VALID_ROLES.has(d.role)) {
+      fail("role-axis", `${d.slug}: role "${d.role}" is not one of ${JSON.stringify([...VALID_ROLES])}`);
+      continue;
+    }
+    if (d.role === "core") coreCount += 1;
+    const derived = roleFor(d);
+    if (d.role !== derived) {
+      fail("role-axis", `${d.slug}: role "${d.role}" does not match its derivation ("${derived}"): core is "${CORE_SLUG}" alone, adapter-binding is exactly ${JSON.stringify(BINDING_SLUGS)}, guide is exactly every category:info document, companion is everything else`);
+    }
+    // The guide <-> not_applicable pairing is a biconditional: a guide has
+    // no protocol maturity to claim, and nothing else is exempted from
+    // claiming one, so the pairing cannot drift silently in either direction.
+    if (d.role === "guide" && d.spec_maturity !== "not_applicable") {
+      fail("role-axis", `${d.slug}: role "guide" requires spec_maturity "not_applicable", found "${d.spec_maturity}"`);
+    }
+    if (d.role !== "guide" && d.spec_maturity === "not_applicable") {
+      fail("role-axis", `${d.slug}: spec_maturity "not_applicable" is reserved for role "guide", found role "${d.role}"`);
     }
   }
+  if (coreCount !== 1) {
+    fail("role-axis", `expected exactly one draft with role "core" (the substrate kernel, "${CORE_SLUG}"), found ${coreCount}`);
+  }
+
+  // (x) Spec-maturity axis (#707 ruling): `spec_maturity` must be one of
+  // candidate/experimental/sketch/not_applicable. (The guide <-> not_applicable
+  // pairing itself is validated above, under (w), alongside role.)
+  const VALID_SPEC_MATURITIES = new Set(["candidate", "experimental", "sketch", "not_applicable"]);
+  for (const d of drafts) {
+    if (!VALID_SPEC_MATURITIES.has(d.spec_maturity)) {
+      fail("spec-maturity-axis", `${d.slug}: spec_maturity "${d.spec_maturity}" is not one of ${JSON.stringify([...VALID_SPEC_MATURITIES])}`);
+    }
+  }
+
+  // (y) Candidate honesty (#707 ruling, the review's named contradiction
+  // class): a document claiming `spec_maturity: "candidate"` must not
+  // contain prose, inside its own "# Status" section, admitting that its
+  // own interface is not yet stable. Scoped to a self-referential subject
+  // ("this document/profile/specification/binding/draft ... is ...") so a
+  // criterion-5 disclosure about an EXTERNAL dependency's instability (e.g.
+  // "depends on an early Internet-Draft that is not ratified") does not
+  // trip it: that sentence's grammatical subject is the external draft, not
+  // "this document", and disclosing it is required, not dishonest.
+  for (const d of drafts) {
+    if (d.spec_maturity !== "candidate") continue;
+    const text = readFile(path.join(ROOT, d.file), d.file);
+    const head = text.match(/^# Status[^\n]*$/m);
+    // No "# Status" heading at all (true today only for the published OAuth
+    // binding, FAMILY_STATUS_EXEMPT_FILE, which (r) exempts from the block
+    // requirement) means nothing to scan; skip rather than exempt by name,
+    // so this check still applies the day that file gains a Status section.
+    if (!head) continue;
+    const start = text.indexOf(head[0]) + head[0].length;
+    const rest = text.slice(start);
+    const nextHead = rest.search(/^# [^#\n]/m);
+    const section = nextHead === -1 ? rest : rest.slice(0, nextHead);
+    const m = section.match(UNSTABLE_SELF_CLAIM);
+    if (m) {
+      fail(
+        "candidate-honesty",
+        `${d.file}: spec_maturity is "candidate" but its own Status section admits its interface is not stable ("...${section.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20)}..."); either the prose is stale or the manifest overclaims`,
+      );
+    }
+  }
+
+  // (z) Candidate gate (#723 review response): the five-criterion candidate
+  // gate as structured, resolvable evidence in candidate-gate.json, not
+  // prose inference. (y)'s regex above stays a useful contradiction
+  // tripwire on top of this, not the gate itself: a document can fail (z)
+  // with entirely honest prose (candidate-gate.json's whole point is that
+  // "looks fine" is not "is attested"). See generate-drafts-index.mjs's
+  // validateCandidateGate() for the full rule.
+  for (const e of validateCandidateGate(ROOT)) fail("candidate-gate", e);
 
   // (s) Conventions anchor stability: every Conventions heading carries an
   // explicit kramdown anchor, so cross-document links never depend on a
@@ -917,4 +1069,11 @@ function main() {
   process.exit(sub.status ?? 1);
 }
 
-main();
+// Guarded the same way as generate-drafts-index.mjs and
+// check-substrate-statements.mjs: importing HAND_TYPED_COUNT or
+// UNSTABLE_SELF_CLAIM (scripts/test-family-manifest.mjs does) must never run
+// this file's own full validation as an import side effect; only running it
+// directly does.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

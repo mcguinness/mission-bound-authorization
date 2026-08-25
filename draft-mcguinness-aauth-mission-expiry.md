@@ -84,7 +84,8 @@ it cannot be changed in place.
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: frozen-until-upstream-release.
+Role: companion. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL).
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

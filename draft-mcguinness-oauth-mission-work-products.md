@@ -177,7 +177,8 @@ object and the handoff rule are companion mechanisms that a deployment
 adopts where its agents share durable work products.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: lab-best-effort.
+Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Artifacts cross into another Mission and must carry provenance, never authority.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

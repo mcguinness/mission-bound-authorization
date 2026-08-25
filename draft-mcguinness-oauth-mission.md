@@ -6047,7 +6047,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: 016a26b031d0ae20 -->
+<!-- assessed-substrate-digest: b2c327aee9d76b21 -->
 
 This appendix is informative. It is this document's own Mapping
 Assessment of itself against the Mission Substrate contract's kernel

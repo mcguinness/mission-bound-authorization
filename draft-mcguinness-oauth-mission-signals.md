@@ -208,7 +208,8 @@ unaffected by this document.
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: 6 conformance rows in conformance-manifest.json (5 tested, 1 partial).
 Adopt when: Consumers need push notice of state changes instead of polling per Mission.
 Requires: Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).

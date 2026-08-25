@@ -176,7 +176,8 @@ supplied the claims it carries.
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: 5 conformance rows in conformance-manifest.json (2 tested, 1 partial, 2 todo).
 Adopt when: The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Resource Access Profile for OAuth 2.0 (when the deployment maps a mission_resource_access authorization_details entry).

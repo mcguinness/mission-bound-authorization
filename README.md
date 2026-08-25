@@ -248,8 +248,9 @@ deployment is known today on any binding. The remaining
 documents are design exploration and independently selectable
 companion work with declared dependencies (runtime, lifecycle,
 evidence, and cross-domain profiles on their own timelines), not a
-request to standardize a 42-document suite. Anything beyond that
-chartering surface enters
+request to standardize the whole suite (its current count is one link
+away, in [`DRAFTS.md`](DRAFTS.md)'s generated summary). Anything beyond
+that chartering surface enters
 scope only as the community pulls it.
 
 The suite takes its name from the model; the OAuth binding's title,
@@ -311,9 +312,23 @@ partial, or todo coverage.
 The OAuth binding is a published Internet-Draft on the IETF
 [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/);
 the companions are editor's copies in this repository, on their own
-timelines. Maturity words (**stable**, **experimental**, **sketch**,
-with informational documents shown as **guide**) are this
-repository's own labels, not IETF statuses.
+timelines. This repository labels every document on five independent
+axes, none of them IETF statuses: a **role** (core, adapter-binding,
+companion, or guide) that never changes with maturity; a **spec
+maturity** (candidate, experimental, sketch, or not applicable for a
+guide) gated on the document's own claimed interface, not on a
+coverage percentage, so implementation incompleteness cannot stand in
+for protocol quality; an **intended standards category** (`std`,
+`exp`, or `info`) from the document's own front matter, a statement of
+requested RFC category, never of WG adoption, approval, or publication
+state; **implementation/conformance**, derived per document from
+`conformance-manifest.json` and shown beside spec maturity rather than
+folded into it; and a **maintenance class**. A candidate document's own
+"# Status" section cannot claim, in prose, that its interface is
+unstable while the manifest calls it a candidate: that contradiction is
+machine-checked. `DRAFTS.md` renders all five axes and their
+family-wide counts, generated from the manifest and the conformance
+ledger.
 
 ## Repository use
 
@@ -328,9 +343,10 @@ make                                       # everything
 Validation:
 
 ```sh
-node scripts/check-family-manifest.mjs        # inventory, catalog, metadata (chains the Statement check)
+node scripts/check-family-manifest.mjs        # inventory, catalog, metadata, candidate gate (chains the Statement check)
 node scripts/check-conformance-manifest.mjs   # requirement rows against the spec texts
-node scripts/generate-drafts-index.mjs --check # DRAFTS.md's index and reference-stacks blocks, and README's binding-packages block, freshness
+node scripts/generate-drafts-index.mjs --check # DRAFTS.md's index, family-counts, and reference-stacks blocks; README's binding-packages block; every draft's family-status block
+node scripts/test-family-manifest.mjs         # fixture tests: role derivation, each candidate-gate criterion, the two regex tripwires
 ```
 
 Operational references, not the catalog (that is one link, Find your
@@ -343,8 +359,8 @@ machine-readable inventory this page, `DRAFTS.md`'s generated
 tables, and the conformance ledger are all built from).
 
 Each manifest entry carries `verbs` (the spine position), a
-one-sentence `summary`, a `pull_when` adoption trigger, `maturity`,
-`maintenance`, and typed edges in two layers: the extracted citation
+one-sentence `summary`, a `pull_when` adoption trigger, `role`,
+`spec_maturity`, `maintenance`, and typed edges in two layers: the extracted citation
 graph (`normative_references` and `references`, drift-checked both
 ways against each draft's own front matter) and the authored
 adoption graph (`adoption_requires`, the unconditional deployment
