@@ -1442,9 +1442,10 @@ profile's error vocabulary directly: an expansion request whose
 Mission, or whose predecessor is not `active`, fails with
 `invalid_grant` ({{request-binding}}, {{predecessor-active}}); an
 expansion Mission
-Intent the Mission Issuer cannot parse or cannot derive a valid
-Authority Set from fails with `invalid_request` or, where the issuance
-profile uses it, `invalid_authorization_details` ({{RFC9396}}), exactly
+Intent the Mission Issuer cannot parse fails with `invalid_request`; one
+it can parse but cannot derive a valid Authority Set from fails with
+`invalid_authorization_details` ({{RFC9396}}) where the client submitted
+a proposal alongside it, or `access_denied` where it did not, exactly
 as for any Mission creation.
 
 # Worked Example {#example}
