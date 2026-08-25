@@ -355,25 +355,28 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     // @spec #child-client-identity — client_id == the child actor's sub.
     expect(child?.client_id).toBe("subagent-extractor");
 
-    // @spec #child-client-identity / #parent-member — the grant reference carries
-    // the parent lineage and an authority_hash over the CHILD set (not the parent's).
+    // @spec #child-client-identity / #parent-member (#702) — the grant
+    // reference carries the baseline {id, issuer} plus the child-delegation
+    // profile's own `parent` lineage member; the child's authority commitment
+    // (over the CHILD set, not the parent's) is record-resident, not a
+    // top-level wire member.
     const a = decodeJwt(body.access_token as string) as {
       aud: string;
       sub: string;
       client_id: string;
-      mission: { id: string; authority_hash: string; parent?: { id: string; depth: number } };
+      mission: { id: string; parent?: { id: string; depth: number } };
     };
     expect(a.aud).toBe(`${ISSUER}/token`);
     // sub = the Mission subject (inherited from the parent); client_id = the child actor.
     expect(a.sub).toBe("alice");
     expect(a.client_id).toBe("subagent-extractor");
     expect(a.mission.id).toBe(body.mission_id);
+    expect(Object.keys(a.mission).sort()).toEqual(["id", "issuer", "parent"]);
     expect(a.mission.parent?.id).toBe(parent.missionId);
     expect(a.mission.parent?.depth).toBe(1);
-    expect(a.mission.authority_hash).toMatch(/^sha-256:/);
-    expect(a.mission.authority_hash).toBe(child?.authority_hash);
+    expect(child?.authority_hash).toMatch(/^sha-256:/);
     const parentRecord = as.kernel.get(parent.missionId);
-    expect(a.mission.authority_hash).not.toBe(parentRecord?.authority_hash);
+    expect(child?.authority_hash).not.toBe(parentRecord?.authority_hash);
   });
 
   it("rejects an unauthenticated creation request at /token (client auth identifies the acting agent; @spec #request-processing step 1)", async () => {
@@ -680,13 +683,15 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     // absent (silently) if the Grant->findByGrant binding is keyed wrong, so this
     // is asserted BEFORE drilling into its members.
     const mission = payload.mission as
-      | { id?: string; authority_hash?: string; parent?: { id?: string; depth?: number } }
+      | { id?: string; parent?: { id?: string; depth?: number } }
       | undefined;
     expect(mission, "child mission claim must be present on the token").toBeDefined();
     expect(mission?.id).toBe(missionId);
-    // The child hash commits the CHILD set; it differs from the parent's.
-    expect(mission?.authority_hash).toBe(child?.authority_hash);
-    expect(mission?.authority_hash).not.toBe(as.kernel.get(p.missionId)?.authority_hash);
+    // (#702) The claim's top level is exactly {id, issuer, parent}; the
+    // child's authority commitment (over the CHILD set, differing from the
+    // parent's) is record-resident, not a wire member.
+    expect(Object.keys(mission as object).sort()).toEqual(["id", "issuer", "parent"]);
+    expect(child?.authority_hash).not.toBe(as.kernel.get(p.missionId)?.authority_hash);
     // The child mission claim carries the parent lineage member.
     expect(mission?.parent?.id).toBe(p.missionId);
     expect(mission?.parent?.depth).toBe(1);

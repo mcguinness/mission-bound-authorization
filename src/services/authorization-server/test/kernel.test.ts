@@ -293,10 +293,19 @@ describe("approval basis (@spec mission#approval-basis)", () => {
     expect(record.authority_hash).toBe(authorityHash(ISS, record.authority_set as never));
   });
 
-  it("carries approval_basis.type as a read-only signal on the mission claim", () => {
+  it("keeps the baseline mission claim to exactly {id, issuer}, with no authority_hash/approval_basis (#702)", () => {
     const record = approve(intent(), 101);
     const claim = kernel.missionClaim(kernel.get(record.id) as MissionRecord);
-    expect(claim.approval_basis).toEqual({ type: "direct" });
+    expect(claim).toEqual({ id: record.id, issuer: ISS });
+  });
+
+  it("discloses approval_basis.type as a read-only signal only to a caller holding the disclosure privilege", () => {
+    const record = approve(intent(), 102);
+    const fresh = kernel.get(record.id) as MissionRecord;
+    const privileged = kernel.introspectionProjection(fresh, { disclose: new Set(["provenance"]) });
+    expect(privileged.approval_basis).toEqual({ type: "direct" });
+    const unprivileged = kernel.introspectionProjection(fresh, { disclose: new Set() });
+    expect(unprivileged.approval_basis).toBeUndefined();
   });
 });
 

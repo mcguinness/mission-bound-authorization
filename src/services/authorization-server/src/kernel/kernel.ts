@@ -1505,25 +1505,39 @@ export class MissionKernel {
     return this.gateActiveLineage(id);
   }
 
-  /** @spec mission#the-mission-claim */
+  /**
+   * @spec mission#the-mission-claim (#702) — the baseline claim is exactly
+   * `{id, issuer}`. `authority_hash`, `expires_at`, and `approval_basis` are
+   * NOT added here: a companion profile that needs one of them adds it as
+   * its own extension member at its own call site (see
+   * {@link childMissionClaim} and the attenuation/cross-domain/cross-org/
+   * issuance-grant profiles), and introspection discloses `authority_hash`/
+   * `approval_basis` separately under the caller's disclosure privilege
+   * ({@link introspectionProjection}), never by widening this method.
+   */
   missionClaim(record: MissionRecord): MissionClaim {
     return {
       id: record.id,
       issuer: record.issuer,
-      authority_hash: record.authority_hash,
-      // @spec mission#the-mission-claim — the RFC 3339 date-time, verbatim.
-      expires_at: record.expires_at,
-      // @spec mission#approval-basis: the read-only wire signal. MUST NOT be
-      // relied on to grant authority.
-      approval_basis: { type: record.approval_basis.type },
     };
   }
 
-  /** @spec mission#introspection — the mission introspection member. */
+  /**
+   * @spec mission#introspection — the FULL, ungated mission introspection
+   * projection: every issuer-held fact, with no caller-scoped disclosure
+   * privilege applied. Unlike {@link introspectionProjection} (the real,
+   * caller-gated adapter surface), this is the issuer's own unrestricted
+   * view and is used internally (e.g. by tests asserting record-level
+   * state); it explicitly carries `authority_hash` and `approval_basis`
+   * (#702 moved them off the baseline {@link missionClaim}) since an
+   * ungated issuer view has no reason to withhold them.
+   */
   introspectionMission(record: MissionRecord): Record<string, unknown> {
     const fresh = this.applyExpiry(record);
     return {
       ...this.missionClaim(fresh),
+      authority_hash: fresh.authority_hash,
+      approval_basis: { type: fresh.approval_basis.type },
       state: fresh.state,
       version: fresh.version,
       // @spec mission#introspection — issuer-only, like `state`: when the
@@ -1573,6 +1587,14 @@ export class MissionKernel {
         : {}),
       ...(caller.disclose.has("provenance") && fresh.proposal_hash
         ? { proposal_hash: fresh.proposal_hash }
+        : {}),
+      // @spec mission#caller-authorization-and-minimization (#702) —
+      // `authority_hash` and `approval_basis` moved off the baseline claim;
+      // introspection discloses them to a caller holding the deployment's
+      // audit-and-correlation disclosure privilege, reusing the same
+      // "provenance" grant `proposal_hash` above already gates on.
+      ...(caller.disclose.has("provenance")
+        ? { authority_hash: fresh.authority_hash, approval_basis: { type: fresh.approval_basis.type } }
         : {}),
       ...(fresh.containment
         ? { containment_version: fresh.containment.containment_version }
@@ -1624,6 +1646,11 @@ export class MissionKernel {
       sub: record.client_id,
       mission: {
         ...this.missionClaim(record),
+        // @spec mission-status#mission-status-response (#702) — OPTIONAL,
+        // disclosed at the AS's discretion (issuance profile's introspection
+        // disclosure footing); this reference AS discloses it on every
+        // Status response.
+        authority_hash: record.authority_hash,
         state: record.state,
         version: record.version,
         expires_at: record.expires_at,

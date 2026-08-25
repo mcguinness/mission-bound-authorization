@@ -367,10 +367,13 @@ describe("derivation over the effective set", () => {
     expect(details).toHaveLength(1);
     expect(details[0]?.resource).toBe(RES_PAY);
     expect(details[0]?.actions).toEqual(["payments:invoice.read"]);
-    // The assertion still commits the child's APPROVED set.
-    expect((decodeJwt(assertion).mission as { authority_hash: string }).authority_hash).toBe(
-      contained.authority_hash,
-    );
+    // @spec mission#the-mission-claim (#702) — the assertion's `mission`
+    // claim carries only the baseline {id, issuer} plus the child-delegation
+    // profile's own `parent` lineage member, never `authority_hash`; the
+    // child's authority commitment (over its APPROVED, not effective, set)
+    // stays record-resident and is unaffected by containment.
+    expect(Object.keys(decodeJwt(assertion).mission as object).sort()).toEqual(["id", "issuer", "parent"]);
+    expect(contained.authority_hash).toBeTruthy();
   });
 
   it("a fully contained mission refuses derivation with GateError authority_contained", () => {

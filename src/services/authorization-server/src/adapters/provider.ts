@@ -1258,8 +1258,11 @@ async function handleChildJwtBearerGrant(
   }
 
   // 4. Resolve the Child Mission; the record is authoritative. Cross-check its
-  //    client_id and authority_hash against the assertion (defence in depth against
-  //    a stale or tampered assertion).
+  //    client_id against the assertion (defence in depth against a stale or
+  //    tampered assertion); `authority_hash` (#702: not on the baseline
+  //    `mission` claim `childMissionClaim` projects) is checked only when the
+  //    assertion happens to carry it — present-then-check, never required,
+  //    mirroring the AuthZEN/MAS wire-consistency pattern.
   if (typeof missionId !== "string") {
     throw new errors.InvalidGrant("child grant assertion missing mission.id");
   }
@@ -1267,7 +1270,10 @@ async function handleChildJwtBearerGrant(
   if (!record) {
     throw new errors.InvalidGrant("child mission not found");
   }
-  if (record.client_id !== assertedClientId || record.authority_hash !== assertedHash) {
+  if (
+    record.client_id !== assertedClientId ||
+    (assertedHash !== undefined && record.authority_hash !== assertedHash)
+  ) {
     throw new errors.InvalidGrant("child grant assertion does not match the mission record");
   }
 
@@ -2073,11 +2079,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         const exp: number = payload.exp;
         const iat: number = payload.iat;
 
-        // @spec mission#the-mission-claim — the Mission profile's claim
-        // shape, when a `mission` member is present at all; its total
-        // ABSENCE is the pre-existing, distinct "unresolvable" case handled
-        // by the Mission lookup below (never Mission-bound), not a
-        // malformed shape.
+        // @spec mission#the-mission-claim (#702) — the baseline Mission
+        // profile claim shape is exactly `{id, issuer}`, when a `mission`
+        // member is present at all; its total ABSENCE is the pre-existing,
+        // distinct "unresolvable" case handled by the Mission lookup below
+        // (never Mission-bound), not a malformed shape. `authority_hash` is
+        // NOT part of the baseline claim; where a companion profile carries
+        // it (e.g. a child-delegation `parent` ref), it is typed but never
+        // REQUIRED here, and its absence is never grounds to reject an
+        // otherwise well-formed baseline claim.
         const missionClaimRaw = payload.mission;
         if (missionClaimRaw !== undefined) {
           const m = missionClaimRaw as Record<string, unknown> | null;
@@ -2088,8 +2098,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             !m.id ||
             typeof m.issuer !== "string" ||
             !m.issuer ||
-            typeof m.authority_hash !== "string" ||
-            !m.authority_hash
+            (m.authority_hash !== undefined && (typeof m.authority_hash !== "string" || !m.authority_hash))
           ) {
             ctx.body = inactive;
             return;

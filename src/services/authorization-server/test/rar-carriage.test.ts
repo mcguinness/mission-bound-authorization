@@ -156,15 +156,11 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     const record = approve(PROPOSAL);
     const introspected = kernel.introspectionMission(record);
     expect(introspected.proposal_hash).toBe(record.proposal_hash);
-    // @spec mission#the-mission-claim — zero claim changes: the exact key set.
+    // @spec mission#the-mission-claim (#702) — the baseline claim is exactly
+    // {id, issuer}: authority_hash, expires_at and approval_basis are NOT
+    // part of it (they are added only by a companion profile that owns them).
     const claim = kernel.missionClaim(record);
-    expect(Object.keys(claim).sort()).toEqual([
-      "approval_basis",
-      "authority_hash",
-      "expires_at",
-      "id",
-      "issuer",
-    ]);
+    expect(Object.keys(claim).sort()).toEqual(["id", "issuer"]);
   });
 
   it("closes the remediation loop natively (@spec I-D.draft-zehavi-oauth-rar-metadata)", () => {
@@ -488,17 +484,12 @@ describe("end-to-end issuance under the new carriage", () => {
       expect(entry.constraints?.max_amount?.amount).toBe("500.00");
     }
 
-    // Zero claim changes: the mission claim never carries the proposal members.
+    // The mission claim never carries the proposal members, and (#702) is
+    // exactly the baseline {id, issuer}.
     const claims = JSON.parse(
       Buffer.from(body.access_token.split(".")[1] as string, "base64url").toString(),
     ) as { mission: Record<string, unknown> };
-    expect(Object.keys(claims.mission).sort()).toEqual([
-      "approval_basis",
-      "authority_hash",
-      "expires_at",
-      "id",
-      "issuer",
-    ]);
+    expect(Object.keys(claims.mission).sort()).toEqual(["id", "issuer"]);
 
     // The record committed the submitted proposal; introspection (issuer-only
     // surface) reports proposal_hash beside state.
