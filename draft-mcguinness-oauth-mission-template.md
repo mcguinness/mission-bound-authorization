@@ -195,7 +195,8 @@ issuance-profile Mission Issuer ({{I-D.draft-mcguinness-oauth-mission}}).
 Nothing here places a new requirement back on the issuance profile.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: lab-best-effort.
+Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
+Implementation: 3 conformance rows in conformance-manifest.json (1 partial, 2 todo).
 Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
 Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0; Mission Expansion for OAuth 2.0.
 <!-- family-status: END -->

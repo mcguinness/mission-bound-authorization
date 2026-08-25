@@ -108,10 +108,18 @@ capability nonconforming, or a justified SHOULD departure a failure
 ## Maintenance Classes Convention
 
 `family-manifest.json`'s `maintenance` field states how responsively
-this repository maintains a draft. Maintenance is orthogonal to
-maturity: `maturity` is specification stability, `maintenance` is
-repository responsiveness, and neither implies the other. The design
-record for this split, and for the classes below, is
+this repository maintains a draft. Maintenance is orthogonal to spec
+maturity: `spec_maturity` is a five-criteria gate on the document's own
+claimed interface (complete requirement inventory, no internal
+contradiction or open `decide` issue on that interface, a named
+interoperability floor with representative evidence where evidence is
+claimed, examples and a clean build, and disclosed unstable external
+dependencies), never a raw coverage percentage; `maintenance` is
+repository responsiveness; and neither implies the other. (`role`,
+covering core, adapter-binding, companion, and guide, is a third
+axis, orthogonal to both, and architectural rather than a maturity
+signal.) The design record for this split, and for the classes below,
+is
 [notes/adoption-plan.md](notes/adoption-plan.md).
 
 Five classes, machine-enumerated in `family-manifest.json`'s
@@ -135,7 +143,7 @@ Five classes, machine-enumerated in `family-manifest.json`'s
   out of the Lab is a four-condition check (a Mission Substrate
   Statement where the draft binds a new substrate, the abstract
   dropping deferred/sketch language, a named adopter or implementer
-  commitment on record, and category/maturity updated together
+  commitment on record, and category/spec_maturity updated together
   in one PR).
 
 ## Consolidation Policy

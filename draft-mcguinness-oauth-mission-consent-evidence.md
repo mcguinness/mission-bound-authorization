@@ -224,7 +224,8 @@ later enforced.
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: You must prove what the Approver actually saw, not only what was approved.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an Approval Governance Record is recorded).

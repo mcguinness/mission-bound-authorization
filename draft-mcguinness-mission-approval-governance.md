@@ -181,7 +181,8 @@ Mission Authority Server's native asynchronous approval alike, and
 depends on no deferral substrate.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
 Requires: Mission Substrate Requirements.
 <!-- family-status: END -->

@@ -458,7 +458,8 @@ compromise degrades the guarantees. Each profile's own Security
 Considerations remain normative over both.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: informational. Maintenance: active.
+Role: guide. Spec maturity: not applicable. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Before adopting anything: the Mission model, invariants, and assurance levels the rest cite.
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

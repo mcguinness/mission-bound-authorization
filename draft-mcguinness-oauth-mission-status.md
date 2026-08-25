@@ -229,7 +229,8 @@ referenced, not re-specified, here.
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: 21 conformance rows in conformance-manifest.json (18 tested, 2 partial, 1 todo).
 Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
 Requires: Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Resource Access Profile for OAuth 2.0 (when the completion capability's terminal_when Common Constraint is used).

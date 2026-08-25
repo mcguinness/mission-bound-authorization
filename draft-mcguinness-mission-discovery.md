@@ -228,7 +228,8 @@ human-approved expansion
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: lab-best-effort.
+Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: An open-world agent meets resources its approval never named.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness supplies taint state); Mission-Bound Authorization for OAuth 2.0 and Mission Progressive Authorization for OAuth 2.0 (when ceiling adjudication is the deployed mode).

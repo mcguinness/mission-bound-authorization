@@ -1069,7 +1069,8 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: 119 conformance rows in conformance-manifest.json (27 tested, 17 partial, 72 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).

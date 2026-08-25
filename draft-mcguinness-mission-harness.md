@@ -207,7 +207,8 @@ engine state or of engine state into the Mission record
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: A harness holds session state across restarts and must stop work when the Mission dies.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Authority Server (when a gateway PEP outside the harness carries the Mission reference); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status is the freshness source).

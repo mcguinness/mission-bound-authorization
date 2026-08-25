@@ -269,7 +269,8 @@ This document does NOT define:
 # Status: An Optional Profile {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: stable. Maintenance: active.
+Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Approved authority will predictably need to widen mid-task via fresh approval.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

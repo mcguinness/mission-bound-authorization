@@ -146,7 +146,8 @@ in-progress deferred substrate
 as it evolves.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: lab-best-effort.
+Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Reviewers routinely narrow a proposed Mission rather than approve or deny.
 Requires: Mission-Bound Authorization for OAuth 2.0; Mission Deferred Approval for OAuth 2.0.
 <!-- family-status: END -->

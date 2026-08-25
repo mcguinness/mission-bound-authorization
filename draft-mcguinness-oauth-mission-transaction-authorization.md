@@ -284,7 +284,8 @@ Experimental for that reason, tracking its substrate and crossing to
 the stable tier by reclassification when the substrate does.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Maturity: experimental. Maintenance: active-experimental.
+Role: companion. Spec maturity: experimental. Maintenance: active-experimental.
+Implementation: 35 conformance rows in conformance-manifest.json (21 tested, 6 partial, 8 todo).
 Adopt when: One action needs a fresh, portable, cross-org authorization with no live callback.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->
