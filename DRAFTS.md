@@ -30,6 +30,7 @@ hand-authored.
 | [Mission-Bound Runtime Enforcement: AuthZEN Profile](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html) | stable | enforce | Runtime enforcement | The concrete OpenID AuthZEN binding of the runtime decision contract. | The PDP speaks AuthZEN and needs the decision-contract wire mapping. |
 | [Mission Capability Binding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html) | stable | enforce | Agent runtime | Binds a Mission's approved catalog-sourced entry (an MCP tool, an OpenAPI operation, or an equivalent) to the capability source it was derived from: `tool_id`, source, and a content digest recorded at derivation and verified at decision time. | Actions come from a discovered catalog where invoked identity can drift from approval. |
 | [Mission Open-World Discovery](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) | experimental | govern | Lifecycle | Makes discovery a governed operation for agents that meet resources their approval could not name, defining the Encounter, resource identity pinning, two-mode Discovery Adjudication, and Discovery Evidence. | An open-world agent meets resources its approval never named. |
+| [Mission Evidence Envelope](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-evidence-envelope.html) | sketch | prove | Proof and portability | A generic, binding-neutral evidence envelope and payload-type registry a future evidence kind MAY register into instead of minting a one-off object and media type, seeded with Intent Admission Evidence as its first payload type; migrates none of the family's existing evidence kinds. | A new evidence kind is being designed and a deployment wants to avoid minting another bespoke media type, or Intent Admission Evidence's inbound assertion and emitted attestation are needed. |
 | [Mission-Bound Authorization for GNAP](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | sketch | approve | The substrate and the bindings | Experimental sketch: the fifth binding, to the Grant Negotiation and Authorization Protocol (RFC 9635) authorization server, and the second authored against the Mission Substrate Requirements contract. | Evaluating a GNAP deployment only. |
 | [Mission-Aware Agent Harnesses](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html) | stable | run | Agent runtime | How an agent harness binds sessions, task graphs, queues, and sub-agent handles to Mission state, and how it must pause, suppress, or terminate work once the Mission is no longer active. | A harness holds session state across restarts and must stop work when the Mission dies. |
 | [Mission Mandate](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html) | stable | prove | Proof and portability | A signed, portable, independently verifiable statement of a Mission's committed facts (its identifiers, integrity anchors, Subject, Approver, and optionally its Authority Set), minted by the Mission Issuer. | An outside party must verify what was approved without a token-exchange hop. |
@@ -746,6 +747,19 @@ commit to evidence by hash, so sensitive task data stays out of the log.
 Layers onto any level.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html)
+
+#### Mission Evidence Envelope
+
+An Experimental, binding-neutral evidence envelope (type, id, mission,
+emitter, occurred_at, sequence, related, payload, integrity envelope)
+and a Mission Evidence Payload Type Registry a future evidence kind
+MAY register into instead of minting its own bespoke media type,
+without weakening per-kind schema and verification separation.
+Migrates none of the family's existing evidence kinds; ships one
+pilot payload type, Intent Admission Evidence, the first consumer of
+the OAuth binding's Intent Submission Evidence dispatch.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-evidence-envelope.html)
 
 ### Security model
 
