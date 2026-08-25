@@ -101,6 +101,13 @@
    ],
    "examples_waiver": null
   },
+  "draft-mcguinness-mission-substrate": {
+   "requirement_inventory": { "attested": true, "audited_by": "ac7c59a3d3489c9ce5cc0cdcbb260532cd93f974" },
+   "decide_resolutions": [
+    { "issue": 708, "status": "resolved_in_tree", "commit": "30982cda740aa761272d847e476d9a77a1ee9726", "note": "PR #717 removed the substrate's normative OAuth dependency (assessment placement, bridge tier, neutral vectors)." }
+   ],
+   "examples_waiver": null
+  },
   "draft-mcguinness-aauth-mission-expiry": {
    "requirement_inventory": { "attested": false, "audited_by": null },
    "decide_resolutions": [],

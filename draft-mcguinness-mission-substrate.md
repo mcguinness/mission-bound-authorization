@@ -223,7 +223,7 @@ needed by an adopter outside that family.
 # Status: A Normative Contract for Bindings {#doc-status}
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: core. Spec maturity: experimental. Maintenance: active.
+Role: core. Spec maturity: candidate. Maintenance: active.
 Implementation: 83 conformance rows in conformance-manifest.json (10 tested, 6 partial, 67 todo).
 Adopt when: Runtime implementers consume its commitment construction and kernel contract; binding authors profile it.
 Requires: nothing beyond its listed references.
