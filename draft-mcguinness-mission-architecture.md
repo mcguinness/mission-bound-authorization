@@ -3394,6 +3394,7 @@ bound profiled by `aauth-mission-expiry`.
 |---|---|
 | `mission-mandate` | A signed, portable statement of a Mission's committed facts; evidence, not a credential. |
 | `mission-audit` | Registration of Mission evidence in a SCITT Transparency Service; receipts verifiable offline. |
+| `mission-evidence-envelope` | Experimental: a generic, binding-neutral evidence envelope and payload-type registry a future evidence kind may register into; seeds Intent Admission Evidence as its first payload type, migrating none of the family's existing evidence kinds. |
 
 **Security model:**
 

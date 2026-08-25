@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 43,
+ "count": 44,
  "drafts": [
   {
    "file": "draft-mcguinness-aauth-mission-expiry.md",
@@ -632,6 +632,33 @@
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-mission-evidence-envelope.md",
+   "slug": "draft-mcguinness-mission-evidence-envelope",
+   "title": "Mission Evidence Envelope",
+   "category": "exp",
+   "maturity": "sketch",
+   "maintenance": "lab-best-effort",
+   "group": "proof-portability",
+   "verbs": [
+    "prove"
+   ],
+   "summary": "A generic, binding-neutral evidence envelope and payload-type registry a future evidence kind MAY register into instead of minting a one-off object and media type, seeded with Intent Admission Evidence as its first payload type; migrates none of the family's existing evidence kinds.",
+   "pull_when": "A new evidence kind is being designed and a deployment wants to avoid minting another bespoke media type, or Intent Admission Evidence's inbound assertion and emitted attestation are needed.",
+   "normative_references": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [],
+   "references": [
+    "draft-mcguinness-mission-audit",
+    "draft-mcguinness-mission-mandate",
+    "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-consent-evidence"
    ]
   },
   {
