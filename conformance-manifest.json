@@ -69,6 +69,10 @@
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "5c793f0e9410b7d28b8ab05fbe10ce5b464ec7f6",
     "content_sha256": "e33ccac94c949bd12bf9e0e802ce07bdd731eabef2aaf336f5c897da6450eb72"
+   },
+   "draft-mcguinness-mission-evidence-envelope.md": {
+    "revision": "0000000000000000000000000000000000000000",
+    "content_sha256": "09ca6d20e66bdf9b82199f1b5ed80e35a1a77cdc03c0e07b69e692639d2a598d"
    }
   }
  },
@@ -15400,6 +15404,466 @@
     "normative": "a Resource Server's conformance does not depend on implementing narrowing, delegate eligibility, or the Transformation Capabilities declaration, which are Authorization-Server-only duties."
    },
    "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "evidence-payload-type-registry",
+   "text": "A verifier MUST reject an instance whose `type` it does not recognize,\nand MUST NOT interpret `payload` under any schema other than the one\nthe recognized `type` registers",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Evidence Envelope instance carrying an unregistered type value is rejected outright, never parsed or interpreted under a default or guessed payload schema"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.mission-evidence-envelope.closed-top-level",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "mission-evidence-envelope-members",
+   "text": "A Mission Evidence Envelope instance is closed to uncoordinated\nextension at this top level",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an envelope instance carries exactly type, id, mission, emitter, occurred_at, sequence, related, payload, and evidence_envelope; a registered payload type extends the object only through payload"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.mission-evidence-envelope.integrity-typ-cty",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "mission-evidence-envelope-integrity",
+   "text": "A\nverifier MUST reject a JWS whose protected `typ` or `cty` does not\nmatch these exact values.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every Mission Evidence Envelope instance is rejected unless its JWS protected typ is application/mission-evidence+jws and cty is application/mission-evidence+json"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.mission-evidence-envelope.integrity-alg-policy",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "mission-evidence-envelope-integrity",
+   "text": "MUST reject `none` and any\nprotected header whose `alg` does not match the algorithm family of\nthe resolved key",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a verifier rejects an envelope instance whose JWS alg is none or does not match the resolved key's algorithm family"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.mission-evidence-envelope.producer-authorization-required",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "producer-authorization",
+   "text": "A verifier MUST reject an instance failing any of these checks,\ntreating the failure identically to a signature or schema failure",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a well-formed, correctly signed, schema-conformant instance naming a Mission or producer role the signer is not authorized for is rejected as not verified, the same as a signature or schema failure"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.mission-evidence-envelope.retention-obligated-actor",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "mission-evidence-envelope-retention",
+   "text": "This duty\nfalls on the producer at the moment of emission; the producer\ndischarges it either by retaining the instance itself, or by\ndelivering it to an evidence store or collector the deployment\ndesignates for this purpose, whose successful acknowledgment of\nreceipt discharges the producer's own retention obligation.",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the retention obligation for a Mission Evidence Envelope instance falls on the producer, discharged either by the producer's own retention or by successfully acknowledged delivery to a designated collector"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.entry-closed-schema",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-assertion",
+   "text": "The entry is closed to exactly two members",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Intent Submission Evidence entry of type mission-intent-admission-assertion carries exactly type and assertion, nothing else"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.assertion-typ-required",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-assertion",
+   "text": "A verifier MUST reject an assertion\nwhose `alg` is `none`, whose `alg` does not match the algorithm family\nof the key `kid` resolves to, or whose protected `typ` is not exactly\n`mission-intent-admission-assertion+jws`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Intent Admission Assertion is rejected unless its protected typ is exactly mission-intent-admission-assertion+jws, alg is not none, and alg matches the resolved key's algorithm family"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.assertion-key-use-separation",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-assertion",
+   "text": "A verifier MUST reject an assertion signed by a key that is\nresolvable but not scoped to this usage; a multipurpose signing key\nwith no usage scoping does not satisfy this requirement.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Intent Admission Assertion signed by a key not specifically scoped to Intent Admission Assertion signing is rejected, even if the key is otherwise resolvable and valid"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.status-active-only",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-assertion",
+   "text": "`active` is the only value this document\n  defines; a verifier MUST treat any other value as not verified.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Intent Admission Assertion whose status is anything other than active is treated as not verified"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.verify-aud",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-verification",
+   "text": "Verify `aud` equals this AS's issuer identifier.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses an Intent Admission Assertion whose aud does not equal this AS's own issuer identifier, with invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.jti-atomic-reserve",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-verification",
+   "text": "the AS MUST use an atomic\n   compare-and-set (or equivalent single-writer-wins primitive)\n   against a store keyed by (admission issuer, `jti`), succeeding only\n   if no prior submission has reserved or committed that key within\n   its validity window.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "replay",
+   "observation": {
+    "normative": "jti reservation is an atomic compare-and-set keyed by (admission issuer, jti); a concurrent submission that loses the race is refused as replay and never verified in parallel"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.jti-release-on-failure",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-verification",
+   "text": "On success, **commit** the\n    `jti` reservation of step 7 (permanent, see above). On failure at\n    this step or any of steps 2-9, **release** the reservation.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a jti reservation is committed permanently only on full verification success; any failure releases the reservation so a legitimate retry can reuse the identifier before expiry"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.intent-hash-equality",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-verification",
+   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 3",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses an Intent Admission Assertion whose intent_hash does not equal the provisional intent_hash of the submission it accompanies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.presenter-conjunction",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-verification",
+   "text": "Verify `presenter.client_id`, and `cnf` where present, equal the\n   presenter the containing exchange established",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses an Intent Admission Assertion whose presenter does not equal the presenter the containing exchange's own client authentication and proof of possession established"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.no-lineage-carry",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-verification",
+   "text": "This type defines no evidence-lineage exception: a shaping or approval\nrevision that changes `intent_hash` requires a fresh assertion with a\nfresh `jti`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Intent Admission Assertion issued for a predecessor intent_hash is never treated as evidence for a revised intent_hash; a shaping or approval revision requires a fresh assertion and jti"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.facts-closed-schema",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-facts",
+   "text": "are closed to exactly:",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the facts this type records onto a submission_evidence element carry exactly admission_issuer, originator, presenter, admission_basis, and status"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.payload-authorization-role",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-payload-type",
+   "text": "`emitter.role` MUST be `issuer`; no other role is permitted for this\n  type.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission-intent-admission instance whose emitter.role is not issuer is rejected"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.payload-authorization-key",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-payload-type",
+   "text": "A valid, resolvable key belonging to a different\nissuer, presented over an instance naming this Mission, MUST be\nrejected under this rule even though the envelope integrity check of\n{{mission-evidence-envelope-integrity}} would otherwise pass.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission-intent-admission instance signed by a valid, resolvable key belonging to an issuer other than the named mission.issuer is rejected, even though the generic envelope integrity check alone would pass"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.payload-closed-schema",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-payload-type",
+   "text": "`payload` is closed to exactly:",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mission-intent-admission payload carries exactly intent_hash, submission_evidence, and disposition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.payload-cross-check",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-payload-type",
+   "text": "a verifier holding the referenced Mission Record\nMUST confirm `payload.intent_hash` and `payload.submission_evidence`\nare byte-for-byte equal, member for member, to the Mission Record's\nown `intent_hash` and `submission_evidence`.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a verifier holding the Mission Record rejects a mission-intent-admission instance whose payload.intent_hash or payload.submission_evidence diverges byte-for-byte from the Mission Record's own members"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.disposition-single-value",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-payload-type",
+   "text": "`admitted` is the only value this document\n  defines: this payload type is emitted only where a Mission exists to\n  reference, so no refusal outcome is representable by it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mission-intent-admission payload's disposition member is always the literal string admitted in this version of the type"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.intent-admission.as-attestation-not-independent-proof",
+   "spec": "draft-mcguinness-mission-evidence-envelope.md",
+   "anchor": "intent-admission-payload-type",
+   "text": "it has not independently\nverified the admission issuer's original Intent Admission Assertion,\nbecause the payload carries only `submission_evidence`'s digest and\nextracted facts",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "verifying a mission-intent-admission instance against its Mission Record proves the Mission issuer's own attestation, never independent proof of the admission issuer's original Intent Admission Assertion, since no assertion bytes are carried in the payload"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": []
   }
