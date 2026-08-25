@@ -1297,7 +1297,7 @@ function readProposalParam(
     throw new errors.InvalidRequest("authorization_details must be a JSON array");
   }
   try {
-    const proposal = opts.kernel.validateProposal(raw, intent.resources);
+    const proposal = opts.kernel.validateProposal(raw, intent.target_resources);
     return proposal.length ? proposal : undefined;
   } catch (e) {
     if (e instanceof IntentError) {

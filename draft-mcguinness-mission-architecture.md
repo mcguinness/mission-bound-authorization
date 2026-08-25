@@ -603,9 +603,11 @@ organize the levers by the question each answers.
 
 What approval commits is broader than the structured Authority Set
 alone: it also commits the rendered intent context (`goal`,
-`constraints`, and, where it differs, the requested ceiling), the
-effective `expires_at`, and the rendered `controls` bounds
-({{I-D.draft-mcguinness-oauth-mission}}). Concrete request values,
+`task_bounds`, and, where it differs, the requested ceiling), the
+effective `expires_at`, and the rendered `derivation_limit` and any
+metering bound
+({{I-D.draft-mcguinness-oauth-mission}},
+{{I-D.draft-mcguinness-mission-metering}}). Concrete request values,
 current consumption, and action sequencing are decision-time facts,
 evaluated later by runtime policy, metering, or action-bound
 (transaction) approval; core does not require them to be re-rendered
@@ -1602,8 +1604,11 @@ Agent Deployment (what is running):
   changes require re-approving standing Missions is policy that
   governance records.
 
-  A Mission may be pinned to a named Agent Deployment where the
-  deployment defines that control. This object is distinct from the
+  A Mission may be pinned to a named Agent Deployment where a
+  companion Agent Deployment Binding profile realizes that pin
+  ({{I-D.draft-mcguinness-oauth-mission}} names the profile and
+  its required properties but defines none of its wire mechanics
+  itself). This object is distinct from the
   Mission Deployment Profile ({{deployment-profile}}), which is the
   estate's published claims manifest, not a property of an agent.
 
@@ -1656,12 +1661,16 @@ the evidence layer joins what was approved, decided, and done.
 ## Swarm Execution: Multiplication, Not Delegation {#swarm-execution}
 
 One composition of the three objects recurs often enough to name. A
-Mission pinned to an Agent Deployment through the OAuth binding's
-`controls.agent_deployment` ({{I-D.draft-mcguinness-oauth-mission}}),
-executed concurrently by N attested instances of that Deployment, is
+Mission pinned to an Agent Deployment class or version, executed
+concurrently by N attested instances of that Deployment, is
 multiplication, not delegation: no `act` hop, no Child Mission, no
 attenuation chain, because authority never moves between principals.
-Late binding is attestation: an instance joins the work by
+This pin is a named architectural pattern, not a wire member the
+OAuth binding currently defines: that document reserves no Intent
+member for it and points forward to a dedicated Agent Deployment
+Binding profile that a deployment wanting this pin implements
+({{I-D.draft-mcguinness-oauth-mission}}). Late binding is
+attestation: an instance joins the work by
 authenticating as the pinned Deployment under the instance profiles
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
 {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), not by receiving
@@ -1671,9 +1680,13 @@ Deployment projected as `client_id`, is an authorization subject,
 never an attribution subject, and attribution stays per-instance
 through the instance substrate, which forbids a sender-constraint
 key shared across a client's instances. The OAuth binding's
-`controls.max_derivations` is the explicit fan-out ceiling, and
-consumption bounds attach at Mission grain, so a swarm shares one
-budget ({{I-D.draft-mcguinness-mission-metering}}).
+`derivation_limit` is not a fan-out or concurrency ceiling: it counts
+issuance events, not instances, and a single instance refreshing
+repeatedly consumes it exactly as one selector among N instances
+deriving once each would. What actually bounds a swarm's aggregate
+consumption is the metering profile's Mission-grain budget: consumption
+bounds attach to the Mission, not to any one instance, so a swarm of
+instances shares one budget ({{I-D.draft-mcguinness-mission-metering}}).
 
 The decision ladder:
 
@@ -3283,7 +3296,8 @@ substrate-neutral by construction.
 Maturity is a dependency boundary. A Standards-Track profile never
 depends normatively on an experimental one: the experimental
 profiles extend the stable interface only through its declared
-seams, the `controls` extension of the OAuth binding and the
+seams, the Mission Intent extension seam of the OAuth binding (a
+named, companion-defined top-level member) and the
 coordinated-extension rules of the evidence objects, and a
 Standards-Track document cites them informatively at most. An
 experimental profile that stabilizes crosses the boundary by
@@ -3467,6 +3481,18 @@ This document makes no IANA request.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Controls taxonomy retirement (#636): the swarm-execution discussion
+  no longer claims `derivation_limit` (renamed from `max_derivations`)
+  is a fan-out or concurrency ceiling; it counts issuance events, not
+  instances, and one instance refreshing repeatedly exhausts it exactly
+  as N instances deriving once each would. The Agent Deployment pin is
+  now described as a named architectural pattern with no wire member
+  the OAuth binding currently defines, pointing to a forward-referenced
+  Agent Deployment Binding profile instead of the retired
+  `controls.agent_deployment`. References to the OAuth binding's
+  retired `controls` extension seam updated to the Mission Intent's
+  own (open, named-member) extension seam.
 
 - PR #717 review fix: precised the "Mission-bound" definition text
   ({{token-classes}} and {{binding-properties}}) so it no longer

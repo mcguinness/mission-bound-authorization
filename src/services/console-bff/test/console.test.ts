@@ -29,7 +29,11 @@ let pdpKey: { iss: string; key: CryptoKey; kid: string };
 const approveMission = (n: number) =>
   kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Pay", resources: [DERIVATION_POLICY.ceiling[0].resource], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({
+        goal: "Pay",
+        target_resources: [DERIVATION_POLICY.ceiling[0].resource],
+        expires_at: "2027-01-01T00:00:00Z",
+      }),
     ),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },

@@ -57,7 +57,7 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 
 const TASK_INTENT = {
   goal: "Reconcile Q3 invoices",
-  resources: [RESOURCE],
+  target_resources: [RESOURCE],
   expires_at: "2027-01-01T00:00:00Z",
 };
 

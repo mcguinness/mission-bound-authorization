@@ -36,7 +36,7 @@ describe("authorization endpoint: mission_intent requires a PAR-issued request_u
     const missionIntent = JSON.stringify({
       intent: {
         goal: "front-channel probe",
-        resources: [CANONICAL_RESOURCE],
+        target_resources: [CANONICAL_RESOURCE],
         expires_at: "2027-01-01T00:00:00Z",
       },
     });

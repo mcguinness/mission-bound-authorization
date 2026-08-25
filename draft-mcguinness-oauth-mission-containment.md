@@ -286,7 +286,7 @@ This document does NOT define:
 - a dedicated containment event type for Signals consumers; the
   metadata-only lifecycle event carries the change in the interim
   ({{propagation}});
-- the content of the `controls.containment` Mission Intent member; it
+- the content of a `containment` Mission Intent member; it
   is named as an extension point only ({{containment-policy}}); or
 - how a deployment detects a tainted read or an anomaly; detection
   belongs to the harness, runtime, and discovery layers
@@ -761,8 +761,8 @@ client, or shaping component MUST NOT be able to select which events
 contain or how far a containment narrows.
 
 A deployment may want the Approver to consent to tightened
-containment behavior at approval time. `controls.containment`, a
-member of the Mission Intent's `controls` object under the issuance
+containment behavior at approval time. `containment`, a
+named top-level Mission Intent member under the issuance
 profile's extensibility rules, is named here as that extension point;
 its content is explicitly not defined by this document. An
 Approver-consented member can only tighten what the issuer-held

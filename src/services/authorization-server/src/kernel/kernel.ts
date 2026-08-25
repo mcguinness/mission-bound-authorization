@@ -15,7 +15,7 @@ import {
   UnknownProtectedEventError,
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
-import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { deriveAuthoritySet, isSubsetSet, resolveDerivationLimit } from "./derive.js";
 import {
   assertDischargePoliciesResolvable,
   conditionDigest,
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS missions (
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   version INTEGER NOT NULL DEFAULT 1,
-  max_derivations INTEGER,
+  derivation_limit INTEGER,
   derivation_count INTEGER NOT NULL DEFAULT 0,
   grant_id TEXT,
   status_list_idx INTEGER UNIQUE,
@@ -319,9 +319,21 @@ export class MissionKernel {
     return derived;
   }
 
+  /**
+   * @spec mission#derivation-issuance-policy — resolve a requested
+   * `requested_derivation_limit` against THIS deployment's own
+   * `derivation_limit_ceiling`, for every Mission-creating surface (direct
+   * approval, child creation, template dispatch, expansion): the immutable
+   * effective `derivation_limit` a record commits is never the requested
+   * value copied verbatim.
+   */
+  resolveDerivationLimit(requested: number | null | undefined): number | null {
+    return resolveDerivationLimit(requested, this.opts.policy.derivation_limit_ceiling);
+  }
+
   /** @spec mission#authority-proposal — intake of the submitted proposal. */
-  validateProposal(raw: string, resources: string[]): AuthorityEntry[] {
-    return validateAuthorityProposal(raw, resources);
+  validateProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
+    return validateAuthorityProposal(raw, targetResources);
   }
 
   /**
@@ -393,7 +405,13 @@ export class MissionKernel {
       created_at: this.now().toISOString(),
       expires_at: input.intent.expires_at,
       version: 1,
-      max_derivations: input.intent.controls?.max_derivations ?? null,
+      // @spec mission#derivation-issuance-policy — the immutable EFFECTIVE
+      // ceiling: min(deployment policy, the client's requested_derivation_limit),
+      // never the requested value copied verbatim.
+      derivation_limit: resolveDerivationLimit(
+        input.intent.requested_derivation_limit,
+        this.opts.policy.derivation_limit_ceiling,
+      ),
       derivation_count: 0,
       grant_id: null,
       status_list_idx: null,
@@ -427,7 +445,7 @@ export class MissionKernel {
            authority_set_json, intent_hash, proposal_hash,
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub,
            approval_basis_json, client_id,
-           policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
+           policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -457,7 +475,7 @@ export class MissionKernel {
           record.created_at,
           record.expires_at,
           record.version,
-          record.max_derivations,
+          record.derivation_limit,
           record.derivation_count,
           record.grant_id,
           record.predecessor ?? null,
@@ -1425,7 +1443,7 @@ export class MissionKernel {
    * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
    * clock, require the Mission itself `active`, and walk `parent` upward refusing
    * if ANY ancestor is non-active. Returns the expiry-fresh record. It does NOT
-   * touch `derivation_count` nor the `max_derivations` cap; consuming a derivation
+   * touch `derivation_count` nor the `derivation_limit` cap; consuming a derivation
    * is {@link gateDerivation}'s alone, layered on top of this.
    */
   private gateActiveLineage(id: string): MissionRecord {
@@ -1456,7 +1474,7 @@ export class MissionKernel {
 
   /**
    * @spec mission#lifecycle — state-gated derivation: only `active` derives,
-   * bounded by expires_at and max_derivations. Increments the derivation
+   * bounded by expires_at and derivation_limit. Increments the derivation
    * count on success.
    */
   gateDerivation(id: string): MissionRecord {
@@ -1484,7 +1502,7 @@ export class MissionKernel {
       }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
-    if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {
+    if (record.derivation_limit !== null && record.derivation_count >= record.derivation_limit) {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
     this.db
@@ -1496,7 +1514,7 @@ export class MissionKernel {
   /**
    * @spec mission#lifecycle — the SAME active gate as {@link gateDerivation}
    * (expiry clock, `active`-state requirement, and ancestor-active lineage walk)
-   * WITHOUT consuming a derivation: no `max_derivations` cap check and no
+   * WITHOUT consuming a derivation: no `derivation_limit` cap check and no
    * `derivation_count` increment. For an async-delegation continuation path that
    * requires the Mission (and its lineage) live but is not itself a derivation.
    * Throws {@link GateError} on refusal, with the same reasons as gateDerivation.
@@ -1555,7 +1573,7 @@ export class MissionKernel {
    * @spec mission#introspection + mission#caller-authorization-and-minimization
    * — the core Mission projection for an AUTHENTICATED, authorized
    * introspection caller: the claim set plus `state` and `version`;
-   * `derivations_remaining` when `controls.max_derivations` is in force
+   * `derivations_remaining` when `derivation_limit` is in force
    * (committed issuances counted); `containment_version` whenever containment
    * applies. Issuer-only audit members are authority to assert, not
    * authorization to disclose: `proposal_hash` requires the caller's
@@ -1582,8 +1600,8 @@ export class MissionKernel {
       ...this.missionClaim(fresh),
       state: fresh.state,
       version: fresh.version,
-      ...(caller.disclose.has("budget") && fresh.max_derivations !== null
-        ? { derivations_remaining: Math.max(0, fresh.max_derivations - fresh.derivation_count) }
+      ...(caller.disclose.has("budget") && fresh.derivation_limit !== null
+        ? { derivations_remaining: Math.max(0, fresh.derivation_limit - fresh.derivation_count) }
         : {}),
       ...(caller.disclose.has("provenance") && fresh.proposal_hash
         ? { proposal_hash: fresh.proposal_hash }
@@ -1904,7 +1922,7 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     created_at: row.created_at as string,
     expires_at: row.expires_at as string,
     version: row.version as number,
-    max_derivations: (row.max_derivations as number | null) ?? null,
+    derivation_limit: (row.derivation_limit as number | null) ?? null,
     derivation_count: row.derivation_count as number,
     grant_id: (row.grant_id as string | null) ?? null,
     status_list_idx: (row.status_list_idx as number | null) ?? null,

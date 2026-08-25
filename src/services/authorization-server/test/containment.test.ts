@@ -83,7 +83,7 @@ const intent = (over: Record<string, unknown> = {}) =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Pay Acme invoices for Q3",
-      resources: [RES_PAY, RES_FILE],
+      target_resources: [RES_PAY, RES_FILE],
       expires_at: EXPIRES_AT,
       ...over,
     }),
@@ -350,7 +350,7 @@ describe("derivation over the effective set", () => {
     const parent = approve(kernel);
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
-      intent: intent({ resources: [RES_PAY] }),
+      intent: intent({ target_resources: [RES_PAY] }),
       childActor: { sub: "subagent", sub_profile: "ai_agent" },
     });
     kernel.contain(child.id, {
@@ -406,7 +406,7 @@ describe("delegation surfaces bound to the effective set", () => {
       createChildMission(kernel, {
         parentId: parent.id,
         intent: intent({
-          resources: [RES_PAY],
+          target_resources: [RES_PAY],
         }),
         proposedAuthority: [
           {
@@ -426,7 +426,7 @@ describe("delegation surfaces bound to the effective set", () => {
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
@@ -476,7 +476,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child: childBoth } = createChildMission(kernel, {
       parentId: parent.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         {
@@ -526,7 +526,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       createChildMission(kernel, {
         parentId: childBoth.id,
         intent: intent({
-          resources: [RES_PAY],
+          target_resources: [RES_PAY],
         }),
         proposedAuthority: [
           { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
@@ -547,7 +547,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child: childPay } = createChildMission(kernel, {
       parentId: parent.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
@@ -578,7 +578,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child: childExecOnly } = createChildMission(kernel, {
       parentId: parent.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
@@ -608,7 +608,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child: childOfA } = createChildMission(kernel, {
       parentId: parentA.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
@@ -618,7 +618,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child: childOfB } = createChildMission(kernel, {
       parentId: parentB.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
@@ -646,7 +646,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         {
@@ -660,7 +660,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child: grandchild } = createChildMission(kernel, {
       parentId: child.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         {
@@ -691,7 +691,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: intent({
-        resources: [RES_PAY],
+        target_resources: [RES_PAY],
       }),
       proposedAuthority: [
         { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
@@ -879,7 +879,7 @@ describe("lifecycle endpoint operation: contain (end-to-end)", () => {
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices for Q3",
-          resources: [CANONICAL_RESOURCE],
+          target_resources: [CANONICAL_RESOURCE],
           expires_at: EXPIRES_AT,
         }),
       ),

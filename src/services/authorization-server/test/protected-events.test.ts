@@ -38,7 +38,9 @@ const authority = (): AuthorityEntry[] => [
 ];
 
 const intent = (goal: string) =>
-  validateMissionIntent(JSON.stringify({ goal, resources: [RESOURCE], expires_at: EXPIRES_AT }));
+  validateMissionIntent(
+    JSON.stringify({ goal, target_resources: [RESOURCE], expires_at: EXPIRES_AT }),
+  );
 
 let seq = 0;
 function approve(): MissionRecord {

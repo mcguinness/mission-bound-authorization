@@ -108,7 +108,7 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
   const intent = JSON.stringify({
     intent: {
       goal: "Pay Acme invoices and send remittance",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
     },
   });

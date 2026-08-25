@@ -219,7 +219,7 @@ describe("gateDerivation refuses an empty effective set BY CAUSE (@spec issuance
   const approve = (kernel: MissionKernel, eventId: string) =>
     kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Pay Acme invoices", resources: [RES], expires_at: EXPIRES_AT }),
+        JSON.stringify({ goal: "Pay Acme invoices", target_resources: [RES], expires_at: EXPIRES_AT }),
       ),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },

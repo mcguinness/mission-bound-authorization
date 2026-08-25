@@ -40,7 +40,7 @@ const POLICY = {
 
 const INTENT = {
   goal: "Read approved invoices",
-  resources: [RESOURCE],
+  target_resources: [RESOURCE],
   expires_at: EXPIRES_AT,
 };
 

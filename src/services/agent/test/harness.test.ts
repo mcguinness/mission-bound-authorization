@@ -23,7 +23,11 @@ describe("M12 scenario 14: 02:00 resume (harness stop-on-non-active)", () => {
     const k = await kernel();
     const m = k.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "board packet", resources: [DERIVATION_POLICY.ceiling[0].resource], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({
+          goal: "board packet",
+          target_resources: [DERIVATION_POLICY.ceiling[0].resource],
+          expires_at: "2027-01-01T00:00:00Z",
+        }),
       ),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
@@ -73,7 +77,7 @@ describe("M12 agent: EMA capability and untrusted shaper", () => {
     const intent = validateMissionIntent(missionIntent);
     const m = k.approve({
       intent,
-      proposedAuthority: k.validateProposal(authorizationDetails as string, intent.resources),
+      proposedAuthority: k.validateProposal(authorizationDetails as string, intent.target_resources),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "ap-agent",

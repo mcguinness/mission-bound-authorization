@@ -217,8 +217,9 @@ to the asynchronous review surface:
    Mission exists. A `deferral_code` and any PAR `request_uri` are
    pending-request state, not a grant.
 3. The approval event executes on the asynchronous review surface. That
-   surface MUST authenticate the Approver. It MUST satisfy the Mission
-   Intent's `controls.acr`. Both requirements hold exactly as the
+   surface MUST authenticate the Approver, satisfying both the
+   deployment's published approval-authentication floor and any
+   requested `acr_values`/`max_age` strength, exactly as the
    synchronous approval event requires
    ({{I-D.draft-mcguinness-oauth-mission}}).
 4. The Mission record is created in the `active` state atomically with
@@ -465,7 +466,8 @@ cancellation, and oracle resistance.
 
 The asynchronous review surface is part of the consent path. It MUST
 meet the approval event's authentication requirements, authenticating
-the Approver and satisfying the Mission Intent's `controls.acr`
+the Approver against the published floor and any requested
+`acr_values`/`max_age` strength
 ({{deferred-sequencing}}); deferring an approval does not lower the bar
 the synchronous event sets. Approver routing and notification, how a
 Proposed Mission reaches a reviewer and how the reviewer is alerted, are

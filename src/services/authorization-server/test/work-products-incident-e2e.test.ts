@@ -91,7 +91,9 @@ const proposed = (actions: string[]): AuthorityEntry[] => [
 ];
 
 const intent = (goal: string) =>
-  validateMissionIntent(JSON.stringify({ goal, resources: [RESOURCE], expires_at: EXPIRES_AT }));
+  validateMissionIntent(
+    JSON.stringify({ goal, target_resources: [RESOURCE], expires_at: EXPIRES_AT }),
+  );
 
 /** The PDP's view of a Mission (the demo stack's viewFor mapping). */
 function viewFor(missionId: string): MissionView {

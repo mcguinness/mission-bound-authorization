@@ -15,12 +15,20 @@ export interface MissionIntent {
    *  Intent's human-readable prose; disclosure metadata, no authority
    *  semantics, committed by intent_hash like every member. */
   goal_lang?: string;
-  resources: string[];
+  /** @spec mission#mission-intent — client-requested Intent ceiling on
+   *  target resources; NOT RFC 8707 `resource` carriage. */
+  target_resources: string[];
   expires_at: string;
-  constraints?: string[];
+  /** @spec mission#mission-intent — human-readable, non-machine-readable
+   *  task bounds (renamed from `constraints` so the name cannot collide
+   *  with a Resource Access entry's enforced `constraints`). */
+  task_bounds?: string[];
   success_criteria?: string[];
   purpose?: string;
-  controls?: { acr?: string; max_derivations?: number; [k: string]: JsonValue | undefined };
+  /** @spec mission#derivation-issuance-policy — client-requested ceiling on
+   *  derivations; the AS-established effective ceiling is
+   *  `MissionRecord.derivation_limit`, never copied verbatim. */
+  requested_derivation_limit?: number;
 }
 
 /**
@@ -495,7 +503,11 @@ export interface MissionRecord {
   created_at: string;
   expires_at: string;
   version: number;
-  max_derivations: number | null;
+  /** @spec mission#derivation-issuance-policy — the AS-established EFFECTIVE
+   *  ceiling: min(deployment policy, `intent.requested_derivation_limit`),
+   *  immutable after creation. Null when the deployment's policy imposes no
+   *  ceiling on this Mission. */
+  derivation_limit: number | null;
   derivation_count: number;
   grant_id: string | null;
   /**

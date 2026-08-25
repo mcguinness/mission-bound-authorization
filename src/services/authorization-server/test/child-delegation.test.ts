@@ -92,7 +92,7 @@ const approveParent = (actions = ["payments:invoice.read", "payments:payment.exe
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: PARENT_EXP,
       }),
     ),
@@ -107,7 +107,7 @@ const childIntent = (actions: string[], over: Record<string, unknown> = {}) =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Extract Acme invoices",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: PARENT_EXP,
       ...over,
     }),
@@ -293,7 +293,7 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Reconcile the ledger",
-          resources: [LEDGER],
+          target_resources: [LEDGER],
           expires_at: PARENT_EXP,
         }),
       ),
@@ -309,7 +309,7 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
         intent: validateMissionIntent(
           JSON.stringify({
             goal: "Read ledger vendors",
-            resources: [LEDGER],
+            target_resources: [LEDGER],
             expires_at: PARENT_EXP,
           }),
         ),
@@ -428,7 +428,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       validateMissionIntent(
         JSON.stringify({
           goal,
-          resources: [R],
+          target_resources: [R],
           expires_at: PARENT_EXP,
         }),
       );
@@ -532,7 +532,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       id: `msn_dparent_${seq++}`,
       issuer: ISS,
       state: "active",
-      intent: { goal: "root", resources: [R], expires_at: PARENT_EXP },
+      intent: { goal: "root", target_resources: [R], expires_at: PARENT_EXP },
       authority_set: [entryOf("100.00", 1), entryOf("500.00", 5)],
       intent_hash: "sha-256:d-intent",
       authority_hash: "sha-256:d-authority",
@@ -551,7 +551,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       created_at: now().toISOString(),
       expires_at: PARENT_EXP,
       version: 1,
-      max_derivations: null,
+      derivation_limit: null,
       derivation_count: 0,
       grant_id: null,
       status_list_idx: null,
@@ -570,7 +570,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       validateMissionIntent(
         JSON.stringify({
           goal: "read",
-          resources: [R],
+          target_resources: [R],
           expires_at: PARENT_EXP,
         }),
       );
@@ -680,14 +680,14 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
 });
 
 describe("child derivation cap is independent of the parent's (@spec child-delegation#child-creation, PR #408)", () => {
-  it("uses the child's OWN controls.max_derivations, not the parent's", () => {
+  it("uses the child's OWN requested_derivation_limit, not the parent's", () => {
     const parent = kernel.approve({
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices for Q3",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: PARENT_EXP,
-          controls: { max_derivations: 5 },
+          requested_derivation_limit: 5,
         }),
       ),
       proposedAuthority: proposed(["payments:invoice.read"]),
@@ -696,24 +696,24 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
       clientId: "parent-agent",
       approvalEventId: `apev-${seq++}`,
     });
-    expect(parent.max_derivations).toBe(5);
+    expect(parent.derivation_limit).toBe(5);
 
     const { child } = createChild(parent.id, ["payments:invoice.read"], {
-      intentOver: { controls: { max_derivations: 2 } },
+      intentOver: { requested_derivation_limit: 2 },
     });
     // The child's cap is its OWN intent's value, distinct from the parent's.
-    expect(child.max_derivations).toBe(2);
-    expect(child.max_derivations).not.toBe(parent.max_derivations);
+    expect(child.derivation_limit).toBe(2);
+    expect(child.derivation_limit).not.toBe(parent.derivation_limit);
   });
 
-  it("a child intent omitting controls.max_derivations gets null (unbounded), like an ordinary Mission", () => {
+  it("a child intent omitting requested_derivation_limit gets null (unbounded), like an ordinary Mission", () => {
     const parent = kernel.approve({
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices for Q3",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: PARENT_EXP,
-          controls: { max_derivations: 5 },
+          requested_derivation_limit: 5,
         }),
       ),
       proposedAuthority: proposed(["payments:invoice.read"]),
@@ -723,7 +723,7 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
       approvalEventId: `apev-${seq++}`,
     });
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
-    expect(child.max_derivations).toBeNull();
+    expect(child.derivation_limit).toBeNull();
   });
 });
 
@@ -806,7 +806,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     });
     const parent = basisKernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "root", resources: [R], expires_at: PARENT_EXP }),
+        JSON.stringify({ goal: "root", target_resources: [R], expires_at: PARENT_EXP }),
       ),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
@@ -816,7 +816,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     const { child } = createChildMission(basisKernel, {
       parentId: parent.id,
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "sub", resources: [R], expires_at: PARENT_EXP }),
+        JSON.stringify({ goal: "sub", target_resources: [R], expires_at: PARENT_EXP }),
       ),
       childActor: { sub: "basis-child", sub_profile: "ai_agent" },
     });
@@ -847,7 +847,7 @@ describe("requires_action_approval Common Constraint (@spec txn-authorization#ap
   const approveGatedParent = (actions = ["payments:invoice.read", "payments:payment.execute"]) =>
     kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Pay Acme invoices for Q3", resources: [RESOURCE], expires_at: PARENT_EXP }),
+        JSON.stringify({ goal: "Pay Acme invoices for Q3", target_resources: [RESOURCE], expires_at: PARENT_EXP }),
       ),
       proposedAuthority: gated(actions),
       subject: { iss: ISS, sub: "alice" },

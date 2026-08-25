@@ -494,13 +494,15 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     created_at: nowIso,
     expires_at: expiresAt,
     version: 1,
-    // @spec child-delegation#child-creation — the Child Mission's derivation
-    // cap comes from the CHILD's own Intent, independent of the parent's (the
-    // rule PR #408 standardized), mirroring template.ts's dispatch-instance
-    // mapping. A child intent that omits `controls.max_derivations` gets
-    // `null` (unbounded), exactly like an ordinary Mission approval; it is NOT
-    // inherited from the parent.
-    max_derivations: input.intent.controls?.max_derivations ?? null,
+    // @spec child-delegation#child-creation, mission#derivation-issuance-policy
+    // — the Child Mission's derivation ceiling comes from the CHILD's own
+    // Intent (its `requested_derivation_limit`), independent of the parent's
+    // (the rule PR #408 standardized), mirroring template.ts's
+    // dispatch-instance mapping, and clamped by THIS deployment's own policy
+    // ceiling exactly like an ordinary Mission approval; it is NOT inherited
+    // from the parent, and an omitted request is not "unbounded" but simply
+    // no client-requested narrowing of the deployment's own ceiling.
+    derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

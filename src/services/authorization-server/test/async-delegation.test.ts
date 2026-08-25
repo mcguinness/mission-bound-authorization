@@ -158,7 +158,7 @@ async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
   const intent = JSON.stringify({
     intent: {
       goal: "Pay Acme invoices and send remittance",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: expiresAt,
     },
   });
@@ -291,7 +291,7 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
     mission_intent: JSON.stringify({
       intent: {
         goal: "Extract Acme invoices",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: FAR_EXP,
       },
     }),

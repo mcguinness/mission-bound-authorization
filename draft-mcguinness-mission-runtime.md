@@ -2617,7 +2617,7 @@ experimental companion ({{I-D.draft-mcguinness-mission-metering}}).
 What this document fixes is the failure posture. As with all
 constraints, an unmetered or unrecognized consumption bound MUST cause
 refusal rather than silent pass-through: when an applicable entry's
-`constraints`, or the Mission's `controls`, carries a bound that
+`constraints`, or the Mission Intent itself, carries a bound that
 expresses cumulative consumption and the deployment does not meter it,
 the PDP MUST refuse a consequential action governed by it. A deployment
 MUST NOT advertise consumption enforcement it does not perform.

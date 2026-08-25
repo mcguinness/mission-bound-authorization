@@ -1555,14 +1555,17 @@ approval record is created ({{lanes}}).
 Authentication step-up has no dedicated denial-reason value under this
 profile: an in-process step-up rides the obligation on a permit, and
 an RFC 9470 step-up rides the obligation on a `resource_policy`
-denial. The OAuth binding's `mission_denial` value `step_up_required` remains
-the Resource Server's own challenge-surface signal
-({{I-D.draft-mcguinness-oauth-mission}}) and composes with, but is
-not, either shape of this obligation. The requirement is Resource
-policy, never a Mission constraint: the issuance profile's `acr` is
-an approval-time requirement on the Approver, recorded on the Mission
-and neither carried on derived tokens nor evaluated per action, and
-the issuance profile defines no per-action `amr` constraint
+denial. The Resource Server's own challenge-surface signal for a weak
+or stale token-associated authentication is the RFC 9470
+`insufficient_user_authentication` challenge itself
+({{I-D.draft-mcguinness-oauth-mission}}), not a Mission-defined denial
+reason, and composes with, but is not, either shape of this
+obligation. The requirement is Resource policy, never a Mission
+constraint: the issuance profile's approval-time `acr_values`/`max_age`
+carriage is a requirement on the Approver at the approval event, a
+distinct fact from this per-action, token-associated requirement; it
+is neither carried on derived tokens nor evaluated per action, and the
+issuance profile defines no per-action `amr` constraint
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 A deployment MAY define further obligation types for genuine attached

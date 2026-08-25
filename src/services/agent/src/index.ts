@@ -69,7 +69,10 @@ export function shapeIntent(input: {
 }): { missionIntent: string; authorizationDetails?: string } {
   const intent: Record<string, unknown> = {
     goal: input.goal,
-    resources: input.resources,
+    // @spec mission#mission-intent — the wire member is `target_resources`
+    // (renamed from `resources`); this function's own parameter name is
+    // unchanged to keep its call sites stable.
+    target_resources: input.resources,
     expires_at: input.expiresAt,
   };
   if (input.proposedActions) {

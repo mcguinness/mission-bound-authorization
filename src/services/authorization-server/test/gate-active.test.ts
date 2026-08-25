@@ -1,8 +1,9 @@
 /**
  * Unit tests for kernel.gateActive (async-delegation foundation). gateActive runs
  * the SAME active/lineage gate as gateDerivation (expiry, active-state, ancestor
- * walk) but WITHOUT consuming a derivation: no max_derivations cap check and no
- * derivation_count increment. Network-free: a bare kernel over a generated key.
+ * walk) but WITHOUT consuming a derivation: no requested_derivation_limit cap
+ * check and no derivation_count increment. Network-free: a bare kernel over a
+ * generated key.
  */
 
 import { DERIVATION_POLICY } from "@mission/demo-data";
@@ -56,7 +57,7 @@ const approve = (over: Record<string, unknown> = {}) =>
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: PARENT_EXP,
         ...over,
       }),
@@ -100,7 +101,7 @@ describe("kernel.gateActive (@spec mission#lifecycle)", () => {
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Read Acme invoices",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: PARENT_EXP,
         }),
       ),
@@ -118,8 +119,8 @@ describe("kernel.gateActive (@spec mission#lifecycle)", () => {
     expect(() => kernel.gateActive(child.id)).toThrow(/non-active ancestor/);
   });
 
-  it("a mission at its max_derivations cap still passes gateActive (cap NOT enforced)", () => {
-    const r = approve({ controls: { max_derivations: 1 } });
+  it("a mission at its requested_derivation_limit cap still passes gateActive (cap NOT enforced)", () => {
+    const r = approve({ requested_derivation_limit: 1 });
     // Exhaust the cap via gateDerivation.
     kernel.gateDerivation(r.id);
     expect(kernel.get(r.id)?.derivation_count).toBe(1);

@@ -522,7 +522,7 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
   const intent = validateMissionIntent(
     JSON.stringify({
       goal: "Pay approved Acme invoices for Q3",
-      resources: [DERIVATION_POLICY.ceiling[0].resource],
+      target_resources: [DERIVATION_POLICY.ceiling[0].resource],
       expires_at: "2027-01-01T00:00:00Z",
     }),
   );

@@ -164,7 +164,7 @@ is expected to evolve with implementation experience.
 A deployment that does not implement this document carries no
 consumption bounds on its Missions and is fully conformant to the
 issuance and runtime profiles. The issuance profile's
-`max_derivations` is not a consumption bound: it is enforced by the
+`derivation_limit` is not a consumption bound: it is enforced by the
 issuing Authorization Server at each derivation and needs none of this
 document ({{I-D.draft-mcguinness-oauth-mission}}).
 
@@ -276,10 +276,20 @@ actions matching different selectors of one group latch exactly one
 selector, atomically with the permit; the affirmative-non-execution
 release restores the group; refusals carry `exclusivity_latched` in
 Decision Evidence; the latch domain is named in the Enforcement
-Scope Statement ({{exclusivity}}). This gate also holds the family's
-adoption of the `exclusive` control into the issuance profile's core
-`controls` vocabulary: that adoption follows the applicable gates of
-this section being met, and until then the control is homed here.
+Scope Statement ({{exclusivity}}). `exclusive` is, and remains, a
+Mission Intent member this document defines and owns
+({{bounds}}); an earlier plan to adopt it into the issuance
+profile's `controls` vocabulary lapsed when that vocabulary was
+retired (a family migration that relocated every member below out of
+`controls` without changing this document's ownership of any of
+them, {{I-D.draft-mcguinness-oauth-mission}}). This gate, met or
+not, therefore changes only whether `exclusive` keeps its EXPERIMENTAL
+marking here, never where it is defined. A 2026-08 promotion
+assessment against this and the independent-interoperation gate below
+found every applicable row NOT MET (issue #117): no reference
+implementation of the latch domain, the settlement-intake path, or an
+independently interoperating counterpart exists, so `exclusive` stays
+EXPERIMENTAL and unpromoted.
 
 **Independent interoperation.** Two distinct results, both required
 for each promoted wire profile, aligning with the implementation and
@@ -295,11 +305,16 @@ interoperation reporting convention of {{RFC7942}}:
 Across every gate, promotion additionally requires the promoted wire
 surface unchanged in name, shape, and semantics across two
 consecutive published revisions of this document while the evidence
-accumulated: the `controls` members of {{bounds}}, `quota_exceeded`,
+accumulated: the Mission Intent members of {{bounds}}, `quota_exceeded`,
 `exclusivity_latched`, `context.prior_evaluation_id`,
 `measured_duration`, the `metering` evidence member
 ({{metering-evidence}}), and the settlement submission contract of
-{{settlement-contract}}.
+{{settlement-contract}}. The #636 controls-retirement cut relocated
+every member of {{bounds}} from `controls.<name>` to a flat top-level
+Mission Intent member: that is a wire-shape change to this exact
+surface, so the two-consecutive-revisions window restarts at this
+revision (zero of two), regardless of how long the pre-relocation
+shape had otherwise held.
 
 Selective promotion means the applicable rows: promoting a
 per-Mission bound class does not require the aggregate or
@@ -324,10 +339,11 @@ Also requires, conditionally: Mission-Bound Runtime Enforcement: AuthZEN Profile
 
 This document depends normatively on the issuance profile and the
 runtime profile and is not implementable alone. It defines its
-consumption bounds as members of the Mission Intent `controls` object,
-using the extension seam the issuance profile provides; they are
-carried on the Mission and committed by `intent_hash` exactly as any
-other Intent member. Metering is performed by the runtime profile's
+consumption bounds as named top-level Mission Intent members, using
+the extension seam the issuance profile provides for a companion
+profile to add explicit, named members; they are carried on the
+Mission and committed by `intent_hash` exactly as any other Intent
+member. Metering is performed by the runtime profile's
 PDP within a documented enforcement scope; this document adds metering
 semantics to the runtime profile's decision contract and changes no
 issuance protocol, though it does add consent-surface obligations on
@@ -354,7 +370,7 @@ optional capabilities it consumes.
 From the contextual-governance kernel it consumes the Mission
 Identifier and issuer, the kernel's Mission Reference and Controller,
 which key every consumption counter; and the immutable Approved
-Context, of which the bounds are part as Mission Intent `controls`
+Context, of which the bounds are part as named Mission Intent
 members. The kernel requires no particular integrity anchors:
 `intent_hash` is the OAuth binding's commitment to that approved
 value, and it commits the bounds like any other Intent member
@@ -385,8 +401,9 @@ and commits them through `intent_hash`.
 
 # Consumption Bounds {#bounds}
 
-A Mission Intent `controls` object
-({{I-D.draft-mcguinness-oauth-mission}}) MAY carry these members:
+This document defines these Mission Intent top-level members
+({{I-D.draft-mcguinness-oauth-mission}}), under that document's rule
+that a companion profile may add a named member coordinated with it:
 
 `max_budget`:
 : OPTIONAL. An object. A hard cap on cumulative monetary
@@ -438,7 +455,10 @@ A Mission Intent `controls` object
   does not detect it.
 
 `exclusive`:
-: OPTIONAL. An array of exclusivity groups, each an array of two or
+: OPTIONAL and EXPERIMENTAL (unlike the four bounds above, this
+  member is not yet promotion-ready: a 2026-08 assessment against
+  {{promotion-criteria}} found every applicable gate NOT MET, issue
+  #117). An array of exclusivity groups, each an array of two or
   more selectors. A selector is an object with `resource` (REQUIRED,
   a string) and `actions` (OPTIONAL, an array of strings); it matches
   a consequential action whose resource equals `resource` and, when
@@ -450,21 +470,20 @@ The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
 enforced by the runtime layer at the point of use ({{metering}}).
 
-Example Mission Intent `controls` carrying three of the four bounds
+Example Mission Intent carrying three of the four bounds
 alongside
 the issuance profile's members:
 
 ~~~ json
 {
-  "controls": {
-    "acr": "urn:example:acr:mfa",
-    "max_derivations": 200,
-    "max_budget": { "amount": "5000.00", "currency": "USD" },
-    "max_calls": [
-      { "call_class": "journal-entries.write", "count": 50 }
-    ],
-    "max_duration": "PT8H"
-  }
+  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "target_resources": ["https://erp.example.com"],
+  "expires_at": "2026-12-31T23:59:59Z",
+  "max_budget": { "amount": "5000.00", "currency": "USD" },
+  "max_calls": [
+    { "call_class": "journal-entries.write", "count": 50 }
+  ],
+  "max_duration": "PT8H"
 }
 ~~~
 
@@ -549,7 +568,7 @@ Consumption bounds are enforced by the runtime profile's PDP
 
 A per-entry `constraints` value that expresses a cumulative consumption
 bound is metered the same way. When an applicable entry or the
-Mission's `controls` carries such a bound, the PDP MUST meter use
+Mission Intent itself carries such a bound, the PDP MUST meter use
 against it. The PDP MUST refuse a consequential action that would
 exceed it. The runtime profile's fail-closed rule stands beneath all
 of this: an unmetered or unrecognized consumption bound MUST cause
@@ -647,8 +666,9 @@ Exclusivity turns the quarantine deployment pattern
 enforceable structure: an Approver can approve a Mission that may
 read a sensitive store or communicate externally, but never both.
 The groups are consented at the approval event, committed by
-`intent_hash` with the other `controls` members, and rendered in the
-consent disclosure ({{consent}} applies unchanged).
+`intent_hash` with the other Mission Intent members this document
+defines, and rendered in the consent disclosure ({{consent}} applies
+unchanged).
 
 In the AuthZEN binding, a refusal under a latched group is denied
 with `exclusivity_latched`, an extension of the runtime denial set
@@ -720,9 +740,9 @@ companion's extension conventions
   ({{settlement-contract}}). Each entry has the members:
 
   `bound`:
-  : REQUIRED. A string. The metered bound: a `controls` member name
-    ({{bounds}}) or the applicable per-entry constraint name
-    ({{metering}}).
+  : REQUIRED. A string. The metered bound: a Mission Intent member
+    name this document defines ({{bounds}}) or the applicable
+    per-entry constraint name ({{metering}}).
 
   `counter_scope`:
   : REQUIRED. A string. The counter's key class: `mission` for the
@@ -1079,23 +1099,45 @@ the humans adjudicating it.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions. `max_budget`, `max_calls`,
-`max_duration`, `max_egress_volume`, and `exclusive` are Mission
-Intent `controls`
-members defined by this
-profile under the issuance profile's controls extension seam;
-`context.prior_evaluation_id` is AuthZEN extension data carried per
-the AuthZEN profile's conventions
-({{I-D.draft-mcguinness-mission-authzen}}); `measured_duration` and
+This document registers the following in the issuance profile's
+"Mission Intent Members" registry: `max_budget`, `max_calls`,
+`max_duration`, and `max_egress_volume` as `stable`, and `exclusive`
+as `experimental` (not promoted; a 2026-08 assessment against this
+document's own promotion criteria, {{promotion-criteria}}, found every
+applicable gate unmet). Each is a named top-level Mission Intent
+member this profile defines, produces, and enforces in full under the
+issuance profile's Mission-Intent extension seam
+({{I-D.draft-mcguinness-oauth-mission}}); the registration records
+ownership only. `context.prior_evaluation_id` is AuthZEN extension
+data carried per the AuthZEN profile's conventions
+({{I-D.draft-mcguinness-mission-authzen}}), needing no separate
+registration; `measured_duration` and
 `metering` are coordinated evidence members under the runtime
 evidence companion's extension conventions
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), likewise outside
+this registry.
 
 --- back
 
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Controls taxonomy retirement (#636, #117): `max_budget`, `max_calls`,
+  `max_duration`, `max_egress_volume`, and `exclusive` move from
+  `controls.<name>` to named top-level Mission Intent members, since
+  the issuance profile retires the `controls` bucket entirely
+  ({{I-D.draft-mcguinness-oauth-mission}}); this is a wire-shape
+  change to that surface, so the wire-surface-stability window
+  ({{promotion-criteria}}) restarts at this revision. The earlier plan
+  to adopt `exclusive` into the issuance profile's core `controls`
+  vocabulary is retired along with that vocabulary; `exclusive` stays
+  an ordinary member of this document. A 2026-08 promotion assessment
+  of `exclusive` against {{promotion-criteria}} found every applicable
+  gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
+  now explicitly marked as such at its own definition ({{bounds}}).
+  `max_derivations` renamed to `derivation_limit` in cross-references
+  to the issuance profile.
 
 - One informative cross-reference in Settlement by Evidence State
   ({{settlement-states}}): a containment overlay's contain transition

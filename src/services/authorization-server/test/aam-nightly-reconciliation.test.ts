@@ -298,7 +298,7 @@ function lowConsequenceIntent(): string {
   return JSON.stringify({
     intent: {
       goal: "nightly reconciliation of Acme invoices (read-only)",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: FAR_FUTURE,
     },
   });
@@ -327,7 +327,7 @@ function reconciliationIntent(): string {
   return JSON.stringify({
     intent: {
       goal: "nightly reconciliation of Acme invoices",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: FAR_FUTURE,
     },
   });
@@ -350,7 +350,7 @@ function overCeilingIntent(): string {
   return JSON.stringify({
     intent: {
       goal: "schedule a payment (exceeds the reconciliation ceiling)",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: FAR_FUTURE,
     },
   });

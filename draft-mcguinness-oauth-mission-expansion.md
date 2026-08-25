@@ -444,9 +444,9 @@ token endpoint. The request carries:
   successor's Mission Intent, and its OPTIONAL `evidence` array
   carries Intent Submission Evidence under that profile's dispatch,
   refusal, and never-authority rules. The Intent describes the
-  broadened task: the `goal`, `resources`, `constraints`, and
-  `controls` the successor needs, including the authority the denied
-  action required. The Mission Issuer derives the successor's
+  broadened task: the `goal`, `target_resources`, `task_bounds`, and
+  any other Mission Intent member the successor needs, including the
+  authority the denied action required. The Mission Issuer derives the successor's
   Authority Set from this Intent and bounds it by policy exactly as
   for any Mission; this document adds no authority-derivation rule.
 
@@ -693,8 +693,10 @@ drawdown completes through the retained interactive path with the
 approval prompt skipped, as that companion defines.
 
 Whichever mode completes, obtaining the fresh approval means the Mission
-Issuer authenticates the Approver, obtains fresh consent for the
-derived Authority Set, satisfies any `controls.acr`, and renders the
+Issuer authenticates the Approver against the published approval-
+authentication floor, obtains fresh consent for the
+derived Authority Set, satisfies any requested `acr_values`/`max_age`
+strength, and renders the
 Subject when the Approver is not the Subject, per the issuance profile's
 approval event. The consent disclosure MUST reflect the successor's
 authority being adjudicated. Expansion never widens authority without a
@@ -1438,9 +1440,10 @@ profile's error vocabulary directly: an expansion request whose
 Mission, or whose predecessor is not `active`, fails with
 `invalid_grant` ({{request-binding}}, {{predecessor-active}}); an
 expansion Mission
-Intent the Mission Issuer cannot parse or cannot derive a valid
-Authority Set from fails with `invalid_request` or, where the issuance
-profile uses it, `invalid_authorization_details` ({{RFC9396}}), exactly
+Intent the Mission Issuer cannot parse fails with `invalid_request`; one
+it can parse but cannot derive a valid Authority Set from fails with
+`invalid_authorization_details` ({{RFC9396}}) where the client submitted
+a proposal alongside it, or `access_denied` where it did not, exactly
 as for any Mission creation.
 
 # Worked Example {#example}

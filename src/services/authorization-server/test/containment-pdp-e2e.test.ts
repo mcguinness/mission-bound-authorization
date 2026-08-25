@@ -64,7 +64,7 @@ const intent = (goal: string) =>
   validateMissionIntent(
     JSON.stringify({
       goal,
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: EXPIRES_AT,
     }),
   );

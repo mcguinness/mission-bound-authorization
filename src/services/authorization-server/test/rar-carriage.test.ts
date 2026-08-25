@@ -75,7 +75,7 @@ describe("proposal_hash anchor (@spec mission#integrity-anchors, test vector 5)"
 
 const TASK_INTENT = {
   goal: "Pay Acme invoices for Q3",
-  resources: [RESOURCE],
+  target_resources: [RESOURCE],
   expires_at: "2027-01-01T00:00:00Z",
 };
 
@@ -174,7 +174,7 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     // ordinary intake) and derive under the ordinary narrowing rules.
     const proposal = validateAuthorityProposal(
       JSON.stringify(decoded.authorization_details),
-      TASK_INTENT.resources,
+      TASK_INTENT.target_resources,
     );
     expect(proposal).toEqual(PROPOSAL);
     const record = approve(proposal);
@@ -186,13 +186,13 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     expect(() =>
       validateAuthorityProposal(
         JSON.stringify([{ type: "payment_initiation", resource: RESOURCE, actions: ["x"] }]),
-        TASK_INTENT.resources,
+        TASK_INTENT.target_resources,
       ),
     ).toThrowError(/unsupported authorization details type/);
     try {
       validateAuthorityProposal(
         JSON.stringify([{ type: "mission_resource_access", resource: RESOURCE, actions: [] }]),
-        TASK_INTENT.resources,
+        TASK_INTENT.target_resources,
       );
       expect.unreachable("schema failure must refuse");
     } catch (e) {
@@ -203,7 +203,7 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
         JSON.stringify([
           { type: "mission_resource_access", resource: "https://other.example", actions: ["a"] },
         ]),
-        TASK_INTENT.resources,
+        TASK_INTENT.target_resources,
       );
       expect.unreachable("foreign resource must refuse");
     } catch (e) {
@@ -512,5 +512,221 @@ describe("end-to-end issuance under the new carriage", () => {
     expect(intro.active).toBe(true);
     expect(intro.mission.proposal_hash).toBe(record?.proposal_hash);
     expect(intro.mission.state).toBe("active");
+  });
+});
+
+// @spec mission#error-mapping — the two derivation-refusal branches at the
+// authorization decision: a submitted proposal that derives nothing is
+// invalid_authorization_details; configured-mapping mode (no proposal
+// submitted) that derives nothing is access_denied. Wire-level, following
+// the same PAR -> /interaction -> decide flow as the end-to-end test above.
+describe("derivation refusal at the authorization decision (@spec mission#error-mapping)", () => {
+  async function decideAndGetErrorRedirect(missionIntent: unknown, authorizationDetails?: unknown) {
+    const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify(missionIntent),
+      ...(authorizationDetails ? { authorization_details: JSON.stringify(authorizationDetails) } : {}),
+    });
+    expect(par.status).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+
+    const authUrl = `${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`;
+    let res = await fetch(authUrl, { redirect: "manual" });
+    storeCookies(res);
+    let location = res.headers.get("location") as string;
+    const uid = location.split("/interaction/")[1] as string;
+
+    res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    });
+    storeCookies(res);
+    location = res.headers.get("location") as string;
+    while (location?.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+      storeCookies(res);
+      location = res.headers.get("location") as string;
+    }
+    return new URL(location);
+  }
+
+  it("a submitted proposal that derives nothing is invalid_authorization_details", async () => {
+    const badProposal: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["not:a:real:action"] },
+    ];
+    const redirect = await decideAndGetErrorRedirect({ intent: TASK_INTENT }, badProposal);
+    expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
+  });
+
+  it("configured-mapping mode (no proposal) that derives nothing is access_denied", async () => {
+    const unmappedIntent = { ...TASK_INTENT, target_resources: ["https://unmapped.example.com"] };
+    const redirect = await decideAndGetErrorRedirect({ intent: unmappedIntent });
+    expect(redirect.searchParams.get("error")).toBe("access_denied");
+  });
+});
+
+// @spec mission#approval-authentication — `acr_values`/`max_age` request the
+// APPROVER's authentication strength, never the token Subject's. Covers the
+// #636-adopted acceptance criterion: same-principal, split-principal,
+// max_age=0, and unsupported-ACR, all wire-level through PAR -> /interaction
+// -> decide. The achieved context is supplied on decide()'s body
+// (`approver_acr`, `approver_auth_time`): this reference stack's headless
+// adjudication surface has no real IdP login step, exactly like
+// `approver`/`subject` already being plain decide()-body strings.
+describe("Approver Authentication Strength (@spec mission#approval-authentication, issue #636)", () => {
+  const READ_ONLY_PROPOSAL: AuthorityEntry[] = [
+    { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+  ];
+
+  async function runApproval(args: {
+    parExtra?: Record<string, string>;
+    approver: string;
+    subject: string;
+    decideExtra?: Record<string, unknown>;
+  }): Promise<URL> {
+    const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      authorization_details: JSON.stringify(READ_ONLY_PROPOSAL),
+      // oidc-provider requires the `openid` scope to accept `acr_values`
+      // (an OpenID Connect Core authentication-request parameter): the
+      // ADOPTED profile of it here is Approver-scoped, not Subject/ID-Token
+      // scoped, but the underlying library ties the parameter's acceptance
+      // to that scope regardless of which principal it describes.
+      scope: "payments openid",
+      ...(args.parExtra ?? {}),
+    });
+    expect(par.status).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+
+    const authUrl = `${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`;
+    let res = await fetch(authUrl, { redirect: "manual" });
+    storeCookies(res);
+    let location = res.headers.get("location") as string;
+    const uid = location.split("/interaction/")[1] as string;
+
+    res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({
+        decision: "approve",
+        approver: args.approver,
+        subject: args.subject,
+        ...(args.decideExtra ?? {}),
+      }),
+    });
+    storeCookies(res);
+    location = res.headers.get("location") as string;
+    while (location?.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+      storeCookies(res);
+      location = res.headers.get("location") as string;
+    }
+    return new URL(location);
+  }
+
+  it("same-principal: a self-approved Mission satisfies a requested acr_values", async () => {
+    const redirect = await runApproval({
+      parExtra: { acr_values: "mfa" },
+      approver: "alice",
+      subject: "alice",
+      decideExtra: { approver_acr: "mfa", approver_auth_time: new Date().toISOString() },
+    });
+    expect(redirect.searchParams.get("error")).toBeNull();
+    expect(redirect.searchParams.get("code")).toBeTruthy();
+  });
+
+  it("split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither", async () => {
+    const redirect = await runApproval({
+      parExtra: { acr_values: "mfa" },
+      approver: "bob",
+      subject: "alice",
+      decideExtra: { approver_acr: "mfa", approver_auth_time: new Date().toISOString() },
+    });
+    expect(redirect.searchParams.get("error")).toBeNull();
+    const code = redirect.searchParams.get("code") as string;
+    expect(code).toBeTruthy();
+
+    const dpopKeys = await generateKeyPair("ES256", { extractable: true });
+    const dpopPub = await exportJWK(dpopKeys.publicKey);
+    const htu = `${ISSUER}/token`;
+    let tok = await fetch(htu, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        dpop: await new SignJWT({ htu, htm: "POST" })
+          .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: dpopPub })
+          .setIssuedAt()
+          .setJti(crypto.randomUUID())
+          .sign(dpopKeys.privateKey),
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: REDIRECT_URI,
+        code_verifier: PKCE_VERIFIER,
+        resource: RESOURCE,
+        client_assertion: await clientAssertion("ap-agent", "ap-agent-auth", agentKey),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+    const nonce = tok.headers.get("dpop-nonce");
+    if (tok.status === 400 && nonce) {
+      tok = await fetch(htu, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          dpop: await new SignJWT({ htu, htm: "POST", nonce })
+            .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: dpopPub })
+            .setIssuedAt()
+            .setJti(crypto.randomUUID())
+            .sign(dpopKeys.privateKey),
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: REDIRECT_URI,
+          code_verifier: PKCE_VERIFIER,
+          resource: RESOURCE,
+          client_assertion: await clientAssertion("ap-agent", "ap-agent-auth", agentKey),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    }
+    expect(tok.status).toBe(200);
+    const body = (await tok.json()) as { access_token: string };
+    const [, payloadB64] = body.access_token.split(".");
+    const claims = JSON.parse(Buffer.from(payloadB64 as string, "base64url").toString()) as Record<
+      string,
+      unknown
+    >;
+    // The Approver's achieved acr/auth_time is approval-time provenance,
+    // never a token claim ({{approval-authentication}}): neither the
+    // top-level RFC 9068 claims nor the mission claim carry it.
+    expect(claims.acr).toBeUndefined();
+    expect(claims.amr).toBeUndefined();
+    expect(claims.auth_time).toBeUndefined();
+    expect((claims.mission as Record<string, unknown>).acr).toBeUndefined();
+  });
+
+  it("max_age=0 refuses a stale Approver authentication", async () => {
+    const redirect = await runApproval({
+      parExtra: { max_age: "0" },
+      approver: "bob",
+      subject: "alice",
+      decideExtra: { approver_auth_time: new Date(Date.now() - 5000).toISOString() },
+    });
+    expect(redirect.searchParams.get("error")).toBe("access_denied");
+  });
+
+  it("an unsupported acr is refused", async () => {
+    const redirect = await runApproval({
+      parExtra: { acr_values: "passkey" },
+      approver: "bob",
+      subject: "alice",
+      decideExtra: { approver_acr: "password", approver_auth_time: new Date().toISOString() },
+    });
+    expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 });

@@ -70,7 +70,7 @@ const intentOf = (actions: string[], opts: { maxAmount?: string; expiresAt?: str
   validateMissionIntent(
     JSON.stringify({
       goal: "reconcile Acme",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: opts.expiresAt ?? "2027-01-01T00:00:00Z",
     }),
   );

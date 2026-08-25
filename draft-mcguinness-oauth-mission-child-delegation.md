@@ -260,8 +260,10 @@ as a narrower token minted under one Mission, not a new Mission.
 
 Neither construct is the first question when the need is only more
 concurrent capacity. The same principal running more attested
-instances of the same pinned Agent Deployment (the issuance
-profile's `controls.agent_deployment`) under the same Mission is
+instances of the same pinned Agent Deployment (a named architectural
+pattern the issuance profile points to a forward-referenced Agent
+Deployment Binding profile for, not a wire member it currently
+defines itself) under the same Mission is
 multiplication, not delegation: each instance derives under the
 Mission directly, with no `act` hop and no Child Mission. The
 architecture names this swarm execution and states the full decision
@@ -1150,20 +1152,22 @@ subset of the parent, it MUST refuse child creation with
 
 ## Derivation Budget Is Not Inherited {#derivation-budget}
 
-A Child Mission's `controls.max_derivations`
-({{I-D.draft-mcguinness-oauth-mission}}) is set on its own Mission
-Intent at child creation and is independent of the parent's: the
+A Child Mission's effective `derivation_limit`
+({{I-D.draft-mcguinness-oauth-mission}}) is established from its own
+Mission Intent's `requested_derivation_limit`, clamped by the
+deployment's own policy ceiling for the Child Mission, at child
+creation, and is independent of the parent's: the
 attenuation rules above bound a child's authority, expiry, and
 delegation policy against the parent, but not its derivation count.
-`max_derivations` is a per-Mission local issuance counter. A Mission
+`derivation_limit` is a per-Mission local issuance counter. A Mission
 Issuer and a deployment MUST NOT treat it, at any single Mission, as
 an aggregate, concurrency, spend, or subtree bound.
 
 A Parent Mission's
-own `max_derivations` caps derivation at the parent alone; it does not
+own `derivation_limit` caps derivation at the parent alone; it does not
 bound how many derivations the child subtree performs in aggregate,
 and a deep or wide subtree can derive far more than the parent's own
-cap suggests. Where an approval interface displays `max_derivations`,
+cap suggests. Where an approval interface displays `derivation_limit`,
 or any per-Mission derivation control, as a limit on child creation,
 that interface MUST disclose the composed bound reachable through the
 subtree alongside it, so the Approver sees the real reachable surface
