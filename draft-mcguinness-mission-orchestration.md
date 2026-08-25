@@ -763,9 +763,12 @@ members:
 
 `mission`:
 : REQUIRED. The Mission whose orchestration state changed, as the
-  nested `mission` object (`id`, `issuer`, and, when known,
-  `authority_hash`), the same shape as the `mission` claim of
-  {{I-D.draft-mcguinness-oauth-mission}} and the Harness Evidence object
+  nested `mission` object: `id` and `issuer`, the same members as the
+  `mission` claim of {{I-D.draft-mcguinness-oauth-mission}}, plus
+  `authority_hash` when known (OPTIONAL, not carried on that baseline
+  claim, and recorded here as this evidence record's own audit
+  extension only when the orchestrator holds it), the same footing
+  the Harness Evidence object uses
   ({{I-D.draft-mcguinness-mission-harness}}).
 
 `workflow_id`:

@@ -1234,8 +1234,9 @@ async function handleChildJwtBearerGrant(
     throw new errors.InvalidGrant("invalid child-bound grant assertion");
   }
   const assertedClientId = claims.client_id;
-  const missionRef = claims.mission as { id?: unknown; authority_hash?: unknown } | undefined;
+  const missionRef = claims.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
   const missionId = missionRef?.id;
+  const assertedIssuer = missionRef?.issuer;
   const assertedHash = missionRef?.authority_hash;
 
   // 3. SECURITY GATE — the assertion names its only authorized redeemer in
@@ -1258,7 +1259,8 @@ async function handleChildJwtBearerGrant(
   }
 
   // 4. Resolve the Child Mission; the record is authoritative. Cross-check its
-  //    client_id against the assertion (defence in depth against a stale or
+  //    client_id and (#702: (issuer, id) is now the complete Mission identity)
+  //    issuer against the assertion (defence in depth against a stale or
   //    tampered assertion); `authority_hash` (#702: not on the baseline
   //    `mission` claim `childMissionClaim` projects) is checked only when the
   //    assertion happens to carry it — present-then-check, never required,
@@ -1272,6 +1274,7 @@ async function handleChildJwtBearerGrant(
   }
   if (
     record.client_id !== assertedClientId ||
+    assertedIssuer !== record.issuer ||
     (assertedHash !== undefined && record.authority_hash !== assertedHash)
   ) {
     throw new errors.InvalidGrant("child grant assertion does not match the mission record");
@@ -2134,9 +2137,23 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // Mission resolution: a token the AS cannot bind to a known Mission
         // is unresolvable; no Mission or token detail is recovered from
         // failure.
-        const missionId = (payload.mission as { id?: string } | undefined)?.id;
+        const missionIdent = payload.mission as { id?: string; issuer?: string } | undefined;
+        const missionId = missionIdent?.id;
         const record = missionId ? kernel.get(missionId) : undefined;
         if (!record) {
+          ctx.body = inactive;
+          return;
+        }
+        // @spec mission#the-mission-claim (#702): (id, issuer) is now the
+        // COMPLETE Mission identity, so both members MUST resolve the same
+        // record; neither is silently preferred. Resolving by `id` alone and
+        // returning the record's own issuer would let a locally-signed,
+        // otherwise-valid token whose `mission.issuer` names a different
+        // (or no longer accurate) issuer introspect active, silently
+        // normalized to the record's issuer. This adapter only ever serves
+        // introspection for Missions it itself holds, so `record.issuer`
+        // is also always this AS's own issuer.
+        if (missionIdent?.issuer !== record.issuer) {
           ctx.body = inactive;
           return;
         }

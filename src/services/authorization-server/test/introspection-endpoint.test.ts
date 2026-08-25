@@ -464,6 +464,14 @@ describe("RFC 9068 + Mission claim-set enforcement (@spec mission#introspection 
     expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
   });
 
+  it("@spec mission#the-mission-claim (#702): a real mission.id with a MISMATCHED mission.issuer is never silently repaired to the record's issuer -> bare active:false", async () => {
+    const crafted = await craftToken({
+      jti: flow1.jti,
+      mission: { id: flow1.missionId, issuer: "https://evil.example" },
+    });
+    expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+  });
+
   it("missing exp -> bare active:false", async () => {
     const crafted = await craftToken(baselineFields(), { omitExp: true });
     expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });

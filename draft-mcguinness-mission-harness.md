@@ -1229,9 +1229,13 @@ authoritative definition of the record's members. The following is a
 non-normative summary of what a record carries:
 
 - `event_id`;
-- the `mission` object (`id`, `issuer`, and, when known,
-  `authority_hash`), the same shape as the `mission` claim of
-  {{I-D.draft-mcguinness-oauth-mission}};
+- the `mission` object (`id` and `issuer`, the same members as the
+  `mission` claim of {{I-D.draft-mcguinness-oauth-mission}}, plus
+  `authority_hash` when known: OPTIONAL, not carried on that
+  baseline claim, and recorded here as this evidence record's own
+  audit extension only when the harness holds it, e.g. from
+  introspection's disclosure privilege or a companion profile's own
+  copy);
 - `session_id`;
 - task graph node or queue item identifier;
 - prior and resulting harness state;
@@ -1241,9 +1245,11 @@ non-normative summary of what a record carries:
 - actor or sub-agent identifier when applicable.
 
 A Harness Evidence record carries the Mission as the nested `mission`
-object, mirroring the `mission` claim; the flat `mission_id` and
-`issuer` of Mission Binding ({{mission-binding}}) are a binding
-key, whereas the evidence record mirrors the claim shape.
+object, mirroring the `mission` claim's `id`/`issuer` members; the
+flat `mission_id` and `issuer` of Mission Binding ({{mission-binding}})
+are a binding key, whereas the evidence record adds `authority_hash`
+as its own extension, per the preceding paragraph, never inherited
+from the claim.
 
 Harness Evidence complements runtime enforcement evidence
 ({{I-D.draft-mcguinness-mission-runtime}}). It records
