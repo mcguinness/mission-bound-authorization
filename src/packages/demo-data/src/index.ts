@@ -461,7 +461,10 @@ function loadPolicy(): LoadedPolicy {
   let derivationLimitCeiling: number | null = null;
   if (rawCeiling !== undefined && rawCeiling !== null) {
     if (typeof rawCeiling !== "number" || !Number.isInteger(rawCeiling) || rawCeiling < 1) {
-      throw new ConfigError(file, "policy.derivation_limit_ceiling must be an integer >= 1, or null");
+      throw new ConfigError(
+        file,
+        "policy.derivation_limit_ceiling must be an integer >= 1, or null",
+      );
     }
     derivationLimitCeiling = rawCeiling;
   }
