@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "179a70ac772df9eee1023788c93b4feb4a27d5d4",
-    "content_sha256": "9292e53a65286a89f2bceb495bf28873eca00f47b393bffd1d076c554d7291a6"
+    "revision": "b618c6145ea466492872ccfd92fc635ac8daf78a",
+    "content_sha256": "c478453979437940b1bfa3180c84adf02d81261a1e74ccd1843d9b42d1f52051"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "a206dbf8a37c7b3e0b0759ce083440e6ae97a448",
@@ -47,8 +47,8 @@
     "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "96088c8a2a264b3a7785622e58285d895acfbcfb",
-    "content_sha256": "1167d2b7cf7d9f8d7d1d7a5eec6e39f077f19b8dcf8525daa182bc4df62679bb"
+    "revision": "4010f759762247e0d4358fdfad6dd5d2ba0607e6",
+    "content_sha256": "f51c68adb7527cf1b610149fb80bbfd296f8570c37dd98207a16a1076f7fa3d1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
@@ -960,12 +960,111 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping (or narrowed to nothing by policy) fails access_denied, since no authorization_details object exists for invalid_authorization_details to describe"
+    "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping (or narrowed to nothing by policy) fails access_denied, since no authorization_details object exists for invalid_authorization_details to describe",
+    "local": "deriveAuthoritySet (src/services/authorization-server/src/kernel/derive.ts) captures whether a proposal was actually submitted BEFORE the template-mode fallback reassigns the working array, so the two empty-result codes are correctly discriminated: invalid_authorization_details when a submitted authorization_details proposal derives nothing, access_denied when configured-mapping mode (no proposal) derives nothing. intentErrorToOidc (src/services/authorization-server/src/adapters/provider.ts) maps the latter to the provider's AccessDenied error; both the render-time and decide-time derivation call sites are wrapped to surface it as a proper authorization-decision outcome rather than propagate uncaught."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "derivation (@spec mission#authorization-derivation) > refuses a no-proposal Intent yielding no authority with access_denied",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "derivation refusal at the authorization decision (@spec mission#error-mapping) > configured-mapping mode (no proposal) that derives nothing is access_denied",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "derivation refusal at the authorization decision (@spec mission#error-mapping) > a submitted proposal that derives nothing is invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately. The third test pins the companion branch (a submitted proposal deriving nothing stays invalid_authorization_details) so the two codes are not confused going forward."
+  },
+  {
+   "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "MUST satisfy both the published floor and, where the client requested one, the `acr_values`/`max_age` carriage above; the floor is never relaxed by a narrower or absent client request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
+    "local": "the demo's headless adjudication surface has no real IdP login step, so the achieved context (approver_acr, approver_auth_time) is supplied directly on decide()'s body, the same way approver/subject already are; a deployment with a real approval UI sources it from that UI's own login/session. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > same-principal: a self-approved Mission satisfies a requested acr_values",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > max_age=0 refuses a stale Approver authentication",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). Split-principal and same-principal both use the same approver_acr/approver_auth_time discriminator, proving the check depends only on the Approver's own achieved context, never the Subject's identity. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
+  },
+  {
+   "id": "core.approval-authentication.no-token-claim-carriage",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "this document defines no Mission Record member for them, and they MUST NOT\nbe carried on, or inferred from, a derived access token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "the Approver's achieved acr/amr/auth_time is approval-time provenance, not a Mission Intent or Mission Record member, and MUST NOT be carried on or inferred from a derived access token; this is the RFC 9068-claim-repurposing pattern core prohibits"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "The same wire test both exercises the approver-scoped check AND decodes the issued access token to assert acr/amr/auth_time are absent at the top level and under the mission claim."
   },
   {
    "id": "core.grant-binding.mission-id-inert",
