@@ -395,3 +395,97 @@ describe("M1 tracer slice", () => {
     });
   });
 });
+
+/**
+ * @spec mission#issuance-gating, mission#error-mapping — a positive wire
+ * proof that `mission_error` reaches the client with a NON-undefined value
+ * (the suspend/revoke scenarios above only prove the splice mechanism fires
+ * without a value, since suspended has no mapped value and revoked destroys
+ * the grant before gateDerivation ever runs). A Mission whose own
+ * `requested_derivation_limit` is 1 exhausts its cap on the SECOND
+ * derivation with no lifecycle transition at all, so the grant stays valid
+ * and nothing short-circuits before MissionGrantError/grant.error runs.
+ */
+describe("mission_error wire carriage: derivations_exhausted (@spec mission#error-mapping)", () => {
+  it("a Mission capped at requested_derivation_limit 1 refuses its second derivation with invalid_grant + mission_error=derivations_exhausted", async () => {
+    const verifier = "cap-verifier-0123456789-0123456789-0123456789";
+    const challenge = Buffer.from(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+    ).toString("base64url");
+    const intent = JSON.stringify({
+      intent: {
+        goal: "One-shot invoice read",
+        target_resources: [CANONICAL_RESOURCE],
+        expires_at: "2027-01-01T00:00:00Z",
+        requested_derivation_limit: 1,
+      },
+    });
+    const authorizationDetails = JSON.stringify([
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+    ]);
+    const parRes = await fetch(`${ISSUER}/request`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: "ap-agent",
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        scope: "payments",
+        resource: CANONICAL_RESOURCE,
+        code_challenge: challenge,
+        code_challenge_method: "S256",
+        mission_intent: intent,
+        authorization_details: authorizationDetails,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+    const requestUri = ((await parRes.json()) as { request_uri?: string }).request_uri as string;
+    expect(requestUri).toMatch(/^urn:/);
+
+    let res = await fetch(
+      `${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: requestUri })}`,
+      { redirect: "manual" },
+    );
+    storeCookies(res);
+    let location = res.headers.get("location") as string;
+    const uid = location.split("/interaction/")[1] as string;
+    res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    });
+    storeCookies(res);
+    location = res.headers.get("location") as string;
+    while (location?.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+      storeCookies(res);
+      location = res.headers.get("location") as string;
+    }
+    const code = new URL(location).searchParams.get("code") as string;
+
+    // Derivation #1 (the code exchange itself): succeeds, and exhausts the cap.
+    const first = await tokenRequest({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: verifier,
+      resource: CANONICAL_RESOURCE,
+    });
+    const firstBody = (await first.json()) as { access_token?: string; refresh_token?: string; error?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+
+    // Derivation #2 (a refresh): refused, grant still valid, no lifecycle
+    // transition anywhere in this test -- the only refusal path available is
+    // gateDerivation -> MissionGrantError -> the grant.error splice.
+    const second = await tokenRequest({
+      grant_type: "refresh_token",
+      refresh_token: firstBody.refresh_token as string,
+    });
+    const secondBody = (await second.json()) as { error?: string; mission_error?: string };
+    expect(second.status, JSON.stringify(secondBody)).toBe(400);
+    expect(secondBody.error).toBe("invalid_grant");
+    expect(secondBody.mission_error).toBe("derivations_exhausted");
+  });
+});

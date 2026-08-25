@@ -428,8 +428,8 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "derivation_limit = min(deployment policy ceiling, requested_derivation_limit) when both are present; whichever is present alone when only one is; null (no ceiling) when neither is present, never unbounded-by-omission as a hardcoded default",
-    "local": "the demo deployment's own policy.json ceiling is null (no ceiling) by default, so this row's own test constructs a LOCAL kernel with a narrower policy ceiling to exercise the clamp in both directions plus the omission case"
+    "normative": "derivation_limit = min(deployment policy ceiling, requested_derivation_limit) when both are present; whichever is present alone when only one is; null (no ceiling) when neither is present, never unbounded-by-omission as a hardcoded default. This establishment happens afresh at every approval event that creates a Mission Record (direct, Child Mission, dispatched Template instance, Expansion successor); an established derivation_limit is never inherited unchanged from a parent, a template, or a predecessor Mission.",
+    "local": "the demo deployment's own policy.json ceiling is null (no ceiling) by default, so this row's own kernel.test.ts test constructs a LOCAL kernel with a narrower policy ceiling to exercise the clamp in both directions plus the omission case; child-delegation.ts and template.ts already established fresh per-surface; expansion.ts previously inherited the predecessor's derivation_limit unchanged (a pre-existing, untested, undocumented default) and is corrected here to establish fresh from the successor's own Intent, matching the other three surfaces and this section's text"
    },
    "level": "unit",
    "coverage": "tested",
@@ -437,6 +437,12 @@
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
      "name": "lifecycle (@spec status#legal-transitions) > @spec mission#derivation-issuance-policy: derivation_limit is min(policy ceiling, requested), never the request copied verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "expansion: derivation_limit establishment (@spec mission#derivation-issuance-policy) > is established fresh from the successor's own Intent, never inherited from the predecessor",
      "level": "unit",
      "surface": "derivation"
     }
@@ -767,7 +773,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted",
-    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
+    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -775,6 +781,12 @@
     {
      "file": "src/services/authorization-server/test/tracer.test.ts",
      "name": "M1 tracer slice > suspend gates refresh with invalid_grant; resume restores issuance",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "mission_error wire carriage: derivations_exhausted (@spec mission#error-mapping) > a Mission capped at requested_derivation_limit 1 refuses its second derivation with invalid_grant + mission_error=derivations_exhausted",
      "level": "endpoint",
      "surface": "token-endpoint"
     }

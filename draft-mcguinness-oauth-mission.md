@@ -3549,6 +3549,15 @@ The rendered approval surface ({{approval-event}}) MUST display the
 established `derivation_limit`, not merely the requested value, so
 the Approver consents to the ceiling actually enforced.
 
+This establishment happens afresh at every approval event that
+creates a Mission Record: a Child Mission's, a dispatched Template
+instance's, and an Expansion successor's, exactly as at direct
+approval. An established `derivation_limit` is never inherited
+unchanged from a parent, a template, or a predecessor Mission; each
+Mission Record's ceiling comes only from its own Intent's
+`requested_derivation_limit`, clamped by the deployment's policy for
+that Mission.
+
 An auditor recomputes the expected `derivation_limit` from the
 recorded `requested_derivation_limit` (or its absence) and the
 Mission's `policy_version` ({{authorization-derivation}}) against the
