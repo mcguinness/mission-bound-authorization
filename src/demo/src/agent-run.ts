@@ -52,7 +52,7 @@ async function main(): Promise<void> {
   const missionIntent = JSON.stringify({
     intent: {
       goal,
-      resources: [CANONICAL_RESOURCE],
+      target_resources: [CANONICAL_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
     },
   });

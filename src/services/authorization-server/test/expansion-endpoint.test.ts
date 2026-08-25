@@ -154,7 +154,7 @@ const authority = (actions: string[]) => [
 
 // @spec mission#submission-via-par — the wire value is the Submission envelope.
 const intentJson = (goal: string, _actions: string[]): string =>
-  JSON.stringify({ intent: { goal, resources: [RESOURCE], expires_at: FAR_EXP } });
+  JSON.stringify({ intent: { goal, target_resources: [RESOURCE], expires_at: FAR_EXP } });
 
 /**
  * Full PAR -> interactive approval -> code -> token dance yielding an ACTIVE
@@ -327,7 +327,7 @@ describe("expansion wire: Submission envelope (@spec mission#submission-via-par,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       // The pre-envelope bare shape, byte-for-byte what intentJson used to emit.
-      mission_intent: JSON.stringify({ goal: "Widen", resources: [RESOURCE], expires_at: FAR_EXP }),
+      mission_intent: JSON.stringify({ goal: "Widen", target_resources: [RESOURCE], expires_at: FAR_EXP }),
       authorization_details: JSON.stringify(authority(["payments:invoice.read", "payments:remittance.send"])),
       creation_request_id: crypto.randomUUID(),
     });
@@ -364,7 +364,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       mission_intent: JSON.stringify({
-        intent: { goal: "Widen with provenance", resources: [RESOURCE], expires_at: FAR_EXP },
+        intent: { goal: "Widen with provenance", target_resources: [RESOURCE], expires_at: FAR_EXP },
         evidence: [entry],
       }),
       authorization_details: JSON.stringify(
@@ -410,7 +410,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       mission_intent: JSON.stringify({
-        intent: { goal: "Widen with stale provenance", resources: [RESOURCE], expires_at: FAR_EXP },
+        intent: { goal: "Widen with stale provenance", target_resources: [RESOURCE], expires_at: FAR_EXP },
         evidence: [{ type: EXP_TYPE, assertion: "stale" }],
       }),
       authorization_details: JSON.stringify(
@@ -611,7 +611,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const pred = await issuePredecessor(["payments:invoice.read", "payments:vendor.read"]);
     const { child } = createChildMission(as.kernel, {
       parentId: pred.missionId,
-      intent: { goal: "Classify invoices", resources: [RESOURCE], expires_at: FAR_EXP },
+      intent: { goal: "Classify invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
       proposedAuthority: authority(["payments:invoice.read"]),
       childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
     });

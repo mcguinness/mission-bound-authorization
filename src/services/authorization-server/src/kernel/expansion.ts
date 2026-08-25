@@ -144,7 +144,15 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     created_at: kernel.nowDate().toISOString(),
     expires_at: expiresAt,
     version: 1,
-    max_derivations: predecessor.max_derivations,
+    // @spec mission#derivation-issuance-policy — every approval event
+    // establishes derivation_limit afresh, an Expansion successor's
+    // included: it is never inherited from the predecessor. Expansion is a
+    // fresh human approval (this function's own approval_basis above is
+    // "direct", exactly kernel.approve()'s path), so the successor's OWN
+    // Intent (input.intent, which MAY carry its own
+    // requested_derivation_limit) is clamped by this deployment's policy
+    // ceiling exactly as an ordinary Mission approval would be.
+    derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

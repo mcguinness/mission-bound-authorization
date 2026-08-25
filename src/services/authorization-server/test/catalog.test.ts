@@ -19,7 +19,7 @@ let catalog: CatalogProvider;
 const approveForAlice = (n: number) =>
   kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Pay Acme", resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Pay Acme", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
     ),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },

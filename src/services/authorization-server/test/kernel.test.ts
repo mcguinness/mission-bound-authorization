@@ -25,7 +25,7 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const intent = (over: Record<string, unknown> = {}) =>
   JSON.stringify({
     goal: "Pay Acme invoices for Q3",
-    resources: [RESOURCE],
+    target_resources: [RESOURCE],
     expires_at: "2027-01-01T00:00:00Z",
     ...over,
   });
@@ -61,9 +61,9 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
     expect(() => validateMissionIntent('{"goal":"x"}')).toThrow(IntentError);
     expect(() => validateMissionIntent(intent({ expires_at: "not-a-date" }))).toThrow(IntentError);
   });
-  it("rejects max_derivations below 1", () => {
-    expect(() => validateMissionIntent(intent({ controls: { max_derivations: 0 } }))).toThrow(
-      /max_derivations/,
+  it("rejects requested_derivation_limit below 1", () => {
+    expect(() => validateMissionIntent(intent({ requested_derivation_limit: 0 }))).toThrow(
+      /requested_derivation_limit/,
     );
   });
   it("accepts well-formed goal_lang, refuses malformed with invalid_request, and commits it in intent_hash (@spec mission#mission-intent)", () => {
@@ -128,7 +128,7 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
     expect(thrown).toBeInstanceOf(IntentError);
     expect((thrown as IntentError).code).toBe("invalid_request");
   });
-  it("rejects proposed_authority resources outside the Intent's resources", () => {
+  it("rejects proposed_authority resources outside the Intent's target_resources", () => {
     expect(() =>
       validateAuthorityProposal(
         JSON.stringify([
@@ -136,7 +136,7 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
         ]),
         [RESOURCE],
       ),
-    ).toThrow(/not among Intent resources/);
+    ).toThrow(/not among Intent target_resources/);
   });
 
   // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata: a
@@ -248,6 +248,22 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
       expect.unreachable();
     } catch (e) {
       expect((e as IntentError).code).toBe("invalid_authorization_details");
+    }
+  });
+
+  // @spec mission#error-mapping — configured-mapping mode (no `authorization_details`
+  // proposal submitted): a well-formed Intent the AS's own policy derives nothing
+  // for is `access_denied`, never `invalid_authorization_details`, because no
+  // proposal was ever submitted to be invalid.
+  it("refuses a no-proposal Intent yielding no authority with access_denied", () => {
+    const noMapping = validateMissionIntent(
+      intent({ target_resources: ["https://unmapped.example.com"] }),
+    );
+    try {
+      deriveAuthoritySet(noMapping, DERIVATION_POLICY as never, undefined);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as IntentError).code).toBe("access_denied");
     }
   });
 });
@@ -470,13 +486,42 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
   });
 
   it("gates derivation on state and derivation cap (@spec mission#lifecycle)", () => {
-    const r = approve(intent({ controls: { max_derivations: 2 } }), 3);
+    const r = approve(intent({ requested_derivation_limit: 2 }), 3);
+    expect(kernel.get(r.id)?.derivation_limit).toBe(2);
     kernel.gateDerivation(r.id);
     kernel.gateDerivation(r.id);
     expect(() => kernel.gateDerivation(r.id)).toThrow(GateError);
     const r2 = approve(intent(), 4);
     kernel.transition(r2.id, "suspend");
     expect(() => kernel.gateDerivation(r2.id)).toThrow(/suspended/);
+  });
+
+  it("@spec mission#derivation-issuance-policy: derivation_limit is min(policy ceiling, requested), never the request copied verbatim", async () => {
+    // A LOCAL kernel whose policy ceiling (5) is narrower than one request and
+    // wider than another, proving the clamp engages in both directions and
+    // that omission defers entirely to the policy ceiling.
+    const { privateKey } = await generateKeyPair("ES256");
+    const localKernel = new MissionKernel({
+      issuer: ISS,
+      policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: 5 } as never,
+      statusKey: privateKey,
+      statusKid: "as-status",
+    });
+    const localApprove = (over: Record<string, unknown>, n: number) =>
+      localKernel.approve({
+        intent: validateMissionIntent(intent(over)),
+        subject: { iss: ISS, sub: "alice" },
+        approver: { iss: ISS, sub: "bob" },
+        clientId: "ap-agent",
+        approvalEventId: `apev-clamp-${n}`,
+      });
+    // Requested (20) exceeds the ceiling (5): clamped down to the ceiling.
+    expect(localApprove({ requested_derivation_limit: 20 }, 1).derivation_limit).toBe(5);
+    // Requested (2) narrows below the ceiling (5): the narrower request wins.
+    expect(localApprove({ requested_derivation_limit: 2 }, 2).derivation_limit).toBe(2);
+    // Omitted request: the deployment's own ceiling applies unchanged, never
+    // "unbounded by omission".
+    expect(localApprove({}, 3).derivation_limit).toBe(5);
   });
 
   it("expiry clock: past expires_at the mission is expired and non-deriving", () => {

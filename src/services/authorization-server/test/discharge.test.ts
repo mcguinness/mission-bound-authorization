@@ -99,7 +99,7 @@ const CEILING: AuthorityEntry[] = [
 const POLICY = { policy_version: "discharge-v1", ceiling: CEILING };
 
 const intent = (goal = "Reconcile Q3 payables") =>
-  validateMissionIntent(JSON.stringify({ goal, resources: [RES], expires_at: EXPIRES_AT }));
+  validateMissionIntent(JSON.stringify({ goal, target_resources: [RES], expires_at: EXPIRES_AT }));
 
 /** A write entry discharged when the Q3 close is finalized, plus a live read entry. */
 const proposal = (): AuthorityEntry[] => [
@@ -616,7 +616,7 @@ const endpointIntent = () =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Send remittances for the Q3 close",
-      resources: [CANONICAL_RESOURCE],
+      target_resources: [CANONICAL_RESOURCE],
       expires_at: EXPIRES_AT,
     }),
   );

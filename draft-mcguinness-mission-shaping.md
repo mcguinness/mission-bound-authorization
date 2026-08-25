@@ -81,6 +81,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -160,8 +168,8 @@ Intent is submitted, how an Authorization Server derives an Authority
 Set, how an Approver consents, and how issued tokens are bound to the
 approved Mission. It does not standardize how a deployment turns an
 open-ended task request, such as "resolve this billing dispute," into a
-Mission Intent with a goal, resources, free-text constraints, success
-criteria, purpose, controls, and expiry.
+Mission Intent with a goal, target resources, free-text task bounds,
+success criteria, purpose, and expiry.
 
 This document describes that missing shaping step. A **Mission Shaper**
 is a client-side component that produces a candidate Mission Intent,
@@ -439,12 +447,14 @@ its `mission_intent` Submission envelope
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
 - a `goal`;
-- `resources`, each an absolute URI;
-- optional free-text `constraints`;
+- `target_resources`, each an absolute URI;
+- optional free-text `task_bounds`;
 - optional `success_criteria`;
 - an optional `purpose`;
 - an `expires_at`; and
-- an optional `controls` object.
+- any other named top-level member a companion profile defines, for
+  example a `requested_derivation_limit` or a consumption bound
+  ({{I-D.draft-mcguinness-mission-metering}}).
 
 The Intent carries no authority members. Where the task calls for
 concrete candidate authority, the shaper additionally produces an
@@ -454,7 +464,7 @@ parameter alongside the Intent
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The shaper proposes the resources. It describes the desired bounds in
-free-text `constraints` and `success_criteria`. It carries any
+free-text `task_bounds` and `success_criteria`. It carries any
 concrete candidate authority (actions, structured constraints,
 delegation facts) in the authority proposal, the untrusted carrier the
 Mission Issuer only narrows when it derives the Authority Set
@@ -486,12 +496,12 @@ request or a refusal.
 A sound shaper applies a default-deny posture: its Mission Intent
 proposal contains only resources that have a positive basis in the
 request, context, capability source, and shaping policy, and free-text
-`constraints` and `success_criteria` that describe the bounds the shaper
+`task_bounds` and `success_criteria` that describe the bounds the shaper
 can defend. It does not include a broad resource class as a
 convenience fallback for unresolved detail.
 
 For an open-ended task whose concrete objects are not known when the
-proposal is built, a sound shaper expresses the bound as `constraints`
+proposal is built, a sound shaper expresses the bound as `task_bounds`
 that hold as invariants over those objects (the owning customer, the
 tenant, an amount ceiling, read-only except named writes, a time
 window), rather than reaching for a broad resource class to anticipate
@@ -551,7 +561,7 @@ task implies use of sub-agents, background workers, or delegated
 execution, the shaper SHOULD propose that fact there, recording the
 same fact in Shaping Evidence ({{shaping-evidence}}) for audit only.
 The shaper MAY also describe the desired delegation bound in free-text
-`constraints` or `success_criteria`.
+`task_bounds` or `success_criteria`.
 
 A sound shaper does not infer
 delegated execution from the mere existence of a task graph or an agent
@@ -582,12 +592,13 @@ and is never an input authority derives from.
 | Field | Guidance | Avoid |
 |---|---|---|
 | `goal` | Concise user-readable summary in the form the Approver sees at consent; preserve the user's framing so the disclosure matches their understanding. | SHOULD NOT quote verbatim prompt text that contains instructions or commands ({{prompt-injection}}). |
-| `resources` | Enumerate, as absolute URIs, the resources, datasets, tools, or domains the prompt referenced; record any human-readable label as an audit annotation in Shaping Evidence, not as the `resources` value. | SHOULD NOT widen beyond what the prompt referenced; "for convenience" enlarges approved authority. |
-| `constraints` | Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. Where a bound is machine-enforceable, the shaper also emits it as a structured constraint on the authority proposal; the Mission Issuer never parses the prose ({{I-D.draft-mcguinness-oauth-mission}}). | SHOULD NOT silently drop a user-expressed bound; record it in `constraints` or in Shaping Evidence, or clarify or refuse instead. |
+| `target_resources` | Enumerate, as absolute URIs, the resources, datasets, tools, or domains the prompt referenced; record any human-readable label as an audit annotation in Shaping Evidence, not as the `target_resources` value. | SHOULD NOT widen beyond what the prompt referenced; "for convenience" enlarges approved authority. |
+| `task_bounds` | Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. Where a bound is machine-enforceable, the shaper also emits it as a structured constraint on the authority proposal; the Mission Issuer never parses the prose ({{I-D.draft-mcguinness-oauth-mission}}). | SHOULD NOT silently drop a user-expressed bound; record it in `task_bounds` or in Shaping Evidence, or clarify or refuse instead. |
 | `success_criteria` | Free-text observable outcomes that indicate the task is complete, phrased for the Approver. Disclosure and audit material only. | SHOULD NOT encode authority here; `success_criteria` carries no machine semantics in the issuance profile. |
 | `expires_at` | The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default. | Don't request the maximum the Mission Issuer allows; the Issuer MAY narrow further. |
 | `purpose` | If the client has registered purposes, select the closest registered URI. | SHOULD NOT invent a new `purpose` URI. |
-| `controls` | Emit `controls` keys the deployment recognizes; a deployment MAY add further keys it defines. | SHOULD NOT emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent. |
+| `requested_derivation_limit` | Where the task implies a natural issuance count (a one-shot read, a fixed number of scheduled runs), propose that count; omit it to defer entirely to the deployment's own ceiling. | Don't propose a large round number "to be safe"; an omitted value is not more permissive than a proposed one, so guessing high only misleads the Approver about what was actually requested. |
+| any other named member | A companion profile MAY define further named top-level Mission Intent members (for example, a metering consumption bound); emit the ones the deployment's adopted companions recognize. | SHOULD NOT emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent. |
 
 # Ambiguity Handling {#ambiguity}
 
@@ -864,8 +875,8 @@ a broad fallback. The candidate Mission Intent it submits:
 ~~~ json
 {
   "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-  "resources": ["https://erp.example.com"],
-  "constraints": [
+  "target_resources": ["https://erp.example.com"],
+  "task_bounds": [
     "Read only invoices in fiscal period 2026-Q3.",
     "Post journal entries no greater than $500.",
     "Customer scope: acme-corp only."
@@ -884,7 +895,7 @@ the 2026-Q3 period and the acme-corp tenant, and `journal-entries.write`
 constrained to a `max_amount` of 500.00 USD, each a narrowing of a
 structured entry the shaper proposed. The shaper translated the user's
 words into those structured constraints before admission; the Issuer
-never parses the free-text `constraints`, which disclose the same
+never parses the free-text `task_bounds`, which disclose the same
 bounds to the Approver and granted nothing. The invariants (period,
 amount, tenant) are what bound an open-ended task
 whose individual invoices were unknown when the goal was written. Had
@@ -919,9 +930,11 @@ re-propose. Three refusal surfaces feed the loop:
 
 Derivation refusal:
 : At submission, the Mission Issuer refuses a well-formed Intent from
-  which it cannot derive a valid Authority Set with
-  `invalid_authorization_details`, distinguishing an
-  authority-derivation failure from a syntax error
+  which it cannot derive a valid Authority Set: with
+  `invalid_authorization_details` when the shaper submitted an
+  authority proposal alongside the Intent, or with `access_denied` when
+  it did not (a bare Intent relying entirely on the Issuer's configured
+  mapping), distinguishing both from a syntax error
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Deferred denial:
@@ -1135,7 +1148,7 @@ documents, tool descriptions, and catalog metadata can all carry
 instructions aimed at the shaper. Concrete threats include attempts
 to:
 
-- expand `resources` beyond what the user requested;
+- expand `target_resources` beyond what the user requested;
 - push `expires_at` past deployment policy;
 - suppress a stated constraint; or
 - select a `purpose` the user did not choose.
@@ -1148,7 +1161,7 @@ Mitigations the shaper SHOULD apply:
 2. Apply the refusal behavior of {{refusal}} when the input exhibits
    injection patterns.
 3. Do not echo verbatim prompt-derived instruction text into `goal` or
-   `constraints` the Approver will read; paraphrase, or quote with clear
+   `task_bounds` the Approver will read; paraphrase, or quote with clear
    attribution, but do not present injected content as if it came from
    the user.
 4. Use the capability sources' resolved vocabulary as a hard allowlist
@@ -1214,11 +1227,11 @@ becomes structured artifacts. The privacy surface follows
 from where that content flows.
 
 The shaper copies or paraphrases prompt content into `goal`,
-`resources`, `constraints`, and `controls`, which the Mission Issuer
+`target_resources`, and `task_bounds`, which the Mission Issuer
 renders in a consent disclosure the Approver reads and which may be
 retained in the Mission record. A shaper SHOULD carry into these fields
 only the content needed to describe the task. It SHOULD NOT widen
-`resources` or echo unrelated prompt content
+`target_resources` or echo unrelated prompt content
 ({{mission-intent-proposal}}). It SHOULD avoid copying third-party
 personal data into `goal` where a non-identifying description suffices.
 

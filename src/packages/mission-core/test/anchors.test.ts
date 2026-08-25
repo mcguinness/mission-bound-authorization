@@ -12,10 +12,10 @@ import {
 
 const ISS = "https://as.example.com";
 
-// Core § test-vectors, vector pair 1 + the nested-controls intent of pair 2.
+// Core § test-vectors, vector pair 1 + the flat-member intent of pair 3.
 const INTENT_V1 = {
   goal: "Reconcile Q3 invoices",
-  resources: ["https://erp.example.com"],
+  target_resources: ["https://erp.example.com"],
   expires_at: "2026-12-31T23:59:59Z",
 };
 
@@ -35,16 +35,16 @@ const AUTHORITY_V1 = [
 
 const INTENT_V2 = {
   goal: "Reconcile Q3 invoices",
-  resources: ["https://erp.example.com"],
+  target_resources: ["https://erp.example.com"],
   expires_at: "2026-12-31T23:59:59Z",
-  controls: { acr: "urn:example:acr:mfa", max_derivations: 20 },
+  requested_derivation_limit: 20,
 };
 
 describe("canonicalize (JCS)", () => {
   it("matches the core vector 1 intent envelope byte-for-byte", () => {
     const canonical = canonicalize({ typ: "mission-intent", iss: ISS, value: INTENT_V1 });
     expect(canonical).toBe(
-      '{"iss":"https://as.example.com","typ":"mission-intent","value":{"expires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices","resources":["https://erp.example.com"]}}',
+      '{"iss":"https://as.example.com","typ":"mission-intent","value":{"expires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices","target_resources":["https://erp.example.com"]}}',
     );
   });
 
@@ -67,7 +67,7 @@ describe("canonicalize (JCS)", () => {
 
 describe("integrity anchors (core § test-vectors)", () => {
   it("vector 1 intent_hash", () => {
-    expect(intentHash(ISS, INTENT_V1)).toBe("sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ");
+    expect(intentHash(ISS, INTENT_V1)).toBe("sha-256:sE_2V3NaDpGNYM8dH1tLpNJnj-RmaHN3FC6ZcbOLJSw");
   });
 
   it("vector 1 authority_hash", () => {
@@ -76,8 +76,8 @@ describe("integrity anchors (core § test-vectors)", () => {
     );
   });
 
-  it("vector 2 intent_hash (nested controls object, integer member)", () => {
-    expect(intentHash(ISS, INTENT_V2)).toBe("sha-256:DHUg4zS3HHnWtXlO6hu9sTN_jX4LyjZ4tOJiTDAvWAI");
+  it("vector 3 intent_hash (flat requested_derivation_limit member)", () => {
+    expect(intentHash(ISS, INTENT_V2)).toBe("sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk");
   });
 
   it("verifyAnchor round-trips and rejects unknown algorithm prefixes", () => {

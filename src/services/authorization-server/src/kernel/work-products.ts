@@ -36,7 +36,7 @@
  *
  * Both use {@link MissionKernel.gateActive}, NEVER {@link
  * MissionKernel.gateDerivation}: producing or ingesting a work product is not a
- * token derivation and MUST NOT consume a Mission's `max_derivations`. gateActive
+ * token derivation and MUST NOT consume a Mission's `derivation_limit`. gateActive
  * is the ONLY kernel state either function touches. Neither reads nor writes any
  * Mission's `authority_set`, containment overlay, or effective Authority Set, so
  * an ingested artifact structurally CANNOT contribute to the receiver's effective

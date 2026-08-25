@@ -185,7 +185,7 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
   const intent = JSON.stringify({
     intent: {
       goal: "Pay Acme invoices and send remittance",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: PARENT_EXP,
     },
   });
@@ -291,7 +291,7 @@ async function createChildViaExchange(fields: {
     mission_intent: JSON.stringify({
       intent: fields.intent ?? {
         goal: "Extract Acme invoices",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: PARENT_EXP,
       },
     }),
@@ -421,7 +421,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       mission_intent: JSON.stringify({
         intent: {
           goal: "Extract Acme invoices",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: PARENT_EXP,
         },
       }),
@@ -443,7 +443,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       creation_request_id: crypto.randomUUID(),
       mission_intent: JSON.stringify({
         goal: "Extract Acme invoices",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: PARENT_EXP,
       }),
       authorization_details: JSON.stringify(childAuthority()),
@@ -465,7 +465,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       mission_intent: JSON.stringify({
         intent: {
           goal: "Extract Acme invoices",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: PARENT_EXP,
         },
         evidence: [{ type: "urn:example:unregistered", assertion: "eyJ" }],
@@ -511,7 +511,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       mission_intent: JSON.stringify({
         intent: {
           goal: "Extract Acme invoices",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: PARENT_EXP,
         },
       }),
@@ -536,7 +536,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         mission_intent: JSON.stringify({
           intent: {
             goal: "Extract Acme invoices",
-            resources: [RESOURCE],
+            target_resources: [RESOURCE],
             expires_at: PARENT_EXP,
           },
         }),

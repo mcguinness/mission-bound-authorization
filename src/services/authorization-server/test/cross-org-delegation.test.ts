@@ -80,7 +80,11 @@ beforeAll(async () => {
   });
   const mission = kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Cross-org reconcile", resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({
+        goal: "Cross-org reconcile",
+        target_resources: [RESOURCE],
+        expires_at: "2027-01-01T00:00:00Z",
+      }),
     ),
     proposedAuthority: [
       {

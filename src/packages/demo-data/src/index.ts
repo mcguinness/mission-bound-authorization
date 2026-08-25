@@ -407,6 +407,8 @@ export interface CeilingEntry {
 export interface DerivationPolicy {
   policy_version: string;
   ceiling: [CeilingEntry, ...CeilingEntry[]];
+  /** @spec mission#derivation-issuance-policy — see {@link LoadedPolicy}. */
+  derivation_limit_ceiling: number | null;
 }
 
 interface LoadedPolicy {
@@ -414,6 +416,13 @@ interface LoadedPolicy {
   ceiling: CeilingEntry[];
   write_actions: string[];
   dispatch_prohibited_actions: string[];
+  /**
+   * @spec mission#derivation-issuance-policy — the deployment's own ceiling on
+   * a Mission's effective `derivation_limit`, independent of any client
+   * `requested_derivation_limit`. OPTIONAL in policy.json; absent means this
+   * deployment imposes none (`null`).
+   */
+  derivation_limit_ceiling: number | null;
 }
 
 function loadPolicy(): LoadedPolicy {
@@ -446,6 +455,19 @@ function loadPolicy(): LoadedPolicy {
     return entry;
   });
   if (ceiling.length === 0) throw new ConfigError(file, "policy.ceiling must be non-empty");
+  // @spec mission#derivation-issuance-policy — OPTIONAL; absent or explicit
+  // null means this deployment imposes no ceiling of its own.
+  const rawCeiling = root.derivation_limit_ceiling;
+  let derivationLimitCeiling: number | null = null;
+  if (rawCeiling !== undefined && rawCeiling !== null) {
+    if (typeof rawCeiling !== "number" || !Number.isInteger(rawCeiling) || rawCeiling < 1) {
+      throw new ConfigError(
+        file,
+        "policy.derivation_limit_ceiling must be an integer >= 1, or null",
+      );
+    }
+    derivationLimitCeiling = rawCeiling;
+  }
   return {
     policy_version: reqString(file, root, "policy_version", "policy"),
     ceiling,
@@ -456,6 +478,7 @@ function loadPolicy(): LoadedPolicy {
       "dispatch_prohibited_actions",
       "policy",
     ),
+    derivation_limit_ceiling: derivationLimitCeiling,
   };
 }
 
@@ -512,6 +535,7 @@ export const DERIVATION_POLICY: DerivationPolicy = {
   ceiling: POLICY.ceiling.map((e) =>
     e.resource === DEFAULT_PAYMENTS_RESOURCE ? { ...e, resource: CANONICAL_RESOURCE } : e,
   ) as [CeilingEntry, ...CeilingEntry[]],
+  derivation_limit_ceiling: POLICY.derivation_limit_ceiling,
 };
 
 export interface ContainmentRemoveEntry {

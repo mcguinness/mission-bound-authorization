@@ -76,6 +76,33 @@ function assertNoUnimplementedCommonConstraint(constraints: AuthorityEntry["cons
 export interface DerivationPolicy {
   policy_version: string;
   ceiling: readonly AuthorityEntry[];
+  /**
+   * @spec mission#derivation-issuance-policy — the deployment's own ceiling on
+   * `derivation_limit`, independent of any client `requested_derivation_limit`.
+   * `null`/absent means the deployment imposes no ceiling of its own, so the
+   * effective value is the client's request unchanged (or `null`, unbounded,
+   * if the client requested nothing either). See {@link resolveDerivationLimit}.
+   */
+  derivation_limit_ceiling?: number | null;
+}
+
+/**
+ * @spec mission#derivation-issuance-policy — resolve the immutable, effective
+ * `derivation_limit` a Mission Record commits: `min(policy ceiling, client
+ * request)` when both are present, whichever alone is present when only one
+ * is, and `null` (no ceiling: not "unbounded by omission" as a special case,
+ * simply the absence of any established ceiling) when neither is. A request
+ * can only narrow the policy ceiling, never widen past it.
+ */
+export function resolveDerivationLimit(
+  requested: number | null | undefined,
+  policyCeiling: number | null | undefined,
+): number | null {
+  const req = requested ?? null;
+  const ceil = policyCeiling ?? null;
+  if (req === null) return ceil;
+  if (ceil === null) return req;
+  return Math.min(req, ceil);
 }
 
 /**
@@ -92,11 +119,16 @@ export function deriveAuthoritySet(
   policy: DerivationPolicy,
   proposal?: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
-  const proposals = proposal?.length
-    ? proposal
-    : // Template mode: no concrete proposal derives the full policy ceiling
-      // narrowed to the Intent's resources.
-      policy.ceiling.filter((c) => intent.resources.includes(c.resource));
+  // @spec mission#error-mapping — captured BEFORE the template-mode fallback
+  // below reassigns `proposals`: whether the client actually submitted an
+  // `authorization_details` proposal is the sole discriminator between the
+  // two empty-result error codes this function can throw.
+  const hasProposal = Boolean(proposal?.length);
+  const proposals = hasProposal
+    ? (proposal as readonly AuthorityEntry[])
+    : // Template mode / configured-mapping: no concrete proposal derives the
+      // full policy ceiling narrowed to the Intent's target_resources.
+      policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
 
   const derived: AuthorityEntry[] = [];
   for (const proposal of proposals) {
@@ -106,8 +138,17 @@ export function deriveAuthoritySet(
     if (entry) derived.push(entry);
   }
   if (derived.length === 0) {
-    // @spec mission#submission-via-par: derivation failure is distinct from syntax.
-    throw new IntentError("invalid_authorization_details", "Intent yields no valid Authority Set");
+    // @spec mission#error-mapping: a submitted RAR proposal that derives
+    // nothing is invalid_authorization_details (an actual proposal was
+    // invalid against the ceiling); a configured-mapping result that derives
+    // nothing is access_denied (no proposal existed to be invalid — the
+    // request was well-formed and AS policy alone yields no authority).
+    throw new IntentError(
+      hasProposal ? "invalid_authorization_details" : "access_denied",
+      hasProposal
+        ? "Intent yields no valid Authority Set from the submitted proposal"
+        : "Intent yields no valid Authority Set under configured-mapping policy",
+    );
   }
   return derived;
 }

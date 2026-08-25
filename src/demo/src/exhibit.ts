@@ -394,7 +394,7 @@ function aamLowConsequenceIntent(): IntentPair {
     missionIntent: JSON.stringify({
       intent: {
         goal: "nightly reconciliation of Acme invoices (read-only)",
-        resources: [CANONICAL_RESOURCE],
+        target_resources: [CANONICAL_RESOURCE],
         expires_at: AAM_FAR_FUTURE,
       },
     }),
@@ -422,7 +422,7 @@ function aamIntent(): IntentPair {
     missionIntent: JSON.stringify({
       intent: {
         goal: "nightly reconciliation of Acme invoices",
-        resources: [CANONICAL_RESOURCE],
+        target_resources: [CANONICAL_RESOURCE],
         expires_at: AAM_FAR_FUTURE,
       },
     }),
@@ -444,7 +444,7 @@ function aamOverCeilingIntent(): IntentPair {
     missionIntent: JSON.stringify({
       intent: {
         goal: "schedule a payment (exceeds the reconciliation ceiling)",
-        resources: [CANONICAL_RESOURCE],
+        target_resources: [CANONICAL_RESOURCE],
         expires_at: AAM_FAR_FUTURE,
       },
     }),
@@ -1094,7 +1094,7 @@ async function main() {
   const missionIntent = JSON.stringify({
     intent: {
       goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
-      resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
+      target_resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
     },
   });
@@ -1818,7 +1818,7 @@ async function main() {
   const successorIntent = validateMissionIntent(
     JSON.stringify({
       goal: "Pay approved Acme invoices for Q3 (expanded: also schedule payments)",
-      resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
+      target_resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
     }),
   );

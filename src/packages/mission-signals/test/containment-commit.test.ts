@@ -52,7 +52,7 @@ const intent = () =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Read approved invoices",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: EXPIRES_AT,
     }),
   );

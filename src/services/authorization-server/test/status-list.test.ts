@@ -70,7 +70,7 @@ beforeAll(async () => {
   for (let n = 0; n < 5; n++) {
     const raw = JSON.stringify({
       goal: `Pay Acme invoices ${n}`,
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: EXPIRIES[n],
     });
     const m = kernel.approve({
@@ -176,7 +176,7 @@ describe("Mission Status List (@spec status#status-list)", () => {
   it("refuses to enroll a non-active Mission (fail-safe: no VALID bit for a non-active idx)", () => {
     const raw = JSON.stringify({
       goal: "late enroll",
-      resources: [RESOURCE],
+      target_resources: [RESOURCE],
       expires_at: "2030-01-01T00:00:00Z",
     });
     const m = kernel.approve({

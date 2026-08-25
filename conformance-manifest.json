@@ -3,20 +3,20 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "1e34458da6c935b90ed0d05d5fbefe6eba5c3cab",
-    "content_sha256": "2da68b37995b02a04161bbe4c8f15ee8b49d2189a8690d22c9ca7c6990ab7567"
+    "revision": "b618c6145ea466492872ccfd92fc635ac8daf78a",
+    "content_sha256": "c478453979437940b1bfa3180c84adf02d81261a1e74ccd1843d9b42d1f52051"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
-    "content_sha256": "c191cc1f7e7ef2dd6942cf8ee79457ea2fa60d4e96c6cc16f36ab7e5a32d3bcb"
+    "revision": "a206dbf8a37c7b3e0b0759ce083440e6ae97a448",
+    "content_sha256": "ad935c8bd6b7ed6b701211ffb1a2b88aee44cfdda215d529bba89f47a29b355c"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "c1627d1e90b44ba80f77f961caae62b45cfd002b",
     "content_sha256": "05be78b62a5f9cc093fbe42d86f7d6a4e982e7e51cec807744de96f7bf50d7a2"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "76900e24a39d374c10312b3f78e13b8ac47820a8",
-    "content_sha256": "ca8165d37d409dd5c90073920271830ffb2e707d4d304f9c3f215016d201aedf"
+    "revision": "62ea026ba25f890063e2263bb8baa9238d4efcb9",
+    "content_sha256": "04407562503c3d6a534efb46cd61499fe55aa665160b21b94d91d139bc06bb94"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "a28ce7de5bd4c0372fc442a3727ceec93c6341e6",
@@ -27,8 +27,8 @@
     "content_sha256": "94f27fb07357fba93989a05797d4798e0d662eeccdbbca2e549f217d8ce6af37"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "701d93cdeae224a61855c5c95c69c10267782e03",
-    "content_sha256": "63d641fe90b00622d0253096a524e7ba1b7da041ae045050c89d0f2737a7c3af"
+    "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
+    "content_sha256": "e20df038a265d17f17a43ec066abe65e45877e4c01b2ce889ce4140cd9f1c003"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "a914b3a4530cb25d50399448c43096afac40da48",
@@ -47,16 +47,16 @@
     "content_sha256": "05040790f9e95836ff17c3b31fb4187ff26bebf9b701351509de34133ae72386"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "a28ce7de5bd4c0372fc442a3727ceec93c6341e6",
-    "content_sha256": "5ebd13d067fd85c55ca1cab7ee73b2111d18a417fe4f85136054cd3b6459a8f7"
+    "revision": "4010f759762247e0d4358fdfad6dd5d2ba0607e6",
+    "content_sha256": "f51c68adb7527cf1b610149fb80bbfd296f8570c37dd98207a16a1076f7fa3d1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "8bec3f3837a990065d6bf78dc72bb2de1f77d95d",
-    "content_sha256": "ae91e21a5dd53375bb383b0912fba06847ef59e28cc7de01a5aadf5707bdd9d9"
+    "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
+    "content_sha256": "701867aef29b8172fe390559729f61644d4dde670cadd65c4b07618d5b246c98"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "fb157fdd890adb3bdb7cc80f69ab6532a0cb4a72",
-    "content_sha256": "817f879d975aad21bf27c7ac376561491ed4425f1902f3bf9b4b82728b4b9fcf"
+    "revision": "e500ea752547a17deaa054eedb6212f9bed9a78d",
+    "content_sha256": "e64973f7561410b2f6f68d97662a5366ed15bc3da5999750dc01f2be934f92e0"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "5c12717f3cad29785f2f6797c5bcd1fcf15cae89",
@@ -384,7 +384,7 @@
    "id": "core.intent.max-derivations-floor",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-intent",
-   "text": "An AS MUST reject `max_derivations` below 1 with `invalid_request`",
+   "text": "An AS MUST reject a value below 1 with `invalid_request`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -397,7 +397,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "controls.max_derivations of 0 or less fails invalid_request",
+    "normative": "requested_derivation_limit of 0 or less fails invalid_request",
     "local": "the kernel test drives the input but asserts a message regex; the invalid_request code is not yet asserted"
    },
    "level": "unit",
@@ -405,9 +405,46 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "intent validation (@spec mission#submission-via-par) > rejects max_derivations below 1",
+     "name": "intent validation (@spec mission#submission-via-par) > rejects requested_derivation_limit below 1",
      "level": "unit",
      "surface": "par"
+    }
+   ]
+  },
+  {
+   "id": "core.derivation-issuance-policy.effective-limit-is-clamped-minimum",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-issuance-policy",
+   "text": "the AS establishes it as the minimum of the deployment's own policy ceiling for this Mission and the requested `requested_derivation_limit`, where one was submitted",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "derivation_limit = min(deployment policy ceiling, requested_derivation_limit) when both are present; whichever is present alone when only one is; null (no ceiling) when neither is present, never unbounded-by-omission as a hardcoded default. This establishment happens afresh at every approval event that creates a Mission Record (direct, Child Mission, dispatched Template instance, Expansion successor); an established derivation_limit is never inherited unchanged from a parent, a template, or a predecessor Mission.",
+    "local": "the demo deployment's own policy.json ceiling is null (no ceiling) by default, so this row's own kernel.test.ts test constructs a LOCAL kernel with a narrower policy ceiling to exercise the clamp in both directions plus the omission case; child-delegation.ts and template.ts already established fresh per-surface; expansion.ts previously inherited the predecessor's derivation_limit unchanged (a pre-existing, untested, undocumented default) and is corrected here to establish fresh from the successor's own Intent, matching the other three surfaces and this section's text"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "lifecycle (@spec status#legal-transitions) > @spec mission#derivation-issuance-policy: derivation_limit is min(policy ceiling, requested), never the request copied verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "expansion: derivation_limit establishment (@spec mission#derivation-issuance-policy) > is established fresh from the successor's own Intent, never inherited from the predecessor",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -636,7 +673,7 @@
    "id": "core.lifecycle.derivation-cap-exhaustion",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
-   "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed the bound",
+   "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -649,7 +686,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "derivation past controls.max_derivations fails invalid_grant at the token endpoint",
+    "normative": "derivation past the established derivation_limit fails invalid_grant at the token endpoint",
     "local": "covered at the kernel gate only; no wire test observes invalid_grant for exhaustion"
    },
    "level": "endpoint",
@@ -736,11 +773,24 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted",
-    "local": "implementation emits mission_denial_reason with the kernel reason set instead; recorded SHOULD-level departure"
+    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > suspend gates refresh with invalid_grant; resume restores issuance",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "mission_error wire carriage: derivations_exhausted (@spec mission#error-mapping) > a Mission capped at requested_derivation_limit 1 refuses its second derivation with invalid_grant + mission_error=derivations_exhausted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "core.intent.requested-expiry-invalid-request",
@@ -897,7 +947,7 @@
    "id": "core.derivation.configured-mapping-lookup",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authorization-derivation",
-   "text": "The mapping is a lookup, never synthesis; the AS refuses an Intent that matches no configured mapping with `invalid_authorization_details`",
+   "text": "the AS refuses an Intent that matches no configured mapping, or whose mapped candidates policy narrows to nothing, with `access_denied`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -910,12 +960,111 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping fails invalid_authorization_details, distinguishable from a policy refusal"
+    "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping (or narrowed to nothing by policy) fails access_denied, since no authorization_details object exists for invalid_authorization_details to describe",
+    "local": "deriveAuthoritySet (src/services/authorization-server/src/kernel/derive.ts) captures whether a proposal was actually submitted BEFORE the template-mode fallback reassigns the working array, so the two empty-result codes are correctly discriminated: invalid_authorization_details when a submitted authorization_details proposal derives nothing, access_denied when configured-mapping mode (no proposal) derives nothing. intentErrorToOidc (src/services/authorization-server/src/adapters/provider.ts) maps the latter to the provider's AccessDenied error; both the render-time and decide-time derivation call sites are wrapped to surface it as a proper authorization-decision outcome rather than propagate uncaught."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "derivation (@spec mission#authorization-derivation) > refuses a no-proposal Intent yielding no authority with access_denied",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "derivation refusal at the authorization decision (@spec mission#error-mapping) > configured-mapping mode (no proposal) that derives nothing is access_denied",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "derivation refusal at the authorization decision (@spec mission#error-mapping) > a submitted proposal that derives nothing is invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately. The third test pins the companion branch (a submitted proposal deriving nothing stays invalid_authorization_details) so the two codes are not confused going forward."
+  },
+  {
+   "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "MUST satisfy both the published floor and, where the client requested one, the `acr_values`/`max_age` carriage above; the floor is never relaxed by a narrower or absent client request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
+    "local": "the demo's headless adjudication surface has no real IdP login step, so the achieved context (approver_acr, approver_auth_time) is supplied directly on decide()'s body, the same way approver/subject already are; a deployment with a real approval UI sources it from that UI's own login/session. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > same-principal: a self-approved Mission satisfies a requested acr_values",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > max_age=0 refuses a stale Approver authentication",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). Split-principal and same-principal both use the same approver_acr/approver_auth_time discriminator, proving the check depends only on the Approver's own achieved context, never the Subject's identity. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
+  },
+  {
+   "id": "core.approval-authentication.no-token-claim-carriage",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "this document defines no Mission Record member for them, and they MUST NOT\nbe carried on, or inferred from, a derived access token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "the Approver's achieved acr/amr/auth_time is approval-time provenance, not a Mission Intent or Mission Record member, and MUST NOT be carried on or inferred from a derived access token; this is the RFC 9068-claim-repurposing pattern core prohibits"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "The same wire test both exercises the approver-scoped check AND decodes the issued access token to assert acr/amr/auth_time are absent at the top level and under the mission claim."
   },
   {
    "id": "core.grant-binding.mission-id-inert",

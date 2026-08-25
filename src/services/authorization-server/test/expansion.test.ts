@@ -44,7 +44,7 @@ const approve = (actions: string[]) =>
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
-        resources: [RESOURCE],
+        target_resources: [RESOURCE],
         expires_at: EXP,
       }),
     ),
@@ -63,7 +63,7 @@ describe("expansion of an uncontained predecessor (regression: unchanged behavio
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices for Q3 (widened)",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: EXP,
         }),
       ),
@@ -98,7 +98,7 @@ describe("expansion of a CONTAINED predecessor (@spec containment#restoration an
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Pay Acme invoices and send remittance (restored after containment review)",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: EXP,
         }),
       ),
@@ -153,7 +153,7 @@ describe("expansion of a CONTAINED predecessor (@spec containment#restoration an
       intent: validateMissionIntent(
         JSON.stringify({
           goal: "Restore after double containment review",
-          resources: [RESOURCE],
+          target_resources: [RESOURCE],
           expires_at: EXP,
         }),
       ),
@@ -167,5 +167,66 @@ describe("expansion of a CONTAINED predecessor (@spec containment#restoration an
       { event_type: "tainted_read", removed: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }] },
       { event_type: "vendor_flagged", removed: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }] },
     ]);
+  });
+});
+
+describe("expansion: derivation_limit establishment (@spec mission#derivation-issuance-policy)", () => {
+  it("is established fresh from the successor's own Intent, never inherited from the predecessor", () => {
+    // Predecessor's OWN requested_derivation_limit (50) establishes ITS
+    // derivation_limit under the demo deployment's default (no-ceiling) policy.
+    const mission = kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3",
+          target_resources: [RESOURCE],
+          expires_at: EXP,
+          requested_derivation_limit: 50,
+        }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    expect(mission.derivation_limit).toBe(50);
+
+    // A successor requesting a DIFFERENT, narrower limit (5) gets ITS OWN
+    // value, not the predecessor's 50: proof of independence, not a
+    // null/null coincidence.
+    const narrower = createExpansion(kernel, {
+      predecessorId: mission.id,
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3 (widened)",
+          target_resources: [RESOURCE],
+          expires_at: EXP,
+          requested_derivation_limit: 5,
+        }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `apev-succ-${seq++}`,
+      approvedUntil: EXP,
+    });
+    expect(narrower.successor.derivation_limit).toBe(5);
+
+    // A successor that OMITS requested_derivation_limit gets the
+    // deployment's own ceiling (null here), never the predecessor's 50.
+    const omitted = createExpansion(kernel, {
+      predecessorId: mission.id,
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3 (widened, no request)",
+          target_resources: [RESOURCE],
+          expires_at: EXP,
+        }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `apev-succ-${seq++}`,
+      approvedUntil: EXP,
+    });
+    expect(omitted.successor.derivation_limit).toBeNull();
   });
 });

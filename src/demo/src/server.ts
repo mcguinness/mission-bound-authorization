@@ -124,7 +124,7 @@ async function main() {
   const missionIntent = JSON.stringify({
     intent: {
       goal: "Pay approved Acme invoices and send remittance",
-      resources: [CANONICAL_RESOURCE],
+      target_resources: [CANONICAL_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
     },
   });
@@ -480,7 +480,7 @@ async function main() {
           ? undefined
           : stack.kernel.validateProposal(
               typeof rawDetails === "string" ? rawDetails : JSON.stringify(rawDetails),
-              parsed.resources,
+              parsed.target_resources,
             );
       derived = stack.kernel.derive(parsed, proposal) as unknown as AuthEntry[];
       proposed = (proposal ?? []) as unknown as AuthEntry[];
@@ -529,7 +529,7 @@ async function main() {
     try {
       const parsed = stack.kernel.validateIntent(semanticIntent);
       const proposal = authorizationDetails
-        ? stack.kernel.validateProposal(authorizationDetails, parsed.resources)
+        ? stack.kernel.validateProposal(authorizationDetails, parsed.target_resources)
         : undefined;
       derived = stack.kernel.derive(parsed, proposal) as unknown as AuthEntry[];
       goal = String((parsed as unknown as { goal?: unknown }).goal ?? "");

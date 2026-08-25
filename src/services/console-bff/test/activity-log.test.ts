@@ -323,7 +323,11 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     });
     const mission = kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Pay", resources: [DERIVATION_POLICY.ceiling[0].resource], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({
+          goal: "Pay",
+          target_resources: [DERIVATION_POLICY.ceiling[0].resource],
+          expires_at: "2027-01-01T00:00:00Z",
+        }),
       ),
       subject: { iss: "https://as.test", sub: "alice" },
       approver: { iss: "https://as.test", sub: "bob" },
