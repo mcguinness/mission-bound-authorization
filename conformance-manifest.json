@@ -161,7 +161,8 @@
    "core.standing-consent-recency",
    "template.dispatch",
    "progressive.ceiling-drawdown",
-   "cross-domain.projection"
+   "cross-domain.projection",
+   "core.local-approved-set-verification"
   ]
  },
  "profiles": [
@@ -1635,6 +1636,145 @@
      "surface": "verification"
     }
    ]
+  },
+  {
+   "id": "core.local-approved-set-verification.tier1-retrieval-recompute-subset-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{rs-enforcement}}, never falls back to trusting the token signature alone as if this profile were not claimed.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.local-approved-set-verification"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Tier 1: a verifying party recomputes authority_hash over the retrieved Authority Set and rejects on mismatch; verifies every carried entry is a subset of a retrieved entry via a type-owned predicate; fails closed (throws) on either failure rather than returning a partial or best-effort result"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > a carried entry that is a subset of a retrieved, correctly-committed entry verifies (permits)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects when the retrieved set does not recompute to the retrieved authority_hash (commitment_mismatch)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry that is NOT a subset of any retrieved entry (not_subset)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy."
+  },
+  {
+   "id": "core.local-approved-set-verification.tier2-independent-pinning",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "the verifying party additionally holds an expected `authority_hash` obtained from a source independent of the Tier 1 retrieval channel, never re-derived from the same call being verified, and MUST reject unless the retrieved (and recomputed-matching) value also equals that independently held one.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.local-approved-set-verification"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Tier 2: a retrieval that passes Tier 1 (recomputes correctly, subset holds) is still rejected when it disagrees with an independently retained expected authority_hash, catching a post-approval substitution that is internally self-consistent and so undetectable by Tier 1 alone"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > a Tier-1-passing retrieval that matches the independently retained authority_hash verifies",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
+     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > @spec mission#the-mission-claim, mission#lasv-retrieval (#702/#725 review) -- a SUBSTITUTED set that is internally self-consistent (recomputes correctly under Tier 1) is still refused once an independently retained approval-time root disagrees: Tier 1 alone would have permitted this",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "core.local-approved-set-verification.retrieval-transport-and-disclosure-gate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "its authorization gate MUST be at least as strong as the disclosure privilege for every audience the Mission has issued to, not any single audience's own.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.local-approved-set-verification"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the retrieval endpoint/transport a deployment provisions for this capability gates authorization at least as strongly as the disclosure privilege for every audience the Mission has issued to"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "review #725 P1-3: disputed as untestable in this repo by the spec's own design, not merely unimplemented. The document explicitly does not mandate a retrieval endpoint or transport (deployment-provisioned), so there is no concrete surface here to gate-check against; a conformance row can only restate the requirement, which this row does, pending a deployment that actually provisions such a surface."
+  },
+  {
+   "id": "core.local-approved-set-verification.status-not-compatible-retrieval-surface",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lasv-retrieval",
+   "text": "Recomputing `authority_hash` over a Status response therefore fails by construction for any multi-audience Mission, and fails after any containment or discharge even for a single-audience one.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status response is audience-scoped and, once containment has applied, reflects the current EFFECTIVE set rather than the complete immutable approved set authority_hash commits, so recomputing authority_hash over it fails by construction for a multi-audience Mission and after any containment"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "authority_hash immutability + projections > keeps authority_hash byte-identical while signedStatus omits the contained entry and carries containment_version",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "review #725 P1-2: this existing (pre-dating the review) test already demonstrates the exact defect the review flagged -- signedStatus's response omits the contained entry and diverges from the full approved set authority_hash commits -- so it is wired here as direct evidence that Status is not a compatible retrieval surface, rather than writing a new redundant test."
   },
   {
    "id": "evidence.compromise.no-self-timestamp",
