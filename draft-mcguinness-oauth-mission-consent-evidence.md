@@ -784,10 +784,13 @@ A Consent Evidence object has these members:
 
   This descriptor follows the evidence-descriptor convention of the
   issuance profile ({{I-D.draft-mcguinness-oauth-mission}}): it is the
-  `mission` claim shape extended with the collision-resistantly named
-  audit members `intent_hash`, `consent_rendering_hash`, and, where
-  present, `proposal_hash`, and it is
-  not authority-bearing on its own.
+  `mission` claim shape (`id` and `issuer`) extended with the
+  collision-resistantly named audit members `authority_hash`,
+  reintroduced here as this document's own audit anchor since a
+  Consent Evidence object is retained and correlated independently of
+  any token, `intent_hash`, `consent_rendering_hash`, and, where
+  present, `proposal_hash`, and it is not authority-bearing on its
+  own.
 
 `approver`:
 : REQUIRED. An object identifying the authenticated Approver. It MUST
