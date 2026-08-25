@@ -250,6 +250,22 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
       expect((e as IntentError).code).toBe("invalid_authorization_details");
     }
   });
+
+  // @spec mission#error-mapping — configured-mapping mode (no `authorization_details`
+  // proposal submitted): a well-formed Intent the AS's own policy derives nothing
+  // for is `access_denied`, never `invalid_authorization_details`, because no
+  // proposal was ever submitted to be invalid.
+  it("refuses a no-proposal Intent yielding no authority with access_denied", () => {
+    const noMapping = validateMissionIntent(
+      intent({ target_resources: ["https://unmapped.example.com"] }),
+    );
+    try {
+      deriveAuthoritySet(noMapping, DERIVATION_POLICY as never, undefined);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as IntentError).code).toBe("access_denied");
+    }
+  });
 });
 
 describe("approval event and record (@spec mission#integrity-anchors)", () => {

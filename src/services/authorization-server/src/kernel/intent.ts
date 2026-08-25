@@ -243,7 +243,14 @@ export class IntentError extends Error {
       // code for evidence-type dispatch failures (unknown type, an entry
       // failing its type's validation, a policy-required type absent).
       // Envelope STRUCTURAL failures stay invalid_request.
-      | "invalid_mission_intent_evidence",
+      | "invalid_mission_intent_evidence"
+      // @spec mission#error-mapping — a well-formed Intent that yields no
+      // Authority Set under configured-mapping mode (no `authorization_details`
+      // proposal was submitted, so nothing was ever proposed to be invalid):
+      // the AS's own policy simply derives nothing for it. Distinct from
+      // `invalid_authorization_details`, which requires an actual submitted
+      // proposal to be invalid against.
+      | "access_denied",
     message: string,
   ) {
     super(message);

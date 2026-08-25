@@ -32,6 +32,14 @@ export const InvalidAuthorizationDetails = (errors as unknown as {
   InvalidAuthorizationDetails: new (message?: string) => Error;
 }).InvalidAuthorizationDetails;
 
+// @spec mission#error-mapping — `access_denied` ({{RFC6749}}) for the
+// configured-mapping-mode derivation refusal (no `authorization_details`
+// proposal was submitted, so AS policy alone yields no Authority Set).
+// Standard oidc-provider error, same @types-lag pattern as the alias above.
+export const AccessDenied = (errors as unknown as {
+  AccessDenied: new (message?: string) => Error;
+}).AccessDenied;
+
 /**
  * @spec mission#intent-submission-evidence — `invalid_mission_intent_evidence`,
  * the core-registered OAuth error for Intent Submission Evidence dispatch
@@ -108,6 +116,8 @@ export function intentErrorToOidc(e: IntentError): Error {
       return new InvalidAuthorizationDetails(e.message);
     case "invalid_mission_intent_evidence":
       return new InvalidMissionIntentEvidence(e.message);
+    case "access_denied":
+      return new AccessDenied(e.message);
     default:
       return new errors.InvalidRequest(e.message);
   }
@@ -1599,7 +1609,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         typeof params.authorization_details === "string"
           ? kernel.validateProposal(params.authorization_details, intent.target_resources)
           : undefined;
-      const authority = kernel.derive(intent, proposal);
+      // @spec mission#error-mapping — a well-formed Intent this AS's policy
+      // (or the client's own proposal) derives no Authority Set from is a
+      // refusal at render time too, not only at decide(): surface it the same
+      // way (400, the mapped error code) rather than let it propagate uncaught.
+      let authority: ReturnType<typeof kernel.derive>;
+      try {
+        authority = kernel.derive(intent, proposal);
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
       // @spec mission#intent-submission-evidence — MATERIAL verified
       // provenance is INPUT to the approval rendering: the Approver sees the
       // normalized verified facts (never the raw artifacts), re-verified from
@@ -2704,6 +2728,42 @@ async function handleMissionDispatchGrant(
   ctx.set("cache-control", "no-store");
 }
 
+/**
+ * @spec mission#approval-authentication — does the Approver's ACHIEVED
+ * authentication context satisfy the client's requested `acr_values`/
+ * `max_age`? Approver-scoped, never Subject-scoped: this checks only the
+ * principal acting as Approver for THIS approval event, never the Mission
+ * Subject, who MAY be a different principal. Absence of either request
+ * parameter trivially satisfies that parameter (the deployment's own
+ * approval-authentication floor, enforced elsewhere, is unaffected either
+ * way and is never relaxed by a narrower or absent client request).
+ */
+function approverAuthenticationSatisfies(
+  requested: { acrValues?: string; maxAge?: string; forceFreshLogin?: boolean },
+  achieved: { acr?: string; authTime?: number },
+  nowEpochSeconds: number,
+): boolean {
+  const acrValues = requested.acrValues?.split(" ").filter(Boolean);
+  if (acrValues && acrValues.length > 0) {
+    if (!achieved.acr || !acrValues.includes(achieved.acr)) return false;
+  }
+  // `forceFreshLogin` recovers `max_age=0` after oidc-provider's own
+  // check_max_age middleware clears `params.max_age` and translates it to
+  // `prompt=login` (its literal max_age=0-to-prompt=login rule) before this
+  // handler ever sees it: both signals demand the freshest possible
+  // authentication, so both are treated as an effective max_age of 0.
+  const maxAge = requested.forceFreshLogin
+    ? 0
+    : requested.maxAge !== undefined
+      ? Number(requested.maxAge)
+      : undefined;
+  if (maxAge !== undefined) {
+    if (!Number.isFinite(maxAge) || achieved.authTime === undefined) return false;
+    if (nowEpochSeconds - achieved.authTime > maxAge) return false;
+  }
+  return true;
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -2764,7 +2824,66 @@ async function decide(
     return;
   }
 
-  const authority = opts.kernel.derive(intent, proposedAuthority);
+  // @spec mission#approval-authentication — the client's requested
+  // `acr_values`/`max_age` (standard OIDC authorization-request params;
+  // oidc-provider parses them unconditionally, no extraParams registration
+  // needed) describe the Approver's authentication, never the Subject's. This
+  // headless adjudication surface has no real IdP login step, so the achieved
+  // context is supplied directly on the decide() body (`approver_acr`,
+  // `approver_auth_time`), exactly as `approver`/`subject` already are; a
+  // deployment with a real approval UI sources it from that UI's own
+  // login/session, never from client input. Failure here is the
+  // {{error-mapping}} authorization-decision row: `access_denied`.
+  const achievedAcr = typeof body.approver_acr === "string" ? body.approver_acr : undefined;
+  const achievedAuthTime =
+    typeof body.approver_auth_time === "number"
+      ? body.approver_auth_time
+      : typeof body.approver_auth_time === "string"
+        ? Math.floor(Date.parse(body.approver_auth_time) / 1000)
+        : undefined;
+  const requestedPrompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
+  if (
+    !approverAuthenticationSatisfies(
+      {
+        ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
+        ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
+        // oidc-provider's check_max_age middleware already translated a
+        // literal max_age=0 to prompt=login and cleared params.max_age.
+        ...(params.max_age === undefined && requestedPrompts.includes("login")
+          ? { forceFreshLogin: true }
+          : {}),
+      },
+      { ...(achievedAcr ? { acr: achievedAcr } : {}), ...(achievedAuthTime !== undefined ? { authTime: achievedAuthTime } : {}) },
+      Math.floor(opts.kernel.nowDate().getTime() / 1000),
+    )
+  ) {
+    await provider.interactionFinished(ctx.req, ctx.res, {
+      error: "access_denied",
+      error_description: "approver authentication did not satisfy the requested acr_values/max_age",
+    });
+    return;
+  }
+
+  // @spec mission#error-mapping — a derivation refusal at the approval
+  // decision is an authorization-decision outcome ({{error-mapping}}'s row for
+  // this surface), completed through the pending front-channel authorization
+  // request exactly like the "approver declined" branch above:
+  // `invalid_authorization_details` when the client submitted a proposal that
+  // yields nothing, `access_denied` when configured-mapping mode (no
+  // proposal) yields nothing.
+  let authority: ReturnType<typeof opts.kernel.derive>;
+  try {
+    authority = opts.kernel.derive(intent, proposedAuthority);
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await provider.interactionFinished(ctx.req, ctx.res, {
+        error: e.code,
+        error_description: e.message,
+      });
+      return;
+    }
+    throw e;
+  }
   // Governance (D37): write-bearing missions require subject != approver
   // with the approver role; read-only may self-approve.
   const writeBearing = authority.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));

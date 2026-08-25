@@ -119,10 +119,15 @@ export function deriveAuthoritySet(
   policy: DerivationPolicy,
   proposal?: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
-  const proposals = proposal?.length
-    ? proposal
-    : // Template mode: no concrete proposal derives the full policy ceiling
-      // narrowed to the Intent's target_resources.
+  // @spec mission#error-mapping — captured BEFORE the template-mode fallback
+  // below reassigns `proposals`: whether the client actually submitted an
+  // `authorization_details` proposal is the sole discriminator between the
+  // two empty-result error codes this function can throw.
+  const hasProposal = Boolean(proposal?.length);
+  const proposals = hasProposal
+    ? (proposal as readonly AuthorityEntry[])
+    : // Template mode / configured-mapping: no concrete proposal derives the
+      // full policy ceiling narrowed to the Intent's target_resources.
       policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
 
   const derived: AuthorityEntry[] = [];
@@ -133,8 +138,17 @@ export function deriveAuthoritySet(
     if (entry) derived.push(entry);
   }
   if (derived.length === 0) {
-    // @spec mission#submission-via-par: derivation failure is distinct from syntax.
-    throw new IntentError("invalid_authorization_details", "Intent yields no valid Authority Set");
+    // @spec mission#error-mapping: a submitted RAR proposal that derives
+    // nothing is invalid_authorization_details (an actual proposal was
+    // invalid against the ceiling); a configured-mapping result that derives
+    // nothing is access_denied (no proposal existed to be invalid — the
+    // request was well-formed and AS policy alone yields no authority).
+    throw new IntentError(
+      hasProposal ? "invalid_authorization_details" : "access_denied",
+      hasProposal
+        ? "Intent yields no valid Authority Set from the submitted proposal"
+        : "Intent yields no valid Authority Set under configured-mapping policy",
+    );
   }
   return derived;
 }
