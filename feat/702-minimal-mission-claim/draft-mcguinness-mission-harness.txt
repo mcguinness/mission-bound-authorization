@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -1321,9 +1321,12 @@ Table of Contents
 
    *  event_id;
 
-   *  the mission object (id, issuer, and, when known, authority_hash),
-      the same shape as the mission claim of
-      [I-D.draft-mcguinness-oauth-mission];
+   *  the mission object (id and issuer, the same members as the mission
+      claim of [I-D.draft-mcguinness-oauth-mission], plus authority_hash
+      when known: OPTIONAL, not carried on that baseline claim, and
+      recorded here as this evidence record's own audit extension only
+      when the harness holds it, e.g. from introspection's disclosure
+      privilege or a companion profile's own copy);
 
    *  session_id;
 
@@ -1340,9 +1343,11 @@ Table of Contents
    *  actor or sub-agent identifier when applicable.
 
    A Harness Evidence record carries the Mission as the nested mission
-   object, mirroring the mission claim; the flat mission_id and issuer
-   of Mission Binding (Section 7) are a binding key, whereas the
-   evidence record mirrors the claim shape.
+   object, mirroring the mission claim's id/issuer members; the flat
+   mission_id and issuer of Mission Binding (Section 7) are a binding
+   key, whereas the evidence record adds authority_hash as its own
+   extension, per the preceding paragraph, never inherited from the
+   claim.
 
    Harness Evidence complements runtime enforcement evidence
    ([I-D.draft-mcguinness-mission-runtime]).  It records execution-

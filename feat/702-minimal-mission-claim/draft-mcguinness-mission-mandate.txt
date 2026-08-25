@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                             Mission Mandate
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -344,13 +344,21 @@ Table of Contents
       MUST NOT be reused by the issuer.
 
    mission:  REQUIRED.  An object in the mission claim shape of the
-      issuance profile, extended per its extensibility rules: id,
-      issuer, and authority_hash, plus intent_hash committing the
-      approved Mission Intent, and expires_at, an RFC 3339 [RFC3339]
-      date-time mirroring the Mission record's expires_at (the mission
-      claim member the issuance-grant profile defines,
-      [I-D.draft-mcguinness-oauth-mission-issuance-grant]).  All five
-      members are REQUIRED here. mission.issuer MUST equal iss.
+      issuance profile (id and issuer,
+      [I-D.draft-mcguinness-oauth-mission]), extended per its
+      extensibility rules with three members this document requires
+      beyond that baseline: authority_hash, reintroduced as this
+      document's own integrity anchor since a Mandate travels to a
+      verifier with no further channel back to the Mission Issuer
+      (mirroring the issuance-grant profile's own reintroduction for the
+      same reason, [I-D.draft-mcguinness-oauth-mission-issuance-grant]);
+      intent_hash, committing the approved Mission Intent; and
+      expires_at, an RFC 3339 [RFC3339] date-time mirroring the Mission
+      record's expires_at, elevated to REQUIRED here the same way the
+      issuance-grant profile elevates it for the credentials it governs
+      ([I-D.draft-mcguinness-oauth-mission-issuance-grant]).  All five
+      members (id, issuer, authority_hash, intent_hash, expires_at) are
+      REQUIRED here. mission.issuer MUST equal iss.
 
    subject:  REQUIRED.  An object with iss and sub, the Mission record's
       subject: the same value the cross-domain Origin Principal profile

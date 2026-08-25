@@ -1070,7 +1070,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 February 2027</td>
+<td class="center">Expires 26 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-24" class="published">24 August 2026</time>
+<time datetime="2026-08-25" class="published">25 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1153,7 +1153,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1303,6 +1303,14 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
                 <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-local-approved-set-verifica" class="internal xref">Local Approved-Set Verification</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4.2.1">
+                    <p id="section-toc.1-1.9.2.4.2.1.1"><a href="#section-9.4.1" class="auto internal xref">9.4.1</a>.  <a href="#name-authenticated-complete-set-" class="internal xref">Authenticated Complete-Set Retrieval</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4.2.2">
+                    <p id="section-toc.1-1.9.2.4.2.2.1"><a href="#section-9.4.2" class="auto internal xref">9.4.2</a>.  <a href="#name-a-typed-selective-inclusion" class="internal xref">A Typed Selective-Inclusion Proof: a Future Composition Point</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
                 <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-remediation-grains" class="internal xref">Remediation Grains</a></p>
@@ -5102,62 +5110,154 @@ held two-entry set, matches it against the Mission's <code>authority_hash</code>
 independently obtained, and verifies the carried entry as a subset of
 the held <code>journal-entries.write</code> entry: containment verified relative
 to the authenticated committed set.<a href="#section-9.4-4" class="pilcrow">¶</a></p>
-<p id="section-9.4-5">A conforming implementation supports at least one of the following.<a href="#section-9.4-5" class="pilcrow">¶</a></p>
-<p id="section-9.4-6"><strong>Authenticated complete-set retrieval.</strong> The verifying party:<a href="#section-9.4-6" class="pilcrow">¶</a></p>
+<p id="section-9.4-5">A conforming implementation claims this capability
+(<a href="#conformance" class="auto internal xref">Section 16</a>) through authenticated complete-set retrieval,
+declaring which of the two tiers below it supports. This document
+also identifies a typed selective-inclusion proof as a future
+composition point (<a href="#lasv-proof-future" class="auto internal xref">Section 9.4.2</a>); it is not, by itself, an
+alternative a conforming implementation can claim today.<a href="#section-9.4-5" class="pilcrow">¶</a></p>
+<div id="lasv-retrieval">
+<section id="section-9.4.1">
+          <h4 id="name-authenticated-complete-set-">
+<a href="#section-9.4.1" class="section-number selfRef">9.4.1. </a><a href="#name-authenticated-complete-set-" class="section-name selfRef">Authenticated Complete-Set Retrieval</a>
+          </h4>
+<p id="section-9.4.1-1">The verifying party retrieves the complete Authority Set, and the
+<code>authority_hash</code> it expects to match, over a channel authenticated to
+the Mission <code>issuer</code>, never from an unauthenticated or self-reported
+source, and:<a href="#section-9.4.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9.4-7.1">
-            <p id="section-9.4-7.1.1"><span class="bcp14">MUST</span> retrieve the complete Authority Set, and the <code>authority_hash</code>
-it expects to match, over a channel authenticated to the Mission
-<code>issuer</code>, never from an unauthenticated or self-reported source;<a href="#section-9.4-7.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.4-7.2">
-            <p id="section-9.4-7.2.1"><span class="bcp14">MUST</span> recompute the commitment over the retrieved set
+<li class="normal" id="section-9.4.1-2.1">
+              <p id="section-9.4.1-2.1.1"><span class="bcp14">MUST</span> recompute the commitment over the retrieved set
 (<a href="#integrity-anchors" class="auto internal xref">Section 7.1</a>) and reject on mismatch, rather than trust
-the retrieval channel alone;<a href="#section-9.4-7.2.1" class="pilcrow">¶</a></p>
+the retrieval channel alone;<a href="#section-9.4.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.4-7.3">
-            <p id="section-9.4-7.3.1"><span class="bcp14">MUST</span> verify each carried <code>authorization_details</code> entry is a subset
+            <li class="normal" id="section-9.4.1-2.2">
+              <p id="section-9.4.1-2.2.1"><span class="bcp14">MUST</span> verify each carried <code>authorization_details</code> entry is a subset
 (<a href="#subset" class="auto internal xref">Section 5.1</a>) of an entry in the retrieved set, and <span class="bcp14">MUST NOT</span> treat
-commitment match alone as sufficient;<a href="#section-9.4-7.3.1" class="pilcrow">¶</a></p>
+commitment match alone as sufficient; and<a href="#section-9.4.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.4-7.4">
-            <p id="section-9.4-7.4.1"><span class="bcp14">MUST</span> bound how long a retrieved set may be relied on (a freshness
-window, or a state version obtained with it) and re-retrieve once
-that bound passes, rather than cache indefinitely; and<a href="#section-9.4-7.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.4-7.5">
-            <p id="section-9.4-7.5.1"><span class="bcp14">MUST</span> fail closed: a retrieval failure, an unauthenticated response,
+            <li class="normal" id="section-9.4.1-2.3">
+              <p id="section-9.4.1-2.3.1"><span class="bcp14">MUST</span> fail closed: a retrieval failure, an unauthenticated response,
 a commitment mismatch, or a subset-test failure refuses the request
 under <a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>, never falls back to trusting the token
-signature alone as if this profile were not claimed.<a href="#section-9.4-7.5.1" class="pilcrow">¶</a></p>
+signature alone as if this profile were not claimed.<a href="#section-9.4.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        </ul>
-<p id="section-9.4-8">This document does not mandate a specific retrieval endpoint or
+          </ul>
+<p id="section-9.4.1-3">That much is <strong>Tier 1</strong>, and it has a specific limit: it does not by
+itself establish that the retrieved set is the set the Approver
+consented to. The same <code>issuer</code> supplies both the retrieved set and
+the <code>authority_hash</code> Tier 1 checks it against, so an issuer that
+returns a substituted set together with a digest recomputed to match
+it passes Tier 1 undetected. Tier 1 defends against a projection bug,
+a stale or corrupted materialization, or a compromised link between
+the record store and the retrieval endpoint; it does not defend
+against an issuer dishonest at the moment of retrieval, nor against a
+signing key compromised after approval.<a href="#section-9.4.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.4.1-4"><strong>Tier 2</strong> adds that defense: the verifying party additionally holds
+an expected <code>authority_hash</code> obtained from a source independent of
+the Tier 1 retrieval channel, never re-derived from the same call
+being verified, and <span class="bcp14">MUST</span> reject unless the retrieved (and
+recomputed-matching) value also equals that independently held one.
+A deployment claiming Tier 2 declares:<a href="#section-9.4.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.4.1-5.1">
+              <p id="section-9.4.1-5.1.1">a <strong>retention point</strong>: which party retains the expected
+<code>authority_hash</code> and where, independent of the retrieval channel
+above (for example, a Resource Server's own durable copy of the
+value disclosed to it under introspection's <code>authority_hash</code>
+disclosure privilege at the time it first received the Mission's
+tokens, <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>);<a href="#section-9.4.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-9.4.1-5.2">
+              <p id="section-9.4.1-5.2.1">a <strong>trust basis</strong>: how the retaining party authenticated that value
+when it captured it, which is the same issuer-authenticated channel
+any disclosure under this document requires, never an unauthenticated
+or self-reported source; and<a href="#section-9.4.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-9.4.1-5.3">
+              <p id="section-9.4.1-5.3.1">a <strong>retention rule</strong>: how long the retained value is held and
+under what conditions, if any, it is replaced, which <span class="bcp14">MUST NOT</span>
+include re-deriving it from the Tier 1 channel it is meant to check.<a href="#section-9.4.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-9.4.1-6">A conforming implementation <span class="bcp14">MAY</span> claim Tier 1 alone or Tier 1 with
+Tier 2, and states which it claims (<a href="#conformance" class="auto internal xref">Section 16</a>): a
+"verified" result means different things under each, and a caller
+relying on it needs to know which.<a href="#section-9.4.1-6" class="pilcrow">¶</a></p>
+<p id="section-9.4.1-7">The approved Authority Set and its <code>authority_hash</code> are immutable for
+the Mission's life (<a href="#mission-record" class="auto internal xref">Section 8</a>). Once retrieved and verified
+under the tier(s) claimed, a verifying party <span class="bcp14">MAY</span> retain them for as
+long as it relies on the Mission; this profile imposes no re-retrieval
+requirement of its own. Freshness applies instead to what does
+change: the Mission's current <code>active</code> state and its current
+effective (containment-filtered) authority, already governed by the
+runtime profile's state-freshness rules
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A verifying party that
+also needs those observes that profile's rules directly, rather than
+treating a re-retrieval of the immutable approved set as if it were
+itself a freshness signal.<a href="#section-9.4.1-7" class="pilcrow">¶</a></p>
+<p id="section-9.4.1-8">This document does not mandate a specific retrieval endpoint or
 transport; a deployment provisions one, discoverable and
-authorization-gated at least as strongly as the introspection
-disclosure privilege it parallels
-(<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>). Where a deployment runs
-Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), that
-surface's authenticated, <code>mission_id</code>-keyed lookup and its <code>version</code>
-and <code>fresh_until</code> members are a compatible concrete retrieval and
-freshness surface; this document does not require it.<a href="#section-9.4-8" class="pilcrow">¶</a></p>
-<p id="section-9.4-9"><strong>A typed selective-inclusion proof.</strong> A profile <span class="bcp14">MAY</span> instead define a
-proof type under which the verifying party holds, per carried entry,
-a proof of that entry's inclusion in the Mission's committed
-Authority Set, without retrieving the complete set. A conforming
-proof type <span class="bcp14">MUST</span>: cover every carried entry, not merely one; tie its
-root to the Mission's own committed Authority Set, under a
-collision-resistant <code>typ</code> distinct from <code>authority_hash</code>'s own
-(<a href="#integrity-anchors" class="auto internal xref">Section 7.1</a>); define the verifier's processing, so a party
-lacking the proof type's software cannot misread it as a plain
-digest; reject an unrecognized proof <code>typ</code> rather than skip
-verification; and define no downgrade path back to bare digest
-equality. This document defines no such type.<a href="#section-9.4-9" class="pilcrow">¶</a></p>
-<p id="section-9.4-10">Under either mechanism, what verification buys depends on when the
-issuer is compromised, and pinning the expected <code>authority_hash</code>
-outside the issuer is what defends against post-approval
-substitution; that analysis, and what a deployment provisions to get
-independent pinning, is stated once, in <a href="#consent-binding" class="auto internal xref">Section 17.1.1</a>.<a href="#section-9.4-10" class="pilcrow">¶</a></p>
+authorization-gated more strongly than the introspection disclosure
+privilege it otherwise parallels
+(<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>): introspection minimizes
+its response to one audience at a time, while a complete-set
+retrieval response necessarily discloses every audience's entries to
+the retrieving party, so its authorization gate <span class="bcp14">MUST</span> be at least as
+strong as the disclosure privilege for every audience the Mission has
+issued to, not any single audience's own.<a href="#section-9.4.1-8" class="pilcrow">¶</a></p>
+<p id="section-9.4.1-9">Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) is
+<strong>not</strong> a compatible retrieval surface for this profile. Its
+authenticated, <code>mission_id</code>-keyed lookup returns only the requesting
+audience's own entries
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and, once
+containment has applied, the Mission's current effective set rather
+than its complete immutable approved set. Recomputing <code>authority_hash</code>
+over a Status response therefore fails by construction for any
+multi-audience Mission, and fails after any containment or discharge
+even for a single-audience one. A deployment claiming this profile
+provisions a retrieval surface distinct from Status, meeting the
+stronger disclosure gate above.<a href="#section-9.4.1-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="lasv-proof-future">
+<section id="section-9.4.2">
+          <h4 id="name-a-typed-selective-inclusion">
+<a href="#section-9.4.2" class="section-number selfRef">9.4.2. </a><a href="#name-a-typed-selective-inclusion" class="section-name selfRef">A Typed Selective-Inclusion Proof: a Future Composition Point</a>
+          </h4>
+<p id="section-9.4.2-1">Rather than retrieving the complete set, a future profile <span class="bcp14">MAY</span> instead
+define a proof type under which the verifying party holds, per
+carried entry, a proof that entry's unnarrowed approved parent entry
+is included in the Mission's committed Authority Set, and applies the
+type-owned subset test (<a href="#subset" class="auto internal xref">Section 5.1</a>) between that disclosed parent
+entry and the carried, possibly narrowed, entry, exactly as
+<a href="#consent-binding" class="auto internal xref">Section 17.1.1</a> states: never a proof of the carried entry
+directly, since a narrowed entry was never itself an array member
+<code>authority_hash</code> committed.<a href="#section-9.4.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.4.2-2">A concrete proof type would need to: cover every carried entry, not
+merely one; authenticate its own proof root as the Mission's
+approval-time commitment, under a collision-resistant <code>typ</code> distinct
+from <code>authority_hash</code>'s own (<a href="#integrity-anchors" class="auto internal xref">Section 7.1</a>); define the
+verifier's processing, so a party lacking the proof type's software
+cannot misread it as a plain digest; reject an unrecognized proof
+<code>typ</code> rather than skip verification; and define no downgrade path
+back to bare digest equality.<a href="#section-9.4.2-2" class="pilcrow">¶</a></p>
+<p id="section-9.4.2-3">The middle requirement is the open problem: this document's flat
+<code>authority_hash</code> digests a single array and by itself authenticates
+nothing about a differently structured proof root (a Merkle root or
+an accumulator, for example), so a concrete proof type would need its
+own construction binding that root to the Mission, for example the
+Mission Issuer signing or committing to it alongside <code>authority_hash</code>
+at the approval event. Until a concrete proof type supplies that
+construction, this mechanism remains a composition point for a future
+companion profile, not an alternative this document lets an
+implementation claim today.<a href="#section-9.4.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.4.2-4">Under Authenticated Complete-Set Retrieval, what verification buys
+depends on when the issuer is compromised, and Tier 2's independent
+pinning is what defends against post-approval substitution; that
+analysis is stated once, in <a href="#consent-binding" class="auto internal xref">Section 17.1.1</a>.<a href="#section-9.4.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="remediation-grains">
@@ -6323,7 +6423,7 @@ reference, never a credential.<a href="#section-16-7.3.1" class="pilcrow">¶</a>
 </li>
       </ul>
 <p id="section-16-8">Beyond these mandatory roles, an implementation <span class="bcp14">MAY</span> additionally claim
-three <span class="bcp14">OPTIONAL</span> capabilities. Each is independent, and an implementation
+four <span class="bcp14">OPTIONAL</span> capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:<a href="#section-16-8" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16-9.1">
@@ -6351,6 +6451,23 @@ Projection profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) specifies the
 interoperable mechanism that satisfies it, and implementations that
 interoperate across the hop implement that companion.<a href="#section-16-9.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-9.4">
+          <p id="section-16-9.4.1"><strong>Local Approved-Set Verification</strong> (<a href="#local-approved-set-verification" class="auto internal xref">Section 9.4</a>):
+a Mission-aware Resource Server or policy decision point
+independently recomputing and subset-checking a Mission's complete
+approved Authority Set, rather than relying on the token signature
+and the AS's subset assertion alone. An implementation claiming
+this capability states which tier it supports, Tier 1 alone or
+Tier 1 with Tier 2 (<a href="#lasv-retrieval" class="auto internal xref">Section 9.4.1</a>), and fails closed under
+<a href="#rs-enforcement" class="auto internal xref">Section 9.3</a> whenever the retrieval, recomputation, or subset
+check it depends on cannot complete for a given request, never
+treating that one request as though the capability were unclaimed.
+This capability's activation, and which tier and retrieval surface
+a deployment has provisioned, are established out of band between
+the claiming party and the Mission Issuer, the same way the
+retrieval surface itself is (<a href="#lasv-retrieval" class="auto internal xref">Section 9.4.1</a>); this document
+defines no discovery metadata for it.<a href="#section-16-9.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-16-10">A conforming implementation names the optional capabilities it supports
@@ -6382,7 +6499,12 @@ introspection, and <code>grant_types_supported</code> containing
 for the companion's cross-domain grant issuance. Absent such a signal,
 a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
-fails if the issuer does not support it.<a href="#section-16-14" class="pilcrow">¶</a></p>
+fails if the issuer does not support it. Local Approved-Set
+Verification has no OAuth metadata signal of its own: it is a
+Resource Server or policy decision point's own claimed capability,
+never something an Authorization Server advertises, so its activation
+is established out of band by construction, not merely absent a
+signal (<a href="#local-approved-set-verification" class="auto internal xref">Section 9.4</a>).<a href="#section-16-14" class="pilcrow">¶</a></p>
 <p id="section-16-15">This binding publishes its own Mapping Assessment of how the surfaces
 above realize the Mission Substrate contract's kernel and
 capabilities (<a href="#oauth-statement" class="auto internal xref">Appendix C</a>). It is not this document's
@@ -6442,38 +6564,39 @@ inclusion-proof mechanism by itself: <code>authority_hash</code> digests the
 complete set as a single array (<a href="#integrity-anchors" class="auto internal xref">Section 7.1</a>), so
 recomputing it needs the full set. The Local Approved-Set
 Verification profile (<a href="#local-approved-set-verification" class="auto internal xref">Section 9.4</a>) defines
-the retrieval, freshness, and fail-closed rules for a party that
-recomputes it this way, and states the minimum properties a typed
-selective-inclusion proof must meet as an alternative, without
-defining such a type itself. Retrieval carries a real privacy and
+the retrieval and fail-closed rules for a party that recomputes it
+this way, split into the Tier 1 projection-error check and the Tier
+2 independently-pinned check (<a href="#lasv-retrieval" class="auto internal xref">Section 9.4.1</a>), and identifies the
+minimum properties a typed selective-inclusion proof would need as a
+future composition point, without defining such a type itself
+(<a href="#lasv-proof-future" class="auto internal xref">Section 9.4.2</a>). Retrieval carries a real privacy and
 authorization burden rather than an architectural prohibition: the
 minimization rules of <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a> keep
 other audiences' entries out of token introspection, so that
 profile's retrieval surface needs authorization at least that strong.<a href="#section-17.1.1-4" class="pilcrow">¶</a></p>
-<p id="section-17.1.1-5">A selective proof composes with the existing subset rules: it commits
-the approved entries to a structure that supports inclusion proofs,
-proves the approved parent entry against that approval-time root, and
-applies the type-specific subset test (<a href="#subset" class="auto internal xref">Section 5.1</a>) between the
-carried narrowed entry and the disclosed parent; the cryptography
-stays generic, and only the semantic comparison is type-owned, the
-division this document uses throughout.<a href="#section-17.1.1-5" class="pilcrow">¶</a></p>
+<p id="section-17.1.1-5">A future selective proof would compose with the existing subset
+rules: it would commit the approved entries to a structure that
+supports inclusion proofs, prove the approved parent entry against
+that approval-time root, and apply the type-specific subset test
+(<a href="#subset" class="auto internal xref">Section 5.1</a>) between the carried narrowed entry and the disclosed
+parent; the cryptography stays generic, and only the semantic
+comparison is type-owned, the division this document uses throughout.<a href="#section-17.1.1-5" class="pilcrow">¶</a></p>
 <p id="section-17.1.1-6">A deployment that needs assurance independent of the token signature
 provisions the verifying party out of band, the Resource Server
 itself or a policy decision point holding a materialized view of the
 Mission record, and adopts the Local Approved-Set Verification
 profile (<a href="#local-approved-set-verification" class="auto internal xref">Section 9.4</a>).<a href="#section-17.1.1-6" class="pilcrow">¶</a></p>
 <p id="section-17.1.1-7">What such verification buys depends on when the issuer is
-compromised. A proof or retrieval response issued under the same
-trust root as the token adds nothing against an issuer malicious at
-approval time: that issuer can approve and commit arbitrary
-authority, and no containment mechanism changes that. The same
-checks do defend against projection implementation errors, against
-corruption of the record after an independently anchored approval
-commitment, and against post-approval signing-key compromise where
-the original commitment is pinned outside the issuer. The pinning is
-what makes the difference; the worked example in
-<a href="#local-approved-set-verification" class="auto internal xref">Section 9.4</a> lists what a deployment
-provisions to get it.<a href="#section-17.1.1-7" class="pilcrow">¶</a></p>
+compromised. Tier 1 retrieval issued under the same trust root as the
+token adds nothing against an issuer malicious at approval time: that
+issuer can approve and commit arbitrary authority, and no containment
+mechanism changes that. The same checks do defend against projection
+implementation errors, against corruption of the record after an
+independently anchored approval commitment, and against post-approval
+signing-key compromise where the original commitment is pinned
+outside the issuer under Tier 2. The pinning is what makes the
+difference; <a href="#lasv-retrieval" class="auto internal xref">Section 9.4.1</a> lists the retention point, trust
+basis, and retention rule a deployment declares to get it.<a href="#section-17.1.1-7" class="pilcrow">¶</a></p>
 <p id="section-17.1.1-8"><code>intent_hash</code> extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority
@@ -8476,7 +8599,34 @@ audit companion is active, and Cross-Domain is not among them.<a href="#appendix
 <p id="appendix-D-2">-01<a href="#appendix-D-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-3.1">
-          <p id="appendix-D-3.1.1">Minimal Mission claim (#702, coordinated with #699): the baseline
+          <p id="appendix-D-3.1.1">PR #725 review round: split Local Approved-Set Verification's
+authenticated complete-set retrieval into two explicit tiers
+(<a href="#lasv-retrieval" class="auto internal xref">Section 9.4.1</a>): Tier 1 (recompute and subset-check against a
+retrieved set, detecting projection errors under continuing trust
+in the issuer) and Tier 2 (additionally require the expected
+<code>authority_hash</code> to come from an independently retained,
+separately authenticated source, defending against post-approval
+substitution). Removed the claim that Mission Status is a
+compatible retrieval surface: Status returns only the requesting
+audience's, and only the current effective (containment-filtered),
+entries, never the complete immutable approved set. Corrected the
+typed selective-inclusion proof from a claimable alternative to a
+future composition point (<a href="#lasv-proof-future" class="auto internal xref">Section 9.4.2</a>), pending a
+concrete proof type that authenticates its own root as the
+Mission's approval-time commitment, and fixed its description to
+prove the approved parent entry, never the carried narrowed entry
+directly. Added the capability to the Conformance section's
+<span class="bcp14">OPTIONAL</span> capabilities list (<a href="#conformance" class="auto internal xref">Section 16</a>). Closed a mismatched-
+issuer gap in token introspection and child-grant redemption: both
+resolved a Mission by <code>id</code> alone without checking the presented
+<code>mission.issuer</code> against the resolved record's, now that
+<code>(id, issuer)</code> is the complete Mission identity. Clarified that
+Harness Evidence and Orchestration Evidence carry <code>authority_hash</code>
+as their own optional audit extension, not inherited from the
+baseline claim.<a href="#appendix-D-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-3.2">
+          <p id="appendix-D-3.2.1">Minimal Mission claim (#702, coordinated with #699): the baseline
 <code>mission</code> claim shrinks to exactly <code>id</code> and <code>issuer</code>.
 <code>authority_hash</code> and <code>approval_basis</code> leave the baseline claim; both
 stay on the Mission record and become available through token
@@ -8503,10 +8653,10 @@ privilege instead. A companion document that carries the recurring
 or audit anchor (offline attenuation, the cross-domain and cross-org
 grants, the Mission Authority Server's Join Assertion) now carries
 it as its own profile-owned extension member, never inherited from
-this baseline.<a href="#appendix-D-3.1.1" class="pilcrow">¶</a></p>
+this baseline.<a href="#appendix-D-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.2">
-          <p id="appendix-D-3.2.1">PR #717 review fix: the OAuth Binding Mapping Assessment appendix
+        <li class="normal" id="appendix-D-3.3">
+          <p id="appendix-D-3.3.1">PR #717 review fix: the OAuth Binding Mapping Assessment appendix
 (<a href="#oauth-statement" class="auto internal xref">Appendix C</a>) is now explicitly informative throughout,
 correcting a layering contradiction (normative-as-own-content text
 that depended, to be read, on a substrate contract cited only
@@ -8515,27 +8665,27 @@ normative requirements; the appendix publishes no Mission Substrate
 Statement and makes no substrate-conformance claim. The
 digest-marker tripwire is unchanged in mechanism: a mismatch still
 prompts review, now understood as an editorial finding rather than
-a normative one.<a href="#appendix-D-3.2.1" class="pilcrow">¶</a></p>
+a normative one.<a href="#appendix-D-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.3">
-          <p id="appendix-D-3.3.1">Added an OAuth Binding Mapping Assessment appendix
+        <li class="normal" id="appendix-D-3.4">
+          <p id="appendix-D-3.4.1">Added an OAuth Binding Mapping Assessment appendix
 (<a href="#oauth-statement" class="auto internal xref">Appendix C</a>): this document's own self-assessment against
 the Mission Substrate contract's kernel and capabilities, relocated
 here from the substrate document so the substrate carries no
 binding-specific discharge (#708); its reference to the substrate
 remains informative, and replaces the prior pointer to the
 substrate's family appendix. No requirement on a Mission Issuer,
-Resource Server, or Client changed.<a href="#appendix-D-3.3.1" class="pilcrow">¶</a></p>
+Resource Server, or Client changed.<a href="#appendix-D-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.4">
-          <p id="appendix-D-3.4.1">Informative pointer from the Conformance section's Mission-bound
+        <li class="normal" id="appendix-D-3.5">
+          <p id="appendix-D-3.5.1">Informative pointer from the Conformance section's Mission-bound
 gates to the architecture's Mission Binding Properties vector,
 naming this document's discharge as its <code>credential-mission-bound</code>
 property; the core's own gates remain authoritative and the
-document remains self-contained (#663).<a href="#appendix-D-3.4.1" class="pilcrow">¶</a></p>
+document remains self-contained (#663).<a href="#appendix-D-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.5">
-          <p id="appendix-D-3.5.1">Mission Resource Access Profile split (#637, #645, #698): the
+        <li class="normal" id="appendix-D-3.6">
+          <p id="appendix-D-3.6.1">Mission Resource Access Profile split (#637, #645, #698): the
 <code>mission_resource_access</code> type definition, its resource and action
 matching, generic constraints, the Common Constraints registry, the
 delegation member and matching rules, the subset and
@@ -8556,10 +8706,10 @@ transformation-capability declaration
 (<code>mission_transformation_capabilities</code>, <a href="#other-types" class="auto internal xref">Section 5.2</a>); sweeps
 every scope-only claim that assumed a lossy projection was always
 available (the Intent enforcement table, Resource Server
-Enforcement, and the minimum-deployment note).<a href="#appendix-D-3.5.1" class="pilcrow">¶</a></p>
+Enforcement, and the minimum-deployment note).<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.6">
-          <p id="appendix-D-3.6.1">Mission-to-OAuth-grant cardinality made explicit
+        <li class="normal" id="appendix-D-3.7">
+          <p id="appendix-D-3.7.1">Mission-to-OAuth-grant cardinality made explicit
 (<a href="#grant-binding" class="auto internal xref">Section 6.1</a>): a Mission is independent of any OAuth grant
 and identified globally by (<code>issuer</code>, <code>id</code>). The Mission grant
 persistent, redeemable grant lineage (the authorization-code
@@ -8582,10 +8732,10 @@ revocation of an unrelated grant or recall of an unexpired token. A
 decision-time runtime join (the Mission Authority Server's Mission
 Join) never becomes a grant binding. The unredeemed-authorization-code
 fork is now one deployment policy applied consistently, with
-idempotent replay (#700).<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
+idempotent replay (#700).<a href="#appendix-D-3.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.7">
-          <p id="appendix-D-3.7.1">Reader-program normative follow-ups: each supported
+        <li class="normal" id="appendix-D-3.8">
+          <p id="appendix-D-3.8.1">Reader-program normative follow-ups: each supported
 <code>authorization_details</code> type's transformation boundary (subset
 relation and delegation semantics understood, or
 carried-as-approved) is declared in the deployment documentation
@@ -8597,10 +8747,10 @@ authority disclosure and fail-closed Resource Server duties
 renamed configured-mapping mode (formerly template mode) and
 framed as the no-RAR on-ramp (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>);
 Authority Sources moved after Protocol Flow within the Overview
-(structure only).<a href="#appendix-D-3.7.1" class="pilcrow">¶</a></p>
+(structure only).<a href="#appendix-D-3.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.8">
-          <p id="appendix-D-3.8.1">Editorial consolidation; no normative change: every removed
+        <li class="normal" id="appendix-D-3.9">
+          <p id="appendix-D-3.9.1">Editorial consolidation; no normative change: every removed
 sentence restates a rule that remains normatively stated at its
 home (<a href="#mission-bound-tokens" class="auto internal xref">Section 9</a> and <a href="#rs-enforcement" class="auto internal xref">Section 9.3</a> for
 <code>client_id</code>'s registered meaning, <a href="#submission-via-par" class="auto internal xref">Section 4.1</a> for the
@@ -8620,32 +8770,32 @@ definition list, a remediation-grains table, a prefix-matching
 example table. Explicit anchors pinned on every previously
 auto-slugged surviving heading, matching the published fragments;
 the end-to-end example now shows <code>mission_id</code> and
-<code>mission_expires_at</code> on the token response.<a href="#appendix-D-3.8.1" class="pilcrow">¶</a></p>
+<code>mission_expires_at</code> on the token response.<a href="#appendix-D-3.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.9">
-          <p id="appendix-D-3.9.1"><code>goal_lang</code> (<span class="bcp14">OPTIONAL</span>, BCP 47) on the Mission Intent and an
+        <li class="normal" id="appendix-D-3.10">
+          <p id="appendix-D-3.10.1"><code>goal_lang</code> (<span class="bcp14">OPTIONAL</span>, BCP 47) on the Mission Intent and an
 Internationalization Considerations section: a syntactic language
 declaration for the Intent's human-readable prose, committed by
 <code>intent_hash</code>, refused <code>invalid_request</code> when malformed, with no
 authority semantics and deliberately no language-tagged display
-fields on Authority Set entries (#534).<a href="#appendix-D-3.9.1" class="pilcrow">¶</a></p>
+fields on Authority Set entries (#534).<a href="#appendix-D-3.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.10">
-          <p id="appendix-D-3.10.1">Standing-consent approval instant: <code>approval_basis.approved_at</code>
+        <li class="normal" id="appendix-D-3.11">
+          <p id="appendix-D-3.11.1">Standing-consent approval instant: <code>approval_basis.approved_at</code>
 (<span class="bcp14">REQUIRED</span> for every standing-consent <code>type</code>) carries the human
 approval instant of the exact consented root, verified by the
 activating issuer from retained state, never accepted as the
 activating request's own assertion, with deployment-declared
 recency ceilings mirroring the Approval Governance companion's
-policy-approval recency (#580).<a href="#appendix-D-3.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-3.11">
-          <p id="appendix-D-3.11.1">Informative pointer to the substrate-hosted OAuth Mission Binding
-Statement from the Conformance section; the core remains
-self-contained (#551).<a href="#appendix-D-3.11.1" class="pilcrow">¶</a></p>
+policy-approval recency (#580).<a href="#appendix-D-3.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-3.12">
-          <p id="appendix-D-3.12.1">Requested versus effective expiry: <code>intent.expires_at</code> is the
+          <p id="appendix-D-3.12.1">Informative pointer to the substrate-hosted OAuth Mission Binding
+Statement from the Conformance section; the core remains
+self-contained (#551).<a href="#appendix-D-3.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-3.13">
+          <p id="appendix-D-3.13.1">Requested versus effective expiry: <code>intent.expires_at</code> is the
 client's requested not-after ceiling and the Mission Record's
 <code>expires_at</code> is the AS-established effective lifetime, never later
 than the request (<code>invalid_request</code> for a malformed or non-future new
@@ -8654,16 +8804,16 @@ recovery returns the stored outcome; the exact-mirror rule and the
 <code>invalid_authorization_details</code> refusal are replaced). Approval
 reconsent covers a changed effective expiry. The new
 <code>mission_expires_at</code> token-response parameter carries the exact
-effective value on every Mission-creating success response.<a href="#appendix-D-3.12.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-3.13">
-          <p id="appendix-D-3.13.1">The Authority Set entry commitment: the committed-object <code>typ</code>
-            <code>mission-authority-entry</code> over a single recorded entry, with its
-Mission-binding rule, selector equivalence class, and test vector
-(<a href="#integrity-anchors" class="auto internal xref">Section 7.1</a>, <a href="#test-vectors" class="auto internal xref">Appendix B</a>).<a href="#appendix-D-3.13.1" class="pilcrow">¶</a></p>
+effective value on every Mission-creating success response.<a href="#appendix-D-3.13.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-3.14">
-          <p id="appendix-D-3.14.1">Breaking change to the Intent carriage shape: the <code>mission_intent</code>
+          <p id="appendix-D-3.14.1">The Authority Set entry commitment: the committed-object <code>typ</code>
+            <code>mission-authority-entry</code> over a single recorded entry, with its
+Mission-binding rule, selector equivalence class, and test vector
+(<a href="#integrity-anchors" class="auto internal xref">Section 7.1</a>, <a href="#test-vectors" class="auto internal xref">Appendix B</a>).<a href="#appendix-D-3.14.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-3.15">
+          <p id="appendix-D-3.15.1">Breaking change to the Intent carriage shape: the <code>mission_intent</code>
 parameter value is the Mission Intent Submission envelope
 (<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>), <code>intent</code> plus an <span class="bcp14">OPTIONAL</span> typed
 <code>evidence</code> array, and the bare-Intent value is refused under the
@@ -8677,10 +8827,10 @@ anti-downgrade rule, evidence invalidation across shaping and
 revision, the presenter conjunction, verification-cost bounds, the
 <code>invalid_mission_intent_evidence</code> error registration, and the
 <code>submission_evidence</code> record member as record-trusted provenance
-metadata.<a href="#appendix-D-3.14.1" class="pilcrow">¶</a></p>
+metadata.<a href="#appendix-D-3.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.15">
-          <p id="appendix-D-3.15.1">Breaking change to the authority-proposal carriage: the proposal
+        <li class="normal" id="appendix-D-3.16">
+          <p id="appendix-D-3.16.1">Breaking change to the authority-proposal carriage: the proposal
 moves from the Intent's <code>proposed_authority</code> member, which is
 removed, to the standard top-level <code>authorization_details</code>
 parameter pushed alongside <code>mission_intent</code>
@@ -8692,64 +8842,64 @@ proposal, recorded on the Mission and surfaced through
 introspection, never on the <code>mission</code> claim. Worked examples and
 test vectors are recomputed; an approval-event rule recomputing
 every recorded anchor and a Mission-governed-client bare-request
-rejection accompany the change.<a href="#appendix-D-3.15.1" class="pilcrow">¶</a></p>
+rejection accompany the change.<a href="#appendix-D-3.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.16">
-          <p id="appendix-D-3.16.1">Derivation is mechanical, in two modes: narrowing (<span class="bcp14">RECOMMENDED</span>)
+        <li class="normal" id="appendix-D-3.17">
+          <p id="appendix-D-3.17.1">Derivation is mechanical, in two modes: narrowing (<span class="bcp14">RECOMMENDED</span>)
 and configured-mapping. The deterministic-reproducibility and
 policy-inspectability rules are retired, <code>policy_version</code> stays as
 an opaque audit correlator, generative derivation is demoted to a
 local-policy extension, and the derivation trust boundary (no
 portable Intent semantics) is stated. Configured-mapping mode
 publishes its mapping space as deployment documentation and
-distinguishes no-mapping from policy refusals.<a href="#appendix-D-3.16.1" class="pilcrow">¶</a></p>
+distinguishes no-mapping from policy refusals.<a href="#appendix-D-3.17.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.17">
-          <p id="appendix-D-3.17.1">New wire surface: the <code>mission_error</code> and <code>derivations_remaining</code>
+        <li class="normal" id="appendix-D-3.18">
+          <p id="appendix-D-3.18.1">New wire surface: the <code>mission_error</code> and <code>derivations_remaining</code>
 introspection members, the <code>mission_denial</code> WWW-Authenticate
 attribute, and the <code>mission_constraints_supported</code>
 protected-resource metadata member. The <code>mission</code> claim gains an
 <span class="bcp14">OPTIONAL</span> <code>expires_at</code>; the <code>mission_id</code> token-response parameter
-is promoted to <span class="bcp14">SHOULD</span>.<a href="#appendix-D-3.17.1" class="pilcrow">¶</a></p>
+is promoted to <span class="bcp14">SHOULD</span>.<a href="#appendix-D-3.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.18">
-          <p id="appendix-D-3.18.1">Authority vocabulary: four new Common Constraints (<code>time_window</code>,
+        <li class="normal" id="appendix-D-3.19">
+          <p id="appendix-D-3.19.1">Authority vocabulary: four new Common Constraints (<code>time_window</code>,
 <code>data_classification</code>, <code>allowed_tools</code>,
 <code>requires_action_approval</code>) with <code>prefix</code>-match fixes; the
 <span class="bcp14">OPTIONAL</span> <code>controls.agent_deployment</code> class pin; <code>max_derivations</code>
-sizing guidance.<a href="#appendix-D-3.18.1" class="pilcrow">¶</a></p>
+sizing guidance.<a href="#appendix-D-3.19.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.19">
-          <p id="appendix-D-3.19.1">Delegation hardening: delegation-authorization policy applies at
+        <li class="normal" id="appendix-D-3.20">
+          <p id="appendix-D-3.20.1">Delegation hardening: delegation-authorization policy applies at
 every exchange, <code>allowed_delegates</code> is <span class="bcp14">RECOMMENDED</span> and its absence
 is never a blanket grant, self-exchange is accepted only from the
 Mission's <code>client_id</code>, and the delegated-token routing guardrail
-is raised to <span class="bcp14">MUST NOT</span>.<a href="#appendix-D-3.19.1" class="pilcrow">¶</a></p>
+is raised to <span class="bcp14">MUST NOT</span>.<a href="#appendix-D-3.20.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.20">
-          <p id="appendix-D-3.20.1">Model precision: the Mission-referenced, Mission-derived, and
+        <li class="normal" id="appendix-D-3.21">
+          <p id="appendix-D-3.21.1">Model precision: the Mission-referenced, Mission-derived, and
 Mission-bound token-class taxonomy; anchors as independent
 commitments with <code>authority_hash</code> an audit correlator at a
 narrowed-token Resource Server; the subset rule named
 representational, not semantic; approval-event sequencing named as
 an extensibility seam; Intent carriage closed to the form-encoded
-PAR parameter.<a href="#appendix-D-3.20.1" class="pilcrow">¶</a></p>
+PAR parameter.<a href="#appendix-D-3.21.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.21">
-          <p id="appendix-D-3.21.1">Operational and privacy: verification-key retention anchored to
+        <li class="normal" id="appendix-D-3.22">
+          <p id="appendix-D-3.22.1">Operational and privacy: verification-key retention anchored to
 the audit horizon, issuer-key custody and per-artifact-class <code>kid</code>
 guidance, a Mission-record and evidence-access privacy section,
 and extended token lifetimes scoped to fully runtime-gated tokens
-with single-audience narrowing as the splitting mechanism.<a href="#appendix-D-3.21.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-3.22">
-          <p id="appendix-D-3.22.1">Editorial throughout, no normative change: requirement lists for
-the PAR submission and rendering duties, twice-stated rules
-reduced to one home, a third integrity-anchor test vector, and
-registry hygiene.<a href="#appendix-D-3.22.1" class="pilcrow">¶</a></p>
+with single-audience narrowing as the splitting mechanism.<a href="#appendix-D-3.22.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-3.23">
-          <p id="appendix-D-3.23.1">External review resolutions: GNAP and capability-system prior art
+          <p id="appendix-D-3.23.1">Editorial throughout, no normative change: requirement lists for
+the PAR submission and rendering duties, twice-stated rules
+reduced to one home, a third integrity-anchor test vector, and
+registry hygiene.<a href="#appendix-D-3.23.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-3.24">
+          <p id="appendix-D-3.24.1">External review resolutions: GNAP and capability-system prior art
 positioned in Relationship to Other Authorization Objects; the
 <code>mission</code> claim named as the actor-freezing wire signal, with the
 Resource Server routing guardrail and a new Security
@@ -8758,17 +8908,17 @@ and RFC 9700 promoted to normative and the OAuth Actor Profile
 reference demoted to informative; an actual Common Constraints
 IANA registry replacing the future-revision deferral; and new
 Security Considerations on composition's effective ceiling and the
-containment materialized-capability residual.<a href="#appendix-D-3.23.1" class="pilcrow">¶</a></p>
+containment materialized-capability residual.<a href="#appendix-D-3.24.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.24">
-          <p id="appendix-D-3.24.1">Editorial density pass: split over-dense paragraphs at their
+        <li class="normal" id="appendix-D-3.25">
+          <p id="appendix-D-3.25.1">Editorial density pass: split over-dense paragraphs at their
 natural idea boundaries, converted a few flowing comparisons and
 one dense list item into bullets, and reordered surrounding prose
 so a rule sentence opens its paragraph or list item; every
-normative sentence kept its exact wording and home section.<a href="#appendix-D-3.24.1" class="pilcrow">¶</a></p>
+normative sentence kept its exact wording and home section.<a href="#appendix-D-3.25.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.25">
-          <p id="appendix-D-3.25.1">Three-role approval model (#701): <code>approval_basis</code> gains an
+        <li class="normal" id="appendix-D-3.26">
+          <p id="appendix-D-3.26.1">Three-role approval model (#701): <code>approval_basis</code> gains an
 <span class="bcp14">OPTIONAL</span> discriminated <code>adjudication</code> member (<code>kind</code>: <code>human</code> or
 <code>policy</code>, a decision mechanism, plus an independent
 <code>governance_record</code> boolean) naming what decided a Mission
@@ -8786,7 +8936,7 @@ approval as the degenerate one-human case. <code>type</code> and
 the Mission Lifecycle state rule. The top-level <code>approver</code> member is
 DEPRECATED as a compatibility alias for
 <code>approval_basis.consent_principal</code>, normatively equal to it; its
-removal is deferred to the same future breaking-change window.<a href="#appendix-D-3.25.1" class="pilcrow">¶</a></p>
+removal is deferred to the same future breaking-change window.<a href="#appendix-D-3.26.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-D-4">-00<a href="#appendix-D-4" class="pilcrow">¶</a></p>

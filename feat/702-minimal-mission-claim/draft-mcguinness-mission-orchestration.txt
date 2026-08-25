@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             24 August 2026
-Expires: 25 February 2027
+Intended status: Experimental                             25 August 2026
+Expires: 26 February 2027
 
 
                   Mission Orchestration and Unwinding
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -846,10 +846,13 @@ Table of Contents
    event_id:  REQUIRED.  A unique identifier.
 
    mission:  REQUIRED.  The Mission whose orchestration state changed,
-      as the nested mission object (id, issuer, and, when known,
-      authority_hash), the same shape as the mission claim of
-      [I-D.draft-mcguinness-oauth-mission] and the Harness Evidence
-      object ([I-D.draft-mcguinness-mission-harness]).
+      as the nested mission object: id and issuer, the same members as
+      the mission claim of [I-D.draft-mcguinness-oauth-mission], plus
+      authority_hash when known (OPTIONAL, not carried on that baseline
+      claim, and recorded here as this evidence record's own audit
+      extension only when the orchestrator holds it), the same footing
+      the Harness Evidence object uses
+      ([I-D.draft-mcguinness-mission-harness]).
 
    workflow_id:  REQUIRED.  The workflow or task graph identifier.
 

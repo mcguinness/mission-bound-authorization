@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 February 2027</td>
+<td class="center">Expires 26 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-harness-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-24" class="published">24 August 2026</time>
+<time datetime="2026-08-25" class="published">25 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1143,7 +1143,7 @@ treats session continuity as proof that Mission authority continues.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2868,9 +2868,13 @@ non-normative summary of what a record carries:<a href="#section-16-2" class="pi
           <p id="section-16-3.1.1"><code>event_id</code>;<a href="#section-16-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-3.2">
-          <p id="section-16-3.2.1">the <code>mission</code> object (<code>id</code>, <code>issuer</code>, and, when known,
-<code>authority_hash</code>), the same shape as the <code>mission</code> claim of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-16-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-16-3.2.1">the <code>mission</code> object (<code>id</code> and <code>issuer</code>, the same members as the
+<code>mission</code> claim of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, plus
+<code>authority_hash</code> when known: <span class="bcp14">OPTIONAL</span>, not carried on that
+baseline claim, and recorded here as this evidence record's own
+audit extension only when the harness holds it, e.g. from
+introspection's disclosure privilege or a companion profile's own
+copy);<a href="#section-16-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-3.3">
           <p id="section-16-3.3.1"><code>session_id</code>;<a href="#section-16-3.3.1" class="pilcrow">¶</a></p>
@@ -2895,9 +2899,11 @@ non-normative summary of what a record carries:<a href="#section-16-2" class="pi
 </li>
       </ul>
 <p id="section-16-4">A Harness Evidence record carries the Mission as the nested <code>mission</code>
-object, mirroring the <code>mission</code> claim; the flat <code>mission_id</code> and
-<code>issuer</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 7</a>) are a binding
-key, whereas the evidence record mirrors the claim shape.<a href="#section-16-4" class="pilcrow">¶</a></p>
+object, mirroring the <code>mission</code> claim's <code>id</code>/<code>issuer</code> members; the
+flat <code>mission_id</code> and <code>issuer</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 7</a>)
+are a binding key, whereas the evidence record adds <code>authority_hash</code>
+as its own extension, per the preceding paragraph, never inherited
+from the claim.<a href="#section-16-4" class="pilcrow">¶</a></p>
 <p id="section-16-5">Harness Evidence complements runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). It records
 execution-continuity decisions, not Resource Server authorization.<a href="#section-16-5" class="pilcrow">¶</a></p>
