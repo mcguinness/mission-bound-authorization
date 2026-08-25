@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             24 August 2026
-Expires: 25 February 2027
+Intended status: Experimental                             25 August 2026
+Expires: 26 February 2027
 
 
                   Mission-Bound Authorization for GNAP
@@ -65,7 +65,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -476,9 +476,13 @@ Table of Contents
    1.  Authenticate the Approver: the resource owner or other
        accountable principal at the authorization server's interaction
        surface, or establish the standing basis of an adopted companion
-       profile (Section 8.1).  When the Intent carries controls.acr, the
-       authentication MUST be one the deployment's policy maps as
-       satisfying the named class.
+       profile (Section 8.1).  This authentication MUST satisfy the
+       deployment's published approval-authentication floor
+       ([I-D.draft-mcguinness-oauth-mission]); this document defines no
+       GNAP-native carriage for a client-requested Approver
+       authentication strength (the OAuth binding's direct flow carries
+       one on acr_values/max_age, a request-parameter shape this binding
+       does not share), so the floor alone governs here.
 
    2.  Establish the Subject: the issuer-qualified principal on whose
        behalf the Mission runs, per the deployment's authority-source
@@ -522,10 +526,11 @@ Table of Contents
 
    *Standing basis.* A policy is not the Approver.  A grant the
    authorization server would approve without interaction creates a
-   Mission only where an adopted profile supplies the complete
-   approval_basis the issuance profile defines (type, consent principal,
-   root commitment, activation, and activation actor), tracing the
-   machine-speed activation to an accountable human consent; the
+   Mission only where an adopted profile supplies the required
+   approval_basis members the issuance profile defines (type, consent
+   principal, root commitment, activation, and activation actor, plus
+   the OPTIONAL adjudication where the profile populates it), tracing
+   the machine-speed activation to an accountable human consent; the
    family's Mission Templates profile is that shape.  The GNAP policy
    identifier and version are activation context, never the Approver.
    Absent such a profile, noninteractive processing MUST NOT create a
@@ -691,11 +696,12 @@ Table of Contents
    rotation), regardless of the number of tokens the response carries;
    an operation that issues none counts zero.
 
-   Where the Intent's controls.max_derivations is present, the
+   Where the Mission's effective derivation_limit is established, the
    authorization server MUST refuse the derivation that would exceed it,
-   per the issuance profile's count-and-gate rule.  An access token
-   issued under a Mission MUST NOT expire later than the Mission's
-   expires_at, so no credential outlives the Mission.
+   per the issuance profile's count-and-gate rule
+   ([I-D.draft-mcguinness-oauth-mission]).  An access token issued under
+   a Mission MUST NOT expire later than the Mission's expires_at, so no
+   credential outlives the Mission.
 
    Where the deployment adopts Mission Containment
    ([I-D.draft-mcguinness-oauth-mission-containment]), the authorization

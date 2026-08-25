@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            24 August 2026
-Expires: 25 February 2027
+Intended status: Informational                            25 August 2026
+Expires: 26 February 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -700,9 +700,10 @@ Table of Contents
       understood.
 
    Approver account, session, or authenticator compromised:  Addressed
-      by the approval-event authentication floor and the Intent's
-      controls.acr step-up hook, which a deployment raises for high-
-      consequence Missions ([I-D.draft-mcguinness-oauth-mission]).
+      by the approval-event authentication floor, conjunctive with any
+      standard step-up authentication strength (acr_values, max_age) the
+      client requests for the Approver, which a deployment raises for
+      high-consequence Missions ([I-D.draft-mcguinness-oauth-mission]).
       Residual: a phished, hijacked, or coerced Approver approves a
       hostile Mission, and the evidence machinery then faithfully
       attests the attacker's Mission; account security and step-up
@@ -805,8 +806,8 @@ Table of Contents
 
    generations):  Addressed by each dimension bounding itself: per-
       domain depth reset at a cross-domain hop, per-Mission
-      max_derivations that a child does not inherit from its parent, and
-      issuer adjudication at each child generation
+      derivation_limit that a child does not inherit from its parent,
+      and issuer adjudication at each child generation
       ([I-D.draft-mcguinness-oauth-mission-cross-domain],
       [I-D.draft-mcguinness-oauth-mission-child-delegation]).  Residual:
       the composed bound across all active dimensions, depth times
@@ -1509,6 +1510,12 @@ Appendix A.  OWASP Agentic Threat Coverage
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Controls taxonomy retirement (#636): the Approver-compromise row's
+      controls.acr reference updated to the standard acr_values/max_age
+      step-up request carriage; the effective-ceiling-composition row's
+      max_derivations renamed derivation_limit.  No adversary-model
+      change.
 
    *  Editorial density pass on this Informational document: the
       Transparency Service entry of Section 6 kept as the one full

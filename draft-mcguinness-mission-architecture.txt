@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            24 August 2026
-Expires: 25 February 2027
+Intended status: Informational                            25 August 2026
+Expires: 26 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -170,15 +170,25 @@ Table of Contents
    but spreads the structure across many documents and several bindings;
    this document is the single structural view.
 
-   The bindings are peers of one another.  OAuth is the family's first-
-   authored binding, and OAuth 2.0 is the substrate with the most
-   deployed infrastructure; that is a deployment fact, not a maturity
-   ranking, and no production Mission deployment is known today on any
-   binding.  Adopting Missions on OAuth requires the changes the OAuth
-   binding defines.  Peer standing implies neither identical
-   capabilities nor identical adoption cost: AAuth, natively contextual,
-   adds no new wire members, and each binding's Mission Substrate
-   Statement declares what it supplies.
+   Peer standing among the bindings is a deployment-topology claim, not
+   a data-model-independence claim: each attaches to its own protocol as
+   an equally adoptable unit, and OAuth is the family's first-authored
+   binding with the most deployed infrastructure, a deployment fact and
+   not a maturity ranking (no production Mission deployment is known
+   today on any binding).  Adopting Missions on OAuth requires the
+   changes the OAuth binding defines.  The two axes diverge for the
+   standalone binding: the Mission Authority Server
+   ([I-D.draft-mcguinness-mission-authority-server]) is a normative
+   standalone-controller protocol binding over the OAuth Mission data
+   model: a peer deployment topology, but not an independent substrate
+   model, since it normatively imports the OAuth Mission record and
+   issuance profile.  AAuth demonstrates model independence: it maps the
+   shared kernel onto its own protocol's native Mission Context without
+   importing the OAuth Authority Set
+   ([I-D.draft-mcguinness-mission-aauth]).  Peer standing implies
+   neither identical capabilities nor identical adoption cost: AAuth,
+   natively contextual, adds no new wire members, and each binding's
+   Mission Substrate Statement declares what it supplies.
 
    Read as one system, the family defines a *delegated-authority layer*
    with OAuth 2.0, the standalone Mission Authority Server, and (as an
@@ -367,9 +377,10 @@ Table of Contents
 
    What approval commits is broader than the structured Authority Set
    alone: it also commits the rendered intent context (goal,
-   constraints, and, where it differs, the requested ceiling), the
-   effective expires_at, and the rendered controls bounds
-   ([I-D.draft-mcguinness-oauth-mission]).  Concrete request values,
+   task_bounds, and, where it differs, the requested ceiling), the
+   effective expires_at, and the rendered derivation_limit and any
+   metering bound ([I-D.draft-mcguinness-oauth-mission],
+   [I-D.draft-mcguinness-mission-metering]).  Concrete request values,
    current consumption, and action sequencing are decision-time facts,
    evaluated later by runtime policy, metering, or action-bound
    (transaction) approval; core does not require them to be re-rendered
@@ -1349,10 +1360,13 @@ Table of Contents
       Deployment, and which changes require re-approving standing
       Missions is policy that governance records.
 
-      A Mission may be pinned to a named Agent Deployment where the
-      deployment defines that control.  This object is distinct from the
-      Mission Deployment Profile (Section 14), which is the estate's
-      published claims manifest, not a property of an agent.
+      A Mission may be pinned to a named Agent Deployment where a
+      companion Agent Deployment Binding profile realizes that pin
+      ([I-D.draft-mcguinness-oauth-mission] names the profile and its
+      required properties but defines none of its wire mechanics
+      itself).  This object is distinct from the Mission Deployment
+      Profile (Section 14), which is the estate's published claims
+      manifest, not a property of an agent.
 
    Mission (why the authority exists):  This family's object: the
       approved task, its lifecycle, and, where the binding derives one,
@@ -1405,13 +1419,17 @@ Table of Contents
 9.3.  Swarm Execution: Multiplication, Not Delegation
 
    One composition of the three objects recurs often enough to name.  A
-   Mission pinned to an Agent Deployment through the OAuth binding's
-   controls.agent_deployment ([I-D.draft-mcguinness-oauth-mission]),
-   executed concurrently by N attested instances of that Deployment, is
+   Mission pinned to an Agent Deployment class or version, executed
+   concurrently by N attested instances of that Deployment, is
    multiplication, not delegation: no act hop, no Child Mission, no
    attenuation chain, because authority never moves between principals.
-   Late binding is attestation: an instance joins the work by
-   authenticating as the pinned Deployment under the instance profiles
+   This pin is a named architectural pattern, not a wire member the
+   OAuth binding currently defines: that document reserves no Intent
+   member for it and points forward to a dedicated Agent Deployment
+   Binding profile that a deployment wanting this pin implements
+   ([I-D.draft-mcguinness-oauth-mission]).  Late binding is attestation:
+   an instance joins the work by authenticating as the pinned Deployment
+   under the instance profiles
    ([I-D.draft-mcguinness-oauth-client-instance-assertion],
    [I-D.draft-mcguinness-oauth-ai-agent-instance]), not by receiving a
    credential from a peer.  The invariant is class-grain authorization,
@@ -1419,10 +1437,14 @@ Table of Contents
    as client_id, is an authorization subject, never an attribution
    subject, and attribution stays per-instance through the instance
    substrate, which forbids a sender-constraint key shared across a
-   client's instances.  The OAuth binding's controls.max_derivations is
-   the explicit fan-out ceiling, and consumption bounds attach at
-   Mission grain, so a swarm shares one budget
-   ([I-D.draft-mcguinness-mission-metering]).
+   client's instances.  The OAuth binding's derivation_limit is not a
+   fan-out or concurrency ceiling: it counts issuance events, not
+   instances, and a single instance refreshing repeatedly consumes it
+   exactly as one selector among N instances deriving once each would.
+   What actually bounds a swarm's aggregate consumption is the metering
+   profile's Mission-grain budget: consumption bounds attach to the
+   Mission, not to any one instance, so a swarm of instances shares one
+   budget ([I-D.draft-mcguinness-mission-metering]).
 
    The decision ladder:
 
@@ -1589,8 +1611,24 @@ Table of Contents
 
    Only the third earns the term: a mission claim alone is a reference,
    not Mission-bound authorization.  The family reserves "Mission-bound"
-   for that class, and a binding earns it through the capability claims
-   of its Mission Substrate Statement, not by protocol lineage.
+   for that class, and Section 13.3's credential-mission-bound
+   equivalence is the definition.  A binding that claims substrate
+   conformance evidences the definition through the capability claims of
+   its own Mission Substrate Statement, not by protocol lineage.  The
+   OAuth binding claims no substrate conformance and publishes no
+   Statement: it is instead assessed through its own informative Mapping
+   Assessment ([I-D.draft-mcguinness-oauth-mission]), and it normatively
+   discharges the definition on its own terms, through its Conformance
+   gates alone, independent of the substrate contract.
+
+   The definition itself is the Mission Binding Properties vector's
+   credential-mission-bound property (Section 13.3), whose six
+   conditions state in full the active-state, subset, and derivation-
+   link requirement summarized above and map each condition to the
+   Mission Substrate Statement capability, or OAuth binding surface,
+   that discharges it.  No single capability claim evidences the
+   property alone; a binding earns it only where every condition is met
+   together.
 
 10.3.  The Mission-Bound Credential
 
@@ -2833,12 +2871,20 @@ Table of Contents
    silently to a weaker binding.
 
    *Credential-mission-bound* is defined by equivalence, not by one
-   artifact.  For the covered path the credential establishes all of:
+   artifact, and is the family's authoritative definition of what earns
+   the term "Mission-bound" (see also Section 10.2's Mission-bound token
+   class, which this equivalence backs).  A binding that claims
+   substrate conformance evidences the definition through its own
+   Mission Substrate Statement; the OAuth binding, which claims no
+   substrate conformance and publishes no Statement, discharges the
+   definition directly through its own Conformance gates instead.  For
+   the covered path the credential establishes all of these conditions:
 
    1.  a trusted issuer authorized to issue for the Mission;
 
-   2.  the canonical (mission.issuer, mission.id) pair and the recorded
-       authority_hash;
+   2.  the canonical (mission.issuer, mission.id) pair identifying the
+       Mission: the baseline Mission reference, and an identity
+       condition only, never a token-carried Authority Set commitment;
 
    3.  an issued authority projection no broader than the Mission's
        Authority Set for the target audience;
@@ -2849,13 +2895,41 @@ Table of Contents
    5.  bounded lifetime plus active-state issuance and refresh gates;
        and
 
-   6.  an auditable derivation link to the Mission authorization: an
-       Issuance Grant jti
-       ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), a native
-       issuance record ([I-D.draft-mcguinness-oauth-mission]), a cross-
+   6.  an auditable derivation link from the credential to the Mission's
+       recorded Authority Set: the OAuth binding's Mission Record
+       ([I-D.draft-mcguinness-oauth-mission]), an Issuance Grant jti
+       ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), a cross-
        domain projection's provenance
        ([I-D.draft-mcguinness-oauth-mission-cross-domain]), or an
-       equivalently specified artifact.
+       equivalently specified artifact.  A token-carried Authority Set
+       commitment, where a binding supplies one, strengthens this
+       condition's local verifiability; it is never itself the Mission-
+       identity requirement of condition 2, and its absence does not
+       fail this condition where the issuer-retained record is otherwise
+       reachable.
+
+   Each condition names what actually establishes it, so a Statement
+   capability claim maps to a condition rather than to the property as a
+   whole: condition 3 is the Substrate Statement's Monotonic Derivation
+   capability, and condition 5's active-state gate is its Lifecycle-
+   Gated Authorization capability.  The Substrate's Credential-Bound
+   capability can select correlation-only fact semantics
+   ([I-D.draft-mcguinness-mission-substrate]), which by itself evidences
+   neither the derivation-link condition (6) nor the authority-
+   projection condition (3); a Credential-Bound claim alone, whatever
+   semantics it selects, never by itself evidences credential-mission-
+   bound, since conditions 1 and 4 come from the deployment's issuer
+   trust configuration and the credential's own subject, client_id, and
+   actor claims, never from a Statement capability row.  A binding earns
+   the property only where its Statement's claims jointly cover every
+   condition.
+
+   For the OAuth binding, the approval event discharges condition 4, the
+   subset rule discharges condition 3, the lifecycle gate discharges
+   condition 5's active-state gate, the Mission Issuer role discharges
+   condition 1, and the same approval event's Mission Record, retained
+   for the audit horizon, discharges condition 6
+   ([I-D.draft-mcguinness-oauth-mission]).
 
    Sender constraint is deliberately not among them: issuance-time key
    targeting and presentation-time proof are presenter-key-bound, a
@@ -2866,7 +2940,7 @@ Table of Contents
    OPTIONAL, so native issuance, the Mission Issuance Grant, and a
    conforming cross-domain exchange satisfy this one property, and
    supply presenter-key-bound exactly where their confirmation binding
-   is actually in force.  A Mission Join Assertion fails properties 3,
+   is actually in force.  A Mission Join Assertion fails conditions 3,
    5, and 6 by design, which is what separates correlation from
    issuance.
 
@@ -3456,7 +3530,8 @@ Table of Contents
    Maturity is a dependency boundary.  A Standards-Track profile never
    depends normatively on an experimental one: the experimental profiles
    extend the stable interface only through its declared seams, the
-   controls extension of the OAuth binding and the coordinated-extension
+   Mission Intent extension seam of the OAuth binding (a named,
+   companion-defined top-level member) and the coordinated-extension
    rules of the evidence objects, and a Standards-Track document cites
    them informatively at most.  An experimental profile that stabilizes
    crosses the boundary by reclassification, not by a stable document
@@ -4204,6 +4279,55 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Controls taxonomy retirement (#636): the swarm-execution
+      discussion no longer claims derivation_limit (renamed from
+      max_derivations) is a fan-out or concurrency ceiling; it counts
+      issuance events, not instances, and one instance refreshing
+      repeatedly exhausts it exactly as N instances deriving once each
+      would.  The Agent Deployment pin is now described as a named
+      architectural pattern with no wire member the OAuth binding
+      currently defines, pointing to a forward-referenced Agent
+      Deployment Binding profile instead of the retired
+      controls.agent_deployment.  References to the OAuth binding's
+      retired controls extension seam updated to the Mission Intent's
+      own (open, named-member) extension seam.
+
+   *  PR #717 review fix: precised the "Mission-bound" definition text
+      (Section 10.2 and Section 13.3) so it no longer requires a Mission
+      Substrate Statement of a binding that deliberately publishes none.
+      A binding that claims substrate conformance evidences credential-
+      mission-bound through its own Statement; the OAuth binding, which
+      claims no substrate conformance and publishes no Statement, is
+      instead assessed through its own informative Mapping Assessment
+      and discharges the definition directly through its own Conformance
+      gates.  No normative content changed.
+
+   *  Reworded the blanket "the bindings are peers of one another"
+      sentence in the Introduction to name two independent axes,
+      deployment topology and data-model independence, and to classify
+      the Mission Authority Server as a normative standalone-controller
+      protocol binding over the OAuth Mission data model: a peer
+      deployment topology, but not an independent substrate model
+      (#704).  Cross-referenced the three previously uncross-referenced
+      accounts of what earns "Mission-bound" (Section 10.2 and
+      Section 13.3, and the OAuth binding's Conformance gates):
+      Section 13.3's credential-mission-bound equivalence is now the
+      stated definition, a binding's Mission Substrate Statement is how
+      it evidences the properties, and the OAuth binding's gates are its
+      discharge of the definition (#663).  No normative content, anchor,
+      or table row changed.
+
+   *  Cross-referenced the three previously separate accounts of what
+      earns the "Mission-bound" term: Section 10.2 now names the Mission
+      Binding Properties vector's credential-mission-bound property
+      (Section 13.3) as the definition.  Its six conditions are each
+      mapped to the Statement capability or OAuth binding surface that
+      discharges it, condition 2 (Mission identity) no longer names a
+      token-carried authority_hash, aligning with the ruled minimal-
+      claim direction of #702, and condition 6 (the auditable derivation
+      link) names the OAuth binding's retained Mission Record explicitly
+      rather than asserting an unspecified discharge (#663).
 
    *  Non-goal reworded (#637): "a new authority format, or a new grant
       protocol" narrowed to "a new grant protocol," naming the OAuth

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -1463,13 +1463,16 @@ Table of Contents
    Authentication step-up has no dedicated denial-reason value under
    this profile: an in-process step-up rides the obligation on a permit,
    and an RFC 9470 step-up rides the obligation on a resource_policy
-   denial.  The OAuth binding's mission_denial value step_up_required
-   remains the Resource Server's own challenge-surface signal
-   ([I-D.draft-mcguinness-oauth-mission]) and composes with, but is not,
-   either shape of this obligation.  The requirement is Resource policy,
-   never a Mission constraint: the issuance profile's acr is an
-   approval-time requirement on the Approver, recorded on the Mission
-   and neither carried on derived tokens nor evaluated per action, and
+   denial.  The Resource Server's own challenge-surface signal for a
+   weak or stale token-associated authentication is the RFC 9470
+   insufficient_user_authentication challenge itself
+   ([I-D.draft-mcguinness-oauth-mission]), not a Mission-defined denial
+   reason, and composes with, but is not, either shape of this
+   obligation.  The requirement is Resource policy, never a Mission
+   constraint: the issuance profile's approval-time acr_values/max_age
+   carriage is a requirement on the Approver at the approval event, a
+   distinct fact from this per-action, token-associated requirement; it
+   is neither carried on derived tokens nor evaluated per action, and
    the issuance profile defines no per-action amr constraint
    ([I-D.draft-mcguinness-oauth-mission]).
 

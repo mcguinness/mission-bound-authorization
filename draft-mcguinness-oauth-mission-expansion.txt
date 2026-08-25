@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                     Mission Expansion for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -415,11 +415,12 @@ Table of Contents
       the successor's Mission Intent, and its OPTIONAL evidence array
       carries Intent Submission Evidence under that profile's dispatch,
       refusal, and never-authority rules.  The Intent describes the
-      broadened task: the goal, resources, constraints, and controls the
-      successor needs, including the authority the denied action
-      required.  The Mission Issuer derives the successor's Authority
-      Set from this Intent and bounds it by policy exactly as for any
-      Mission; this document adds no authority-derivation rule.
+      broadened task: the goal, target_resources, task_bounds, and any
+      other Mission Intent member the successor needs, including the
+      authority the denied action required.  The Mission Issuer derives
+      the successor's Authority Set from this Intent and bounds it by
+      policy exactly as for any Mission; this document adds no
+      authority-derivation rule.
 
    authorization_details:  OPTIONAL.  The successor's authority
       proposal: the standard [RFC9396] parameter carried on the same
@@ -670,12 +671,13 @@ Table of Contents
    approval prompt skipped, as that companion defines.
 
    Whichever mode completes, obtaining the fresh approval means the
-   Mission Issuer authenticates the Approver, obtains fresh consent for
-   the derived Authority Set, satisfies any controls.acr, and renders
-   the Subject when the Approver is not the Subject, per the issuance
-   profile's approval event.  The consent disclosure MUST reflect the
-   successor's authority being adjudicated.  Expansion never widens
-   authority without a new consent: if the Approver declines, no
+   Mission Issuer authenticates the Approver against the published
+   approval- authentication floor, obtains fresh consent for the derived
+   Authority Set, satisfies any requested acr_values/max_age strength,
+   and renders the Subject when the Approver is not the Subject, per the
+   issuance profile's approval event.  The consent disclosure MUST
+   reflect the successor's authority being adjudicated.  Expansion never
+   widens authority without a new consent: if the Approver declines, no
    successor is created and the predecessor is untouched (Section 13).
 
    At completion the Mission Issuer computes the successor's integrity
@@ -1418,10 +1420,11 @@ Table of Contents
    predecessor cross-check does not match the subject_token-resolved
    Mission, or whose predecessor is not active, fails with invalid_grant
    (Section 5.2, Section 5.3); an expansion Mission Intent the Mission
-   Issuer cannot parse or cannot derive a valid Authority Set from fails
-   with invalid_request or, where the issuance profile uses it,
-   invalid_authorization_details ([RFC9396]), exactly as for any Mission
-   creation.
+   Issuer cannot parse fails with invalid_request; one it can parse but
+   cannot derive a valid Authority Set from fails with
+   invalid_authorization_details ([RFC9396]) where the client submitted
+   a proposal alongside it, or access_denied where it did not, exactly
+   as for any Mission creation.
 
 14.  Worked Example
 

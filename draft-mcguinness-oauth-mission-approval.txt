@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                 Mission Deferred Approval for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -213,10 +213,10 @@ Table of Contents
        request_uri are pending-request state, not a grant.
 
    3.  The approval event executes on the asynchronous review surface.
-       That surface MUST authenticate the Approver.  It MUST satisfy the
-       Mission Intent's controls.acr.  Both requirements hold exactly as
-       the synchronous approval event requires
-       ([I-D.draft-mcguinness-oauth-mission]).
+       That surface MUST authenticate the Approver, satisfying both the
+       deployment's published approval-authentication floor and any
+       requested acr_values/max_age strength, exactly as the synchronous
+       approval event requires ([I-D.draft-mcguinness-oauth-mission]).
 
    4.  The Mission record is created in the active state atomically with
        the approval decision, preserving the issuance profile's
@@ -461,12 +461,12 @@ Table of Contents
 
    The asynchronous review surface is part of the consent path.  It MUST
    meet the approval event's authentication requirements, authenticating
-   the Approver and satisfying the Mission Intent's controls.acr
-   (Section 5.1); deferring an approval does not lower the bar the
-   synchronous event sets.  Approver routing and notification, how a
-   Proposed Mission reaches a reviewer and how the reviewer is alerted,
-   are deployment matters and are named as such here rather than
-   specified.
+   the Approver against the published floor and any requested
+   acr_values/max_age strength (Section 5.1); deferring an approval does
+   not lower the bar the synchronous event sets.  Approver routing and
+   notification, how a Proposed Mission reaches a reviewer and how the
+   reviewer is alerted, are deployment matters and are named as such
+   here rather than specified.
 
    An Approval Governance Record (Section 5.5) participates in the
    approval before commitment and is evidence after it; its assertion

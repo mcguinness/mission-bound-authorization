@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
              Mission Resource Access Profile for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -388,8 +388,8 @@ Table of Contents
    ceiling entry that the AS does not implement narrowing for MUST NOT
    be dropped while the entry survives.  The AS MUST instead fail
    closed: refuse the whole derivation, or omit the entry from the
-   result, exactly as an unrecognized resources value already may be;
-   the granted authorization_details echo reflects any such omission
+   result, exactly as an unrecognized target_resources value already may
+   be; the granted authorization_details echo reflects any such omission
    ([I-D.draft-mcguinness-oauth-mission]).  Carrying the entry forward
    with the key dropped would widen effective authority past the ceiling
    exactly as an unenforced key would at the Resource Server
@@ -1091,6 +1091,14 @@ Table of Contents
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  Controls taxonomy retirement (#636): the AS-side no-registered-
+      narrowing failure-closed cross-reference updated from an
+      unrecognized resources value to an unrecognized target_resources
+      value, matching the issuance profile's rename.  No entry-level
+      constraints reference changed; this document's own constraints is
+      the RAR entry-level object, unaffected by the retirement of the
+      Mission Intent's separate controls bucket.
 
    *  Review response (#637): relocated the Resource Server enforcement
       duties (exact/prefix resource matching, action matching, per-entry

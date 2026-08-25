@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -219,11 +219,13 @@ Table of Contents
 
    Neither construct is the first question when the need is only more
    concurrent capacity.  The same principal running more attested
-   instances of the same pinned Agent Deployment (the issuance profile's
-   controls.agent_deployment) under the same Mission is multiplication,
-   not delegation: each instance derives under the Mission directly,
-   with no act hop and no Child Mission.  The architecture names this
-   swarm execution and states the full decision ladder
+   instances of the same pinned Agent Deployment (a named architectural
+   pattern the issuance profile points to a forward-referenced Agent
+   Deployment Binding profile for, not a wire member it currently
+   defines itself) under the same Mission is multiplication, not
+   delegation: each instance derives under the Mission directly, with no
+   act hop and no Child Mission.  The architecture names this swarm
+   execution and states the full decision ladder
    ([I-D.draft-mcguinness-mission-architecture]); the choice below
    begins where a different principal or a separate lifecycle enters.
 
@@ -1092,21 +1094,23 @@ Table of Contents
 
 8.2.  Derivation Budget Is Not Inherited
 
-   A Child Mission's controls.max_derivations
-   ([I-D.draft-mcguinness-oauth-mission]) is set on its own Mission
-   Intent at child creation and is independent of the parent's: the
-   attenuation rules above bound a child's authority, expiry, and
-   delegation policy against the parent, but not its derivation count.
-   max_derivations is a per-Mission local issuance counter.  A Mission
-   Issuer and a deployment MUST NOT treat it, at any single Mission, as
-   an aggregate, concurrency, spend, or subtree bound.
+   A Child Mission's effective derivation_limit
+   ([I-D.draft-mcguinness-oauth-mission]) is established from its own
+   Mission Intent's requested_derivation_limit, clamped by the
+   deployment's own policy ceiling for the Child Mission, at child
+   creation, and is independent of the parent's: the attenuation rules
+   above bound a child's authority, expiry, and delegation policy
+   against the parent, but not its derivation count. derivation_limit is
+   a per-Mission local issuance counter.  A Mission Issuer and a
+   deployment MUST NOT treat it, at any single Mission, as an aggregate,
+   concurrency, spend, or subtree bound.
 
-   A Parent Mission's own max_derivations caps derivation at the parent
+   A Parent Mission's own derivation_limit caps derivation at the parent
    alone; it does not bound how many derivations the child subtree
    performs in aggregate, and a deep or wide subtree can derive far more
    than the parent's own cap suggests.  Where an approval interface
-   displays max_derivations, or any per-Mission derivation control, as a
-   limit on child creation, that interface MUST disclose the composed
+   displays derivation_limit, or any per-Mission derivation control, as
+   a limit on child creation, that interface MUST disclose the composed
    bound reachable through the subtree alongside it, so the Approver
    sees the real reachable surface rather than one Mission's local
    counter alone.

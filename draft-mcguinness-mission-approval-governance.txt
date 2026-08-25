@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                       Mission Approval Governance
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -172,8 +172,8 @@ Table of Contents
    object digest.
 
    The terms Mission, Mission Issuer, Approver, approval event, Mission
-   Intent, approval_event_id, intent_hash, authority_hash, and controls
-   are used as defined in [I-D.draft-mcguinness-oauth-mission].
+   Intent, approval_event_id, intent_hash, and authority_hash are used
+   as defined in [I-D.draft-mcguinness-oauth-mission].
 
    Approval Governance Record (AGR):  The record this document defines:
       the policy, assertions, and evaluation standing behind one
@@ -199,7 +199,13 @@ Table of Contents
    approval_event_id joins the record to the approval event and to the
    Mission record it governs ([I-D.draft-mcguinness-oauth-mission]).
    The record never appears on tokens or in any protocol message; it is
-   issuer-retained control-plane state.
+   issuer-retained control-plane state.  Where the governed Mission
+   populates approval_basis.adjudication
+   ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping") and
+   this record exists, adjudication.governance_record is true and kind
+   equals this record's accountable assertion's own mechanism, never a
+   value that names this record itself, and never a flattening of its
+   assertion set into a single principal.
 
 5.  The Approval Governance Record
 
@@ -418,7 +424,7 @@ Table of Contents
 
    At evaluation, the issuer MUST classify the committed Mission's
    consequence classes from the derived Authority Set and from any
-   consumption bound Mission Intent controls carries
+   consumption bound the Mission Intent carries
    ([I-D.draft-mcguinness-mission-metering]).  The issuer MUST select,
    across every class either source carries, the strictest maximum age
    that applies, accounting for any declared exception.  This is a
@@ -465,7 +471,7 @@ Table of Contents
    defines: irreversible action, external commitment, privileged
    administration, and a consumption bound
    ([I-D.draft-mcguinness-oauth-mission]).  Where the committed
-   Mission's derived Authority Set or Mission Intent controls
+   Mission's derived Authority Set or Mission Intent
    ([I-D.draft-mcguinness-mission-metering]) carries one, the assertion
    satisfying the accountable-approver rule of Section 6 MUST be kind:
    human, unless a committed, class-named exception under this section
@@ -819,12 +825,12 @@ Table of Contents
 
    *  enforce the strictest applicable policy-approval maximum age
       across the consequence classes the committed Mission's derived
-      Authority Set and Mission Intent controls carry, from a committed
-      ceiling and any committed exception (Section 8);
+      Authority Set and Mission Intent carry, from a committed ceiling
+      and any committed exception (Section 8);
 
    *  require kind: human for the accountable-approver assertion where
       the committed Mission's derived Authority Set or Mission Intent
-      controls carries a high-risk class, unless a committed class-named
+      carries a high-risk class, unless a committed class-named
       exception applies (Section 8);
 
    *  commit the record atomically with Mission creation and let failure

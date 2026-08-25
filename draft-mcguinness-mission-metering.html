@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 February 2027</td>
+<td class="center">Expires 26 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-metering-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-24" class="published">24 August 2026</time>
+<time datetime="2026-08-25" class="published">25 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1317,7 +1317,7 @@ is expected to evolve with implementation experience.<a href="#section-2-1" clas
 <p id="section-2-2">A deployment that does not implement this document carries no
 consumption bounds on its Missions and is fully conformant to the
 issuance and runtime profiles. The issuance profile's
-<code>max_derivations</code> is not a consumption bound: it is enforced by the
+<code>derivation_limit</code> is not a consumption bound: it is enforced by the
 issuing Authorization Server at each derivation and needs none of this
 document (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">The consent-integrity rule of <a href="#consent" class="auto internal xref">Section 6.1</a> is the boundary that makes
@@ -1467,10 +1467,20 @@ actions matching different selectors of one group latch exactly one
 selector, atomically with the permit; the affirmative-non-execution
 release restores the group; refusals carry <code>exclusivity_latched</code> in
 Decision Evidence; the latch domain is named in the Enforcement
-Scope Statement (<a href="#exclusivity" class="auto internal xref">Section 8</a>). This gate also holds the family's
-adoption of the <code>exclusive</code> control into the issuance profile's core
-<code>controls</code> vocabulary: that adoption follows the applicable gates of
-this section being met, and until then the control is homed here.<a href="#section-2.1-12" class="pilcrow">¶</a></p>
+Scope Statement (<a href="#exclusivity" class="auto internal xref">Section 8</a>). <code>exclusive</code> is, and remains, a
+Mission Intent member this document defines and owns
+(<a href="#bounds" class="auto internal xref">Section 6</a>); an earlier plan to adopt it into the issuance
+profile's <code>controls</code> vocabulary lapsed when that vocabulary was
+retired (a family migration that relocated every member below out of
+<code>controls</code> without changing this document's ownership of any of
+them, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This gate, met or
+not, therefore changes only whether <code>exclusive</code> keeps its EXPERIMENTAL
+marking here, never where it is defined. A 2026-08 promotion
+assessment against this and the independent-interoperation gate below
+found every applicable row NOT MET (issue #117): no reference
+implementation of the latch domain, the settlement-intake path, or an
+independently interoperating counterpart exists, so <code>exclusive</code> stays
+EXPERIMENTAL and unpromoted.<a href="#section-2.1-12" class="pilcrow">¶</a></p>
 <p id="section-2.1-13"><strong>Independent interoperation.</strong> Two distinct results, both required
 for each promoted wire profile, aligning with the implementation and
 interoperation reporting convention of <span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>:<a href="#section-2.1-13" class="pilcrow">¶</a></p>
@@ -1489,11 +1499,16 @@ failure cases, under the settlement submission contract
 <p id="section-2.1-15">Across every gate, promotion additionally requires the promoted wire
 surface unchanged in name, shape, and semantics across two
 consecutive published revisions of this document while the evidence
-accumulated: the <code>controls</code> members of <a href="#bounds" class="auto internal xref">Section 6</a>, <code>quota_exceeded</code>,
+accumulated: the Mission Intent members of <a href="#bounds" class="auto internal xref">Section 6</a>, <code>quota_exceeded</code>,
 <code>exclusivity_latched</code>, <code>context.prior_evaluation_id</code>,
 <code>measured_duration</code>, the <code>metering</code> evidence member
 (<a href="#metering-evidence" class="auto internal xref">Section 10</a>), and the settlement submission contract of
-<a href="#settlement-contract" class="auto internal xref">Section 11.1.1</a>.<a href="#section-2.1-15" class="pilcrow">¶</a></p>
+<a href="#settlement-contract" class="auto internal xref">Section 11.1.1</a>. The #636 controls-retirement cut relocated
+every member of <a href="#bounds" class="auto internal xref">Section 6</a> from <code>controls.&lt;name&gt;</code> to a flat top-level
+Mission Intent member: that is a wire-shape change to this exact
+surface, so the two-consecutive-revisions window restarts at this
+revision (zero of two), regardless of how long the pre-relocation
+shape had otherwise held.<a href="#section-2.1-15" class="pilcrow">¶</a></p>
 <p id="section-2.1-16">Selective promotion means the applicable rows: promoting a
 per-Mission bound class does not require the aggregate or
 <code>exclusive</code> gates, and promoting the <code>exclusive</code> control does not
@@ -1519,10 +1534,11 @@ Also requires, conditionally: Mission-Bound Runtime Enforcement: AuthZEN Profile
       </h2>
 <p id="section-3-1">This document depends normatively on the issuance profile and the
 runtime profile and is not implementable alone. It defines its
-consumption bounds as members of the Mission Intent <code>controls</code> object,
-using the extension seam the issuance profile provides; they are
-carried on the Mission and committed by <code>intent_hash</code> exactly as any
-other Intent member. Metering is performed by the runtime profile's
+consumption bounds as named top-level Mission Intent members, using
+the extension seam the issuance profile provides for a companion
+profile to add explicit, named members; they are carried on the
+Mission and committed by <code>intent_hash</code> exactly as any other Intent
+member. Metering is performed by the runtime profile's
 PDP within a documented enforcement scope; this document adds metering
 semantics to the runtime profile's decision contract and changes no
 issuance protocol, though it does add consent-surface obligations on
@@ -1563,7 +1579,7 @@ optional capabilities it consumes.<a href="#section-5-1" class="pilcrow">¶</a><
 <p id="section-5-2">From the contextual-governance kernel it consumes the Mission
 Identifier and issuer, the kernel's Mission Reference and Controller,
 which key every consumption counter; and the immutable Approved
-Context, of which the bounds are part as Mission Intent <code>controls</code>
+Context, of which the bounds are part as named Mission Intent
 members. The kernel requires no particular integrity anchors:
 <code>intent_hash</code> is the OAuth binding's commitment to that approved
 value, and it commits the bounds like any other Intent member
@@ -1635,8 +1651,9 @@ and commits them through <code>intent_hash</code>.<a href="#section-5-5" class="
       <h2 id="name-consumption-bounds">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-consumption-bounds" class="section-name selfRef">Consumption Bounds</a>
       </h2>
-<p id="section-6-1">A Mission Intent <code>controls</code> object
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) <span class="bcp14">MAY</span> carry these members:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-1">This document defines these Mission Intent top-level members
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under that document's rule
+that a companion profile may add a named member coordinated with it:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6-2">
         <dt id="section-6-2.1">
 <code>max_budget</code>:</dt>
@@ -1718,7 +1735,10 @@ does not detect it.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 <dt id="section-6-2.9">
 <code>exclusive</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.10">
-          <p id="section-6-2.10.1"><span class="bcp14">OPTIONAL</span>. An array of exclusivity groups, each an array of two or
+          <p id="section-6-2.10.1"><span class="bcp14">OPTIONAL</span> and EXPERIMENTAL (unlike the four bounds above, this
+member is not yet promotion-ready: a 2026-08 assessment against
+<a href="#promotion-criteria" class="auto internal xref">Section 2.1</a> found every applicable gate NOT MET, issue
+#117). An array of exclusivity groups, each an array of two or
 more selectors. A selector is an object with <code>resource</code> (<span class="bcp14">REQUIRED</span>,
 a string) and <code>actions</code> (<span class="bcp14">OPTIONAL</span>, an array of strings); it matches
 a consequential action whose resource equals <code>resource</code> and, when
@@ -1731,21 +1751,20 @@ be combined under this Mission (<a href="#exclusivity" class="auto internal xref
 <p id="section-6-3">The bounds are carried on the Mission and committed by <code>intent_hash</code>.
 They are not enforced by the Authorization Server at issuance; they are
 enforced by the runtime layer at the point of use (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-6-3" class="pilcrow">¶</a></p>
-<p id="section-6-4">Example Mission Intent <code>controls</code> carrying three of the four bounds
+<p id="section-6-4">Example Mission Intent carrying three of the four bounds
 alongside
 the issuance profile's members:<a href="#section-6-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-6-5">
 <pre>
 {
-  "controls": {
-    "acr": "urn:example:acr:mfa",
-    "max_derivations": 200,
-    "max_budget": { "amount": "5000.00", "currency": "USD" },
-    "max_calls": [
-      { "call_class": "journal-entries.write", "count": 50 }
-    ],
-    "max_duration": "PT8H"
-  }
+  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "target_resources": ["https://erp.example.com"],
+  "expires_at": "2026-12-31T23:59:59Z",
+  "max_budget": { "amount": "5000.00", "currency": "USD" },
+  "max_calls": [
+    { "call_class": "journal-entries.write", "count": 50 }
+  ],
+  "max_duration": "PT8H"
 }
 </pre><a href="#section-6-5" class="pilcrow">¶</a>
 </div>
@@ -1864,7 +1883,7 @@ measured so that PDPs accumulate consistently.<a href="#section-7-2.4.3" class="
       </ul>
 <p id="section-7-3">A per-entry <code>constraints</code> value that expresses a cumulative consumption
 bound is metered the same way. When an applicable entry or the
-Mission's <code>controls</code> carries such a bound, the PDP <span class="bcp14">MUST</span> meter use
+Mission Intent itself carries such a bound, the PDP <span class="bcp14">MUST</span> meter use
 against it. The PDP <span class="bcp14">MUST</span> refuse a consequential action that would
 exceed it. The runtime profile's fail-closed rule stands beneath all
 of this: an unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause
@@ -1991,8 +2010,9 @@ Statement.<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
 enforceable structure: an Approver can approve a Mission that may
 read a sensitive store or communicate externally, but never both.
 The groups are consented at the approval event, committed by
-<code>intent_hash</code> with the other <code>controls</code> members, and rendered in the
-consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies unchanged).<a href="#section-8-5" class="pilcrow">¶</a></p>
+<code>intent_hash</code> with the other Mission Intent members this document
+defines, and rendered in the consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies
+unchanged).<a href="#section-8-5" class="pilcrow">¶</a></p>
 <p id="section-8-6">In the AuthZEN binding, a refusal under a latched group is denied
 with <code>exclusivity_latched</code>, an extension of the runtime denial set
 under the AuthZEN profile's coordinated-extension conventions
@@ -2072,9 +2092,9 @@ carry it where the committed quantity is conveyed by <code>consumed</code>
             <dt id="section-10-2.2.2.1">
 <code>bound</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-10-2.2.2.2">
-              <p id="section-10-2.2.2.2.1"><span class="bcp14">REQUIRED</span>. A string. The metered bound: a <code>controls</code> member name
-(<a href="#bounds" class="auto internal xref">Section 6</a>) or the applicable per-entry constraint name
-(<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-10-2.2.2.2.1" class="pilcrow">¶</a></p>
+              <p id="section-10-2.2.2.2.1"><span class="bcp14">REQUIRED</span>. A string. The metered bound: a Mission Intent member
+name this document defines (<a href="#bounds" class="auto internal xref">Section 6</a>) or the applicable
+per-entry constraint name (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-10-2.2.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-10-2.2.2.3">
@@ -2556,17 +2576,23 @@ the humans adjudicating it.<a href="#section-14-2" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document has no IANA actions. <code>max_budget</code>, <code>max_calls</code>,
-<code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> are Mission
-Intent <code>controls</code>
-members defined by this
-profile under the issuance profile's controls extension seam;
-<code>context.prior_evaluation_id</code> is AuthZEN extension data carried per
-the AuthZEN profile's conventions
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); <code>measured_duration</code> and
+<p id="section-15-1">This document registers the following in the issuance profile's
+"Mission Intent Members" registry: <code>max_budget</code>, <code>max_calls</code>,
+<code>max_duration</code>, and <code>max_egress_volume</code> as <code>stable</code>, and <code>exclusive</code>
+as <code>experimental</code> (not promoted; a 2026-08 assessment against this
+document's own promotion criteria, <a href="#promotion-criteria" class="auto internal xref">Section 2.1</a>, found every
+applicable gate unmet). Each is a named top-level Mission Intent
+member this profile defines, produces, and enforces in full under the
+issuance profile's Mission-Intent extension seam
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the registration records
+ownership only. <code>context.prior_evaluation_id</code> is AuthZEN extension
+data carried per the AuthZEN profile's conventions
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), needing no separate
+registration; <code>measured_duration</code> and
 <code>metering</code> are coordinated evidence members under the runtime
 evidence companion's extension conventions
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-15-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), likewise outside
+this registry.<a href="#section-15-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2658,13 +2684,30 @@ evidence companion's extension conventions
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">One informative cross-reference in Settlement by Evidence State
+          <p id="appendix-A-2.1.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+<code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
+<code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
+the issuance profile retires the <code>controls</code> bucket entirely
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this is a wire-shape
+change to that surface, so the wire-surface-stability window
+(<a href="#promotion-criteria" class="auto internal xref">Section 2.1</a>) restarts at this revision. The earlier plan
+to adopt <code>exclusive</code> into the issuance profile's core <code>controls</code>
+vocabulary is retired along with that vocabulary; <code>exclusive</code> stays
+an ordinary member of this document. A 2026-08 promotion assessment
+of <code>exclusive</code> against <a href="#promotion-criteria" class="auto internal xref">Section 2.1</a> found every applicable
+gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
+now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
+<code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
+to the issuance profile.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 11.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

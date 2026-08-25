@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 February 2027</td>
+<td class="center">Expires 26 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-substrate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-24" class="published">24 August 2026</time>
+<time datetime="2026-08-25" class="published">25 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1148,7 +1148,7 @@ authority hashes.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1322,17 +1322,15 @@ authority hashes.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
             <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-mission-bound-authorization" class="internal xref">Mission-Bound Authorization Family Use</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#appendix-B.1" class="auto internal xref">B.1</a>.  <a href="#name-oauth-binding-mapping-asses" class="internal xref">OAuth Binding Mapping Assessment</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
-            <p id="section-toc.1-1.16.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.16.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-E" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1980,14 +1978,48 @@ binding that proves the old and new values commit to the same
 object, producer behavior during the transition, verifier selection
 and downgrade behavior when recognition sets differ, and the
 transition procedure itself.<a href="#section-5-6" class="pilcrow">¶</a></p>
-<p id="section-5-7">The OAuth binding's Integrity Anchor Test Vectors
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) give a byte-level worked
-example of the envelope-anchor species alone (<code>intent_hash</code>,
-<code>proposal_hash</code>, <code>authority_hash</code>); an implementation can check its
-own computation against them. The canonical-object and raw-octet
-species above, the parse-time duplicate-detection rule, the I-JSON
-numeric domain, and the reject-unknown-prefix and no-downgrade
-agility rules remain prose-only: no vector pins them.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-7">This document gives its own byte-level worked example of the
+envelope-anchor species, independent of any binding's field names.
+Given the closed JSON object<a href="#section-5-7" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5-8">
+<pre>
+{
+  "typ": "mission-substrate-context",
+  "iss": "urn:example:controller:1",
+  "value": {
+    "purpose": "Reconcile Q3 invoices",
+    "boundary": ["read:urn:example:resource:erp"]
+  }
+}
+</pre><a href="#section-5-8" class="pilcrow">¶</a>
+</div>
+<p id="section-5-9">canonicalized under JCS, the exact canonical bytes are (shown here
+wrapped only for layout; remove the layout line breaks, adding no
+characters, to recover the single-line canonical form):<a href="#section-5-9" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-5-10">
+<pre>
+{"iss":"urn:example:controller:1","typ":"mission-substrate-context",
+"value":{"boundary":["read:urn:example:resource:erp"],"purpose":"Rec
+oncile Q3 invoices"}}
+</pre><a href="#section-5-10" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="section-5-11">
+<pre>
+sha-256:R5C5cMDxLzhle5Xac-V9qCKN4q8wSVAvbgiv3PYEzzI
+</pre><a href="#section-5-11" class="pilcrow">¶</a>
+</div>
+<p id="section-5-12">An implementation can check its own canonicalization and hashing
+against this vector before applying the construction to a
+binding-specific object such as an Approved Context. A binding <span class="bcp14">MAY</span>
+publish additional worked examples over its own field names; the
+OAuth binding's Integrity Anchor Test Vectors
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) are one such example, giving
+a byte-level worked example of the envelope-anchor species over
+<code>intent_hash</code>, <code>proposal_hash</code>, and <code>authority_hash</code>. The
+canonical-object and raw-octet species above, the parse-time
+duplicate-detection rule, the I-JSON numeric domain, and the
+reject-unknown-prefix and no-downgrade agility rules remain
+prose-only: no vector pins them.<a href="#section-5-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capabilities">
@@ -2423,17 +2455,18 @@ scope in the Mission Substrate Statement are the conformance result.<a href="#se
         </h3>
 <p id="section-8.1-1">A specification that itself claims conformance to this document
 <span class="bcp14">MUST</span> contain a section titled "Mission Substrate Statement".  For a
-specification that makes no such claim, this document <span class="bcp14">MAY</span> instead
-publish a <strong>Mapping Assessment</strong>: this document's own normative
-assessment of how that specification realizes the kernel and
-capabilities, in the Statement's form (<a href="#family" class="auto internal xref">Appendix B</a> carries one for
-the OAuth binding).  A Mapping Assessment is not the described
-specification's conformance result, and no such result exists
-unless a specification claims conformance itself; the assessment
-binds this document's readers (family documents use it as the
-mapping), and the described specification neither claims nor takes
-any requirement from it.  Either form <span class="bcp14">MUST</span> identify the
-specification version and mode to which it applies.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+specification that makes no such claim, another document <span class="bcp14">MAY</span> instead
+publish a <strong>Mapping Assessment</strong> of it: that other document's own
+assessment of how the unclaiming specification realizes the kernel
+and capabilities, in the Statement's form (for example, the OAuth
+binding publishes one of itself; <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "OAuth Binding Mapping Assessment").  A Mapping Assessment is
+not the assessed specification's conformance result, and no such
+result exists unless the specification claims conformance itself;
+the assessment binds only the document that publishes it, and the
+assessed specification neither claims nor takes any requirement from
+it.  Either form <span class="bcp14">MUST</span> identify the specification version and mode to
+which it applies.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">For the kernel, the Statement <span class="bcp14">MUST</span> provide a checkable mapping for:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8.1-3">
 <li id="section-8.1-3.1">
@@ -2746,10 +2779,6 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
 <a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -2823,6 +2852,10 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for UMA 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
@@ -2838,17 +2871,18 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-binding-mapping-guidance" class="section-name selfRef">Binding Mapping Guidance</a>
       </h2>
 <p id="appendix-A-1">This appendix is informative.  Four bindings publish their own
-normative Mission Substrate Statements, and this document publishes
-its Mapping Assessment of the OAuth binding
-(<a href="#oauth-statement" class="auto internal xref">Appendix B.1</a>): the standalone MAS
+normative Mission Substrate Statements: the standalone MAS
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), AAuth
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), UMA
 (<span>[<a href="#I-D.draft-mcguinness-mission-uma" class="cite xref">I-D.draft-mcguinness-mission-uma</a>]</span>), and GNAP
 (<span>[<a href="#I-D.draft-mcguinness-mission-gnap" class="cite xref">I-D.draft-mcguinness-mission-gnap</a>]</span>) bindings each publish their
-own.  Those Statements, not this appendix, are the authoritative
-capability claims.  This appendix illustrates the mapping method
-through three design poles among which a new substrate can locate
-itself.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+own.  The OAuth binding instead publishes its own Mapping Assessment
+of itself against this document's kernel and capabilities
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "OAuth Binding
+Mapping Assessment").  Those Statements and that Assessment, not this
+appendix, are the authoritative capability claims.  This appendix
+illustrates the mapping method through three design poles among
+which a new substrate can locate itself.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <div id="oauth-native-mapping-the-broad-claims-pole">
 <section id="appendix-A.1">
         <h3 id="name-oauth-native-mapping-the-br">
@@ -2923,10 +2957,11 @@ kernel requirements.<a href="#appendix-A.3-3" class="pilcrow">¶</a></p>
       <h2 id="name-mission-bound-authorization">
 <a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-mission-bound-authorization" class="section-name selfRef">Mission-Bound Authorization Family Use</a>
       </h2>
-<p id="appendix-B-1">This appendix is normative for documents of the Mission-Bound
-Authorization family and informative for every other adopter.  An
-adopter outside the family does not need it.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
-<p id="appendix-B-2">The family's earlier documents, including the published OAuth binding
+<p id="appendix-B-1">This appendix is informative.  It maps this document's kernel and
+capability vocabulary to the terms the Mission-Bound Authorization
+family's earlier documents use; an adopter outside the family does
+not need it.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">The family's earlier documents, including the OAuth binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), use the vocabulary this
 contract was generalized from.  The terms correspond as follows:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <span id="name-family-vocabulary-mapping"></span><table class="center" id="table-4">
@@ -2971,8 +3006,8 @@ contract was generalized from.  The terms correspond as follows:<a href="#append
           </tr>
         </tbody>
       </table>
-<p id="appendix-B-4">A family document that maps its own vocabulary to the kernel's <span class="bcp14">MUST</span>
-use these correspondences.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
+<p id="appendix-B-4">A family document that maps its own vocabulary to the kernel's uses
+these correspondences.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
 <p id="appendix-B-5">The authority-role map (<a href="#authority-roles" class="auto internal xref">Section 4.2</a>) aligns with the OAuth binding's
 Authority Sources: the <code>authority_source</code> record member and its three
 sources (user-delegated, service-owned, organizational) are the OAuth
@@ -2981,268 +3016,52 @@ source ceiling is that role's assertion staying within the named
 source's authority.<a href="#appendix-B-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-6">Precedence is scoped, not global.  For the OAuth-native binding, the
 OAuth binding's definitions govern that mapping; this document governs
-the kernel and capability vocabulary.  The dependency is one-way and
-creates no cycle: this appendix takes a normative reference to the
-OAuth binding, the specification its Mapping Assessment is asserted
-against, while the OAuth binding takes no normative dependency on
-this document (its pointer back is informative, and the family
-manifest's typed edges record it as such).<a href="#appendix-B-6" class="pilcrow">¶</a></p>
+the kernel and capability vocabulary.  Neither document takes a
+normative dependency on the other: this appendix is informative, and
+the OAuth binding publishes its own Mapping Assessment of itself
+against this document's kernel in its own text
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "OAuth Binding
+Mapping Assessment"), informatively citing this document in turn; the
+family manifest's typed edges record both directions as informative.<a href="#appendix-B-6" class="pilcrow">¶</a></p>
 <p id="appendix-B-7">Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
-<span class="bcp14">MUST</span> land in this document, and the owning family section becomes a
+lands in this document, and the owning family section becomes a
 reference to it; no change is ever made solely to move words.<a href="#appendix-B-7" class="pilcrow">¶</a></p>
-<div id="oauth-statement">
-<section id="appendix-B.1">
-        <h3 id="name-oauth-binding-mapping-asses">
-<a href="#appendix-B.1" class="section-number selfRef">B.1. </a><a href="#name-oauth-binding-mapping-asses" class="section-name selfRef">OAuth Binding Mapping Assessment</a>
-        </h3>
-<p id="appendix-B.1-1">This section is this document's Mapping Assessment of the OAuth
-Mission binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), published
-under <a href="#statement" class="auto internal xref">Section 8.1</a>.  The assessment is normative as this
-document's own content: this document asserts, and maintains
-against the OAuth binding's text, the kernel mapping and capability
-claims below.  It is not the OAuth binding's conformance result:
-the OAuth binding makes no substrate-conformance claim and takes no
-requirement from this document; its pointer to this section is
-informative on its side, and the two documents' no-mutual-dependency
-rule stands.
-It applies to the OAuth binding edition published from the same
-repository revision as this document (the two editions revise and
-publish in lockstep, so the assessed revision is exact; for a copy
-obtained independently of the repository, the family's conformance
-manifest publishes the assessed binding's content digest in its
-<code>source.specs</code> entry, identifying the exact assessed bytes), in the
-binding's base single-domain mode with the <span class="bcp14">OPTIONAL</span> capabilities as
-the activation conditions below state, and to the kernel and
-capability vocabulary of this document.  The OAuth binding's own definitions
-govern every mapped construct; this assessment claims no property the
-OAuth binding does not define.<a href="#appendix-B.1-1" class="pilcrow">¶</a></p>
-<p id="appendix-B.1-2">For the kernel:<a href="#appendix-B.1-2" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="appendix-B.1-3">
-<li id="appendix-B.1-3.1">
-            <p id="appendix-B.1-3.1.1">The Mission Reference is <code>mission_id</code>: high-entropy, unambiguous
-within the issuer namespace, compared by exact string equality
-together with <code>mission.issuer</code>, never reassigned, retained for the
-audit horizon, and disclosed beyond the issuer only on the
-binding's authorized surfaces.<a href="#appendix-B.1-3.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.2">
-            <p id="appendix-B.1-3.2.1">The Controller is the Mission Issuer (the Authorization Server),
-established through <code>mission.issuer</code> and the deployment's issuer
-trust (AS metadata and published keys).<a href="#appendix-B.1-3.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.3">
-            <p id="appendix-B.1-3.3.1">The Actor handle is the authenticated OAuth client at approval;
-the external Subject is fixed by the OAuth binding's injective mapping;
-delegates ride the <code>act</code> chain; child and successor lineage is
-recorded through the parent and predecessor members; actor-type
-classification uses <code>sub_profile</code> and instance assertions where
-deployed.<a href="#appendix-B.1-3.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.4">
-            <p id="appendix-B.1-3.4.1">The Approved Context is the Mission Intent recorded verbatim, the
-recorded authority proposal where one was submitted, and the
-derived Authority Set; the immutable boundary is the record's
-immutable members; commitments are the typed integrity anchors
-(<code>intent_hash</code>, <code>proposal_hash</code>, <code>authority_hash</code>); a material
-change obtains a new approval through an expansion successor.<a href="#appendix-B.1-3.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.5">
-            <p id="appendix-B.1-3.5.1">The approval ceremony is the OAuth binding's approval event: authenticated
-Approver, the distinct-approver rule for write-bearing Missions,
-rendering of the derived Authority Set and the effective expiry,
-and atomic record commit, with deferred, interactive, and dispatch
-realizations.<a href="#appendix-B.1-3.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.6">
-            <p id="appendix-B.1-3.6.1">The active predicate is stored <code>state</code> equal to <code>active</code> with
-the decision time strictly before the record's effective
-<code>expires_at</code>, the issuer materializing the resulting <code>expired</code>
-transition lazily where it chooses; any other stored value,
-recognized or not, is non-active; transitions are authenticated
-lifecycle operations; a non-active Mission refuses issuance and
-derivation.<a href="#appendix-B.1-3.6.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.7">
-            <p id="appendix-B.1-3.7.1">The reliance bound is the record's effective <code>expires_at</code> (never
-later than the requested ceiling), which caps every derived
-credential's <code>exp</code>; the maximum residual after a Mission becomes
-non-active is the outstanding credential lifetime, bounded by the
-deployment's declared access-token TTL.<a href="#appendix-B.1-3.7.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.8">
-            <p id="appendix-B.1-3.8.1">The propagation and join surfaces are: the <code>mission</code> claim
-(artifact issuance under the Mission, authority derivation, and
-lifecycle-gated issuance); the <code>mission_id</code> and
-<code>mission_expires_at</code> response members (correlation only); the
-introspection projection (state as of the response, caller
-authorization and minimization applying); the Status surfaces
-(state as of a signed observation with explicit freshness); and
-the grant binding (the issuer's native association of Mission,
-Subject, client, and credential).<a href="#appendix-B.1-3.8.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="appendix-B.1-3.9">
-            <p id="appendix-B.1-3.9.1">The governance record is the Mission Record with its approval
-evidence and lifecycle history, retained for the audit horizon,
-with integrity resting on record custody and the typed anchors.<a href="#appendix-B.1-3.9.1" class="pilcrow">¶</a></p>
-</li>
-        </ol>
-<p id="appendix-B.1-4">The capability table:<a href="#appendix-B.1-4" class="pilcrow">¶</a></p>
-<span id="name-oauth-mission-binding-capab"></span><table class="center" id="table-5">
-          <caption>
-<a href="#table-5" class="selfRef">Table 5</a>:
-<a href="#name-oauth-mission-binding-capab" class="selfRef">OAuth Mission binding capability table</a>
-          </caption>
-<thead>
-            <tr>
-              <th class="text-left" rowspan="1" colspan="1">Capability</th>
-              <th class="text-left" rowspan="1" colspan="1">Claim</th>
-              <th class="text-left" rowspan="1" colspan="1">Activation</th>
-              <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
-              <th class="text-left" rowspan="1" colspan="1">Limitations</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">always</td>
-              <td class="text-left" rowspan="1" colspan="1">State-gated issuance and every derivation gate</td>
-              <td class="text-left" rowspan="1" colspan="1">Outstanding credentials run to their own <code>exp</code>; the residual is bounded, not zero</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">Status, introspection, or Signals companion active</td>
-              <td class="text-left" rowspan="1" colspan="1">Those surfaces</td>
-              <td class="text-left" rowspan="1" colspan="1">Staleness bounded by each surface's declared freshness</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">always</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>authorization_details</code> of AS-supported types, each type's own specification defining semantics (for <code>mission_resource_access</code>, the Mission Resource Access Profile's Common Constraints)</td>
-              <td class="text-left" rowspan="1" colspan="1">Semantics exist per supported type, not universally</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">always</td>
-              <td class="text-left" rowspan="1" colspan="1">The subset rule over covered types at every derivation, delegation, and attenuation point</td>
-              <td class="text-left" rowspan="1" colspan="1">Covered transitions are <code>attenuate</code>; a cross-vocabulary transition is <code>decide_anew</code>, never silent attenuation</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">always</td>
-              <td class="text-left" rowspan="1" colspan="1">The <code>mission</code> claim on issued tokens</td>
-              <td class="text-left" rowspan="1" colspan="1">Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">the Delegation role active (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)</td>
-              <td class="text-left" rowspan="1" colspan="1">The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound <code>subject_token</code> with the delegate identity independently established by the <code>actor_token</code> or the delegate's own client authentication, binding both to the newly issued credential</td>
-              <td class="text-left" rowspan="1" colspan="1">The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">Mandate, signed Status, or audit companion active</td>
-              <td class="text-left" rowspan="1" colspan="1">Anchor recomputation and signed artifacts per those profiles</td>
-              <td class="text-left" rowspan="1" colspan="1">Signature verification never establishes current state</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">Evidence, Mandate, or audit companion active</td>
-              <td class="text-left" rowspan="1" colspan="1">Per those profiles</td>
-              <td class="text-left" rowspan="1" colspan="1">The governance record is otherwise issuer-local</td>
-            </tr>
-          </tbody>
-        </table>
-<p id="appendix-B.1-6">Temporal elements: every issued credential's <code>exp</code> is capped by the
-record's effective <code>expires_at</code>; state observations carry their
-surface's declared freshness; the residual after non-active is the
-outstanding credential lifetime under the deployment's declared TTL.
-Failure behavior: an unknown lifecycle state is non-active; an
-unresolvable reference, a failed anchor verification, and an unknown
-<code>authorization_details</code> type fail closed; where a row's activation
-condition does not hold, the property is not supplied and a consumer
-<span class="bcp14">MUST NOT</span> rely on it.<a href="#appendix-B.1-6" class="pilcrow">¶</a></p>
-<p id="appendix-B.1-7">The OAuth binding's three <span class="bcp14">OPTIONAL</span> implementation roles, which its
-Conformance section names <span class="bcp14">OPTIONAL</span> capabilities
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), are surfaces an
-implementation may or may not offer, each independent of the others. The capability table above states scoped guarantee
-claims: properties the OAuth binding supplies and the conditions
-under which each is supplied. The two vocabularies answer different
-questions and are not equivalent; the entries below relate them
-without collapsing one into the other. Declaring an <span class="bcp14">OPTIONAL</span> role
-never creates a claim beyond the eight already stated above.<a href="#appendix-B.1-7" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="appendix-B.1-8">
-          <dt id="appendix-B.1-8.1">Introspection:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-B.1-8.2">
-            <p id="appendix-B.1-8.2.1">Exercises State-Observable.  One of State-Observable's three named
-activation surfaces, alongside Status and Signals; declaring it
-activates that otherwise-conditional claim.<a href="#appendix-B.1-8.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="appendix-B.1-8.3">Delegation:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-B.1-8.4">
-            <p id="appendix-B.1-8.4.1">Exercises Lifecycle-Gated Authorization, Structured Authority,
-Monotonic Derivation, Credential-Bound, and Authorized Context
-Correlation.  The OAuth binding's delegation subset-checks
-<code>authorization_details</code>, carries the <code>mission</code> claim unchanged,
-sender-constrains the delegated credential to the delegate's own
-key, and refuses issuance unless the Mission is active.  The Token
-Exchange that issues the delegated credential associates, at
-issuance, the Mission and Subject carried by the Mission-bound
-<code>subject_token</code> with the delegate identity established by the
-<code>actor_token</code> or the delegate's own client authentication, binding
-all three to the newly issued credential without itself
-establishing a new grant binding: an access-token-only delegated
-exchange is a derived token under the subject_token's existing
-binding, not a second binding of its own
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the
-Mission to the Grant").  Four
-of the five claims are supplied always, and Delegation exercises
-them rather than creating them; Authorized Context Correlation is
-the exception, activated by this role, whose Token Exchange join
-is its supplier.  The <code>act</code> chain itself supplies none of them: it
-is attribution, never authority.<a href="#appendix-B.1-8.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="appendix-B.1-8.5">Cross-Domain:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-B.1-8.6">
-            <p id="appendix-B.1-8.6.1">Exercises Lifecycle-Gated Authorization, Structured Authority,
-Monotonic Derivation, and Credential-Bound.  Carries these four
-always-supplied guarantees across the domain hop: the Mission
-reference and <code>authority_hash</code> intact, authority that only
-narrows, and projection gated on active state, while adding an
-interoperable projection surface the guarantees alone do not
-provide.  It does not become Portable Evidence by crossing a
-domain: that claim activates only when an Evidence, Mandate, or
-audit companion is active, and Cross-Domain is not among them.<a href="#appendix-B.1-8.6.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
 </section>
 </div>
+<div id="document-history">
+<section id="appendix-C">
+      <h2 id="name-document-history">
+<a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-C-2.1">
+          <p id="appendix-C-2.1.1">Removed the normative dependency on the OAuth binding (#708): the
+OAuth Binding Mapping Assessment moved to the OAuth binding's own
+text, which now publishes it about itself; the Family Use appendix
+is now informative throughout, with no assessment of its own; the
+front matter's reference to the OAuth binding moved from normative
+to informative; and this document's Default Commitment Construction
+section gained its own neutral, binding-independent worked example
+so the construction no longer leans on the OAuth binding's vectors.
+No kernel or capability requirement changed.<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-C-1">This document refines the substrate interface first consolidated
+<p id="appendix-D-1">This document refines the substrate interface first consolidated
 informationally by the architecture document.  The author thanks the
-Mission-Bound Authorization implementer community for feedback.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+Mission-Bound Authorization implementer community for feedback.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-D">
+<section id="appendix-E">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

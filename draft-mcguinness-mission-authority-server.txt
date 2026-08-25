@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          24 August 2026
-Expires: 25 February 2027
+Intended status: Standards Track                          25 August 2026
+Expires: 26 February 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 February 2027.
+   This Internet-Draft will expire on 26 February 2027.
 
 Copyright Notice
 
@@ -552,9 +552,11 @@ Table of Contents
 
    *  A well-formed Intent from which the MAS cannot derive a valid
       Authority Set under policy MUST be refused with invalid_authority
-      (the MAS equivalent of invalid_authorization_details), so a client
-      can distinguish a syntax error from an authority-derivation
-      failure.
+      (the MAS's single equivalent of the issuance profile's two
+      derivation-failure outcomes, invalid_authorization_details for a
+      submitted proposal and access_denied for configured-mapping mode,
+      [I-D.draft-mcguinness-oauth-mission]), so a client can distinguish
+      a syntax error from an authority-derivation failure.
 
    *  An Intent Submission Evidence entry of an unsupported type, an
       entry that fails its type's verification, or a policy-required
@@ -579,15 +581,15 @@ Table of Contents
    issuance profile's Mission record defines them.
 
    A MAS has no derivation event: no token is issued under the Mission,
-   so controls.max_derivations binds nothing here (a MAS implementing
-   the issuance-grant companion has one, each grant minted, and applies
-   that profile's counting rule,
+   so a requested requested_derivation_limit binds nothing here (a MAS
+   implementing the issuance-grant companion has one, each grant minted,
+   and applies that profile's counting rule,
    [I-D.draft-mcguinness-oauth-mission-issuance-grant]).  A MAS SHOULD
    refuse an Intent that carries it, or record it and ensure the
    approval rendering marks it non-binding, per the issuance profile's
    rule that consent is not given to a limit that binds nowhere.  The
-   same treatment applies to any future control scoped to an issuance
-   event.
+   same treatment applies to any future Mission Intent member scoped to
+   an issuance event.
 
    On acceptance the MAS derives the Authority Set from the Intent, and
    from the authority proposal where one was submitted, under the
@@ -616,7 +618,7 @@ Table of Contents
    {
      "intent": {
        "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-       "resources": ["https://erp.example.com"],
+       "target_resources": ["https://erp.example.com"],
        "expires_at": "2026-12-31T23:59:59Z"
      }
    }
@@ -677,7 +679,7 @@ Table of Contents
 
    error_reason:  OPTIONAL.  A string.  A machine-readable refinement of
       error: for invalid_mission_intent, the name of the offending top-
-      level member; for invalid_authority, the resources entry no
+      level member; for invalid_authority, the target_resources entry no
       authority could be derived for.  It reflects the client's own
       input and MUST NOT disclose policy internals.
 
@@ -738,10 +740,14 @@ Table of Contents
    profile's approval event unchanged
    ([I-D.draft-mcguinness-oauth-mission]):
 
-   1.  Authenticate the Approver; when the Intent's controls.acr is
-       present, the authentication MUST be one the deployment's policy
-       maps as satisfying the named class (the issuance profile's acr
-       mapping rule).
+   1.  Authenticate the Approver; this authentication MUST satisfy the
+       deployment's published approval-authentication floor
+       ([I-D.draft-mcguinness-oauth-mission]).  This document defines no
+       MAS-native carriage for a client-requested Approver
+       authentication strength (the OAuth binding's direct flow carries
+       one on acr_values/max_age, an OAuth authorization-request
+       parameter shape a MAS, having no such request, does not share),
+       so the floor alone governs here.
 
    2.  Establish the Subject under the issuance profile's rules: the MAS
        MUST itself establish the Subject's (iss, sub) and MUST NOT take
@@ -1084,7 +1090,7 @@ Table of Contents
    {
      "intent": {
        "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
-       "resources": ["https://erp.example.com"],
+       "target_resources": ["https://erp.example.com"],
        "expires_at": "2026-12-31T23:59:59Z"
      },
      "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -2858,7 +2864,7 @@ A.1.  Submit
    {
      "intent": {
        "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-       "resources": ["https://erp.example.com"],
+       "target_resources": ["https://erp.example.com"],
        "expires_at": "2026-12-31T23:59:59Z"
      }
    }

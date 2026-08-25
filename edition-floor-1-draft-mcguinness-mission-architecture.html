@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 February 2027</td>
+<td class="center">Expires 26 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-24" class="published">24 August 2026</time>
+<time datetime="2026-08-25" class="published">25 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-25">25 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1415,15 +1415,25 @@ companions layer approval, lifecycle, enforcement, runtime,
 delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
 and several bindings; this document is the single structural view.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">The bindings are peers of one another. OAuth is the family's
-first-authored binding, and OAuth 2.0 is the substrate with the most
-deployed infrastructure; that is a deployment fact, not a maturity
-ranking, and no production Mission deployment is known today on any
-binding. Adopting Missions on OAuth requires the changes the OAuth
-binding defines. Peer standing implies neither identical
-capabilities nor identical adoption cost: AAuth, natively
-contextual, adds no new wire members, and each binding's Mission
-Substrate Statement declares what it supplies.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-4">Peer standing among the bindings is a deployment-topology claim, not
+a data-model-independence claim: each attaches to its own protocol as
+an equally adoptable unit, and OAuth is the family's first-authored
+binding with the most deployed infrastructure, a deployment fact and
+not a maturity ranking (no production Mission deployment is known
+today on any binding). Adopting Missions on OAuth requires the
+changes the OAuth binding defines. The two axes diverge for the
+standalone binding: the Mission Authority Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) is a normative
+standalone-controller protocol binding over the OAuth Mission data
+model: a peer deployment topology, but not an independent substrate
+model, since it normatively imports the OAuth Mission record and
+issuance profile. AAuth demonstrates model independence:
+it maps the shared kernel onto its own protocol's native Mission
+Context without importing the OAuth Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). Peer standing implies
+neither identical capabilities nor identical adoption cost: AAuth,
+natively contextual, adds no new wire members, and each binding's
+Mission Substrate Statement declares what it supplies.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Read as one system, the family defines a <strong>delegated-authority
 layer</strong> with OAuth 2.0, the standalone Mission Authority Server, and
 (as an experimental sketch) UMA 2.0 as authority-bearing bindings.
@@ -1633,9 +1643,11 @@ risk warrants (<a href="#assurance-levels" class="auto internal xref">Section 13
 organize the levers by the question each answers.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 <p id="section-4.1-6">What approval commits is broader than the structured Authority Set
 alone: it also commits the rendered intent context (<code>goal</code>,
-<code>constraints</code>, and, where it differs, the requested ceiling), the
-effective <code>expires_at</code>, and the rendered <code>controls</code> bounds
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Concrete request values,
+<code>task_bounds</code>, and, where it differs, the requested ceiling), the
+effective <code>expires_at</code>, and the rendered <code>derivation_limit</code> and any
+metering bound
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). Concrete request values,
 current consumption, and action sequencing are decision-time facts,
 evaluated later by runtime policy, metering, or action-bound
 (transaction) approval; core does not require them to be re-rendered
@@ -2831,8 +2843,11 @@ configuration. Owned by the deployment's change governance; a
 change to any of these is a new Agent Deployment, and which
 changes require re-approving standing Missions is policy that
 governance records.<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2.4.2">A Mission may be pinned to a named Agent Deployment where the
-deployment defines that control. This object is distinct from the
+<p id="section-9.2-2.4.2">A Mission may be pinned to a named Agent Deployment where a
+companion Agent Deployment Binding profile realizes that pin
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> names the profile and
+its required properties but defines none of its wire mechanics
+itself). This object is distinct from the
 Mission Deployment Profile (<a href="#deployment-profile" class="auto internal xref">Section 14</a>), which is the
 estate's published claims manifest, not a property of an agent.<a href="#section-9.2-2.4.2" class="pilcrow">¶</a></p>
 </dd>
@@ -2900,12 +2915,16 @@ the evidence layer joins what was approved, decided, and done.<a href="#section-
 <a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-swarm-execution-multiplicat" class="section-name selfRef">Swarm Execution: Multiplication, Not Delegation</a>
         </h3>
 <p id="section-9.3-1">One composition of the three objects recurs often enough to name. A
-Mission pinned to an Agent Deployment through the OAuth binding's
-<code>controls.agent_deployment</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
-executed concurrently by N attested instances of that Deployment, is
+Mission pinned to an Agent Deployment class or version, executed
+concurrently by N attested instances of that Deployment, is
 multiplication, not delegation: no <code>act</code> hop, no Child Mission, no
 attenuation chain, because authority never moves between principals.
-Late binding is attestation: an instance joins the work by
+This pin is a named architectural pattern, not a wire member the
+OAuth binding currently defines: that document reserves no Intent
+member for it and points forward to a dedicated Agent Deployment
+Binding profile that a deployment wanting this pin implements
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Late binding is
+attestation: an instance joins the work by
 authenticating as the pinned Deployment under the instance profiles
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), not by receiving
@@ -2915,9 +2934,13 @@ Deployment projected as <code>client_id</code>, is an authorization subject,
 never an attribution subject, and attribution stays per-instance
 through the instance substrate, which forbids a sender-constraint
 key shared across a client's instances. The OAuth binding's
-<code>controls.max_derivations</code> is the explicit fan-out ceiling, and
-consumption bounds attach at Mission grain, so a swarm shares one
-budget (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<code>derivation_limit</code> is not a fan-out or concurrency ceiling: it counts
+issuance events, not instances, and a single instance refreshing
+repeatedly consumes it exactly as one selector among N instances
+deriving once each would. What actually bounds a swarm's aggregate
+consumption is the metering profile's Mission-grain budget: consumption
+bounds attach to the Mission, not to any one instance, so a swarm of
+instances shares one budget (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 <p id="section-9.3-2">The decision ladder:<a href="#section-9.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.3-3.1">
@@ -3070,8 +3093,23 @@ of the OAuth binding.<a href="#section-10.2-2.3.1" class="pilcrow">¶</a></p>
         </ul>
 <p id="section-10.2-3">Only the third earns the term: a <code>mission</code> claim alone is a reference,
 not Mission-bound authorization. The family reserves "Mission-bound"
-for that class, and a binding earns it through the capability claims
-of its Mission Substrate Statement, not by protocol lineage.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+for that class, and <a href="#binding-properties" class="auto internal xref">Section 13.3</a>'s <code>credential-mission-bound</code>
+equivalence is the definition. A binding that claims substrate
+conformance evidences the definition through the capability claims of
+its own Mission Substrate Statement, not by protocol lineage. The
+OAuth binding claims no substrate conformance and publishes no
+Statement: it is instead assessed through its own informative Mapping
+Assessment (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and it
+normatively discharges the definition on its own terms, through its
+Conformance gates alone, independent of the substrate contract.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">The definition itself is the Mission Binding Properties vector's
+<code>credential-mission-bound</code> property (<a href="#binding-properties" class="auto internal xref">Section 13.3</a>), whose
+six conditions state in full the active-state, subset, and
+derivation-link requirement summarized above and map each condition
+to the Mission Substrate Statement capability, or OAuth binding
+surface, that discharges it. No single capability claim evidences the
+property alone; a binding earns it only where every condition is met
+together.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-mission-bound-credential">
@@ -4421,14 +4459,22 @@ stronger path's claim from the deployment's name. Where policy
 requires a property on a path, its absence denies; nothing falls
 back silently to a weaker binding.<a href="#section-13.3-3" class="pilcrow">¶</a></p>
 <p id="section-13.3-4"><strong>Credential-mission-bound</strong> is defined by equivalence, not by one
-artifact. For the covered path the credential establishes all of:<a href="#section-13.3-4" class="pilcrow">¶</a></p>
+artifact, and is the family's authoritative definition of what earns
+the term "Mission-bound" (see also <a href="#token-classes" class="auto internal xref">Section 10.2</a>'s Mission-bound
+token class, which this equivalence backs). A binding that claims
+substrate conformance evidences the definition through its own
+Mission Substrate Statement; the OAuth binding, which claims no
+substrate conformance and publishes no Statement, discharges the
+definition directly through its own Conformance gates instead. For
+the covered path the credential establishes all of these conditions:<a href="#section-13.3-4" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-13.3-5">
 <li id="section-13.3-5.1">
             <p id="section-13.3-5.1.1">a trusted issuer authorized to issue for the Mission;<a href="#section-13.3-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-13.3-5.2">
-            <p id="section-13.3-5.2.1">the canonical (<code>mission.issuer</code>, <code>mission.id</code>) pair and the
-recorded <code>authority_hash</code>;<a href="#section-13.3-5.2.1" class="pilcrow">¶</a></p>
+            <p id="section-13.3-5.2.1">the canonical (<code>mission.issuer</code>, <code>mission.id</code>) pair identifying
+the Mission: the baseline Mission reference, and an identity
+condition only, never a token-carried Authority Set commitment;<a href="#section-13.3-5.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-13.3-5.3">
             <p id="section-13.3-5.3.1">an issued authority projection no broader than the Mission's
@@ -4442,16 +4488,42 @@ delegation context where applicable;<a href="#section-13.3-5.4.1" class="pilcrow
             <p id="section-13.3-5.5.1">bounded lifetime plus active-state issuance and refresh gates; and<a href="#section-13.3-5.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-13.3-5.6">
-            <p id="section-13.3-5.6.1">an auditable derivation link to the Mission authorization: an
-Issuance Grant <code>jti</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), a native
-issuance record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), a
+            <p id="section-13.3-5.6.1">an auditable derivation link from the credential to the Mission's
+recorded Authority Set: the OAuth binding's Mission Record
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), an Issuance Grant <code>jti</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), a
 cross-domain projection's provenance
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), or an
-equivalently specified artifact.<a href="#section-13.3-5.6.1" class="pilcrow">¶</a></p>
+equivalently specified artifact. A token-carried Authority Set
+commitment, where a binding supplies one, strengthens this
+condition's local verifiability; it is never itself the
+Mission-identity requirement of condition 2, and its absence does
+not fail this condition where the issuer-retained record is
+otherwise reachable.<a href="#section-13.3-5.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-13.3-6">Sender constraint is deliberately not among them: issuance-time key
+<p id="section-13.3-6">Each condition names what actually establishes it, so a Statement
+capability claim maps to a condition rather than to the property as a
+whole: condition 3 is the Substrate Statement's Monotonic Derivation
+capability, and condition 5's active-state gate is its
+Lifecycle-Gated Authorization capability. The Substrate's
+Credential-Bound capability can select correlation-only fact
+semantics (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>), which by
+itself evidences neither the derivation-link condition (6) nor the
+authority-projection condition (3); a Credential-Bound claim alone,
+whatever semantics it selects, never by itself evidences
+<code>credential-mission-bound</code>, since conditions 1 and 4 come from the
+deployment's issuer trust configuration and the credential's own
+subject, <code>client_id</code>, and actor claims, never from a Statement
+capability row. A binding earns the property only where its
+Statement's claims jointly cover every condition.<a href="#section-13.3-6" class="pilcrow">¶</a></p>
+<p id="section-13.3-7">For the OAuth binding, the approval event discharges condition 4,
+the subset rule discharges condition 3, the lifecycle gate discharges
+condition 5's active-state gate, the Mission Issuer role discharges
+condition 1, and the same approval event's Mission Record, retained
+for the audit horizon, discharges condition 6
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-13.3-7" class="pilcrow">¶</a></p>
+<p id="section-13.3-8">Sender constraint is deliberately not among them: issuance-time key
 targeting and presentation-time proof are <code>presenter-key-bound</code>, a
 separate property, so a path that needs possession requires the
 composition rather than reading it into the equivalence. That is
@@ -4461,62 +4533,62 @@ OPTIONAL, so native issuance, the Mission Issuance Grant, and a
 conforming cross-domain exchange satisfy this one property, and
 supply <code>presenter-key-bound</code> exactly where their confirmation
 binding is actually in force. A Mission Join Assertion fails
-properties 3, 5, and 6 by design, which is what separates
-correlation from issuance.<a href="#section-13.3-6" class="pilcrow">¶</a></p>
-<p id="section-13.3-7"><strong>Presenter-key-bound</strong> is possession and nothing more: the
+conditions 3, 5, and 6 by design, which is what separates
+correlation from issuance.<a href="#section-13.3-8" class="pilcrow">¶</a></p>
+<p id="section-13.3-9"><strong>Presenter-key-bound</strong> is possession and nothing more: the
 credential names a confirmation key at issuance, and the presenter
 proves possession at use, with DPoP or mutual TLS. It does not
-identify which concrete agent process or workload holds the key.<a href="#section-13.3-7" class="pilcrow">¶</a></p>
-<p id="section-13.3-8"><strong>Instance-bound</strong> requires all of: an authenticated instance
+identify which concrete agent process or workload holds the key.<a href="#section-13.3-9" class="pilcrow">¶</a></p>
+<p id="section-13.3-10"><strong>Instance-bound</strong> requires all of: an authenticated instance
 identifier; a verified binding from that identity to the
 confirmation key; current proof of possession; and no key sharing
 across instances. End-to-end sender constraint alone establishes
-<code>presenter-key-bound</code>, never this property.<a href="#section-13.3-8" class="pilcrow">¶</a></p>
-<p id="section-13.3-9"><strong>Action-bound</strong> requires an authenticated permit binding the
+<code>presenter-key-bound</code>, never this property.<a href="#section-13.3-10" class="pilcrow">¶</a></p>
+<p id="section-13.3-11"><strong>Action-bound</strong> requires an authenticated permit binding the
 Mission, the action and resource, and the normalized parameters or
 complete request projection, under the permit's validity and use
-controls, in one of two proof forms:<a href="#section-13.3-9" class="pilcrow">¶</a></p>
+controls, in one of two proof forms:<a href="#section-13.3-11" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13.3-10.1">
-            <p id="section-13.3-10.1.1"><strong>portable permit</strong>: an audience-restricted, presenter- or
+<li class="normal" id="section-13.3-12.1">
+            <p id="section-13.3-12.1.1"><strong>portable permit</strong>: an audience-restricted, presenter- or
 sender-bound artifact, verified where it is presented; the
 transaction token of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span>
-is the family's discharge; or<a href="#section-13.3-10.1.1" class="pilcrow">¶</a></p>
+is the family's discharge; or<a href="#section-13.3-12.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-10.2">
-            <p id="section-13.3-10.2.1"><strong>channel-bound permit</strong>: a permit bound to the mutually
+          <li class="normal" id="section-13.3-12.2">
+            <p id="section-13.3-12.2.1"><strong>channel-bound permit</strong>: a permit bound to the mutually
 authenticated requesting and executing parties and enforced on
 that same channel, with request cache-key equality, its validity
 window, and the applicable use controls; the runtime permit of the
 AuthZEN binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>)
-discharges it under exactly those conditions.<a href="#section-13.3-10.2.1" class="pilcrow">¶</a></p>
+discharges it under exactly those conditions.<a href="#section-13.3-12.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-13.3-11">A parameter binding alone makes a response neither form, and an
+<p id="section-13.3-13">A parameter binding alone makes a response neither form, and an
 evaluation identifier alone is a correlator, never the property: it
 qualifies only where dereferencing it through an authenticated,
 audience-bound, freshness- and use-controlled permit store yields
-one of the two forms above, complete.<a href="#section-13.3-11" class="pilcrow">¶</a></p>
-<p id="section-13.3-12">Deployments claim compositions, and a claimed composition requires
-every member property:<a href="#section-13.3-12" class="pilcrow">¶</a></p>
+one of the two forms above, complete.<a href="#section-13.3-13" class="pilcrow">¶</a></p>
+<p id="section-13.3-14">Deployments claim compositions, and a claimed composition requires
+every member property:<a href="#section-13.3-14" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13.3-13.1">
-            <p id="section-13.3-13.1.1"><strong>harness-attributed</strong>: <code>work-item-bound</code>, under the attacher and
+<li class="normal" id="section-13.3-15.1">
+            <p id="section-13.3-15.1.1"><strong>harness-attributed</strong>: <code>work-item-bound</code>, under the attacher and
 inheritance rules the harness states
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-13.3-13.1.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-13.3-15.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-13.2">
-            <p id="section-13.3-13.2.1"><strong>mission-credential-bound</strong>: <code>credential-mission-bound</code> plus
+          <li class="normal" id="section-13.3-15.2">
+            <p id="section-13.3-15.2.1"><strong>mission-credential-bound</strong>: <code>credential-mission-bound</code> plus
 <code>presenter-key-bound</code>, end to end; <code>instance-bound</code> strengthens
-the claim where an instance identity exists and is verified; and<a href="#section-13.3-13.2.1" class="pilcrow">¶</a></p>
+the claim where an instance identity exists and is verified; and<a href="#section-13.3-15.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-13.3">
-            <p id="section-13.3-13.3.1"><strong>runtime-action-bound</strong>: authoritative Mission establishment plus
-<code>action-bound</code>.<a href="#section-13.3-13.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-13.3-15.3">
+            <p id="section-13.3-15.3.1"><strong>runtime-action-bound</strong>: authoritative Mission establishment plus
+<code>action-bound</code>.<a href="#section-13.3-15.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-13.3-14">A work-item-attribution composition is deliberately absent.
+<p id="section-13.3-16">A work-item-attribution composition is deliberately absent.
 <code>work-item-bound</code> and <code>action-bound</code> holding together does not prove
 the permitted action came from that work item: concurrent items
 under one Mission still substitute. The composition becomes
@@ -4524,8 +4596,8 @@ definable only when a verified cross-link exists, the action permit
 or its authenticated request context binding the same
 tamper-resistant work-item identifier the harness recorded; no
 family carrier supplies that today, so a deployment claims the two
-properties separately and nothing more.<a href="#section-13.3-14" class="pilcrow">¶</a></p>
-<p id="section-13.3-15">The mechanism mapping is conservative: a propagated
+properties separately and nothing more.<a href="#section-13.3-16" class="pilcrow">¶</a></p>
+<p id="section-13.3-17">The mechanism mapping is conservative: a propagated
 Mission-Reference is selection only; a mapping join is
 <code>credential-correlated</code>, with its equivalence-class ambiguity; a
 Mission Join Assertion is a stronger, token- and key-specific
@@ -4537,8 +4609,8 @@ confirmation binding is in force end to end; an authenticated
 client-instance assertion with a verified key binding is what makes
 a path <code>instance-bound</code>; a verified transaction token is the
 portable <code>action-bound</code> form, and an AuthZEN runtime permit is the
-channel-bound form under that binding's conditions.<a href="#section-13.3-15" class="pilcrow">¶</a></p>
-<p id="section-13.3-16">The property names above are stable identifiers, and a claim is a
+channel-bound form under that binding's conditions.<a href="#section-13.3-17" class="pilcrow">¶</a></p>
+<p id="section-13.3-18">The property names above are stable identifiers, and a claim is a
 per-path declaration, not prose: each claimed property or
 composition names the covered issuer, resource, and action-class
 paths. The Enforcement Scope Statement carries the per-path
@@ -4549,12 +4621,12 @@ never itself a deployment claim. An unknown property identifier, an
 undeclared path, or an unstated property is not claimed, and a
 consumer treats it as not held; nothing downgrades silently.
 Schema-level claim identifiers and validation rules remain the
-Deployment Profile's own future work.<a href="#section-13.3-16" class="pilcrow">¶</a></p>
-<p id="section-13.3-17">Binding properties and the assurance claims above compose rather
+Deployment Profile's own future work.<a href="#section-13.3-18" class="pilcrow">¶</a></p>
+<p id="section-13.3-19">Binding properties and the assurance claims above compose rather
 than repeat: a binding property says whose Mission a path's work and
 credentials are bound to; an assurance claim says what the
 deployment's enforcement proves. Credential-level and action-level
-binding likewise compose rather than substitute.<a href="#section-13.3-17" class="pilcrow">¶</a></p>
+binding likewise compose rather than substitute.<a href="#section-13.3-19" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5118,7 +5190,8 @@ substrate-neutral by construction.<a href="#section-17-1" class="pilcrow">¶</a>
 <p id="section-17-2">Maturity is a dependency boundary. A Standards-Track profile never
 depends normatively on an experimental one: the experimental
 profiles extend the stable interface only through its declared
-seams, the <code>controls</code> extension of the OAuth binding and the
+seams, the Mission Intent extension seam of the OAuth binding (a
+named, companion-defined top-level member) and the
 coordinated-extension rules of the evidence objects, and a
 Standards-Track document cites them informatively at most. An
 experimental profile that stabilizes crosses the boundary by
@@ -5815,15 +5888,70 @@ minimization and retention duties applying there.<a href="#section-19-3" class="
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Non-goal reworded (#637): "a new authority format, or a new grant
+          <p id="appendix-A-2.1.1">Controls taxonomy retirement (#636): the swarm-execution discussion
+no longer claims <code>derivation_limit</code> (renamed from <code>max_derivations</code>)
+is a fan-out or concurrency ceiling; it counts issuance events, not
+instances, and one instance refreshing repeatedly exhausts it exactly
+as N instances deriving once each would. The Agent Deployment pin is
+now described as a named architectural pattern with no wire member
+the OAuth binding currently defines, pointing to a forward-referenced
+Agent Deployment Binding profile instead of the retired
+<code>controls.agent_deployment</code>. References to the OAuth binding's
+retired <code>controls</code> extension seam updated to the Mission Intent's
+own (open, named-member) extension seam.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">PR #717 review fix: precised the "Mission-bound" definition text
+(<a href="#token-classes" class="auto internal xref">Section 10.2</a> and <a href="#binding-properties" class="auto internal xref">Section 13.3</a>) so it no longer
+requires a Mission Substrate Statement of a binding that
+deliberately publishes none. A binding that claims substrate
+conformance evidences <code>credential-mission-bound</code> through its own
+Statement; the OAuth binding, which claims no substrate conformance
+and publishes no Statement, is instead assessed through its own
+informative Mapping Assessment and discharges the definition
+directly through its own Conformance gates. No normative content
+changed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Reworded the blanket "the bindings are peers of one another"
+sentence in the Introduction to name two independent axes, deployment
+topology and data-model independence, and to classify the Mission
+Authority Server as a normative standalone-controller protocol
+binding over the OAuth Mission data model: a peer deployment
+topology, but not an independent substrate model (#704).
+Cross-referenced the three
+previously uncross-referenced accounts of what earns "Mission-bound"
+(<a href="#token-classes" class="auto internal xref">Section 10.2</a> and <a href="#binding-properties" class="auto internal xref">Section 13.3</a>, and the OAuth
+binding's Conformance gates): <a href="#binding-properties" class="auto internal xref">Section 13.3</a>'s
+<code>credential-mission-bound</code> equivalence is now the stated definition,
+a binding's Mission Substrate Statement is how it evidences the
+properties, and the OAuth binding's gates are its discharge of the
+definition (#663). No normative content, anchor, or table row
+changed.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Cross-referenced the three previously separate accounts of what
+earns the "Mission-bound" term: <a href="#token-classes" class="auto internal xref">Section 10.2</a> now names the
+Mission Binding Properties vector's <code>credential-mission-bound</code>
+property (<a href="#binding-properties" class="auto internal xref">Section 13.3</a>) as the definition. Its six
+conditions are each mapped to the Statement capability or OAuth
+binding surface that discharges it, condition 2 (Mission identity)
+no longer names a token-carried <code>authority_hash</code>, aligning with
+the ruled minimal-claim direction of #702, and condition 6
+(the auditable derivation link) names the OAuth binding's retained
+Mission Record explicitly rather than asserting an unspecified
+discharge (#663).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Non-goal reworded (#637): "a new authority format, or a new grant
 protocol" narrowed to "a new grant protocol," naming the OAuth
 binding's Mission Resource Access Profile as the family's one
 cross-resource <code>authorization_details</code> type, since RFC 9396 leaves
 type semantics to the type and the family now defines one. Document
-Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Editorial density pass on this Informational document: the
 aggregate-ceiling and artifact-plane (non-transitive work-product)
 composition readings under <a href="#invariants" class="auto internal xref">Section 8</a> tightened to a summary
 sentence plus citation each, with their "not this summary, is the
@@ -5831,7 +5959,7 @@ normative text this passage tracks" deferral kept; several
 over-long paragraphs in <a href="#capability-envelope" class="auto internal xref">Section 4.1</a>, <a href="#validity-model" class="auto internal xref">Section 10.5</a>,
 <a href="#assurance-levels" class="auto internal xref">Section 13</a>, and <a href="#containment" class="auto internal xref">Section 15.1</a> split for one idea per
 paragraph and front-loaded openers. No normative content, anchor,
-or table row changed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+or table row changed.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
