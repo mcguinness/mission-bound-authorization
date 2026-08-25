@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-25T15:44:15Z
-Source repository commit: 8623171e8c9df94bb4121911a71acf9220d3040e
+Generated: 2026-08-25T20:13:18Z
+Source repository commit: 41f66a4a016a2e531a55e67c0db6a7f673f331f8
 Member count: 7
 
 Reading order:
@@ -4616,9 +4616,9 @@ Table of Contents
 
 2.  Status: A Normative Contract for Bindings
 
-   Role: core.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 83 conformance rows in conformance-manifest.json (10
-   tested, 6 partial, 67 todo).  Adopt when: Runtime implementers
+   Role: core.  Spec maturity: candidate.  Maintenance: active.
+   Implementation: 88 conformance rows in conformance-manifest.json (10
+   tested, 6 partial, 72 todo).  Adopt when: Runtime implementers
    consume its commitment construction and kernel contract; binding
    authors profile it.  Requires: nothing beyond its listed references.
 
