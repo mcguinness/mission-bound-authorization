@@ -27,14 +27,32 @@
 //                               recorded revision, and the entry needs
 //                               deliberate re-review and a bump before this
 //                               passes again
+//   (h) revision/hash mismatch- source.specs[spec].revision names a commit
+//                               that, at this exact path, resolves via `git
+//                               show <revision>:<spec>` to bytes whose sha256
+//                               does not equal the recorded content_sha256.
+//                               A well-formed 40-hex revision that simply
+//                               is not resolvable locally (a shallow clone
+//                               missing the object) is a printed skip note,
+//                               never a failure; an available-but-mismatched
+//                               object always fails, since that is exactly
+//                               the false pin this check exists to catch.
 //
 // source.specs replaces a single global source.revision with one entry per
 // spec file named by a row's "spec": { revision, content_sha256 }. revision
 // is the commit whose text that spec's rows were validated against;
 // content_sha256 is a mechanical gate, recomputed here from the working-tree
 // file and compared, proving the file is still byte-identical to the
-// audited text. It intentionally does not shell out to git (CI checkouts are
-// shallow): the digest is the whole check, not a lookup of what changed.
+// audited text. Check (h) additionally re-derives content_sha256 from
+// git history at the named revision and compares: content_sha256 alone
+// proves the working tree has not drifted since some pin was recorded, but
+// says nothing about whether revision actually names the commit that
+// produced those bytes, which is exactly how a copy-pasted or stale
+// revision can hide behind a correct digest. This repository's CI
+// (.github/workflows/family-manifest.yml) runs actions/checkout with
+// fetch-depth: 0 (full history), so in CI an available-but-mismatched
+// object is always a hard failure, never silently skipped; a contributor's
+// local shallow clone is the only case the skip path is for.
 // Completeness provenance (whether the inventory covers every requirement in
 // the spec) lives in the tracking issues, not in this manifest.
 //
@@ -59,7 +77,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -95,6 +113,28 @@ for (const list of MODEL_LISTS) {
 const HEX40 = /^[0-9a-f]{40}$/;
 const HEX64 = /^[0-9a-f]{64}$/;
 const SOURCE_SPEC_MEMBERS = new Set(["revision", "content_sha256"]);
+
+// Check (h): re-derives content_sha256 from git history at the named
+// revision, for this exact path, and compares against the recorded value.
+// Returns "match", "mismatch" (the object resolved but the bytes differ:
+// always a real finding), or "unavailable" (revision, or this path at
+// revision, is not resolvable in local git history: a shallow clone is
+// missing the object, which proves nothing about whether the pin is
+// correct, so this is a printed skip note, never a failure).
+function verifyRevisionHash(root, file, revision, expectedHash) {
+  let blob;
+  try {
+    blob = execFileSync("git", ["show", `${revision}:${file}`], {
+      cwd: root,
+      maxBuffer: 1024 * 1024 * 64,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return { status: "unavailable" };
+  }
+  const actual = crypto.createHash("sha256").update(blob).digest("hex");
+  return { status: actual === expectedHash ? "match" : "mismatch", actual };
+}
 
 if (!manifest.source || typeof manifest.source !== "object" || Array.isArray(manifest.source) ||
     !manifest.source.specs || typeof manifest.source.specs !== "object" || Array.isArray(manifest.source.specs)) {
@@ -138,6 +178,25 @@ if (!manifest.source || typeof manifest.source !== "object" || Array.isArray(man
         "spec-inventory-drift",
         `${spec}: working-tree content_sha256 (${actual}) does not match source.specs's recorded digest (${entry.content_sha256}) for revision ${entry.revision}; the spec changed since its rows were last audited: re-review and bump both fields`
       );
+    }
+
+    // Check (h): revision must name a commit whose tree, at this path,
+    // actually contains the recorded bytes. Only runs once revision and
+    // content_sha256 are individually well-formed (checked above); a
+    // malformed revision is already a schema finding and re-running git on
+    // it would only produce a redundant "unavailable" skip note.
+    if (HEX40.test(entry.revision) && HEX64.test(entry.content_sha256)) {
+      const rc = verifyRevisionHash(ROOT, spec, entry.revision, entry.content_sha256);
+      if (rc.status === "unavailable") {
+        console.log(
+          `[revision-check] source.specs["${spec}"]: \`git show ${entry.revision}:${spec}\` did not resolve locally; skipping the historical cross-check (expected in a shallow clone, never a failure; CI runs fetch-depth: 0 and always resolves it)`
+        );
+      } else if (rc.status === "mismatch") {
+        fail(
+          "revision-mismatch",
+          `source.specs["${spec}"]: \`git show ${entry.revision}:${spec}\` hashes to ${rc.actual}, which does not match the recorded content_sha256 (${entry.content_sha256}); revision must name a commit whose tree contains exactly these bytes for this path`
+        );
+      }
     }
   }
 }

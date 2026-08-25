@@ -1,5 +1,5 @@
 {
- "$comment": "Structured evidence for the #707 five-criterion candidate gate (PR #723 review response). A document's spec_maturity may be \"candidate\" in family-manifest.json only if scripts/check-family-manifest.mjs's candidate-gate check resolves, for that document, all of: (1) requirement_inventory.attested is true with a non-empty audited_by that is a real, existing commit SHA (verified against git history, not merely well-formed) recording a dedicated completeness audit, not inferred from a '# Conformance' heading, which proves a floor exists but not that it is complete; (2) every decide_issue_scope entry naming this document's slug has a matching decide_resolutions entry with status 'resolved_in_tree' and a commit that exists in git history, or the document fails; (3) the document has a real Conformance section (checked structurally elsewhere): representative implementation evidence is displayed beside spec maturity in each document's family-status block, never gated as a coverage threshold, per the ruling's own text; (4) the document contains at least one '~~~' artwork block, or examples_waiver.reason is a non-empty, explicit proportionality statement; (5) unstable external normative dependencies are disclosed via DEPENDENCIES.md's generated external-normative-ids block (scripts/check-family-manifest.mjs check (q)), which needs no separate field here.",
+ "$comment": "Structured evidence for the #707 five-criterion candidate gate (PR #723 review response). A document's spec_maturity may be \"candidate\" in family-manifest.json only if scripts/check-family-manifest.mjs's candidate-gate check resolves, for that document, all of: (1) requirement_inventory.attested is true with a non-empty audited_by that is a real, existing commit SHA (verified against git history, not merely well-formed) recording a dedicated completeness audit, not inferred from a '# Conformance' heading, which proves a floor exists but not that it is complete, AND requirement_inventory.report names a durable, versioned audit report (report.path, an existing file in this repository, and report.document_sha256, a 64-hex sha256 of the audited document as of the audit commit): a bare attested/audited_by pair is not itself an auditable record (PR #727 review); (2) every decide_issue_scope entry naming this document's slug has a matching decide_resolutions entry with status 'resolved_in_tree' and a commit that exists in git history, or the document fails; (3) the document has a real Conformance section (checked structurally elsewhere): representative implementation evidence is displayed beside spec maturity in each document's family-status block, never gated as a coverage threshold, per the ruling's own text; (4) the document contains at least one '~~~' artwork block, or examples_waiver.reason is a non-empty, explicit proportionality statement; (5) unstable external normative dependencies are disclosed via DEPENDENCIES.md's generated external-normative-ids block (scripts/check-family-manifest.mjs check (q)), which needs no separate field here. A report whose document_sha256 no longer matches conformance-manifest.json's current content_sha256 for that file prints a non-fatal staleness warning (a family-status regen changes bytes mechanically and should not by itself force a re-audit); the check never fails on staleness alone.",
  "decide_issue_scope": {
   "662": {
    "title": "Audit: three experimental normative down-references vs CONTRIBUTING's maturity bound",
@@ -24,6 +24,30 @@
   "703": {
    "title": "Runtime: extract the OAuth Runtime Adapter; AuthZEN base plus feature profiles",
    "slugs": ["draft-mcguinness-mission-runtime", "draft-mcguinness-mission-authzen", "draft-mcguinness-mission-runtime-oauth"]
+  },
+  "708": {
+   "title": "Substrate: remove the normative OAuth dependency (assessment placement, bridge tier, neutral vectors)",
+   "slugs": ["draft-mcguinness-mission-substrate"]
+  },
+  "705": {
+   "title": "Status: availability state vs terminal cause (active/suspended/terminal + reason)",
+   "slugs": ["draft-mcguinness-oauth-mission-status"]
+  },
+  "242": {
+   "title": "Status: extract Status List and completion into optional extensions",
+   "slugs": ["draft-mcguinness-oauth-mission-status"]
+  },
+  "663": {
+   "title": "Family: three uncross-referenced accounts of what earns 'Mission-bound'",
+   "slugs": ["draft-mcguinness-oauth-mission", "draft-mcguinness-mission-architecture"]
+  },
+  "660": {
+   "title": "Approval-time: template/progressive prohibited sets diverge from the core's high-risk classification",
+   "slugs": ["draft-mcguinness-oauth-mission-template", "draft-mcguinness-oauth-mission-progressive"]
+  },
+  "648": {
+   "title": "Impl: transaction-assurance idempotency claim states, idempotency_conflict, tombstones, active reconciliation (S-6 disposition stale)",
+   "slugs": ["draft-mcguinness-mission-runtime", "draft-mcguinness-mission-authzen"]
   }
  },
  "documents": {
@@ -74,6 +98,17 @@
    "requirement_inventory": { "attested": false, "audited_by": null },
    "decide_resolutions": [
     { "issue": 703, "status": "deferred_to_audit_wave", "commit": null, "note": "The new OAuth Runtime Adapter #703 called for; landed via PR #724 (merged 2026-08-25) but not yet independently audited. In the owner's ruled audit-wave scope (core, resource-access, substrate, status, runtime, runtime-oauth, runtime-evidence, authzen)." }
+   ],
+   "examples_waiver": null
+  },
+  "draft-mcguinness-mission-substrate": {
+   "requirement_inventory": {
+    "attested": true,
+    "audited_by": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
+    "report": { "path": "notes/audits/2026-08-25-substrate-completeness-audit.md", "document_sha256": "5553530d68a34c7c8c83865c0584fb0334b04ad78ca17cce4a30e4f4fb3525c0" }
+   },
+   "decide_resolutions": [
+    { "issue": 708, "status": "resolved_in_tree", "commit": "30982cda740aa761272d847e476d9a77a1ee9726", "note": "PR #717 removed the substrate's normative OAuth dependency (assessment placement, bridge tier, neutral vectors)." }
    ],
    "examples_waiver": null
   },

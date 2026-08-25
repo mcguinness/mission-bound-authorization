@@ -15,6 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import crypto from "node:crypto";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { execFileSync } from "node:child_process";
@@ -117,6 +118,20 @@ function makeFixtureRepo({ draftBody, familyOverrides = {}, conformanceRequireme
 function cleanup(root) {
   fs.rmSync(root, { recursive: true, force: true });
 }
+
+// Writes a fixture audit-report file at root/relPath and returns its
+// sha256 hex digest, for building a requirement_inventory.report fixture
+// (#727 review: an attestation must name a durable, versioned report, not
+// only a commit SHA). Not committed to the fixture's git repo: report.path
+// existence is a plain fs.existsSync check, independent of the
+// commit-existence checks that need real git history.
+function writeFixtureReport(root, relPath, content) {
+  const p = path.join(root, relPath);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, content);
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+const FIXTURE_REPORT_PATH = "notes/audits/fixture-completeness-audit.md";
 
 const CONFORMANT_BODY = [
   "# Fixture",
@@ -229,7 +244,11 @@ test("candidate-gate: passes when all five criteria are genuinely satisfied", ()
     gateOverrides: (commit) => ({
       documents: {
         "draft-fixture-example": {
-          requirement_inventory: { attested: true, audited_by: commit },
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: "0".repeat(64) },
+          },
           decide_resolutions: [],
           examples_waiver: null,
         },
@@ -237,8 +256,128 @@ test("candidate-gate: passes when all five criteria are genuinely satisfied", ()
     }),
   });
   try {
+    writeFixtureReport(root, FIXTURE_REPORT_PATH, "fixture audit report body");
     assert.deepEqual(validateCandidateGate(root), []);
   } finally {
+    cleanup(root);
+  }
+});
+
+test("candidate-gate: attested without a report fails criterion 1 (#727 review: a SHA alone is not auditable)", () => {
+  const { root } = makeFixtureRepo({
+    draftBody: CONFORMANT_BODY,
+    conformanceRequirements: [{ spec: FIXTURE_FILE, coverage: "tested" }],
+    gateOverrides: (commit) => ({
+      documents: {
+        "draft-fixture-example": {
+          requirement_inventory: { attested: true, audited_by: commit }, // no report field
+          decide_resolutions: [],
+          examples_waiver: null,
+        },
+      },
+    }),
+  });
+  try {
+    const findings = validateCandidateGate(root);
+    assert.ok(findings.some((f) => f.includes("report")), `expected a report finding, got: ${JSON.stringify(findings)}`);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("candidate-gate: a report with a malformed document_sha256 fails", () => {
+  const { root } = makeFixtureRepo({
+    draftBody: CONFORMANT_BODY,
+    conformanceRequirements: [{ spec: FIXTURE_FILE, coverage: "tested" }],
+    gateOverrides: (commit) => ({
+      documents: {
+        "draft-fixture-example": {
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: "not-a-hex-digest" },
+          },
+          decide_resolutions: [],
+          examples_waiver: null,
+        },
+      },
+    }),
+  });
+  try {
+    writeFixtureReport(root, FIXTURE_REPORT_PATH, "fixture audit report body");
+    const findings = validateCandidateGate(root);
+    assert.ok(
+      findings.some((f) => f.includes("document_sha256")),
+      `expected a document_sha256 finding, got: ${JSON.stringify(findings)}`,
+    );
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("candidate-gate: a report naming a missing path fails", () => {
+  const { root } = makeFixtureRepo({
+    draftBody: CONFORMANT_BODY,
+    conformanceRequirements: [{ spec: FIXTURE_FILE, coverage: "tested" }],
+    gateOverrides: (commit) => ({
+      documents: {
+        "draft-fixture-example": {
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            report: { path: "notes/audits/does-not-exist.md", document_sha256: "0".repeat(64) },
+          },
+          decide_resolutions: [],
+          examples_waiver: null,
+        },
+      },
+    }),
+  });
+  // Deliberately never written to disk.
+  try {
+    const findings = validateCandidateGate(root);
+    assert.ok(
+      findings.some((f) => f.includes("report.path")),
+      `expected a report.path finding, got: ${JSON.stringify(findings)}`,
+    );
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("candidate-gate: a stale report document_sha256 warns but still passes", () => {
+  const { root } = makeFixtureRepo({
+    draftBody: CONFORMANT_BODY,
+    conformanceRequirements: [{ spec: FIXTURE_FILE, coverage: "tested" }], // source.specs content_sha256 is "0".repeat(64)
+    gateOverrides: (commit) => ({
+      documents: {
+        "draft-fixture-example": {
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            // Well-formed, but deliberately does not equal the "0".repeat(64)
+            // conformance-manifest.json records for FIXTURE_FILE: the
+            // audited document has moved on since the report was written.
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: "1".repeat(64) },
+          },
+          decide_resolutions: [],
+          examples_waiver: null,
+        },
+      },
+    }),
+  });
+  const originalWarn = console.warn;
+  let warned = false;
+  console.warn = (...args) => {
+    warned = true;
+    originalWarn.apply(console, args);
+  };
+  try {
+    writeFixtureReport(root, FIXTURE_REPORT_PATH, "fixture audit report body, now stale relative to the pin");
+    assert.deepEqual(validateCandidateGate(root), [], "staleness must never fail the gate");
+    assert.ok(warned, "expected a printed staleness warning");
+  } finally {
+    console.warn = originalWarn;
     cleanup(root);
   }
 });
@@ -339,7 +478,11 @@ test("candidate-gate: criterion 2 passes when the scoped issue is resolved_in_tr
       decide_issue_scope: { "999": { title: "Fixture decide issue", slugs: ["draft-fixture-example"] } },
       documents: {
         "draft-fixture-example": {
-          requirement_inventory: { attested: true, audited_by: commit },
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: "0".repeat(64) },
+          },
           decide_resolutions: [{ issue: 999, status: "resolved_in_tree", commit }],
           examples_waiver: null,
         },
@@ -347,6 +490,7 @@ test("candidate-gate: criterion 2 passes when the scoped issue is resolved_in_tr
     }),
   });
   try {
+    writeFixtureReport(root, FIXTURE_REPORT_PATH, "fixture audit report body");
     assert.deepEqual(validateCandidateGate(root), []);
   } finally {
     cleanup(root);
@@ -404,7 +548,11 @@ test("candidate-gate: criterion 4 passes with no examples but a recorded, non-em
     gateOverrides: (commit) => ({
       documents: {
         "draft-fixture-example": {
-          requirement_inventory: { attested: true, audited_by: commit },
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: "0".repeat(64) },
+          },
           decide_resolutions: [],
           examples_waiver: { reason: "Single-member format profile; proportionality." },
         },
@@ -412,6 +560,7 @@ test("candidate-gate: criterion 4 passes with no examples but a recorded, non-em
     }),
   });
   try {
+    writeFixtureReport(root, FIXTURE_REPORT_PATH, "fixture audit report body");
     assert.deepEqual(validateCandidateGate(root), []);
   } finally {
     cleanup(root);

@@ -23,8 +23,8 @@
     "content_sha256": "6b16343b04fc5a9cf006037db31983bee8c99908066b7e7bca7055c1ac4fbc87"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "b2c327aee9d76b21dd2c66425af951a4b5f1201c951d7195a0c6abb7b83939e4"
+    "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
+    "content_sha256": "5553530d68a34c7c8c83865c0584fb0334b04ad78ca17cce4a30e4f4fb3525c0"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -51,8 +51,8 @@
     "content_sha256": "aa8e62ece9b39ebf702115f8f4583bfb547d63512e778b3cf2a087b83acb1cc6"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "b41d8dcf10fc465cd258e21bd905415cd0b41f2fa0bdf5b3ccbf61b3325a4509"
+    "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
+    "content_sha256": "8fb582dc630c9cc7edc8989187d1e5f56cd28489445d1ec3e4dd1595b505619b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -10916,6 +10916,28 @@
    "notes": "Same shared verifyAnchor primitive substrate's Default Commitment Construction defines (#284 ruling); core.commitment.unknown-prefix exercises the identical function under its own document tag."
   },
   {
+   "id": "substrate.default-commitment.new-prefix-transition-duties",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "default-commitment",
+   "text": "a specification introducing a new prefix MUST define the carrier and schema of any parallel commitment, the binding that proves the old and new values commit to the same object, producer behavior during the transition, verifier selection and downgrade behavior when recognition sets differ, and the transition procedure itself.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a specification introducing a new digest-prefix algorithm defines the carrier and schema of any parallel commitment, the binding that proves the old and new values commit to the same object, producer behavior during the transition, verifier selection and downgrade behavior when recognition sets differ, and the transition procedure itself; no transition mechanism exists in this document, so an introducing specification carries the whole duty"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "substrate.approval.atomic-ceremony",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "approval",
@@ -12296,6 +12318,94 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a specification adding a capability publishes an updated Statement, or a Statement extension naming the base binding and the precise added scope"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.composition.declare-consumed-capabilities",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "composition",
+   "text": "A substrate-neutral profile MUST declare the kernel functions and optional capabilities it consumes.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a substrate-neutral profile declares, in its own text, the kernel functions and the optional capabilities it consumes"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.composition.no-inferred-capability-from-generic-claim",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "composition",
+   "text": "It MUST NOT infer an undeclared capability from the generic statement that a binding supports Missions.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a substrate-neutral profile never infers an undeclared capability merely from a binding's generic claim to support Missions; only a capability actually declared, per the previous requirement, is consumed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.composition.adapter-states-assumptions-and-failure-behavior",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "composition",
+   "text": "The adapter's specification MUST state the new trust assumptions, what it proves, what it cannot prove, and its failure behavior.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a profile defines an explicit adapter or join to supply a capability a binding lacks, the adapter's own specification states the new trust assumptions it introduces, what it proves, what it cannot prove, and its failure behavior"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.composition.preserve-capability-scope-boundaries",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "composition",
+   "text": "Specifications MUST preserve those boundaries rather than describe the whole deployment with the stronger local property.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a specification describing a capability that composes only over a declared scope never describes the whole deployment as carrying the stronger local property that scope does not reach"
    },
    "level": "unit",
    "coverage": "todo",

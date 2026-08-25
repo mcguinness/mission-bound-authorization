@@ -661,13 +661,33 @@ export function validateCandidateGate(root = ROOT) {
   }
 
   const confBySpec = loadConformanceCounts(root);
+  // Raw source.specs, read alongside the derived counts above, purely to
+  // compare a report's frozen document_sha256 against the manifest's
+  // current pin for the same file (the staleness signal below). Read
+  // defensively: conformance-manifest.json's own shape is check (g)'s and
+  // check-conformance-manifest.mjs's job, not this function's; a read
+  // failure here just means the staleness signal is skipped, not that the
+  // candidate gate itself fails on it.
+  let confSourceSpecs = {};
+  try {
+    const conf = JSON.parse(fs.readFileSync(path.join(root, "conformance-manifest.json"), "utf8"));
+    confSourceSpecs = (conf.source && conf.source.specs) || {};
+  } catch {
+    confSourceSpecs = {};
+  }
+
   for (const d of manifest.drafts) {
     if (d.spec_maturity !== "candidate") continue;
     const docGate = (gate.documents || {})[d.slug];
 
     // Criterion 1: mechanical (an audit has been recorded against this spec
     // at all) AND attested (a human-recorded, commit-verified claim that the
-    // recorded audit was a complete requirement inventory).
+    // recorded audit was a complete requirement inventory) AND auditable
+    // (the attestation names a durable, versioned report: #727 review,
+    // "attested: true plus a SHA is not a durable record"). The mutable PR
+    // description that once carried the audit's substance is not this
+    // report; the report lives in the repository at requirement_inventory
+    // report.path.
     if (!confBySpec.has(d.file)) {
       findings.push(`${d.slug}: spec_maturity is "candidate" but ${d.file} has no source.specs entry in conformance-manifest.json (no inventory audit has ever been recorded against it)`);
     }
@@ -676,6 +696,32 @@ export function validateCandidateGate(root = ROOT) {
       findings.push(`${d.slug}: spec_maturity is "candidate" but candidate-gate.json records no attested requirement_inventory (criterion 1: complete requirement inventory)`);
     } else if (!commitExists(inv.audited_by, root)) {
       findings.push(`${d.slug}: requirement_inventory.audited_by "${inv.audited_by}" does not resolve to a commit in this repository's history`);
+    } else {
+      const report = inv.report;
+      if (!report || typeof report !== "object" || Array.isArray(report)) {
+        findings.push(`${d.slug}: requirement_inventory.attested is true but candidate-gate.json has no requirement_inventory.report object (criterion 1: an attestation must name a durable, versioned audit report, not only a commit SHA)`);
+      } else {
+        if (typeof report.path !== "string" || report.path.length === 0 || !fs.existsSync(path.join(root, report.path))) {
+          findings.push(`${d.slug}: requirement_inventory.report.path "${report.path}" does not name a file that exists in this repository`);
+        }
+        if (typeof report.document_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(report.document_sha256)) {
+          findings.push(`${d.slug}: requirement_inventory.report.document_sha256 must be a 64-character lowercase hex sha256 digest`);
+        } else {
+          // Staleness signal, deliberately non-fatal: a family-status regen
+          // changes a candidate document's bytes (and hence content_sha256)
+          // on every unrelated maturity flip anywhere in the family. Tying
+          // the report's frozen digest to that would force a re-audit for a
+          // change the report's own substance was never about. Printed so
+          // a human notices and judges whether a re-audit is actually
+          // warranted; never gates the check.
+          const liveHash = confSourceSpecs[d.file] && confSourceSpecs[d.file].content_sha256;
+          if (typeof liveHash === "string" && liveHash !== report.document_sha256) {
+            console.warn(
+              `[candidate-gate] WARNING: ${d.slug}: requirement_inventory.report.document_sha256 (${report.document_sha256}) differs from conformance-manifest.json's current source.specs content_sha256 for ${d.file} (${liveHash}); the audited document has changed since the report was written. Non-fatal (see check (z)/#727): a human should judge whether this warrants a fresh audit.`
+            );
+          }
+        }
+      }
     }
 
     // Criterion 2: every decide issue scoped to this slug must be recorded

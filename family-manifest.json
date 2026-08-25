@@ -1279,7 +1279,7 @@
    "title": "Mission Substrate Requirements",
    "category": "std",
    "role": "core",
-   "spec_maturity": "experimental",
+   "spec_maturity": "candidate",
    "maintenance": "active",
    "group": "bindings-substrate",
    "verbs": [
