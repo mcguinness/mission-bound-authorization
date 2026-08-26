@@ -273,36 +273,45 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     // Attempted with the terminated Mission's own authority => refused.
     expect(
       resolveCompensationAuthority({
-        reversedDecisionId: "dec_x",
+        reversedEvaluationId: "dec_x",
         presentsTerminatedMissionAuthority: true,
       }).decision,
     ).toBe("deny");
 
     // No basis => human review.
-    expect(resolveCompensationAuthority({ reversedDecisionId: "dec_x" }).decision).toBe(
+    expect(resolveCompensationAuthority({ reversedEvaluationId: "dec_x" }).decision).toBe(
       "human_review",
     );
 
     // A separate_mission that is not active does not apply => human review.
     expect(
-      resolveCompensationAuthority({ reversedDecisionId: "dec_x", basis: "separate_mission" })
+      resolveCompensationAuthority({ reversedEvaluationId: "dec_x", basis: "separate_mission" })
         .decision,
     ).toBe("human_review");
 
-    // A valid active separate_mission permits, bound to the reversed decision_id.
+    // A valid active separate_mission permits, bound to the reversed evaluation_id.
     const r = resolveCompensationAuthority({
-      reversedDecisionId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+      reversedEvaluationId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
       basis: "separate_mission",
       separateMissionActive: true,
     });
     expect(r.decision).toBe("permit");
     expect(r.authority_basis).toBe("separate_mission");
-    expect(r.compensates_decision_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
+    expect(r.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
+
+    // resource_policy also binds to the reversed evaluation_id.
+    const rp = resolveCompensationAuthority({
+      reversedEvaluationId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+      basis: "resource_policy",
+    });
+    expect(rp.decision).toBe("permit");
+    expect(rp.authority_basis).toBe("resource_policy");
+    expect(rp.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
   });
 
   it("5b: compensate evidence for a high-risk class carries basis, binding, and a signed envelope", () => {
     const r = resolveCompensationAuthority({
-      reversedDecisionId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+      reversedEvaluationId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
       basis: "separate_mission",
       separateMissionActive: true,
     });
@@ -323,13 +332,13 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         authority_basis: r.authority_basis,
         compensation_action: "erp.journal_entry.reverse",
         compensation_outcome: "completed",
-        compensates_decision_id: r.compensates_decision_id,
+        compensates_evaluation_id: r.compensates_evaluation_id,
         compensated_reversibility: "irreversible_action",
       },
       { signEnvelope: signer },
     );
     expect(ev.authority_basis).toBe("separate_mission");
-    expect(ev.compensates_decision_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
+    expect(ev.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
     expect(ev.linked_evidence).toContain("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
     expect(ev.linked_evidence).toContain("orch_4r9SqLm8tY2p");
     expect(ev.evidence_envelope).toBeDefined();

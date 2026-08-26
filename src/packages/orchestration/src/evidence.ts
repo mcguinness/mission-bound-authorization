@@ -51,11 +51,11 @@ export interface OrchestrationEvidence {
   compensation_action?: string;
   compensation_outcome?: string;
   /**
-   * The reversed step's `decision_id` (runtime-profile binding). Its normative
+   * The reversed step's `evaluation_id` (runtime-profile binding). Its normative
    * home is the compensating runtime decision; surfaced on the record and also
    * folded into `linked_evidence`, matching the draft's compensate example.
    */
-  compensates_decision_id?: string;
+  compensates_evaluation_id?: string;
   /** Per-Mission sequence indicator for evidence ordering (§ evidence-ordering). */
   sequence?: number;
   /** JWS Compact integrity protection over the record (payload = JCS minus this). */
@@ -86,7 +86,7 @@ export interface BuildOrchestrationEvidenceInput {
   authority_basis?: AuthorityBasis;
   compensation_action?: string;
   compensation_outcome?: string;
-  compensates_decision_id?: string;
+  compensates_evaluation_id?: string;
   sequence?: number;
   /**
    * The reversibility class of the compensated step. Drives the
@@ -138,11 +138,11 @@ export function buildOrchestrationEvidence(
     rec.compensation_outcome = input.compensation_outcome;
 
     // linked_evidence is REQUIRED for compensate; fold in the reversed
-    // decision_id so the record binds to the specific committed step it offsets.
+    // evaluation_id so the record binds to the specific committed step it offsets.
     const linked = new Set<string>(input.linked_evidence ?? []);
-    if (input.compensates_decision_id !== undefined) {
-      linked.add(input.compensates_decision_id);
-      rec.compensates_decision_id = input.compensates_decision_id;
+    if (input.compensates_evaluation_id !== undefined) {
+      linked.add(input.compensates_evaluation_id);
+      rec.compensates_evaluation_id = input.compensates_evaluation_id;
     }
     if (linked.size === 0) {
       throw new Error("compensate evidence REQUIRES linked_evidence");
