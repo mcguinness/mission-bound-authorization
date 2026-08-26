@@ -1,0 +1,2928 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Evidence Envelope</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       The family defines roughly thirty  application/mission-*  evidence
+media types, each repeating the same handful of members (a type
+discriminator, a record identifier, a Mission reference, an emitter,
+a timestamp, an integrity envelope) beside its own payload-specific
+content. This document defines a generic, binding-neutral  Mission
+Evidence Envelope  and a  Mission Evidence Payload Type Registry 
+that a future evidence kind MAY register into instead of minting
+another one-off object and another media type, without weakening the
+per-kind schema and verification separation the family already
+depends on. It defines one pilot payload type,  Intent Admission
+Evidence , the first consumer of the OAuth binding's Intent
+Submission Evidence dispatch. This document does not migrate any of
+the family's existing evidence kinds onto the envelope; whether an
+existing kind migrates is that kind's own specification's decision,
+addressed here only as a non-normative migration plan. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="evidence" name="keyword">
+<meta content="registry" name="keyword">
+<meta content="draft-mcguinness-mission-evidence-envelope-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.3
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-mission-evidence-envelope.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Evidence Envelope</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 27 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-evidence-envelope-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-26" class="published">26 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-27">27 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Evidence Envelope</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The family defines roughly thirty <code>application/mission-*</code> evidence
+media types, each repeating the same handful of members (a type
+discriminator, a record identifier, a Mission reference, an emitter,
+a timestamp, an integrity envelope) beside its own payload-specific
+content. This document defines a generic, binding-neutral <strong>Mission
+Evidence Envelope</strong> and a <strong>Mission Evidence Payload Type Registry</strong>
+that a future evidence kind MAY register into instead of minting
+another one-off object and another media type, without weakening the
+per-kind schema and verification separation the family already
+depends on. It defines one pilot payload type, <strong>Intent Admission
+Evidence</strong>, the first consumer of the OAuth binding's Intent
+Submission Evidence dispatch. This document does not migrate any of
+the family's existing evidence kinds onto the envelope; whether an
+existing kind migrates is that kind's own specification's decision,
+addressed here only as a non-normative migration plan.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-evidence-envelope.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-evidence-envelope.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-evidence-envelope/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-evidence-envelope/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 27 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-experime" class="internal xref">Status: An Optional, Experimental Mechanism</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-evidence-envelope" class="internal xref">Mission Evidence Envelope</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-envelope-members" class="internal xref">Envelope Members</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-payload-type-registry" class="internal xref">Payload Type Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-domain-separation" class="internal xref">Domain Separation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-producer-authorization" class="internal xref">Producer Authorization</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-integrity" class="internal xref">Integrity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-retention" class="internal xref">Retention</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-specialized-containers" class="internal xref">Specialized Containers</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.8">
+                <p id="section-toc.1-1.5.2.8.1"><a href="#section-5.8" class="auto internal xref">5.8</a>.  <a href="#name-migration-plan-non-normativ" class="internal xref">Migration Plan (Non-Normative)</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-intent-admission-evidence" class="internal xref">Intent Admission Evidence</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-the-intent-admission-assert" class="internal xref">The Intent Admission Assertion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-verification-procedure" class="internal xref">Verification Procedure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-recorded-facts" class="internal xref">Recorded Facts</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-the-intent-admission-payloa" class="internal xref">The Intent Admission Payload Type</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-envelope-and-registry" class="internal xref">Envelope and Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-intent-admission" class="internal xref">Intent Admission</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-envelope-and-registry-2" class="internal xref">Envelope and Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-intent-admission-2" class="internal xref">Intent Admission</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-media-type-registry" class="internal xref">Media Type Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.1">
+                    <p id="section-toc.1-1.10.2.1.2.1.1"><a href="#section-10.1.1" class="auto internal xref">10.1.1</a>.  <a href="#name-mission-evidence-envelope-m" class="internal xref">Mission Evidence Envelope Media Type</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.2">
+                    <p id="section-toc.1-1.10.2.1.2.2.1"><a href="#section-10.1.2" class="auto internal xref">10.1.2</a>.  <a href="#name-secured-mission-evidence-en" class="internal xref">Secured Mission Evidence Envelope Media Type</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-mission-evidence-payload-ty" class="internal xref">Mission Evidence Payload Type Registry</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Consent Evidence, Decision Evidence, Execution Evidence, Refusal
+Records, the Mission Receipt, Approval Governance, Harness Evidence,
+Egress Evidence, Containment Evidence, the Protected Event Receipt,
+Child Evidence, Discovery Evidence, the Work Product Binding, and the
+audit profile's own approval, lifecycle-transition, derivation, and
+erasure records are each a closed JSON object with its own media
+type, its own integrity envelope, and its own retention rule. Read
+across the family, they share a shape: something that identifies what
+kind of record this is, a record identifier, a reference to the
+Mission the record concerns, the identity of the component that
+produced it, a timestamp, and an integrity envelope around
+kind-specific content. A 2026-08-24 architecture-shape review counted
+twenty-nine registered media types built on that repeated shape and
+recommended one generic envelope, a registered payload-type registry
+with closed schemas per type, and specialized cryptographic containers
+preserved only where they buy a genuinely different property.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document answers that recommendation with a mechanism and one
+pilot consumer, not with a retroactive claim on the family's existing
+records. It defines:<a href="#section-1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-3.1">
+          <p id="section-1-3.1.1">the <strong>Mission Evidence Envelope</strong> (<a href="#mission-evidence-envelope" class="auto internal xref">Section 5</a>):
+the generic wrapper (<code>type</code>, <code>id</code>, <code>mission</code>, <code>emitter</code>,
+<code>occurred_at</code>, <code>sequence</code>, <code>related</code>, <code>payload</code>, and an integrity
+envelope);<a href="#section-1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.2">
+          <p id="section-1-3.2.1">the <strong>Mission Evidence Payload Type Registry</strong>
+(<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>): registration rules requiring a
+closed payload schema, a verification procedure that establishes
+producer authorization and not merely signature validity
+(<a href="#producer-authorization" class="auto internal xref">Section 5.4</a>), and a named producer, so a shared
+envelope and a shared media type never relocate domain separation
+into a payload member; and<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.3">
+          <p id="section-1-3.3.1"><strong>Intent Admission Evidence</strong> (<a href="#intent-admission-evidence" class="auto internal xref">Section 6</a>): the
+registry's first registered payload type and the first consumer of
+the OAuth binding's Intent Submission Evidence dispatch, which
+shipped with an empty type registry that refuses every presented
+entry until a profile registers one.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-4">This document does not migrate Decision Evidence, Execution Evidence,
+Refusal Records, the Mission Receipt, Consent Evidence, Approval
+Governance, or any other existing evidence kind onto this envelope.
+Each of those objects keeps its own members, its own media type, and
+its own integrity envelope exactly as its defining specification fixes
+them. Whether a given kind migrates onto this envelope in the future
+is a decision for that kind's own specification, made on its own
+merits and its own breaking-change and deprecation terms; this
+document states only a non-normative migration plan
+(<a href="#migration-plan" class="auto internal xref">Section 5.8</a>) and does not require, schedule, or presume any
+particular migration. A reader should not infer, from this document's
+existence, that an existing evidence kind's current media type is
+deprecated: it is not, unless and until that kind's own specification
+says so.<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="doc-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-experime">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-experime" class="section-name selfRef">Status: An Optional, Experimental Mechanism</a>
+      </h2>
+<p id="section-2-1">Role: companion. Spec maturity: sketch. Maintenance: lab-best-effort.
+Implementation: 23 conformance rows in conformance-manifest.json (23 todo).
+Adopt when: A new evidence kind is being designed and a deployment wants to avoid minting another bespoke media type, or Intent Admission Evidence's inbound assertion and emitted attestation are needed.
+Requires: nothing beyond its listed references.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document is Experimental. It has no known implementation, no
+migrated evidence kind, and no adopter commitment on record. A
+deployment MAY implement the envelope and the Intent Admission payload
+type independently of every other family document; adopting it
+creates no dependency on Mission-Bound Runtime Enforcement, its
+AuthZEN binding, or their evidence companion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), because none of
+this document's normative content depends on records those documents
+define.<a href="#section-2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-3">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-3-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
+"MAY", and "OPTIONAL" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2"><strong>Envelope instance</strong>: a JSON object conforming to
+<a href="#mission-evidence-envelope-members" class="auto internal xref">Section 5.1</a>, identified by its <code>type</code>
+member.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3"><strong>Payload type</strong>: a registration in the Mission Evidence Payload Type
+Registry (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>) fixing one <code>type</code>
+value's closed <code>payload</code> schema, verification procedure, and producer.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4"><strong>Producer</strong>: the component authorized, under a payload type's
+verification procedure, to emit an envelope instance of that type for
+a named Mission.<a href="#section-3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-substrate">
+<section id="section-4">
+      <h2 id="name-mission-substrate">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      </h2>
+<p id="section-4-1">This document is defined against the Mission model rather than
+against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
+this section is its consumption declaration under the rule of Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">It is a kernel-only consumer. From the contextual-governance kernel it
+consumes the Mission identifier and issuer, carried in every envelope
+instance's <code>mission</code> object. Its instances are not the kernel's
+ordered governance record; they are a separate, joinable evidence
+stream, retained no shorter than the Mission's audit horizon
+(<a href="#mission-evidence-envelope-retention" class="auto internal xref">Section 5.6</a>).<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">Its declaration against the optional capabilities:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<span id="name-mission-evidence-envelope-c"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-mission-evidence-envelope-c" class="selfRef">Mission Evidence Envelope capability consumption</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Consumption</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope of consumption</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">No envelope instance this document defines represents or evaluates machine-actionable authority</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">This document records evidence; it neither gates nor grants authority</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">No instance establishes or consults Mission state</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">No instance derives or narrows authority</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission enters an instance only as the <code>mission</code> reference object; this document verifies no credential binding beyond <a href="#producer-authorization" class="auto internal xref">Section 5.4</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">No instance correlates against an authorized context beyond the Mission reference</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Not consumed, and supplied in scoped form: a verifier holding the producing authority's published keys and the producer-authorization rule of <a href="#producer-authorization" class="auto internal xref">Section 5.4</a> verifies an instance independently of the emitting deployment; this document defines no transparency-service registration itself</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Portability beyond a party holding the relevant issuer's published keys requires the transparency mechanisms of the audit profile (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), where a deployment adopts them</td>
+          </tr>
+        </tbody>
+      </table>
+</section>
+</div>
+<div id="mission-evidence-envelope">
+<section id="section-5">
+      <h2 id="name-mission-evidence-envelope">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-evidence-envelope" class="section-name selfRef">Mission Evidence Envelope</a>
+      </h2>
+<p id="section-5-1">A Mission Evidence Envelope instance is a JSON object with the members
+below. A registered payload type (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>)
+fixes the content of <code>payload</code> alone; every other member is fixed by
+this document and is identical across every payload type.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="mission-evidence-envelope-members">
+<section id="section-5.1">
+        <h3 id="name-envelope-members">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-envelope-members" class="section-name selfRef">Envelope Members</a>
+        </h3>
+<span class="break"></span><dl class="dlParallel" id="section-5.1-1">
+          <dt id="section-5.1-1.1">
+<code>type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.2">
+            <p id="section-5.1-1.2.1">REQUIRED. A string. The registered payload type
+(<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>): the schema <code>payload</code> is closed
+to, and the verification procedure a consumer applies to the whole
+instance.<a href="#section-5.1-1.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.3">
+<code>id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.4">
+            <p id="section-5.1-1.4.1">REQUIRED. A string. A unique identifier for this envelope instance.
+ABNF: <code>1*64( ALPHA / DIGIT / "-" / "_" )</code>. At least 128 bits of
+entropy.<a href="#section-5.1-1.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.5">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.6">
+            <p id="section-5.1-1.6.1">REQUIRED. An object with <code>id</code> and <code>issuer</code>: the Mission this
+instance concerns.<a href="#section-5.1-1.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.7">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.8">
+            <p id="section-5.1-1.8.1">REQUIRED. An object with <code>id</code> (REQUIRED, a string identifying the
+emitting component) and <code>role</code> (REQUIRED, a string). This document
+defines one role, <code>issuer</code>: the Mission issuer identified by
+<code>mission.issuer</code>, or a component the issuer specifically registers
+to emit on its behalf (<a href="#producer-authorization" class="auto internal xref">Section 5.4</a>). A payload type
+registration MAY require additional roles, coordinated the same way
+a <code>type</code> value is (collision-resistant, registered alongside the
+type). <code>emitter</code> alone is a claim, not a proof of authorization;
+<a href="#producer-authorization" class="auto internal xref">Section 5.4</a> fixes what a verifier additionally checks.<a href="#section-5.1-1.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.9">
+<code>occurred_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.10">
+            <p id="section-5.1-1.10.1">REQUIRED. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp of the event this
+instance records.<a href="#section-5.1-1.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.11">
+<code>sequence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.12">
+            <p id="section-5.1-1.12.1">REQUIRED. An integer, zero or greater. A per-(Mission, emitter)
+monotonically increasing sequence indicator: a verifier detects
+gaps and orders instances within (Mission, emitter). It does not by
+itself establish Mission-wide order across distinct emitters.<a href="#section-5.1-1.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.13">
+<code>related</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.14">
+            <p id="section-5.1-1.14.1">OPTIONAL. An array, default empty. Each entry is an object with
+<code>relation</code> (REQUIRED, a collision-resistant name, the same guidance
+as a <code>typ</code> value, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and
+<code>reference</code> (REQUIRED, a string, the correlated identifier). A
+registered payload type MAY require specific <code>relation</code> values; this
+document requires none.<a href="#section-5.1-1.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.15">
+<code>payload</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.16">
+            <p id="section-5.1-1.16.1">REQUIRED. An object. Content fixed exclusively by the registered
+<code>type</code>'s closed schema (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>). This
+document defines no members of its own on <code>payload</code>.<a href="#section-5.1-1.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.17">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.18">
+            <p id="section-5.1-1.18.1">REQUIRED. An object, the integrity protection
+(<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>), carrying <code>format</code> (string,
+required) and <code>value</code> (string, required).<a href="#section-5.1-1.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.1-2">A Mission Evidence Envelope instance is closed to uncoordinated
+extension at this top level: a member outside this list is not part
+of this document's schema, and a registered payload type extends the
+object only through <code>payload</code>.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evidence-payload-type-registry">
+<section id="section-5.2">
+        <h3 id="name-payload-type-registry">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-payload-type-registry" class="section-name selfRef">Payload Type Registry</a>
+        </h3>
+<p id="section-5.2-1"><code>type</code> selects a registration, and a registration fixes exactly four
+things: the closed schema <code>payload</code> carries; the verification
+procedure a consumer applies to the whole instance, which MUST
+establish producer authorization under <a href="#producer-authorization" class="auto internal xref">Section 5.4</a> and
+not only that the envelope integrity check of
+<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a> passes; the producer or
+producer class, and the <code>emitter.role</code> values, authorized to emit it;
+and its registered <code>type</code> string.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">A verifier MUST reject an instance whose <code>type</code> it does not recognize,
+and MUST NOT interpret <code>payload</code> under any schema other than the one
+the recognized <code>type</code> registers; an unrecognized <code>type</code> is refused,
+never processed under a guessed or default schema. This is the same
+reject-never-guess discipline the Mission Intent Submission envelope's
+evidence dispatch already applies to its own <code>type</code> member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<p id="section-5.2-3">Registration requires: a collision-resistant name for <code>type</code>, under
+the same guidance as an integrity-anchor <code>typ</code> value
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); a stable reference defining
+the closed <code>payload</code> schema; a stable reference defining the
+verification procedure, including the producer-authorization check
+<a href="#producer-authorization" class="auto internal xref">Section 5.4</a> requires; and the producer or producer
+class, and permitted <code>emitter.role</code> values, authoritative for
+instances of that type. The registration mechanics and Designated
+Expert criteria are in <a href="#iana" class="auto internal xref">Section 10</a>.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.2-4"><strong>Registration is not frozen for its full lifetime.</strong> A registered
+type's change controller MAY publish a compatible update to its
+schema or verification procedure under the same <code>type</code> value: a
+clarification that does not change which bytes conform, or a
+security-hardening amendment that narrows what a verifier accepts
+without admitting anything a prior conforming verifier would have
+rejected, is a same-<code>type</code> revision, subject to the change
+controller's own review and a preserved change history a verifier can
+consult. A <code>type</code> value is retired and a new one registered only when
+a change would accept or require content an existing conforming
+instance does not carry, or would reinterpret an existing member's
+meaning: an incompatible schema change or a semantic reinterpretation.
+This mirrors ordinary IANA registry update practice (compatible
+erratum and security-update paths exist alongside the closed-question
+of what counts as a new registration) rather than treating every
+change as equivalent to inventing a new artifact. This document seeds
+the registry with one payload type, <code>mission-intent-admission</code>
+(<a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>).<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-evidence-envelope-domain-separation">
+<section id="section-5.3">
+        <h3 id="name-domain-separation">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-domain-separation" class="section-name selfRef">Domain Separation</a>
+        </h3>
+<p id="section-5.3-1">Sharing one envelope shape and one media type across every registered
+payload type does not relocate domain separation into a payload
+member the way a single flat <code>typ</code> value list would. Four things hold
+it in place instead. First, <code>type</code> is itself inside the bytes the
+<code>evidence_envelope</code> signs
+(<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>): a party that relabels
+<code>type</code> without the signer's key breaks the signature, so <code>type</code> is
+tamper-evident, not an unauthenticated routing hint read before
+verification. Second, a verifier applies a payload's schema and
+verification procedure only after resolving <code>type</code> to exactly one
+registration (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>); there is no shared,
+generic parse of <code>payload</code> a verifier could apply across types. Third,
+a schema or procedure change that would accept or require different
+conforming bytes is a new <code>type</code>, never a silent reinterpretation of
+an existing one, while a compatible clarification or hardening stays
+reviewable against its change history
+(<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>). Fourth, a valid signature and a
+schema-conformant payload are necessary but not sufficient: a verifier
+additionally checks that the signing emitter is authorized to speak
+for the named Mission and type (<a href="#producer-authorization" class="auto internal xref">Section 5.4</a>), so domain
+separation is never reduced to "the bytes parse and the signature
+verifies."<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">This is a narrower and safer construction than the single universal
+<code>typ</code> list this family previously declined: no payload member ever
+carries domain separation, <code>type</code> is bound by the signature rather
+than trusted as presented, every type keeps its own closed schema and
+verification procedure, and no signature alone establishes producer
+authority. It does not touch the media-type domain separation the
+family's existing evidence objects already carry under their own,
+separately registered media types
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>); this
+document neither re-registers them nor requires that they migrate.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="producer-authorization">
+<section id="section-5.4">
+        <h3 id="name-producer-authorization">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-producer-authorization" class="section-name selfRef">Producer Authorization</a>
+        </h3>
+<p id="section-5.4-1">The generic envelope integrity check
+(<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>) proves that the exact bytes
+of an instance, <code>evidence_envelope</code> excluded, are signed by whatever
+key the JWS <code>kid</code> resolves to. It does not by itself prove that the
+resolved key's owner is entitled to speak for the named
+<code>mission.issuer</code>, <code>mission.id</code>, and <code>type</code>: any component with a
+resolvable signing key can construct a well-formed, correctly signed,
+schema-conformant instance naming a Mission it has no relationship to,
+unless something additionally checks that binding.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">A payload type's verification procedure is therefore incomplete, and
+non-conforming to this registry, unless it establishes all of the
+following before an instance is treated as verified:<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.4-3">
+<li id="section-5.4-3.1">
+            <p id="section-5.4-3.1.1">which <code>emitter.role</code> value(s) the type permits, and that the
+instance's <code>emitter.role</code> is one of them;<a href="#section-5.4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.4-3.2">
+            <p id="section-5.4-3.2.1">how a verifier determines the canonical identity authorized to hold
+that role for the named <code>mission.issuer</code> (the issuer identity
+itself, or a component the issuer specifically registers, never a
+value the instance merely asserts about itself); and<a href="#section-5.4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.4-3.3">
+            <p id="section-5.4-3.3.1">that the JWS signing key is one that canonical authority has
+published, or specifically authorized, for this evidence usage,
+not merely a key that is resolvable somewhere.<a href="#section-5.4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-5.4-4">A verifier MUST reject an instance failing any of these checks,
+treating the failure identically to a signature or schema failure: an
+otherwise well-formed, correctly signed, schema-conformant instance
+naming a Mission or producer role it is not authorized for is not
+verified evidence.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-evidence-envelope-integrity">
+<section id="section-5.5">
+        <h3 id="name-integrity">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-integrity" class="section-name selfRef">Integrity</a>
+        </h3>
+<p id="section-5.5-1">Every committed or signed JSON value in this document satisfies the
+canonicalization, I-JSON conformance, and algorithm-agility rules of
+the Mission Substrate's Default Commitment Construction
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+canonicalization, parse-time duplicate-member-name rejection, the
+I-JSON <span>[<a href="#RFC7493" class="cite xref">RFC7493</a>]</span> numeric and string domain, and the reject-unknown,
+no-downgrade rule for any algorithm prefix. This document does not
+restate those rules; it instantiates them.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">A Mission Evidence Envelope instance's integrity protection is a JWS
+Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> (<code>format</code> <code>jws-compact</code>, the only
+format this document defines) whose payload is the JCS canonical
+bytes of the instance with the <code>evidence_envelope</code> member removed. A
+verifier MUST perform the following steps, in order, and MUST NOT
+treat an instance as verified if any step fails:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.5-3">
+<li id="section-5.5-3.1">
+            <p id="section-5.5-3.1.1">Decode the JWS payload.<a href="#section-5.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.5-3.2">
+            <p id="section-5.5-3.2.1">Compute the JCS canonical bytes of the outer instance with the
+<code>evidence_envelope</code> member removed.<a href="#section-5.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.5-3.3">
+            <p id="section-5.5-3.3.1">Require byte-for-byte equality between the decoded payload of step
+1 and the canonical bytes of step 2, rejecting the instance on any
+difference.<a href="#section-5.5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.5-3.4">
+            <p id="section-5.5-3.4.1">Verify the JWS signature and protected header against the
+candidate emitter's published or registered signing key.<a href="#section-5.5-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.5-3.5">
+            <p id="section-5.5-3.5.1">Apply <a href="#producer-authorization" class="auto internal xref">Section 5.4</a>: reject unless the signing key,
+<code>emitter</code>, <code>mission.issuer</code>, and <code>type</code> are mutually authorized
+under the recognized type's registration.<a href="#section-5.5-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-5.5-4">The JWS protected header MUST carry <code>kid</code> (a key identifier resolvable
+under <a href="#producer-authorization" class="auto internal xref">Section 5.4</a>), <code>alg</code> (<code>ES256</code> <span>[<a href="#RFC7518" class="cite xref">RFC7518</a>]</span>
+mandatory to implement; an implementation MAY offer other JOSE
+algorithms but MUST implement <code>ES256</code>, and MUST reject <code>none</code> and any
+protected header whose <code>alg</code> does not match the algorithm family of
+the resolved key), <code>typ</code> (<code>application/mission-evidence+jws</code>, the one
+value for every payload type this envelope secures, <a href="#iana" class="auto internal xref">Section 10</a>), and
+<code>cty</code> (<code>application/mission-evidence+json</code>, the one media type every
+instance of this envelope carries regardless of <code>type</code>, <a href="#iana" class="auto internal xref">Section 10</a>). A
+verifier MUST reject a JWS whose protected <code>typ</code> or <code>cty</code> does not
+match these exact values.<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+<p id="section-5.5-5">Where the selected signing key is identified as compromised by the
+deployment-defined key-status mechanism, a verifier MUST require an
+independently trusted existence proof over the complete signed
+instance, or its unambiguous typed digest, establishing existence
+before the compromise boundary, before continuing verification; the
+instance's own asserted timestamps never satisfy this.<a href="#section-5.5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-evidence-envelope-retention">
+<section id="section-5.6">
+        <h3 id="name-retention">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-retention" class="section-name selfRef">Retention</a>
+        </h3>
+<p id="section-5.6-1">A Mission Evidence Envelope instance MUST be retained for at least the
+deployment's audit retention window, no shorter than the Mission's
+audit horizon (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This duty
+falls on the producer at the moment of emission; the producer
+discharges it either by retaining the instance itself, or by
+delivering it to an evidence store or collector the deployment
+designates for this purpose, whose successful acknowledgment of
+receipt discharges the producer's own retention obligation. A
+producer that ceases to hold an instance after a successfully
+acknowledged delivery to such a collector is not, for that reason
+alone, non-conforming; the collector then carries the retention
+window. A registered payload type MAY require stricter retention,
+different acknowledgment semantics, or a specific durable store where
+its own governance requirements differ from this default.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="specialized-evidence-containers">
+<section id="section-5.7">
+        <h3 id="name-specialized-containers">
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-specialized-containers" class="section-name selfRef">Specialized Containers</a>
+        </h3>
+<p id="section-5.7-1">Not every committed artifact belongs inside this envelope's generic
+<code>payload</code> wrapping. An SD-JWT Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) is a portable, selectively
+disclosable claim set whose wire form is the SD-JWT's own compact
+serialization; wrapping it in a JSON <code>payload</code> member would require
+re-encoding the disclosures or losing selective disclosure entirely. A
+SCITT Signed Statement and Receipt
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) commit a payload-preimage
+digest at a transparency boundary under COSE, a distinct signing stack
+and trust model from this envelope's JOSE <code>evidence_envelope</code>, and
+registering a Receipt as a payload type here would confuse a
+transparency-service commitment with a producer-signed evidence
+record. Both stay in their own compact, natively typed wire forms,
+outside this registry.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="migration-plan">
+<section id="section-5.8">
+        <h3 id="name-migration-plan-non-normativ">
+<a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-migration-plan-non-normativ" class="section-name selfRef">Migration Plan (Non-Normative)</a>
+        </h3>
+<p id="section-5.8-1">This document requires no existing evidence kind to migrate, and
+claims no timeline for one doing so. This section is a non-normative
+inventory for whichever kind's own editors choose to evaluate it, so
+this registry does not become, in the review's words, "a permanent
+parallel envelope instead of consolidation" by default.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+<p id="section-5.8-2">Candidates fall into three tiers, ordered by how disruptive adopting
+this envelope would be to what already ships:<a href="#section-5.8-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.8-3">
+<li id="section-5.8-3.1">
+            <p id="section-5.8-3.1.1"><strong>Unregistered or locally-agreed kinds with no pinned wire vector</strong>:
+Orchestration Evidence (<code>mission-orchestration-evidence</code>, a
+local-use identifier with no registered media type,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> evidence-types catalog
+discussion) and Shaping Evidence (no fixed schema or media type
+today). Registering either as a payload type here, instead of
+minting its own bespoke media type, costs nothing a deployment has
+already pinned; this is the tier where adopting the registry is
+cheapest and where a first real migration, if one lands, should
+start.<a href="#section-5.8-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.8-3.2">
+            <p id="section-5.8-3.2.1"><strong>Registered-but-unsigned kinds</strong>: Harness Evidence and Egress
+Evidence fix an operational <code>typ</code> of <code>none</code> today. Adding an
+envelope-based signed form is additive (a new option beside the
+existing unsigned form), not a breaking change to either.<a href="#section-5.8-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.8-3.3">
+            <p id="section-5.8-3.3.1"><strong>Heavily pinned, tested kinds</strong>: Decision Evidence, Execution
+Evidence, Refusal Records, the Mission Receipt, Consent Evidence,
+and Approval Governance each carry worked test vectors and
+conformance-manifest coverage keyed to their current media types.
+Moving any of these is a breaking change to pinned vectors and
+requires that kind's own dedicated migration and deprecation plan,
+never a unilateral decision by this document.<a href="#section-5.8-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-5.8-4">Landing an actual migration is deliberately out of this document's own
+scope; it is flagged here as a candidate follow-on for the affected
+kind's own editors to schedule.<a href="#section-5.8-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="intent-admission-evidence">
+<section id="section-6">
+      <h2 id="name-intent-admission-evidence">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-intent-admission-evidence" class="section-name selfRef">Intent Admission Evidence</a>
+      </h2>
+<p id="section-6-1">Intent Admission Evidence spans two planes, and the terms below keep
+them distinct because the AS's own evidence hook does
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Inbound, a client presents an
+<strong>Intent Admission Assertion</strong> as an Intent Submission Evidence entry
+(<a href="#intent-admission-assertion" class="auto internal xref">Section 6.1</a>): this is the first type this document
+series registers under the Mission Intent Submission envelope's
+evidence dispatch, which shipped with an empty type registry and
+refuses every presented entry until a profile registers one. Emitted,
+the AS records its own admission attestation as a <strong>Mission Intent
+Admission</strong> payload type of the Mission Evidence Envelope
+(<a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>): the first payload type this
+document's registry seeds (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>). The
+inbound assertion is client-presented policy input; the emitted record
+is the issuer's own signed attestation, not independent proof of the
+inbound assertion (<a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>). Neither is
+authority: verified evidence remains authenticated input to AS policy,
+never a copied entry in the Authority Set and never the Mission
+approval event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div id="intent-admission-assertion">
+<section id="section-6.1">
+        <h3 id="name-the-intent-admission-assert">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-the-intent-admission-assert" class="section-name selfRef">The Intent Admission Assertion</a>
+        </h3>
+<p id="section-6.1-1">The evidence entry's <code>type</code> is <code>mission-intent-admission-assertion</code>.
+The entry is closed to exactly two members:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.1-2">
+          <dt id="section-6.1-2.1">
+<code>type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">REQUIRED. The string <code>mission-intent-admission-assertion</code>.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-2.3">
+<code>assertion</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">REQUIRED. A string, a JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>: the
+Intent Admission Assertion.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.1-3">The assertion's JOSE protected header MUST carry <code>typ</code>
+          <code>mission-intent-admission-assertion+jws</code>, a collision-resistant value
+distinct from every other JWS this family defines, so an assertion of
+this exact type cannot be substituted for, or accepted in place of, a
+JWS from a different profile that happens to share a key. This <code>typ</code>
+value is not separately registered as an IANA media type: it names a
+JOSE object identity, never transmitted as a <code>Content-Type</code>, and this
+document mints no bespoke media type for the assertion.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">The protected header MUST also carry <code>alg</code> (<code>ES256</code> <span>[<a href="#RFC7518" class="cite xref">RFC7518</a>]</span>
+mandatory to implement; an implementation MAY offer other JOSE
+algorithms but MUST implement <code>ES256</code>) and <code>kid</code> (a key identifier
+resolvable as described below). A verifier MUST reject an assertion
+whose <code>alg</code> is <code>none</code>, whose <code>alg</code> does not match the algorithm family
+of the key <code>kid</code> resolves to, or whose protected <code>typ</code> is not exactly
+<code>mission-intent-admission-assertion+jws</code>.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">The admission issuer's key used to sign this assertion MUST be
+published or configured specifically for Intent Admission Assertion
+signing, distinct from any other key-use the admission issuer
+publishes (for example, a <code>use</code> or <code>key_ops</code> scoping, or a
+deployment-published key-purpose registration naming this exact
+usage). A verifier MUST reject an assertion signed by a key that is
+resolvable but not scoped to this usage; a multipurpose signing key
+with no usage scoping does not satisfy this requirement.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+<p id="section-6.1-6">The decoded assertion's claims are closed to exactly these members:<a href="#section-6.1-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.1-7">
+          <dt id="section-6.1-7.1">
+<code>iss</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.2">
+            <p id="section-6.1-7.2.1">REQUIRED. A string. The admission issuer: the party attesting to
+the Intent's originator and the admission decision, distinct from
+the Mission AS.<a href="#section-6.1-7.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.3">
+<code>aud</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.4">
+            <p id="section-6.1-7.4.1">REQUIRED. A string. The Mission AS's issuer identifier.<a href="#section-6.1-7.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.5">
+<code>iat</code>, <code>exp</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.6">
+            <p id="section-6.1-7.6.1">REQUIRED. RFC 3339-equivalent JWT numeric dates <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>, the
+assertion's validity window.<a href="#section-6.1-7.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.7">
+<code>jti</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.8">
+            <p id="section-6.1-7.8.1">REQUIRED. A string. The assertion identifier, unique within the
+admission issuer's namespace.<a href="#section-6.1-7.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.9">
+<code>intent_hash</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.10">
+            <p id="section-6.1-7.10.1">REQUIRED. A string. The exact <code>intent_hash</code> this assertion applies
+to (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.1-7.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.11">
+<code>originator</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.12">
+            <p id="section-6.1-7.12.1">REQUIRED. An object with <code>iss</code> and <code>sub</code>. Who the admission issuer
+attests originated the Intent, distinct from the presenter below.<a href="#section-6.1-7.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.13">
+<code>presenter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.14">
+            <p id="section-6.1-7.14.1">REQUIRED. An object with <code>client_id</code> (REQUIRED, a string) and <code>cnf</code>
+(OPTIONAL, a confirmation-method object <span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>), the party this
+assertion authorizes to submit the Intent.<a href="#section-6.1-7.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.15">
+<code>admission_basis</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.16">
+            <p id="section-6.1-7.16.1">REQUIRED. An object with <code>type</code> (REQUIRED, a string, a
+collision-resistant name for the upstream decision class) and
+<code>reference</code> (REQUIRED, a string, an admission-issuer-scoped pointer
+to that decision). This document does not standardize the upstream
+admission or consent system <code>reference</code> points into.<a href="#section-6.1-7.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-7.17">
+<code>status</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-7.18">
+            <p id="section-6.1-7.18.1">REQUIRED. A string. <code>active</code> is the only value this document
+defines; a verifier MUST treat any other value as not verified.
+<code>status</code> reflects the admission issuer's state at the instant it
+signed the assertion; it is not re-checked afterward
+(<a href="#intent-admission-security" class="auto internal xref">Section 8.2</a>).<a href="#section-6.1-7.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="intent-admission-verification">
+<section id="section-6.2">
+        <h3 id="name-verification-procedure">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-verification-procedure" class="section-name selfRef">Verification Procedure</a>
+        </h3>
+<p id="section-6.2-1">Beyond the Mission Intent Submission envelope's own dispatch rules
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the AS verifies an entry of
+this type as follows, rejecting the submission with
+<code>invalid_mission_intent_evidence</code> on any failure:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.2-2">
+<li id="section-6.2-2.1">
+            <p id="section-6.2-2.1.1">Confirm the entry carries exactly <code>type</code> and <code>assertion</code>.<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.2">
+            <p id="section-6.2-2.2.1">Decode <code>assertion</code> as a JWS Compact Serialization. Confirm the
+protected <code>typ</code> is exactly <code>mission-intent-admission-assertion+jws</code>
+and <code>alg</code> is not <code>none</code>.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.3">
+            <p id="section-6.2-2.3.1">Resolve <code>kid</code> in the admission issuer's key material scoped
+specifically to Intent Admission Assertion signing, established by
+deployment configuration (an issuer allowlist, a configured JWKS
+with usage scoping, or equivalent); this document does not
+standardize admission-issuer discovery. Confirm <code>alg</code> matches the
+resolved key's algorithm family.<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.4">
+            <p id="section-6.2-2.4.1">Verify the JWS signature.<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.5">
+            <p id="section-6.2-2.5.1">Verify <code>aud</code> equals this AS's issuer identifier.<a href="#section-6.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.6">
+            <p id="section-6.2-2.6.1">Verify the current time is within <code>iat</code> and <code>exp</code>, under the
+deployment's clock-skew tolerance.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.7">
+            <p id="section-6.2-2.7.1"><strong>Atomically reserve <code>jti</code></strong>: the AS MUST use an atomic
+compare-and-set (or equivalent single-writer-wins primitive)
+against a store keyed by (admission issuer, <code>jti</code>), succeeding only
+if no prior submission has reserved or committed that key within
+its validity window. A concurrent submission that loses the race
+observes reservation failure and MUST be refused as replay; it
+MUST NOT proceed to verify the same assertion a second time in
+parallel. A reservation that is not later committed (step 10) MUST
+be released no later than <code>exp</code>, freeing the identifier for a
+legitimate retry; a committed reservation is permanent for the
+window this AS retains submission records.<a href="#section-6.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.8">
+            <p id="section-6.2-2.8.1">Verify <code>intent_hash</code> equals the provisional <code>intent_hash</code> computed
+at submission-processing step 3
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.9">
+            <p id="section-6.2-2.9.1">Verify <code>presenter.client_id</code>, and <code>cnf</code> where present, equal the
+presenter the containing exchange established; the assertion is
+never an alternative client-authentication mechanism and never
+selects the presenter (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.10">
+            <p id="section-6.2-2.10.1">Verify <code>status</code> is exactly <code>active</code>. On success, <strong>commit</strong> the
+<code>jti</code> reservation of step 7 (permanent, see above). On failure at
+this step or any of steps 2-9, <strong>release</strong> the reservation.<a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-6.2-3">This type defines no evidence-lineage exception: a shaping or approval
+revision that changes <code>intent_hash</code> requires a fresh assertion with a
+fresh <code>jti</code>, under the general rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4"><strong>Composition with creation-fingerprint idempotent recovery.</strong> On a
+surface that also carries a Mission-creation idempotency fingerprint
+(expansion, child creation, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+this <code>jti</code> reservation is a distinct, submission-plane replay control,
+not a substitute for that fingerprint's own recovery path. Recovery of
+an already-completed creation operation under the fingerprint's own
+rules returns the recorded outcome without re-running this section's
+verification a second time, exactly as that rule already states;
+committing a <code>jti</code> in step 10 is what makes that recovery safe to skip
+re-verification against, since the original commit already proves the
+assertion was checked once. A fresh submission bearing a <code>jti</code> this AS
+has never seen follows the full ten-step procedure above regardless of
+whether it shares a creation fingerprint with an unrelated prior
+request.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="intent-admission-facts">
+<section id="section-6.3">
+        <h3 id="name-recorded-facts">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-recorded-facts" class="section-name selfRef">Recorded Facts</a>
+        </h3>
+<p id="section-6.3-1">On success, the verified output <code>facts</code> this type designates for
+recording as a <code>submission_evidence</code> element
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) are closed to exactly:<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.3-2">
+          <dt id="section-6.3-2.1">
+<code>admission_issuer</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.2">
+            <p id="section-6.3-2.2.1">REQUIRED. The assertion's <code>iss</code>.<a href="#section-6.3-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.3">
+<code>originator</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.4">
+            <p id="section-6.3-2.4.1">REQUIRED. The assertion's <code>originator</code>.<a href="#section-6.3-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.5">
+<code>presenter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.6">
+            <p id="section-6.3-2.6.1">REQUIRED. The assertion's <code>presenter</code>.<a href="#section-6.3-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.7">
+<code>admission_basis</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.8">
+            <p id="section-6.3-2.8.1">REQUIRED. The assertion's <code>admission_basis</code>.<a href="#section-6.3-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.9">
+<code>status</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.10">
+            <p id="section-6.3-2.10.1">REQUIRED. The assertion's <code>status</code>, as observed at admission; see
+<a href="#intent-admission-security" class="auto internal xref">Section 8.2</a> for what this does and does not prove
+afterward.<a href="#section-6.3-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.3-3">These facts are exactly the normalized form a <code>submission_evidence</code>
+element's <code>facts</code> member carries for this type
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this document defines no
+independent commitment over them beyond the Mission Record's own
+trust, matching the OAuth binding's stated position that it commits
+none. A future profile whose threat model needs an independently
+committed root over Mission-record-derived facts, including this
+evidence, MAY reference the Mission Record's <code>submission_evidence</code>
+array as that normalized input without redefining its shape; this
+document takes no position on whether or how such a root is
+constructed.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="intent-admission-payload-type">
+<section id="section-6.4">
+        <h3 id="name-the-intent-admission-payloa">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-the-intent-admission-payloa" class="section-name selfRef">The Intent Admission Payload Type</a>
+        </h3>
+<p id="section-6.4-1"><code>mission-intent-admission</code> is a Mission Evidence Envelope payload type
+(<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>).<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2"><strong>Producer authorization</strong> (<a href="#producer-authorization" class="auto internal xref">Section 5.4</a>), instantiated
+for this type:<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.4-3.1">
+            <p id="section-6.4-3.1.1"><code>emitter.role</code> MUST be <code>issuer</code>; no other role is permitted for this
+type.<a href="#section-6.4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.4-3.2">
+            <p id="section-6.4-3.2.1"><code>emitter.id</code> MUST equal the canonical identity of the Mission issuer
+named by <code>mission.issuer</code>, or a component that issuer specifically
+registers to emit this type on its behalf; it MUST NOT be accepted
+merely because it is a string equal to some other value the instance
+carries.<a href="#section-6.4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.4-3.3">
+            <p id="section-6.4-3.3.1">The JWS signing key MUST be one <code>mission.issuer</code> (or its specifically
+registered component) publishes for Mission Evidence Envelope
+signing; a verifier MUST NOT accept a key merely because it resolves
+and validates, if that key is not published by the named issuer for
+this purpose. A valid, resolvable key belonging to a different
+issuer, presented over an instance naming this Mission, MUST be
+rejected under this rule even though the envelope integrity check of
+<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a> would otherwise pass.<a href="#section-6.4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.4-4">An AS SHOULD emit one instance at Mission creation when the approved
+submission carried Intent Admission Evidence, giving that admission an
+independently signed, portable, registrable record instead of leaving
+it as unanchored Mission Record metadata alone.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
+<p id="section-6.4-5"><code>payload</code> is closed to exactly:<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.4-6">
+          <dt id="section-6.4-6.1">
+<code>intent_hash</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.4-6.2">
+            <p id="section-6.4-6.2.1">REQUIRED. A string. The admitted Mission's <code>intent_hash</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.4-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.4-6.3">
+<code>submission_evidence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.4-6.4">
+            <p id="section-6.4-6.4.1">REQUIRED. An array. The Mission Record's <code>submission_evidence</code> array
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), restated exactly, in the
+record's order.<a href="#section-6.4-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.4-6.5">
+<code>disposition</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.4-6.6">
+            <p id="section-6.4-6.6.1">REQUIRED. A string. <code>admitted</code> is the only value this document
+defines: this payload type is emitted only where a Mission exists to
+reference, so no refusal outcome is representable by it. A companion
+needing richer admission-outcome semantics registers a new payload
+type rather than extending this one's closed schema
+(<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>).<a href="#section-6.4-6.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.4-7">Beyond <a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a> and the producer
+authorization above, a verifier holding the referenced Mission Record
+MUST confirm <code>payload.intent_hash</code> and <code>payload.submission_evidence</code>
+are byte-for-byte equal, member for member, to the Mission Record's
+own <code>intent_hash</code> and <code>submission_evidence</code>.<a href="#section-6.4-7" class="pilcrow">¶</a></p>
+<p id="section-6.4-8"><strong>This is an AS attestation, not independent proof of the original
+assertion.</strong> A verifier that has done all of the above has confirmed
+that the Mission issuer itself attests to having admitted this exact
+intent under this exact recorded evidence; it has not independently
+verified the admission issuer's original Intent Admission Assertion,
+because the payload carries only <code>submission_evidence</code>'s digest and
+extracted facts (<a href="#intent-admission-facts" class="auto internal xref">Section 6.3</a>), never the assertion
+bytes themselves, and the cross-check above compares two
+representations that are both under the Mission issuer's own control.
+A party requiring independent proof of what the admission issuer
+signed must obtain the retained assertion artifact, or a resolvable
+reference to it plus its digest, and verify it directly under
+<a href="#intent-admission-verification" class="auto internal xref">Section 6.2</a>; this document does not require a
+Mission issuer to retain or disclose that artifact, and states no
+disclosure or access rule for one that is retained voluntarily. A
+deployment that intends independent verifiability should retain the
+assertion (or a digest-referenced pointer to it) and define its own
+disclosure policy.<a href="#section-6.4-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="intent-admission-example">
+<section id="section-6.5">
+        <h3 id="name-worked-example">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+        </h3>
+<p id="section-6.5-1">An Intent Submission Evidence entry presenting an Intent Admission
+Assertion:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.5-2">
+<pre>
+{
+  "type": "mission-intent-admission-assertion",
+  "assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFkbWlzc2lvbi1rZXktMSIsInR5cCI6Im1pc3Npb24taW50ZW50LWFkbWlzc2lvbi1hc3NlcnRpb24randzIn0..."
+}
+</pre><a href="#section-6.5-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.5-3">The Mission Evidence Envelope instance the AS emits after admitting
+it:<a href="#section-6.5-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.5-4">
+<pre>
+{
+  "type": "mission-intent-admission",
+  "id": "evt_9K2nP4qV9rL3tY6sB1zN0eF7jB1zN6cQ",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example"
+  },
+  "emitter": { "id": "https://as.example", "role": "issuer" },
+  "occurred_at": "2026-11-02T08:00:05Z",
+  "sequence": 0,
+  "payload": {
+    "intent_hash": "sha-256:3q4-...",
+    "submission_evidence": [
+      {
+        "type": "mission-intent-admission-assertion",
+        "artifact_hash": "sha-256:9zP-...",
+        "verified_at": "2026-11-02T08:00:04Z",
+        "facts": {
+          "admission_issuer": "https://admission.example",
+          "originator": { "iss": "https://admission.example", "sub": "user-42" },
+          "presenter": { "client_id": "agent-client-7" },
+          "admission_basis": { "type": "helpdesk-ticket", "reference": "TCK-88123" },
+          "status": "active"
+        }
+      }
+    ],
+    "disposition": "admitted"
+  },
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0xIn0..."
+  }
+}
+</pre><a href="#section-6.5-4" class="pilcrow">¶</a>
+</div>
+<p id="section-6.5-5">Three negative cases the verification procedure above refuses, none
+of which are pinned as byte-level vectors at this Experimental
+maturity:<a href="#section-6.5-5" class="pilcrow">¶</a></p>
+<p id="section-6.5-6"><strong>Cross-issuer signature.</strong> A component holding a valid, resolvable
+signing key for <code>https://as-b.example</code> signs an otherwise well-formed
+<code>mission-intent-admission</code> instance whose <code>mission.issuer</code> is
+<code>https://as-a.example</code>. The envelope integrity check
+(<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>) passes: the signature is
+valid and the bytes match. Producer authorization
+(<a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>) fails: the key is not one
+<code>https://as-a.example</code> publishes, so the instance is rejected.<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+<p id="section-6.5-7"><strong>Concurrent replay.</strong> Two submissions presenting assertions with the
+same <code>jti</code> arrive concurrently. Exactly one wins the atomic reservation
+of verification step 7; the other observes reservation failure and is
+refused as replay, never processed to a second, independent admission
+decision.<a href="#section-6.5-7" class="pilcrow">¶</a></p>
+<p id="section-6.5-8"><strong>Cross-JOSE-type substitution.</strong> A JWS validly signed by a key
+resolvable in the admission issuer's key set, but whose protected
+<code>typ</code> is some other profile's value (or absent), is presented as an
+Intent Admission Assertion. Verification step 2 rejects it before
+signature verification is even meaningful for this purpose: the
+protected <code>typ</code> does not equal
+<code>mission-intent-admission-assertion+jws</code>.<a href="#section-6.5-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conformance">
+<section id="section-7">
+      <h2 id="name-conformance">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-7-1">This document defines conformance for three roles: a PRODUCER that
+emits Mission Evidence Envelope instances; a VERIFIER that reads and
+checks them; and, for Intent Admission Evidence specifically, the AS
+that processes the inbound assertion.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A PRODUCER conforming to this document MUST:<a href="#section-7-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-3.1">
+          <p id="section-7-3.1.1">emit only instances whose <code>type</code> is registered
+(<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>);<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.2">
+          <p id="section-7-3.2.1">sign every instance under <a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>,
+with a <code>kid</code> resolvable under <a href="#producer-authorization" class="auto internal xref">Section 5.4</a> for the
+named <code>mission.issuer</code>, <code>emitter.role</code>, and <code>type</code>; and<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.3">
+          <p id="section-7-3.3.1">retain, or successfully deliver to a designated collector, every
+instance it emits, per <a href="#mission-evidence-envelope-retention" class="auto internal xref">Section 5.6</a>.<a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-4">A VERIFIER conforming to this document MUST:<a href="#section-7-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-5.1">
+          <p id="section-7-5.1.1">reject an instance whose <code>type</code> it does not recognize, applying no
+default or guessed schema (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>);<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-5.2">
+          <p id="section-7-5.2.1">perform the five-step procedure of
+<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>, including the producer
+authorization check of step 5, and treat a failure at any step as
+not-verified; and<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-5.3">
+          <p id="section-7-5.3.1">apply the compromise-boundary rule of
+<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a> where the resolved signing
+key is identified as compromised.<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-6">An AS supporting Intent Admission Evidence MUST:<a href="#section-7-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-7.1">
+          <p id="section-7-7.1.1">perform the ten-step procedure of <a href="#intent-admission-verification" class="auto internal xref">Section 6.2</a>
+for every <code>mission-intent-admission-assertion</code> entry presented,
+including the atomic <code>jti</code> reserve/commit/release discipline of step
+7 and step 10;<a href="#section-7-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-7.2">
+          <p id="section-7-7.2.1">record the verified facts exactly as <a href="#intent-admission-facts" class="auto internal xref">Section 6.3</a>
+fixes; and<a href="#section-7-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-7.3">
+          <p id="section-7-7.3.1">where it emits a <code>mission-intent-admission</code> instance, satisfy the
+producer-authorization instantiation and the byte-equality
+cross-check of <a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>.<a href="#section-7-7.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-8">
+      <h2 id="name-security-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="envelope-and-registry">
+<section id="section-8.1">
+        <h3 id="name-envelope-and-registry">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-envelope-and-registry" class="section-name selfRef">Envelope and Registry</a>
+        </h3>
+<p id="section-8.1-1">A shared media type and a shared JWS <code>typ</code> across every registered
+payload type do not, by themselves, prevent a well-signed instance
+from naming a Mission or role its signer has no relationship to; that
+is exactly the gap <a href="#producer-authorization" class="auto internal xref">Section 5.4</a> closes, and a payload
+type registration that omits an executable producer-authorization
+check is non-conforming under <a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>, not
+merely incomplete. A Designated Expert reviewing a new registration
+(<a href="#iana" class="auto internal xref">Section 10</a>) MUST confirm the verification-procedure reference actually
+specifies this check; a registration whose "verification procedure"
+is only the generic five-step integrity algorithm, with no
+type-specific authorization binding, does not satisfy the registry's
+own requirement.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">Producer authorization is bound to the key the named Mission issuer
+(or its specifically registered component) publishes. Compromise of
+that key defeats producer authorization the same way it would defeat
+any other signature-based control; this document adds no independent
+defense against a compromised issuer key beyond the general
+compromise-boundary rule of <a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="intent-admission-security">
+<section id="section-8.2">
+        <h3 id="name-intent-admission">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-intent-admission" class="section-name selfRef">Intent Admission</a>
+        </h3>
+<p id="section-8.2-1"><strong>Key-use separation.</strong> Requiring a key scoped specifically to Intent
+Admission Assertion signing, and a distinct protected <code>typ</code>
+(<a href="#intent-admission-assertion" class="auto internal xref">Section 6.1</a>), defends against a cross-protocol
+substitution: without both, a JWS validly issued for an unrelated
+purpose under the same multipurpose key could otherwise be
+misinterpreted as an Intent Admission Assertion, since generic JWS
+validation alone does not distinguish one profile's tokens from
+another's.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2"><strong>Atomic replay control.</strong> Checking whether a <code>jti</code> has been consumed
+and then separately recording it as consumed is a check-then-act race:
+two concurrent submissions can both observe the identifier as unused
+before either records it. The atomic reserve of
+<a href="#intent-admission-verification" class="auto internal xref">Section 6.2</a> step 7 closes this by making the
+reservation itself the race's single winner-take-all point, rather
+than treating "check" and "consume" as two independent operations a
+concurrent request can interleave between.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<p id="section-8.2-3"><strong>Status is a point-in-time attestation, not a live check.</strong> Verifying
+<code>status == active</code> at verification step 10 establishes only that the
+admission issuer's state was <code>active</code> when it signed the assertion. It
+does not establish that the upstream admission decision remains valid
+at any later time, including at the moment a verifier later inspects a
+retained <code>mission-intent-admission</code> instance or <code>submission_evidence</code>
+element. A deployment whose threat model requires currently-valid
+admission status, not merely status-at-signing, MUST define its own
+mechanism for checking current status against the admission issuer;
+this document provides none, and the absence of a later revocation
+check is not a gap this document's conformance requirements cover.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4"><strong>The emitted record is not independent proof of the inbound
+assertion.</strong> See <a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>: a verifier that
+trusts only the Mission issuer's own attestation, without separately
+verifying the original Intent Admission Assertion or a retained
+reference to it, has not independently corroborated what the admission
+issuer signed.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-9">
+      <h2 id="name-privacy-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<div id="envelope-and-registry-1">
+<section id="section-9.1">
+        <h3 id="name-envelope-and-registry-2">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-envelope-and-registry-2" class="section-name selfRef">Envelope and Registry</a>
+        </h3>
+<p id="section-9.1-1">A Mission Evidence Envelope instance's <code>emitter</code>, <code>mission</code>, and
+<code>payload</code> members may carry identifiers correlatable across a
+Mission's evidence stream; a registered payload type states its own
+minimization guidance where its payload carries personal data. This
+document states none for the generic envelope beyond what
+<a href="#intent-admission-facts" class="auto internal xref">Section 6.3</a> states for Intent Admission Evidence.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="intent-admission">
+<section id="section-9.2">
+        <h3 id="name-intent-admission-2">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-intent-admission-2" class="section-name selfRef">Intent Admission</a>
+        </h3>
+<p id="section-9.2-1">The Intent Admission Assertion's <code>originator</code>, and the <code>facts</code>
+recorded under <a href="#intent-admission-facts" class="auto internal xref">Section 6.3</a>, identify a natural person;
+<code>admission_basis.reference</code> further identifies an external ticketing
+or consent record. A deployment retaining <code>mission-intent-admission</code>
+payload instances SHOULD apply access control and retention discipline
+proportionate to that sensitivity, and MUST NOT resolve
+<code>admission_basis.reference</code> to disclose more of the upstream record
+than the admission issuer's own disclosure policy permits.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana">
+<section id="section-10">
+      <h2 id="name-iana-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-10-1">This document requests the following IANA actions.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="media-type-registry">
+<section id="section-10.1">
+        <h3 id="name-media-type-registry">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-media-type-registry" class="section-name selfRef">Media Type Registry</a>
+        </h3>
+<p id="section-10.1-1">This document registers two media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>: the Mission
+Evidence Envelope's JSON representation and its JWS-secured
+representation, shared by every registered payload type.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<div id="mission-evidence-envelope-media-type">
+<section id="section-10.1.1">
+          <h4 id="name-mission-evidence-envelope-m">
+<a href="#section-10.1.1" class="section-number selfRef">10.1.1. </a><a href="#name-mission-evidence-envelope-m" class="section-name selfRef">Mission Evidence Envelope Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-1.1">
+              <p id="section-10.1.1-1.1.1">Type name: application<a href="#section-10.1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.2">
+              <p id="section-10.1.1-1.2.1">Subtype name: mission-evidence+json<a href="#section-10.1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.3">
+              <p id="section-10.1.1-1.3.1">Required parameters: none<a href="#section-10.1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.4">
+              <p id="section-10.1.1-1.4.1">Optional parameters: none<a href="#section-10.1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.5">
+              <p id="section-10.1.1-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-10.1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.6">
+              <p id="section-10.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 8</a><a href="#section-10.1.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.7">
+              <p id="section-10.1.1-1.7.1">Interoperability considerations: see this document
+(<a href="#mission-evidence-envelope" class="auto internal xref">Section 5</a>)<a href="#section-10.1.1-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.8">
+              <p id="section-10.1.1-1.8.1">Published specification: this document<a href="#section-10.1.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.9">
+              <p id="section-10.1.1-1.9.1">Applications that use this media type: any registered Mission
+Evidence Envelope payload type (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>)<a href="#section-10.1.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.10">
+              <p id="section-10.1.1-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-10.1.1-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.11">
+              <p id="section-10.1.1-1.11.1">Additional information:<a href="#section-10.1.1-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-1.11.2.1">
+                  <p id="section-10.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-10.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.1-1.11.2.2">
+                  <p id="section-10.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-10.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.1-1.11.2.3">
+                  <p id="section-10.1.1-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-10.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.1-1.11.2.4">
+                  <p id="section-10.1.1-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-10.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.1.1-1.12">
+              <p id="section-10.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-10.1.1-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.13">
+              <p id="section-10.1.1-1.13.1">Intended usage: COMMON<a href="#section-10.1.1-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.14">
+              <p id="section-10.1.1-1.14.1">Restrictions on usage: none<a href="#section-10.1.1-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.15">
+              <p id="section-10.1.1-1.15.1">Author: IETF<a href="#section-10.1.1-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.16">
+              <p id="section-10.1.1-1.16.1">Change controller: IETF<a href="#section-10.1.1-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="secured-mission-evidence-envelope-media-type">
+<section id="section-10.1.2">
+          <h4 id="name-secured-mission-evidence-en">
+<a href="#section-10.1.2" class="section-number selfRef">10.1.2. </a><a href="#name-secured-mission-evidence-en" class="section-name selfRef">Secured Mission Evidence Envelope Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-1.1">
+              <p id="section-10.1.2-1.1.1">Type name: application<a href="#section-10.1.2-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.2">
+              <p id="section-10.1.2-1.2.1">Subtype name: mission-evidence+jws<a href="#section-10.1.2-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.3">
+              <p id="section-10.1.2-1.3.1">Required parameters: none<a href="#section-10.1.2-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.4">
+              <p id="section-10.1.2-1.4.1">Optional parameters: none<a href="#section-10.1.2-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.5">
+              <p id="section-10.1.2-1.5.1">Encoding considerations: binary; a JWS Compact Serialization:
+base64url-encoded values separated by period characters. The
+secured payload's own media type is always
+<code>application/mission-evidence+json</code>, carried in the JWS protected
+<code>cty</code> (<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>).<a href="#section-10.1.2-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.6">
+              <p id="section-10.1.2-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 8</a><a href="#section-10.1.2-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.7">
+              <p id="section-10.1.2-1.7.1">Interoperability considerations: see this document
+(<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>)<a href="#section-10.1.2-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.8">
+              <p id="section-10.1.2-1.8.1">Published specification: this document<a href="#section-10.1.2-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.9">
+              <p id="section-10.1.2-1.9.1">Applications that use this media type: any registered Mission
+Evidence Envelope payload type (<a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a>)<a href="#section-10.1.2-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.10">
+              <p id="section-10.1.2-1.10.1">Fragment identifier considerations: N/A<a href="#section-10.1.2-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.11">
+              <p id="section-10.1.2-1.11.1">Additional information:<a href="#section-10.1.2-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-1.11.2.1">
+                  <p id="section-10.1.2-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-10.1.2-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.2-1.11.2.2">
+                  <p id="section-10.1.2-1.11.2.2.1">Magic number(s): none<a href="#section-10.1.2-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.2-1.11.2.3">
+                  <p id="section-10.1.2-1.11.2.3.1">File extension(s): none<a href="#section-10.1.2-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.2-1.11.2.4">
+                  <p id="section-10.1.2-1.11.2.4.1">Macintosh file type code(s): N/A<a href="#section-10.1.2-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.1.2-1.12">
+              <p id="section-10.1.2-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-10.1.2-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.13">
+              <p id="section-10.1.2-1.13.1">Intended usage: COMMON<a href="#section-10.1.2-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.14">
+              <p id="section-10.1.2-1.14.1">Restrictions on usage: none<a href="#section-10.1.2-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.15">
+              <p id="section-10.1.2-1.15.1">Author: IETF<a href="#section-10.1.2-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.16">
+              <p id="section-10.1.2-1.16.1">Change controller: IETF<a href="#section-10.1.2-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-evidence-payload-types">
+<section id="section-10.2">
+        <h3 id="name-mission-evidence-payload-ty">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mission-evidence-payload-ty" class="section-name selfRef">Mission Evidence Payload Type Registry</a>
+        </h3>
+<p id="section-10.2-1">IANA is requested to create the "Mission Evidence Payload Types"
+registry. The registration policy is Specification Required
+<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>. A Designated Expert reviews a submission for the
+discipline <a href="#evidence-payload-type-registry" class="auto internal xref">Section 5.2</a> and
+<a href="#producer-authorization" class="auto internal xref">Section 5.4</a> require: a <code>Type</code> value that is a
+collision-resistant name, not already registered; a stable <code>Payload
+Schema Reference</code> fixing a closed schema for <code>payload</code>; a stable
+<code>Verification Procedure Reference</code> fixing, beyond the shared envelope
+integrity procedure (<a href="#mission-evidence-envelope-integrity" class="auto internal xref">Section 5.5</a>), every
+check a consumer applies to that payload, including an executable
+producer-authorization binding of emitter, signing key, and permitted
+<code>emitter.role</code> values to the named <code>mission.issuer</code> and <code>type</code>
+(<a href="#producer-authorization" class="auto internal xref">Section 5.4</a>); and a <code>Producer</code> naming the principal or
+principal class, and permitted <code>emitter.role</code> values, authoritative
+for instances of the type.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">A Designated Expert MUST reject a registration whose verification
+procedure reference does not fully specify payload verification and
+producer authorization, or whose <code>Type</code> would require reinterpreting
+an already-registered type's schema or semantics rather than adding a
+new one (<a href="#mission-evidence-envelope-domain-separation" class="auto internal xref">Section 5.3</a>). A
+Designated Expert MAY approve a same-<code>Type</code> update to an existing
+registration's schema or verification-procedure reference where the
+change controller demonstrates it is compatible (accepts no bytes an
+existing conforming instance would not already satisfy, and
+reinterprets no existing member) and preserves a change history;
+approval of an incompatible change requires a new <code>Type</code>.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">Each registration records:<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-4.1">
+            <p id="section-10.2-4.1.1"><strong>Type</strong>: the payload type's collision-resistant string value.<a href="#section-10.2-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-4.2">
+            <p id="section-10.2-4.2.1"><strong>Payload Schema Reference</strong>: the specification and section
+defining the closed <code>payload</code> schema.<a href="#section-10.2-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-4.3">
+            <p id="section-10.2-4.3.1"><strong>Verification Procedure Reference</strong>: the specification and section
+defining the type-specific verification procedure, including its
+producer-authorization binding.<a href="#section-10.2-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-4.4">
+            <p id="section-10.2-4.4.1"><strong>Producer</strong>: the principal or principal class, and permitted
+<code>emitter.role</code> values, authoritative for instances of this type.<a href="#section-10.2-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-4.5">
+            <p id="section-10.2-4.5.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-10.2-4.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-4.6">
+            <p id="section-10.2-4.6.1"><strong>Reference</strong>: the specification defining the type.<a href="#section-10.2-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.2-5">This document seeds the registry with the payload type it defines:<a href="#section-10.2-5" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Type</th>
+              <th class="text-left" rowspan="1" colspan="1">Payload Schema Reference</th>
+              <th class="text-left" rowspan="1" colspan="1">Verification Procedure Reference</th>
+              <th class="text-left" rowspan="1" colspan="1">Producer</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-intent-admission</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#intent-admission-payload-type" class="auto internal xref">Section 6.4</a>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission issuer (<code>emitter.role</code> <code>issuer</code>)</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#intent-admission-evidence" class="auto internal xref">Section 6</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-10.2-7">Each further document that defines a Mission Evidence Envelope payload
+type requests that type's registration in its own IANA considerations,
+carrying its Internet-Draft reference as a publication dependency
+under this registry's policy until it is published.<a href="#section-10.2-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
+      <h2 id="name-references">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-11.1">
+        <h3 id="name-normative-references">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6234">[RFC6234]</dt>
+        <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7493">[RFC7493]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The I-JSON Message Format"</span>, <span class="seriesInfo">RFC 7493</span>, <span class="seriesInfo">DOI 10.17487/RFC7493</span>, <time datetime="2015-03" class="refDate">March 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7493">https://www.rfc-editor.org/rfc/rfc7493</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7518">[RFC7518]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Algorithms (JWA)"</span>, <span class="seriesInfo">RFC 7518</span>, <span class="seriesInfo">DOI 10.17487/RFC7518</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7518">https://www.rfc-editor.org/rfc/rfc7518</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7800">[RFC7800]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)"</span>, <span class="seriesInfo">RFC 7800</span>, <span class="seriesInfo">DOI 10.17487/RFC7800</span>, <time datetime="2016-04" class="refDate">April 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7800">https://www.rfc-editor.org/rfc/rfc7800</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8126">[RFC8126]</dt>
+        <dd>
+<span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Leiba, B.</span>, and <span class="refAuthor">T. Narten</span>, <span class="refTitle">"Guidelines for Writing an IANA Considerations Section in RFCs"</span>, <span class="seriesInfo">BCP 26</span>, <span class="seriesInfo">RFC 8126</span>, <span class="seriesInfo">DOI 10.17487/RFC8126</span>, <time datetime="2017-06" class="refDate">June 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8126">https://www.rfc-editor.org/rfc/rfc8126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+      <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-11.2">
+        <h3 id="name-informative-references">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">Initial version. Defines the Mission Evidence Envelope, the Mission
+Evidence Payload Type Registry, and Intent Admission Evidence as the
+registry's first payload type and the first consumer of the OAuth
+binding's Intent Submission Evidence dispatch (#506). Extracted as a
+standalone, binding-neutral companion, rather than hosted inside
+Mission Runtime Evidence, so that a consent-only, approval-time, or
+other non-runtime evidence producer never depends on PDP/PEP decision
+and execution record machinery merely to use the shared envelope
+(review of PR #721, responding to the #282 architecture-shape finding
+and the #512 disposition on Intent Admission). Incorporates review
+findings: an explicit Producer Authorization section binding
+emitter/key to (Mission issuer, type) rather than trusting a resolved
+signature alone; a protected JWS <code>typ</code>, mandatory-algorithm, and
+key-use-separation requirement for the inbound Intent Admission
+Assertion; an atomic <code>jti</code> reserve/commit/release replay control,
+composed explicitly with the OAuth binding's creation-fingerprint
+idempotent recovery so the two mechanisms do not read as competing; a softened
+payload-type change-control rule permitting compatible clarification
+and security hardening under the same <code>type</code>, reserving a new <code>type</code>
+for incompatible schema or semantic change; an explicit statement that
+the emitted <code>mission-intent-admission</code> record is the Mission issuer's
+own attestation, not independent proof of the admission issuer's
+original assertion; a stated limitation that admission status is
+checked only at signing time, never re-verified against later
+revocation; and an assigned retention obligation (the producer, or a
+designated collector on successful delivery). A non-normative
+Migration Plan section responds to the review's request that this
+document not become "a permanent parallel envelope": no existing
+evidence kind is migrated by this document, and whether one migrates
+is left to that kind's own specification.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">This document responds to the 2026-08-24 architecture-shape review's
+P1 finding 10 and to issues #282, #512, #506, and #699. The author
+thanks the Mission-Bound Authorization implementer community for
+feedback.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
