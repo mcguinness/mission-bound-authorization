@@ -52,6 +52,12 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
+  RFC8725:
+  RFC9110:
+  RFC9457:
+  RFC9700:
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -60,12 +66,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC8725:
-  RFC9110:
-  RFC9457:
-  RFC9700:
   I-D.draft-mcguinness-oauth-mission-status-list:
     title: "Mission Status List for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
@@ -595,15 +595,19 @@ The members are:
     `status_list` reference where the deployment publishes a Mission
     Status List
     ({{I-D.draft-mcguinness-oauth-mission-status-list}}).
-- `authorization_details`: the audience-scoped Authority Set entries
-  relevant to the requesting audience, as the `mission_resource_access`
-  shape of {{I-D.draft-mcguinness-oauth-mission-resource-access}},
-  carried at the top level as a sibling of `mission` (as
-  on the token and in the introspection response). Entries addressed
-  to other audiences MUST NOT be disclosed. When the request omits
-  `audience` ({{mission-status-request}}), there is no requesting
-  audience: the response is state-only and MUST NOT carry
-  `authorization_details`.
+- `authorization_details`: the Authority Set entries of every
+  AS-supported `authorization_details` type
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
+  Details Types") relevant to the requesting audience, audience
+  relevance determined per each entry's own type specification (for
+  the general-purpose `mission_resource_access` type, by its
+  `resource` member,
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}), carried at
+  the top level as a sibling of `mission` (as on the token and in the
+  introspection response). Entries addressed to other audiences MUST
+  NOT be disclosed. When the request omits `audience`
+  ({{mission-status-request}}), there is no requesting audience: the
+  response is state-only and MUST NOT carry `authorization_details`.
 
 A consumer MUST verify, before honoring a response:
 
