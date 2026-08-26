@@ -70,7 +70,10 @@ afterEach(async () => {
 /** Starts the reference PDP HTTP server with one registered PEP, wrapping
  * the real `evaluate` in a counter so a test can prove zero decision work
  * happened on a channel-boundary refusal. */
-async function startServer(evaluations: { n: number }): Promise<PdpHttpServerHandle> {
+async function startServer(
+  evaluations: { n: number },
+  overrides: { maxBodyBytes?: number } = {},
+): Promise<PdpHttpServerHandle> {
   const countingEvaluate: typeof evaluate = async (r, o) => {
     evaluations.n += 1;
     return evaluate(r, o);
@@ -88,6 +91,7 @@ async function startServer(evaluations: { n: number }): Promise<PdpHttpServerHan
     }),
     evaluateFn: countingEvaluate,
     replayWindowSeconds: 30,
+    ...overrides,
   });
   return handle;
 }
@@ -256,6 +260,115 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
     // The underlying (unrecoverable, discarded) decision was a genuine
     // permit; the PEP never acts on it because it arrived unauthenticated.
     expect(evaluations.n).toBe(1);
+  });
+
+  it("rejects a replayed permit response bound to a different request", async () => {
+    const evaluations = { n: 0 };
+    const server = await startServer(evaluations);
+
+    // Request A: a genuinely permitted decision over a raw, correctly
+    // signed request. Its validly signed response is captured.
+    const nonceA = randomUUID();
+    const issuedAtA = String(Date.now());
+    const bodyA = JSON.stringify({ request: req() });
+    const signatureA = macHex(SECRET, REQUEST_MAC_DOMAIN, [PEP_ID, nonceA, issuedAtA, bodyA]);
+    const resA = await fetch(server.url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-pdp-pep-id": PEP_ID,
+        "x-pdp-signature": signatureA,
+        "x-pdp-nonce": nonceA,
+        "x-pdp-issued-at": issuedAtA,
+      },
+      body: bodyA,
+    });
+    expect(resA.status).toBe(200);
+    const capturedBody = await resA.text();
+    const capturedSignature = resA.headers.get("x-pdp-signature");
+    expect(capturedSignature).not.toBeNull();
+    expect((JSON.parse(capturedBody) as { decision: boolean }).decision).toBe(true);
+    expect(evaluations.n).toBe(1);
+
+    // Request B: a distinct request (its own nonce/issuedAt/digest,
+    // generated inside evaluateRemote). The server genuinely processes it,
+    // then an intermediary substitutes A's captured, validly signed permit
+    // response in place of B's own real response.
+    const replaySubstitutionFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      await fetch(input, init);
+      return new Response(capturedBody, {
+        status: 200,
+        headers: { "content-type": "application/json", "x-pdp-signature": capturedSignature as string },
+      });
+    }) as typeof fetch;
+
+    const decision = await evaluateRemote(req(), {
+      url: server.url,
+      pepId: PEP_ID,
+      secret: SECRET,
+      fetchImpl: replaySubstitutionFetch,
+    });
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("decision_channel_unauthenticated_response");
+    // The server evaluated both requests (A directly, B through the real
+    // round trip the substitution fetch performs); the PEP still refuses
+    // to trust A's response for B, despite both being validly signed for
+    // their own request.
+    expect(evaluations.n).toBe(2);
+  });
+
+  it("a request body larger than the configured bound is refused before evaluation, with zero PDP evaluation", async () => {
+    const evaluations = { n: 0 };
+    const server = await startServer(evaluations, { maxBodyBytes: 512 });
+    const nonce = randomUUID();
+    const issuedAt = String(Date.now());
+    const oversized = JSON.stringify({
+      request: req({ resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "x".repeat(500) } } }),
+    });
+    const signature = macHex(SECRET, REQUEST_MAC_DOMAIN, [PEP_ID, nonce, issuedAt, oversized]);
+    const res = await fetch(server.url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-pdp-pep-id": PEP_ID,
+        "x-pdp-signature": signature,
+        "x-pdp-nonce": nonce,
+        "x-pdp-issued-at": issuedAt,
+      },
+      body: oversized,
+    });
+    expect(res.status).toBe(413);
+    expect(evaluations.n).toBe(0);
+    // Non-vacuous: a normal-sized valid request on the SAME server still permits.
+    const ok = await evaluateRemote(req(), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    expect(ok.decision).toBe(true);
+    expect(evaluations.n).toBe(1);
+  });
+
+  it("a PDP that never responds is refused once the client timeout elapses, with zero PDP evaluation observed by the client", async () => {
+    const evaluations = { n: 0 };
+    const server = await startServer(evaluations);
+    const hangingFetch = ((_input: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          const err = new Error("The operation was aborted");
+          err.name = "AbortError";
+          reject(err);
+        });
+      })) as typeof fetch;
+    const decision = await evaluateRemote(req(), {
+      url: server.url,
+      pepId: PEP_ID,
+      secret: SECRET,
+      fetchImpl: hangingFetch,
+      timeoutMs: 20,
+    });
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("decision_channel_timeout");
+    expect(evaluations.n).toBe(0);
+    // Non-vacuous: a valid request over the real channel on the SAME server still permits.
+    const ok = await evaluateRemote(req(), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    expect(ok.decision).toBe(true);
   });
 
   it("co-resident: calling evaluate() directly needs no channel signature, satisfying the requirement structurally", async () => {

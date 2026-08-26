@@ -21,11 +21,14 @@
  * This is a minimal reference topology proving the contract, not a
  * production PDP service: no TLS termination, no persistent nonce store
  * across restarts, no PEP registry beyond the in-memory map the caller
- * supplies.
+ * supplies. The request body read is bounded ({@link
+ * PdpRemoteServerConfig.maxBodyBytes}): an oversized body is refused
+ * before it is buffered, so the fail-closed channel behavior this module
+ * demonstrates is not obscured by an unbounded read.
  */
 
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
-import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN } from "./channel-mac.js";
+import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
 import { evaluate, type Decision, type EvaluateOptions, type EvaluationRequest } from "./evaluate.js";
 
 /**
@@ -50,6 +53,8 @@ export interface PdpRemoteServerConfig {
   getOptions: (req: EvaluationRequest) => EvaluateOptions | Promise<EvaluateOptions>;
   /** Replay/freshness window for X-Pdp-Issued-At, seconds. Default 30. */
   replayWindowSeconds?: number;
+  /** Maximum accepted request body size, bytes. Default 65536 (64 KiB); a larger body is refused before being buffered. */
+  maxBodyBytes?: number;
   /**
    * Injectable in place of the real `evaluate`, so a test can prove exactly
    * how many times the PDP's decision function ran (zero on every
@@ -71,7 +76,8 @@ type ChannelRefusalReason =
   | "stale_or_future_request"
   | "replayed_request"
   | "malformed_body"
-  | "pep_not_authorized_for_scope";
+  | "pep_not_authorized_for_scope"
+  | "request_body_too_large";
 
 function headerString(v: string | string[] | undefined): string | undefined {
   if (typeof v === "string") return v;
@@ -79,8 +85,13 @@ function headerString(v: string | string[] | undefined): string | undefined {
   return undefined;
 }
 
-function sendRefusal(res: ServerResponse, status: number, reason: ChannelRefusalReason): void {
-  res.writeHead(status, { "content-type": "application/json" });
+function sendRefusal(
+  res: ServerResponse,
+  status: number,
+  reason: ChannelRefusalReason,
+  extraHeaders: Record<string, string> = {},
+): void {
+  res.writeHead(status, { "content-type": "application/json", ...extraHeaders });
   res.end(JSON.stringify({ error: "decision_channel_refused", reason }));
 }
 
@@ -94,6 +105,7 @@ function sendRefusal(res: ServerResponse, status: number, reason: ChannelRefusal
 export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promise<PdpHttpServerHandle> {
   const evaluateImpl = config.evaluateFn ?? evaluate;
   const replayWindowMs = (config.replayWindowSeconds ?? 30) * 1000;
+  const maxBodyBytes = config.maxBodyBytes ?? 65536;
   // pepId:nonce -> expiry ms. A reference adapter's in-memory replay guard;
   // a production deployment would use a shared, persistent store.
   const seenNonces = new Map<string, number>();
@@ -106,7 +118,19 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
 
   async function handleEvaluate(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const chunks: Buffer[] = [];
-    for await (const chunk of req as AsyncIterable<Buffer>) chunks.push(chunk);
+    let receivedBytes = 0;
+    for await (const chunk of req as AsyncIterable<Buffer>) {
+      receivedBytes += chunk.length;
+      if (receivedBytes > maxBodyBytes) {
+        // The rest of the oversized body is never read, so this connection
+        // cannot be reused for a later request on the same socket: closed
+        // explicitly rather than left for the client to discover.
+        sendRefusal(res, 413, "request_body_too_large", { connection: "close" });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    }
     const rawBody = Buffer.concat(chunks).toString("utf8");
 
     const pepId = headerString(req.headers["x-pdp-pep-id"]);
@@ -173,8 +197,19 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     const opts = await config.getOptions(evalRequest);
     const decision: Decision = await evaluateImpl(evalRequest, opts);
     const body = JSON.stringify(decision);
-    const responseSignature = macHex(pep.secret, RESPONSE_MAC_DOMAIN, [body]);
-    res.writeHead(200, { "content-type": "application/json", "x-pdp-signature": responseSignature });
+    const status = 200;
+    // Bound to the request that produced it, not just its own bytes: a
+    // response MAC over the body alone lets an intermediary replay an
+    // old, validly signed permit as the answer to a different request.
+    const responseSignature = macHex(pep.secret, RESPONSE_MAC_DOMAIN, [
+      pepId,
+      nonce,
+      issuedAt,
+      sha256Hex(rawBody),
+      String(status),
+      body,
+    ]);
+    res.writeHead(status, { "content-type": "application/json", "x-pdp-signature": responseSignature });
     res.end(body);
   }
 
