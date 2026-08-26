@@ -66,21 +66,35 @@ describe("Enforcement Scope Statement validation (@spec runtime#runtime-conforma
     expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
   });
 
-  const BASELINE_MEMBERS = [
-    "mediated_scope",
-    "authority_entry_types",
-    "pdps",
-    "state_source",
-    "remote_decision_channels",
-    "record_integrity_mechanism",
-  ] as const;
+  it("omitting mediated_scope fails validation, naming that member", () => {
+    const findings = validateEnforcementScopeStatement(omit(baseline(), "mediated_scope"));
+    expect(findings.some((f) => f.member === "mediated_scope")).toBe(true);
+  });
 
-  for (const member of BASELINE_MEMBERS) {
-    it(`omitting ${member} fails validation, naming that member`, () => {
-      const findings = validateEnforcementScopeStatement(omit(baseline(), member));
-      expect(findings.some((f) => f.member === member)).toBe(true);
-    });
-  }
+  it("omitting authority_entry_types fails validation, naming that member", () => {
+    const findings = validateEnforcementScopeStatement(omit(baseline(), "authority_entry_types"));
+    expect(findings.some((f) => f.member === "authority_entry_types")).toBe(true);
+  });
+
+  it("omitting pdps fails validation, naming that member", () => {
+    const findings = validateEnforcementScopeStatement(omit(baseline(), "pdps"));
+    expect(findings.some((f) => f.member === "pdps")).toBe(true);
+  });
+
+  it("omitting state_source fails validation, naming that member", () => {
+    const findings = validateEnforcementScopeStatement(omit(baseline(), "state_source"));
+    expect(findings.some((f) => f.member === "state_source")).toBe(true);
+  });
+
+  it("omitting remote_decision_channels fails validation, naming that member", () => {
+    const findings = validateEnforcementScopeStatement(omit(baseline(), "remote_decision_channels"));
+    expect(findings.some((f) => f.member === "remote_decision_channels")).toBe(true);
+  });
+
+  it("omitting record_integrity_mechanism fails validation, naming that member", () => {
+    const findings = validateEnforcementScopeStatement(omit(baseline(), "record_integrity_mechanism"));
+    expect(findings.some((f) => f.member === "record_integrity_mechanism")).toBe(true);
+  });
 
   it("an empty remote_decision_channels array is valid (a wholly co-resident deployment)", () => {
     const stmt: EnforcementScopeStatement = { ...baseline(), remote_decision_channels: [] };
