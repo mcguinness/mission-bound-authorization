@@ -1042,7 +1042,8 @@
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
