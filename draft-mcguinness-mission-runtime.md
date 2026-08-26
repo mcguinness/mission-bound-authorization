@@ -2777,6 +2777,7 @@ SHOULD retain evidence that it ran them.
 | A PEP submits a decision request for an enforcement scope it is not authorized for | Refused before evaluation, with no PDP evaluation |
 | A decision response carries no signature, or one the PEP does not recognize | Refused; the PEP MUST NOT act on the decision |
 | A decision response is modified after the PDP signs it | Refused; the PEP MUST NOT act on the decision |
+| A validly signed decision response captured for one request is presented as the response to a different request | Refused; the PEP MUST NOT act on the decision |
 
 A co-resident PDP and PEP satisfy {{decision-channel}} structurally
 and need no separate channel mechanism; these tests apply only where

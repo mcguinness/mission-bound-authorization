@@ -6012,6 +6012,12 @@
      "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision response with no signature is refused; the PEP MUST NOT act on it",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > rejects a replayed permit response bound to a different request",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
    "notes": "src/services/pdp/src/server.ts (PDP) and src/services/pdp/src/client.ts (PEP) are a genuinely separated topology over a real 127.0.0.1 HTTP hop, not another direct function call: the request and response are domain-separated HMAC'd end to end (src/services/pdp/src/channel-mac.ts), the PDP authenticates the PEP by a registered per-identity secret and accepts credential-derived inputs only from a PEP whose registered scopes include the request's audience, and the PEP authenticates the PDP by verifying the response MAC, bound to pep_id, nonce, request_issued_at, the request digest, HTTP status, and the response body, before trusting the decision it carries: a response validly signed for one request cannot be replayed as the answer to another. Every channel-boundary refusal is proven non-vacuous (evaluate() call count stays 0, via an injectable counter) and followed by a valid signed request on the SAME running server that permits. The co-resident case (mcp-payments/src/pep.ts calling evaluate() directly) is unaffected and is exercised separately to show it satisfies the requirement structurally. Not covered: mutual TLS as an alternative trust mode; wiring this channel into mcp-payments' own production PEP path (it remains a standalone reference adapter validating the contract, per the issue's own scoping). The raw-token-forwarding clause of this section is tracked separately as runtime.token-validation.raw-credential-not-used-outside-scope."
@@ -8319,7 +8325,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PEP/PDP boundary that is not co-resident demonstrates that an unauthenticated PEP, a tampered request, a PEP acting outside its authorized scope, an unauthenticated PDP response, and a tampered response are all refused before or without honoring a decision"
+    "normative": "a PEP/PDP boundary that is not co-resident demonstrates that an unauthenticated PEP, a tampered request, a PEP acting outside its authorized scope, an unauthenticated PDP response, a tampered response, and a validly signed response replayed as the answer to a different request are all refused before or without honoring a decision"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -8351,6 +8357,12 @@
     {
      "file": "src/services/pdp/test/remote-channel.test.ts",
      "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision response modified in transit after the PDP signs it is refused; the PEP MUST NOT act on it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > rejects a replayed permit response bound to a different request",
      "level": "cross-component",
      "surface": "decision-request"
     },
