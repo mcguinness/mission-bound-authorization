@@ -328,7 +328,7 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         reason: "committed_step_reversed_after_review",
         occurred_at: "2026-11-02T09:03:00Z",
         outcome_state: "committed",
-        linked_evidence: ["orch_4r9SqLm8tY2p"],
+        linked_evidence: ["orch_4r9SqLm8tY2p", "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA"],
         authority_basis: r.authority_basis,
         compensation_action: "erp.journal_entry.reverse",
         compensation_outcome: "completed",
@@ -339,12 +339,17 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     );
     expect(ev.authority_basis).toBe("separate_mission");
     expect(ev.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
-    expect(ev.linked_evidence).toContain("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
-    expect(ev.linked_evidence).toContain("orch_4r9SqLm8tY2p");
+    // linked_evidence carries only the supplied evidence-record identifiers;
+    // the compensated evaluation_id is never folded into it.
+    expect(ev.linked_evidence).toEqual([
+      "orch_4r9SqLm8tY2p",
+      "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+    ]);
+    expect(ev.linked_evidence).not.toContain("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
     expect(ev.evidence_envelope).toBeDefined();
 
-    const headerB64 = (ev.evidence_envelope ?? "").split(".")[0] ?? "";
-    const header = JSON.parse(Buffer.from(headerB64, "base64url").toString("utf8")) as {
+    const [headerB64, payloadB64] = (ev.evidence_envelope ?? "").split(".");
+    const header = JSON.parse(Buffer.from(headerB64 ?? "", "base64url").toString("utf8")) as {
       alg?: string;
       kid?: string;
       typ?: string;
@@ -352,6 +357,11 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     expect(header.alg).toBe("HS256");
     expect(header.kid).toBe("test-kid");
     expect(header.typ).toBe("mission-orchestration-evidence");
+
+    // The signed JCS payload carries the new member and never the old name.
+    const payload = Buffer.from(payloadB64 ?? "", "base64url").toString("utf8");
+    expect(payload).toContain('"compensates_evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"');
+    expect(payload).not.toContain("compensates_decision_id");
   });
 
   it("5c: high-risk compensation without a signer fails closed", () => {
@@ -365,13 +375,33 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         orchestration_decision: "compensate",
         reason: "reversed",
         occurred_at: "2026-11-02T09:03:00Z",
-        linked_evidence: ["dec_1"],
+        linked_evidence: ["evd_1"],
         authority_basis: "resource_policy",
         compensation_action: "erp.journal_entry.reverse",
         compensation_outcome: "completed",
+        compensates_evaluation_id: "dec_1",
         compensated_reversibility: "external_commitment",
       }),
     ).toThrow();
+  });
+
+  it("5d: compensate evidence missing compensates_evaluation_id fails closed", () => {
+    expect(() =>
+      buildOrchestrationEvidence({
+        event_id: "orch_bad2",
+        mission: MISSION,
+        workflow_id: "wf",
+        mission_state: "revoked",
+        state_source: "status",
+        orchestration_decision: "compensate",
+        reason: "reversed",
+        occurred_at: "2026-11-02T09:03:00Z",
+        linked_evidence: ["evd_1"],
+        authority_basis: "resource_policy",
+        compensation_action: "erp.journal_entry.reverse",
+        compensation_outcome: "completed",
+      }),
+    ).toThrow(/compensates_evaluation_id/);
   });
 
   it("runs compensations in reverse dependency order; partial failure => compensation_incomplete", () => {

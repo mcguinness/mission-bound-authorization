@@ -51,9 +51,10 @@ export interface OrchestrationEvidence {
   compensation_action?: string;
   compensation_outcome?: string;
   /**
-   * The reversed step's `evaluation_id` (runtime-profile binding). Its normative
-   * home is the compensating runtime decision; surfaced on the record and also
-   * folded into `linked_evidence`, matching the draft's compensate example.
+   * The reversed step's `evaluation_id` (runtime-profile binding). Its
+   * normative home is the compensating runtime decision; surfaced here as its
+   * own record member, distinct from `linked_evidence`, which carries only
+   * evidence-record identifiers.
    */
   compensates_evaluation_id?: string;
   /** Per-Mission sequence indicator for evidence ordering (§ evidence-ordering). */
@@ -99,10 +100,12 @@ export interface BuildOrchestrationEvidenceInput {
 /**
  * Build an Orchestration Evidence record. On a `compensate` decision the
  * compensate members (`authority_basis`, `compensation_action`,
- * `compensation_outcome`, `linked_evidence`) are REQUIRED and enforced
- * (fail closed). An `evidence_envelope` is attached whenever a signer is
- * provided, and is REQUIRED (throws when absent) when compensating a high-risk
- * class.
+ * `compensation_outcome`, `linked_evidence`, `compensates_evaluation_id`) are
+ * REQUIRED and enforced (fail closed). `linked_evidence` carries only
+ * supplied evidence-record identifiers; the compensated evaluation's
+ * `evaluation_id` is never folded into it. An `evidence_envelope` is attached
+ * whenever a signer is provided, and is REQUIRED (throws when absent) when
+ * compensating a high-risk class.
  */
 export function buildOrchestrationEvidence(
   input: BuildOrchestrationEvidenceInput,
@@ -133,18 +136,19 @@ export function buildOrchestrationEvidence(
     if (input.compensation_outcome === undefined) {
       throw new Error("compensate evidence REQUIRES compensation_outcome");
     }
+    if (input.compensates_evaluation_id === undefined) {
+      throw new Error("compensate evidence REQUIRES compensates_evaluation_id");
+    }
     rec.authority_basis = input.authority_basis;
     rec.compensation_action = input.compensation_action;
     rec.compensation_outcome = input.compensation_outcome;
+    rec.compensates_evaluation_id = input.compensates_evaluation_id;
 
-    // linked_evidence is REQUIRED for compensate; fold in the reversed
-    // evaluation_id so the record binds to the specific committed step it offsets.
-    const linked = new Set<string>(input.linked_evidence ?? []);
-    if (input.compensates_evaluation_id !== undefined) {
-      linked.add(input.compensates_evaluation_id);
-      rec.compensates_evaluation_id = input.compensates_evaluation_id;
-    }
-    if (linked.size === 0) {
+    // linked_evidence is REQUIRED for compensate and carries only supplied
+    // evidence-record identifiers; the compensated evaluation_id belongs solely
+    // in compensates_evaluation_id, never folded in here.
+    const linked = input.linked_evidence ?? [];
+    if (linked.length === 0) {
       throw new Error("compensate evidence REQUIRES linked_evidence");
     }
     rec.linked_evidence = [...linked];
