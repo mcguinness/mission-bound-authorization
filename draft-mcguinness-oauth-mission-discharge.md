@@ -309,9 +309,10 @@ The baseline authority mapping is AS authorization policy keyed by
 client or workload identity, with its resource boundary where
 applicable) may assert each event type. Authentication uses the
 Status profile's mechanism set
-({{I-D.draft-mcguinness-oauth-mission-status}}, Section
-"Authentication"), sender-constrained where the deployment's profile
-requires it, and MUST bind the asserting principal.
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission
+Status Operation", subsection "Authentication"), sender-constrained
+where the deployment's profile requires it, and MUST bind the
+asserting principal.
 
 A `terminal_when` condition MAY carry `discharge_policy` (OPTIONAL): a
 stable, opaque selector naming the AS-side authority mapping for that
@@ -453,12 +454,14 @@ at-least-once sender stops retrying against.
 This section is OPTIONAL. A deployment that ends an entry's authority
 only by Mission revocation or expiry is fully conformant to the
 issuance profile and is unaffected by this section, which places no
-new requirement on the issuance profile: it defines one OPTIONAL
-entry member and the rules for handling it. A deployment claims the
-completion capability only when it issues or consumes entries
-carrying `terminal_when`. The capability is newer and less exercised
-than baseline issuance and runtime enforcement, and is not required by
-any Mission Assurance Level; its entry-discharge details may change.
+new requirement on the issuance profile or the Status profile: it
+defines one OPTIONAL entry member, one OPTIONAL Mission Lifecycle
+extension operation, and the rules for handling them. A deployment
+claims the completion capability only when it issues or consumes
+entries carrying `terminal_when`. The capability is newer and less
+exercised than baseline issuance and runtime enforcement, and is not
+required by any Mission Assurance Level; its entry-discharge details
+may change.
 
 The issuance profile gates issuance on Mission state but has no
 notion of an approved entry being **done**. A Mission granted
