@@ -157,7 +157,7 @@ Mission Assurance Level
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Implementation: 3 conformance rows in conformance-manifest.json (1 tested, 2 partial).
+Implementation: 4 conformance rows in conformance-manifest.json (2 tested, 2 partial).
 Adopt when: In-flight work must unwind safely if the Mission ends mid-workflow.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source); Mission Lifecycle Signals for OAuth 2.0 (when Signals is the authority-change trigger source).
