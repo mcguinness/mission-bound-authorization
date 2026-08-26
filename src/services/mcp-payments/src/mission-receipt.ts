@@ -291,7 +291,7 @@ export async function verifyMissionReceipt(
   if (executionRec) {
     // @spec runtime-evidence#execution-evidence-object `mission_id` (lines
     // 1010-1012, #739 review point 3): "mirrored from the linked Decision
-    // Evidence for join-key convenience" — the receipt's own `mission.id`
+    // Evidence for join-key convenience", so the receipt's own `mission.id`
     // MUST equal it too. The pre-#739-review check joined Decision Evidence
     // and Refusal Record to `receipt.mission` but never checked Execution
     // Evidence's `mission_id` against it at all.
@@ -314,14 +314,21 @@ export async function verifyMissionReceipt(
     }
     // @spec runtime-evidence#execution-evidence-object `authorized_parameter_digest`
     // (lines 1020-1023, #739 review point 3): "REQUIRED when the linked
-    // Decision Evidence carries `parameter_digest`; MUST equal it" — an
-    // EXACT mirror in both directions. The pre-#739-review check only
-    // caught the case where `decisionRec.parameter_digest` was present and
-    // unequal; it silently passed the reverse case (Execution Evidence
-    // asserting an `authorized_parameter_digest` the Decision Evidence
-    // never carried at all). `!==` on two `string | undefined` values
-    // covers presence and equality together: both absent is not a failure,
-    // exactly one present is, and both present-but-different is.
+    // Decision Evidence carries `parameter_digest`; MUST equal it", per the
+    // review's explicit "exact mirror" direction enforced in BOTH
+    // directions here. The pre-#739-review check only caught the case
+    // where `decisionRec.parameter_digest` was present and unequal; it
+    // silently passed the reverse case (Execution Evidence asserting an
+    // `authorized_parameter_digest` the Decision Evidence never carried at
+    // all). `!==` on two `string | undefined` values covers presence and
+    // equality together: both absent is not a failure, exactly one present
+    // is, and both present-but-different is. Note: the spec's own member
+    // text (lines 1020-1023) only states the "Decision Evidence carries it
+    // -> Execution Evidence MUST equal it" direction; it does not itself
+    // forbid Execution Evidence carrying one the Decision Evidence lacks.
+    // Rejecting that reverse case is stricter than the draft's literal
+    // text, following the review's explicit instruction; possibly a spec
+    // gap worth its own finding, not merely an implementation gap.
     if (executionRec.authorized_parameter_digest !== decisionRec.parameter_digest) {
       return { valid: false, reason: "join_failure" };
     }
@@ -342,7 +349,7 @@ export async function verifyMissionReceipt(
   // This verifier does not implement the `policy`/`executor`/`target`
   // comparisons, and nothing in this deployment builds a receipt carrying
   // any of them (`buildAndSignMissionReceipt` only ever projects
-  // `decision`/`outcome`) — so per the review, a receipt carrying one is
+  // `decision`/`outcome`), so per the review, a receipt carrying one is
   // REJECTED here rather than silently accepted with that member
   // unverified. Implement the comparison instead of removing this guard if
   // a future profile needs to carry one.
