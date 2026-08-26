@@ -16,7 +16,8 @@ interface Entry {
 // comparison (@spec mission#subset is type-owned; this module takes it as
 // an injected predicate and defines no type of its own).
 const isSubsetOfGranted = (candidate: Entry, granted: Entry): boolean =>
-  candidate.resource === granted.resource && candidate.actions.every((a) => granted.actions.includes(a));
+  candidate.resource === granted.resource &&
+  candidate.actions.every((a) => granted.actions.includes(a));
 
 const APPROVED: Entry[] = [
   { resource: "https://erp.example.com", actions: ["invoices.read", "journal-entries.write"] },
@@ -95,7 +96,10 @@ describe("Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retriev
     // retrieval call. Only a caller holding an independently retained
     // approval-time root (Tier 2) catches the substitution.
     const substituted: Entry[] = [
-      { resource: "https://erp.example.com", actions: ["invoices.read", "journal-entries.write", "invoices.delete"] },
+      {
+        resource: "https://erp.example.com",
+        actions: ["invoices.read", "journal-entries.write", "invoices.delete"],
+      },
     ];
     const substitutedHash = authorityHash(ISS, substituted as never);
     expect(substitutedHash).not.toBe(APPROVED_HASH);
