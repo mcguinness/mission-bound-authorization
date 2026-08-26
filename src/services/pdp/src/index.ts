@@ -21,3 +21,9 @@ export {
   type PrincipalMappingResolver,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";
+export {
+  resolveBaselineJoin,
+  type BaselineJoinInput,
+  type BaselineJoinResult,
+  type DelegatePolicy,
+} from "./mas-join.js";

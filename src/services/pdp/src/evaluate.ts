@@ -164,7 +164,19 @@ export type DenialReason =
    * every sub-cause of either step; the profile does not distinguish them at
    * the enforcement point.
    */
-  | "principal_mapping_failed";
+  | "principal_mapping_failed"
+  /**
+   * @spec authority-server#mission-join rule 6 (#557) — the baseline MAS
+   * Join's uniform denial: "A failure of the subject or client join MUST be
+   * denied with the `mission_mismatch` denial reason ... The PDP MUST NOT
+   * fall back to evaluating the action against the referenced Mission's
+   * authority when the join fails." Distinct from the bare string
+   * `"mission_mismatch"` used in two unrelated enums elsewhere in this tree
+   * (authorization-server/src/adapters/provider.ts's Protected Events
+   * rejection, and mcp-payments/src/server.ts's `"txn_mission_mismatch"`
+   * transaction-authorization refusal): neither is this `DenialReason`.
+   */
+  | "mission_mismatch";
 
 export interface Decision {
   decision: boolean;

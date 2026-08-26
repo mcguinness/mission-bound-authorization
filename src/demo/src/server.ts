@@ -144,7 +144,10 @@ async function main() {
     ...(await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST")),
     clientInstanceId: "inst-1",
   };
-  const missionId = facts.mission.id;
+  // validateToken() still throws on a token with no mission claim (#557
+  // adds only the OPTIONAL configured MAS-Join path; this demo bootstrap
+  // never uses it), so `mission` is always present here.
+  const missionId = facts.mission!.id;
 
   // The agent's ACTIVE mission: the credential material it currently acts under.
   // Held mutably so an APPROVED mission approval can swap the whole set (facts +
@@ -404,7 +407,8 @@ async function main() {
         ...(await stack.server.validateToken(issuedMission.accessToken, proof, CANONICAL_RESOURCE, "POST")),
         clientInstanceId: "inst-1",
       };
-      const newId = newFacts.mission.id;
+      // Same as above: validateToken() guarantees `mission` here.
+      const newId = newFacts.mission!.id;
       active = { facts: newFacts, missionId: newId, issued: issuedMission };
       // Active-mission swap: prior JIT continuation handles belong to the OLD
       // mission, so drop them (a stale /agent/retry must not execute against the

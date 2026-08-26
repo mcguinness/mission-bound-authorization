@@ -21,6 +21,7 @@ import {
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
+  type DelegatePolicy,
   type Decision,
   type EntitlementResolver,
   evaluate,
@@ -31,6 +32,7 @@ import {
   type OriginPrincipal,
   type PrincipalMappingResolver,
   relationForAction,
+  resolveBaselineJoin,
   stalenessBoundSeconds,
 } from "@mission/pdp";
 import {
@@ -73,7 +75,17 @@ export interface TokenFacts {
   clientId: string;
   clientInstanceId?: string;
   act?: ActObject;
-  mission: {
+  /**
+   * @spec authority-server#mission-join (#557) — OPTIONAL: an ordinary OAuth
+   * credential validated for a configured MAS-governed route (`PepDeps.masJoin`)
+   * carries no `mission` claim at all. `enforceInner` branches on its
+   * presence: present, the credential-carried claim governs exactly as
+   * before; absent, `enforceInner` resolves the baseline mapping Join
+   * against a PEP-supplied propagated reference (`RequestSignals.missionReference`)
+   * before anything else runs, denying `mission_mismatch` on a failed
+   * subject/client join and never falling back to an unjoined decision.
+   */
+  mission?: {
     id: string;
     issuer: string;
     /**
@@ -320,6 +332,30 @@ export interface PepDeps {
    * `entitlementStalenessBoundSeconds` unchanged.
    */
   entitlementStalenessBoundSeconds?: number;
+  /**
+   * @spec authority-server#mission-join (#557) — enables the baseline MAS
+   * Join gateway path for a credential validated with no `mission` claim
+   * (`TokenFacts.mission` absent). ABSENT (the default): `enforceInner`
+   * refuses `unknown_mission` for such a credential, exactly the prior
+   * behavior; this deployment claims no MAS-governed route at all.
+   */
+  masJoin?: {
+    delegatePolicy?: DelegatePolicy;
+    /**
+     * @spec authority-server#mission-join rule 8 — the acting credential's
+     * OWN authority bound (one of the permit's three independently
+     * evaluated bounds, alongside the joined Mission's authority and
+     * current Resource policy, the latter enforced downstream by the
+     * existing FGA/PDP call unchanged). ABSENT: the joined route fails
+     * closed with `out_of_authority` on every request -- rule 8 cannot be
+     * honestly evaluated without a credential-authority source, so an
+     * unconfigured deployment gets a working Join with no usable permit,
+     * never a silently unbounded one. A deployment supplies this to
+     * evaluate its own OAuth-scope-to-authority model; none is provided
+     * here (see the PR's documented remainder).
+     */
+    resolveOrdinaryAuthority?: (token: TokenFacts) => AuthorityEntry[] | undefined;
+  };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
@@ -434,6 +470,17 @@ export interface EnforceResult {
    * (@spec mission#authority-proposal).
    */
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec authority-server#mission-join (#557) — the governing Mission
+   * {id, issuer} for this decision, ALWAYS present on a permit: the
+   * credential's own claim on the Mission-bound path, or the baseline
+   * Join's resolved reference on the joined path (where `token.mission`
+   * itself stays absent). The caller (server.ts) uses this, never
+   * `token.mission`, for anything past the permit -- operation keys,
+   * connector calls, execution evidence -- so a joined credential's write
+   * actually executes, not merely permits.
+   */
+  resolvedMission?: { id: string; issuer: string; authority_hash?: string };
 }
 
 /**
@@ -491,7 +538,9 @@ export class Pep {
   ): Promise<EnforceResult> {
     return getTracer("pep").startActiveSpan(`pep.enforce ${tool}`, async (span) => {
       span.setAttribute("mission.tool", tool);
-      span.setAttribute("mission.id", token.mission.id);
+      // @spec authority-server#mission-join (#557): absent for an ordinary
+      // credential on the baseline-Join path; enforceInner resolves it.
+      if (token.mission) span.setAttribute("mission.id", token.mission.id);
       try {
         const res = await this.enforceInner(tool, args, token, actionApproval, signals);
         span.setAttribute("mission.permitted", res.permitted);
@@ -514,33 +563,82 @@ export class Pep {
     const mapping = this.toolAction(tool);
     if (!mapping) return this.refuse(token, "unknown_tool", tool);
 
-    // @spec authority-server#reference-verification — a propagated Mission
-    // Reference is a selection assertion, never authority. Every credential
-    // on this path carries the `mission` claim, so the credential-carried
-    // reference governs: a propagated reference naming a different Mission,
-    // and a malformed reference where governance requires one (every tool
-    // here is governed), deny as `mission_reference_conflict`, never a
-    // silent pick-one and never a silent ignore.
-    const propagated = signals?.missionReference;
-    if (propagated) {
-      const matches =
-        !("malformed" in propagated) &&
-        propagated.id === token.mission.id &&
-        propagated.issuer === token.mission.issuer;
-      if (!matches) return this.refuse(token, "mission_reference_conflict", mapping.action);
-    }
+    let view: MissionView;
+    let freshness: Freshness;
+    // The governing Mission anchor for the AuthZEN envelope below: the
+    // credential's own claim on the Mission-bound path, or the resolved
+    // Join's {id, issuer} on the baseline-Join path (never a raw request
+    // value either way).
+    let missionAnchor: { id: string; issuer: string; authority_hash?: string; subject?: OriginPrincipal };
 
-    const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-    if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
-    const { view, freshness } = loaded;
+    if (token.mission) {
+      // @spec authority-server#reference-verification — a propagated Mission
+      // Reference is a selection assertion, never authority. This credential
+      // carries the `mission` claim, so the credential-carried reference
+      // governs: a propagated reference naming a different Mission, and a
+      // malformed reference where governance requires one (every tool here
+      // is governed), deny as `mission_reference_conflict`, never a silent
+      // pick-one and never a silent ignore.
+      const propagated = signals?.missionReference;
+      if (propagated) {
+        const matches =
+          !("malformed" in propagated) &&
+          propagated.id === token.mission.id &&
+          propagated.issuer === token.mission.issuer;
+        if (!matches) return this.refuse(token, "mission_reference_conflict", mapping.action);
+      }
 
-    // @spec authority-server#reference-verification — the locally loaded
-    // Mission view is the PEP's own binding source; a credential whose
-    // mission claim names a different issuer than the view it selects is
-    // reference sources disagreeing on the canonical (issuer, id) pair,
-    // refused as mission_reference_conflict, never resolved by picking one.
-    if (view.issuer !== token.mission.issuer) {
-      return this.refuse(token, "mission_reference_conflict", mapping.action, view);
+      const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
+      if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
+
+      // @spec authority-server#reference-verification — the locally loaded
+      // Mission view is the PEP's own binding source; a credential whose
+      // mission claim names a different issuer than the view it selects is
+      // reference sources disagreeing on the canonical (issuer, id) pair,
+      // refused as mission_reference_conflict, never resolved by picking one.
+      if (loaded.view.issuer !== token.mission.issuer) {
+        return this.refuse(token, "mission_reference_conflict", mapping.action, loaded.view);
+      }
+      view = loaded.view;
+      freshness = loaded.freshness;
+      missionAnchor = token.mission;
+    } else {
+      // @spec authority-server#mission-join (#557): an ordinary credential
+      // with no `mission` claim, joined against a PEP-supplied propagated
+      // Mission reference (rule 1). ABSENT masJoin config: this deployment
+      // claims no MAS-governed route, so refuse exactly as the prior
+      // behavior would have (an unrecognized/no-claim credential).
+      if (!this.deps.masJoin) return this.refuse(token, "unknown_mission", mapping.action);
+
+      const propagated = signals?.missionReference;
+      if (!propagated || "malformed" in propagated) return this.refuse(token, "unknown_mission", mapping.action);
+
+      const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
+      if (!loaded) return this.refuse(token, "unknown_mission", mapping.action, undefined, propagated.id);
+
+      // Rules 3, 4, 5, 6: subject/client join, delegate narrowing, uniform
+      // mission_mismatch with no fallback to the unjoined view.
+      const joined = resolveBaselineJoin({
+        view: loaded.view,
+        subject: { iss: token.iss ?? "", sub: token.sub },
+        clientId: token.clientId,
+        ...(this.deps.masJoin.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
+      });
+      if (!joined.ok) return this.refuse(token, "mission_mismatch", mapping.action, loaded.view);
+
+      // Rule 8, bound 1: the acting credential's OWN authority. No
+      // evaluator configured -> fail closed (see PepDeps.masJoin doc): a
+      // working Join with no usable permit, never a silently unbounded one.
+      const ordinaryAuthority = this.deps.masJoin.resolveOrdinaryAuthority?.(token);
+      if (!ordinaryAuthority) return this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+      const boundAuthority = joined.authoritySet.filter((e) =>
+        ordinaryAuthority.some((o) => o.resource === e.resource && e.actions.every((a) => o.actions.includes(a))),
+      );
+      if (boundAuthority.length === 0) return this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+
+      view = { ...loaded.view, authority_set: boundAuthority };
+      freshness = loaded.freshness;
+      missionAnchor = { id: view.id, issuer: view.issuer };
     }
 
     // @spec attenuation#mission-binding-check: when the credential is an
@@ -659,18 +757,20 @@ export class Pep {
         audience: CANONICAL_RESOURCE,
         mission: {
           id: view.id,
-          issuer: token.mission.issuer,
+          issuer: missionAnchor.issuer,
           // @spec mission#the-mission-claim, authzen#context-mission (#702) —
           // NOT on the baseline claim; carried into the envelope only when
           // the verified token's own profile added it. Present-then-check
-          // downstream (evaluate.ts's view-consistency rule 1).
-          ...(token.mission.authority_hash !== undefined
-            ? { authority_hash: token.mission.authority_hash }
+          // downstream (evaluate.ts's view-consistency rule 1). Always
+          // absent on the baseline-Join path (#557): an ordinary credential
+          // carries no such extension member.
+          ...(missionAnchor.authority_hash !== undefined
+            ? { authority_hash: missionAnchor.authority_hash }
             : {}),
           // @spec cross-domain#mission-subject, authzen#context-mission — the
           // verified token's immutable origin principal, carried unchanged;
           // never populated from `args` or any other unverified request value.
-          ...(token.mission.subject !== undefined ? { subject: token.mission.subject } : {}),
+          ...(missionAnchor.subject !== undefined ? { subject: missionAnchor.subject } : {}),
         },
         // @spec runtime#state-freshness: `freshness` is the loader's OWN
         // assertion of when it read authoritative state, propagated exactly
@@ -901,6 +1001,11 @@ export class Pep {
     return {
       permitted: true,
       decision,
+      resolvedMission: {
+        id: missionAnchor.id,
+        issuer: missionAnchor.issuer,
+        ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
+      },
       ...(effective ? { effective } : {}),
       ...(listEffective ? { listEffective } : {}),
       ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
@@ -942,6 +1047,15 @@ export class Pep {
    * `"requested"`), so no separate input needs to be threaded through.
    */
   reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
+    // @spec authority-server#mission-join (#557): the baseline-Join gateway
+    // path is not wired into read-binding reverification (a documented
+    // remainder -- doing so needs the resolved Mission anchor threaded back
+    // through the caller's post-decision call, which this PR does not
+    // build). Fails closed rather than dereferencing an absent claim.
+    if (!token.mission) {
+      this.recordRefusal(token, "parameter_mismatch", effective.action);
+      return false;
+    }
     const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
@@ -960,22 +1074,41 @@ export class Pep {
     return true;
   }
 
-  private refuse(token: TokenFacts, reason: string, action: string, view?: MissionView): EnforceResult {
-    this.recordRefusal(token, reason, action, view);
+  private refuse(
+    token: TokenFacts,
+    reason: string,
+    action: string,
+    view?: MissionView,
+    missionIdOverride?: string,
+  ): EnforceResult {
+    this.recordRefusal(token, reason, action, view, missionIdOverride);
     return { permitted: false, refusal_reason: reason };
   }
 
-  private recordRefusal(token: TokenFacts, reason: string, action: string, view?: MissionView): void {
+  private recordRefusal(
+    token: TokenFacts,
+    reason: string,
+    action: string,
+    view?: MissionView,
+    missionIdOverride?: string,
+  ): void {
     // @spec runtime-evidence#refusal-record (#702) — `authority_hash` where
     // the refusing component holds it: the resolved `MissionView` when one
     // was loaded, else the verified token's own (now OPTIONAL) copy, else
     // omitted entirely (exactOptionalPropertyTypes forbids an explicit
     // `undefined` value on an optional member).
-    const authorityHash = view?.authority_hash ?? token.mission.authority_hash;
+    const authorityHash = view?.authority_hash ?? token.mission?.authority_hash;
+    // @spec authority-server#mission-join (#557): on the baseline-Join path
+    // a refusal before any MissionView loads (masJoin unconfigured, no/
+    // malformed propagated reference) has neither `view` nor `token.mission`
+    // to report; `missionIdOverride` lets those specific call sites still
+    // record the PEP-attested reference it DID see, and "unknown" is the
+    // last resort for a refusal that never identified one at all.
+    const missionId = view?.id ?? token.mission?.id ?? missionIdOverride ?? "unknown";
     this.deps.evidence.record({
       kind: "refusal",
       refusal_reason: reason,
-      mission_id: token.mission.id,
+      mission_id: missionId,
       ...(authorityHash !== undefined ? { authority_hash: authorityHash } : {}),
       action,
       instance_epoch: this.deps.instanceEpoch,

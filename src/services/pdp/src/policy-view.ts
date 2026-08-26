@@ -33,6 +33,27 @@ export interface AuthorityEntry {
      */
     requires_action_approval?: boolean;
   };
+  /**
+   * @spec authority-server#mission-join rule 5 (#557) — this entry's
+   * baseline-Join delegate-narrowing rule, carried into the materialized
+   * view so mas-join.ts can read it without a second Mission-Record lookup.
+   * Absent means the entry is NOT delegable: rule 5 excludes it from a
+   * delegate's narrowed set entirely.
+   *
+   * @spec observation.local — the spec cross-references "the issuance
+   * profile's per-entry delegation rules" (the kernel's own
+   * `AuthorityEntry.delegation`, `authorization-server/src/kernel/types.ts`,
+   * matched by `DelegateMatcher {sub, sub_profile}`). This PDP package has
+   * no dependency on that package, so this is a PDP-local equivalent
+   * (`allowed_delegates` matched by bare `client_id` string, the identity
+   * the baseline Join's rule 4 already authenticates), not a shared type.
+   * Named distinctly (`join_delegation`, not `delegation`) so a MissionView
+   * ever assembled by widening a kernel `AuthorityEntry` cannot silently
+   * structurally satisfy or collide with this member.
+   * Not a `policyViewId` input (below): entry-level fields already sit
+   * outside that pinned commitment.
+   */
+  join_delegation?: { max_depth?: number; allowed_delegates?: string[] };
 }
 
 /** The subset of the Mission Record the PDP evaluates against. */

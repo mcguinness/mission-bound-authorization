@@ -165,6 +165,7 @@
    "substrate.portable-evidence",
    "issuance-grant.state-integration",
    "mas.enterprise",
+   "mas.baseline-join",
    "core.standing-consent",
    "core.standing-consent-recency",
    "template.dispatch",
@@ -3773,6 +3774,301 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "mas.baseline-join.reference-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}) or from deployment configuration.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference; missing or malformed carriage refuses unknown_mission, never a silent no-op or fallback to some other guess"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for a malformed propagated reference",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits a direct-client ordinary credential whose subject matches the Mission's subject",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path."
+  },
+  {
+   "id": "mas.baseline-join.subject-join",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "The PDP MUST verify that the presented credential's authenticated subject equals the Mission's `subject.sub` under the deployment's account mapping. Where the credential's issuer and the Mission's `subject.iss` name the same namespace, equality is byte-equality; otherwise the deployment MUST document the mapping, and a subject the mapping does not cover fails the join.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "resolveBaselineJoin compares the authenticated subject {iss, sub} against the loaded MissionView's own subject by byte-equality; a mismatch on either member denies mission_mismatch",
+    "local": "the same-namespace case only: an account-mapping contract for a differing AS/MAS subject namespace is not implemented (a deployment would supply an already-mapped subject to the resolver, per its own documented mapping)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > joins when the authenticated subject matches the Mission's subject exactly",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_mismatch when the subject sub differs",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_mismatch when the subject issuer differs (same sub)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch when the authenticated subject does not match the Mission's subject",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. observation.local: cross-namespace account mapping is out of scope for this resolver (see PR body)."
+  },
+  {
+   "id": "mas.baseline-join.client-join",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "The PDP MUST verify that the presented credential's authenticated client identifier equals the Mission's `client_id`, or names a delegate that deployment policy explicitly authorizes to act under that Mission's client. Delegate authorization MUST be explicit, an enumerated policy, never a default.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "resolveBaselineJoin joins directly when client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_mismatch -- never a default admission"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > joins directly when the client_id matches the Mission's own client_id",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_mismatch for an unrecognized client with no delegate policy at all",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_mismatch for a client not named in the delegate policy (no default)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557."
+  },
+  {
+   "id": "mas.baseline-join.delegate-narrowing",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "When the joined party is a delegate rather than the Mission's `client_id`, the PDP MUST narrow the effective Authority Set to the delegable subset under the issuance profile's per-entry `delegation` rules ({{I-D.draft-mcguinness-oauth-mission}}): entries without a `delegation` member are excluded, `allowed_delegates` is applied, and `max_depth` is evaluated from the deployment's actor records rather than from a Mission-bound token's `act` chain.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a joined delegate's effective authority is narrowed to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; max_depth is compared against the delegate policy's own recorded depth, never a token act chain",
+    "local": "join_delegation is a PDP-package-local field (MissionView.authority_set[].join_delegation), not the kernel's own AuthorityEntry.delegation (authorization-server/src/kernel/types.ts, a richer DelegateMatcher-based shape this package has no dependency on); functionally equivalent for the baseline join's client_id-based matching, per the PR body's documented remainder"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > joins as a delegate and narrows to only the delegable, allowed entries",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > excludes an entry with no delegation member entirely, even for an authorized delegate",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > excludes an entry whose allowed_delegates does not name this delegate",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_mismatch when the recorded depth exceeds the delegate's max_depth",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > joins as a delegate when the recorded depth is within max_depth",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits an authorized delegate and narrows the effective authority to the delegable subset",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape (see the PR body)."
+  },
+  {
+   "id": "mas.baseline-join.no-fallback-denial",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A failure of the subject or client join MUST be denied with the `mission_mismatch` denial reason: the presented credential does not join to the referenced Mission because its authenticated subject or client identifier does not match the Mission's `subject.sub` or `client_id` under the deployment's documented mapping and delegate policy. The PDP MUST NOT fall back to evaluating the action against the referenced Mission's authority when the join fails.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "resolveBaselineJoin's failure variant carries no authoritySet member at all (a discriminated union, not an optional field defaulting to empty), so a failed join has nothing for a caller to accidentally evaluate against; every join failure in this PEP surfaces as the single mission_mismatch refusal_reason"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: no fallback (@spec authority-server#mission-join rule 6) > a failed join never returns a partial or unjoined authoritySet",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch for a referenced Mission that does not resolve at all",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. DenialReason gains \"mission_mismatch\" (services/pdp/src/evaluate.ts) as the registered vocabulary member this reason rides; distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment)."
+  },
+  {
+   "id": "mas.baseline-join.authority-from-mission",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "On a successful join, the PDP evaluates the action under the runtime profile's decision contract, drawing the Authority Set from the Mission (the audience-scoped Mission Status response or a materialized policy view), since the credential carries none.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permitted joined decision's authority always traces to the resolved MissionView's authority_set (direct or delegate-narrowed), never to any claim on the ordinary credential itself, which carries no authorization_details at all in this reference implementation"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits a direct-client ordinary credential whose subject matches the Mission's subject",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. Partial: the positive case (authority sourced from the Mission) is exercised; no dedicated negative test proves the credential's OWN claims can never substitute for it, since this reference implementation's ordinary credentials carry no authorization_details member to attempt that substitution with."
+  },
+  {
+   "id": "mas.baseline-join.three-bound-intersection",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the Resource Server or gateway), the Mission's approved authority, and current Resource policy.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "PepDeps.masJoin.resolveOrdinaryAuthority supplies bound 1 (the acting credential's own authority); its result is intersected against the joined Mission authority (bound 2) by resource+action before the existing FGA/PDP call independently enforces bound 3 (current Resource policy) unchanged. Absent, bound 1 cannot be honestly evaluated, so the joined route fails closed with out_of_authority on every request rather than treating an unconfigured bound as unbounded"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8, bound 1 (acting credential authority) > fails closed with out_of_authority when no resolveOrdinaryAuthority evaluator is configured, even after a successful join",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8, bound 1 (acting credential authority) > intersects the acting credential's own authority with the joined Mission authority: an action outside the credential's own authority is refused out_of_authority",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. Partial: bound 1's contract and fail-closed default, plus its intersection with bound 2, are tested. No deployment-side resolveOrdinaryAuthority evaluator (an OAuth-scope-to-authority model) is implemented here -- a documented remainder, not a silent gap (see the PR body). Bound 3 (Resource policy) is the existing FGA/PDP call, exercised generically elsewhere, not specifically in combination with a joined credential in this file."
   },
   {
    "id": "txn-authorization.challenge.not-client-supplied",
