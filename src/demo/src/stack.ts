@@ -24,6 +24,7 @@ import { Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
+  createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
   type DpopKeys,
@@ -359,8 +360,13 @@ export async function composeStack(opts: {
     ],
   );
 
-  const evidence = new EvidenceStore();
+  // @spec runtime-evidence#decision-evidence-integrity (issue #649): a fresh,
+  // per-process ES256 signer: fine for this demo stack (nothing outside this
+  // process ever needs to verify a record it signs), NOT a substitute for a
+  // deployment's own published, durable JWKS.
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
+  // Egress stays on the pre-existing unsigned path (issue #649's deferred slice B).
   const egressEvidence = new EvidenceStore();
   const connectors = new Connectors();
   const revokedInstances = new Set<string>();

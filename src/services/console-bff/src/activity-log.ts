@@ -147,17 +147,23 @@ function correlation(e: EvidenceBase): Partial<ActivityEntry> {
 function toEntry(e: Evidence): ActivityEntry {
   switch (e.kind) {
     case "decision": {
+      // @spec runtime-evidence#decision-evidence-object (issue #649): the
+      // retained row's `content` IS the exact signed Decision Evidence
+      // Object; every substantive field below is projected from it, never
+      // from the wrapper (`mission_id`/`trace_id`/`at` are the only wrapper
+      // members this row reads, per the file header note in `evidence.ts`).
       const d = e as DecisionEvidence;
       return {
         mission_id: d.mission_id,
         kind: "decision",
         at: d.at,
-        ...emitterFields(d.emitter),
-        action: d.action,
-        decision: d.decision,
-        ...(d.denial_reason !== undefined ? { denial_reason: d.denial_reason } : {}),
-        ...(d.entry_digest !== undefined ? { entry_digest: d.entry_digest } : {}),
-        ...correlation(d),
+        ...emitterFields(d.content.emitter),
+        action: d.content.action.name,
+        decision: d.content.decision === "permit",
+        ...(d.content.denial_reason !== undefined ? { denial_reason: d.content.denial_reason } : {}),
+        ...(d.content.entry_digest !== undefined ? { entry_digest: d.content.entry_digest } : {}),
+        decision_id: d.content.evaluation_id,
+        ...(d.trace_id !== undefined ? { trace_id: d.trace_id } : {}),
       };
     }
     case "refusal": {
@@ -166,10 +172,11 @@ function toEntry(e: Evidence): ActivityEntry {
         mission_id: r.mission_id,
         kind: "refusal",
         at: r.at,
-        ...emitterFields(r.emitter),
-        action: r.action,
-        denial_reason: r.refusal_reason,
-        ...correlation(r),
+        ...emitterFields(r.content.emitter),
+        action: r.content.action.name,
+        denial_reason: r.content.denial_reason,
+        ...(r.content.hop_reference !== undefined ? { hop_reference: r.content.hop_reference } : {}),
+        ...(r.trace_id !== undefined ? { trace_id: r.trace_id } : {}),
       };
     }
     case "execution": {
@@ -178,10 +185,15 @@ function toEntry(e: Evidence): ActivityEntry {
         mission_id: x.mission_id,
         kind: "execution",
         at: x.at,
-        ...emitterFields(x.emitter),
-        action: x.action,
-        outcome: x.outcome,
-        ...correlation(x),
+        ...emitterFields(x.content.emitter),
+        // The activity log's `action` column has no Execution Evidence
+        // analogue (the spec object carries no action name, only
+        // `evaluation_id`, joined back to the Decision Evidence row for
+        // that detail); `decision_id` below carries the join key instead.
+        outcome: x.content.outcome,
+        decision_id: x.content.evaluation_id,
+        ...(x.content.hop_reference !== undefined ? { hop_reference: x.content.hop_reference } : {}),
+        ...(x.trace_id !== undefined ? { trace_id: x.trace_id } : {}),
       };
     }
     case "egress": {

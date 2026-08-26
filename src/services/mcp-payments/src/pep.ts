@@ -40,7 +40,7 @@ import {
   type ListEffectiveParams,
   parameterDigest,
 } from "./effective-params.js";
-import type { EvidenceStore } from "./evidence.js";
+import type { EvidenceStore, RuntimeActionClass, RuntimeConditions } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
@@ -512,7 +512,7 @@ export class Pep {
     signals?: RequestSignals,
   ): Promise<EnforceResult> {
     const mapping = this.toolAction(tool);
-    if (!mapping) return this.refuse(token, "unknown_tool", tool);
+    if (!mapping) return await this.refuse(token, "unknown_tool", tool);
 
     // @spec authority-server#reference-verification — a propagated Mission
     // Reference is a selection assertion, never authority. Every credential
@@ -527,11 +527,11 @@ export class Pep {
         !("malformed" in propagated) &&
         propagated.id === token.mission.id &&
         propagated.issuer === token.mission.issuer;
-      if (!matches) return this.refuse(token, "mission_reference_conflict", mapping.action);
+      if (!matches) return await this.refuse(token, "mission_reference_conflict", mapping.action);
     }
 
     const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-    if (!loaded) return this.refuse(token, "unknown_mission", mapping.action);
+    if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action);
     const { view, freshness } = loaded;
 
     // @spec authority-server#reference-verification — the locally loaded
@@ -540,7 +540,7 @@ export class Pep {
     // reference sources disagreeing on the canonical (issuer, id) pair,
     // refused as mission_reference_conflict, never resolved by picking one.
     if (view.issuer !== token.mission.issuer) {
-      return this.refuse(token, "mission_reference_conflict", mapping.action, view);
+      return await this.refuse(token, "mission_reference_conflict", mapping.action, view);
     }
 
     // @spec attenuation#mission-binding-check: when the credential is an
@@ -555,7 +555,7 @@ export class Pep {
         (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
       )
     ) {
-      this.recordRefusal(token, "out_of_authority", mapping.action, view);
+      await this.recordRefusal(token, "out_of_authority", mapping.action, view);
       return { permitted: false, denial_reason: "out_of_authority" };
     }
 
@@ -564,7 +564,7 @@ export class Pep {
     if (this.deps.revokedInstances?.size) {
       for (const hop of flattenActChain(token.act)) {
         if (this.deps.revokedInstances.has(`${hop.iss} ${hop.sub}`)) {
-          return this.refuse(token, "instance_revoked", mapping.action, view);
+          return await this.refuse(token, "instance_revoked", mapping.action, view);
         }
       }
     }
@@ -579,9 +579,9 @@ export class Pep {
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
-      if (!invoice) return this.refuse(token, "unknown_invoice", mapping.action, view);
+      if (!invoice) return await this.refuse(token, "unknown_invoice", mapping.action, view);
       const vendor = this.deps.payments.getVendor(invoice.vendor_id);
-      if (!vendor) return this.refuse(token, "unknown_vendor", mapping.action, view);
+      if (!vendor) return await this.refuse(token, "unknown_vendor", mapping.action, view);
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE });
       amount = effective.amount;
       resourceObj = { type: "invoice", id: invoice.id, properties: { vendor_id: vendor.id } };
@@ -647,6 +647,22 @@ export class Pep {
       }
     }
 
+    // @spec runtime-evidence#decision-evidence-object (issue #649): captured
+    // ahead of `req` so the retained Decision Evidence's `actor`/
+    // `capability_source` coordinated-extension members (below) reuse the
+    // EXACT same values the PDP evaluated, rather than a second derivation.
+    const contextActor = buildContextActor({
+      ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
+      ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
+      ...(token.act !== undefined ? { act: token.act } : {}),
+    });
+    const capabilitySource = {
+      tool_id: `${TOOL_BASE}/${tool}`,
+      source_uri: SERVER_CARD_URI,
+      source_digest: this.deps.sourceDigest,
+      operation_ref: `tools/${tool}`,
+    };
+
     const req: EvaluationRequest = {
       // @spec authzen#pdp-request rule 10 — `subject.properties.iss` is this
       // resource's own verified issuer identity, carried on TokenFacts by
@@ -682,17 +698,8 @@ export class Pep {
         // external_commitment) from being denied `stale_state` merely for
         // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
         freshness,
-        actor: buildContextActor({
-          ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
-          ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
-          ...(token.act !== undefined ? { act: token.act } : {}),
-        }),
-        capability_source: {
-          tool_id: `${TOOL_BASE}/${tool}`,
-          source_uri: SERVER_CARD_URI,
-          source_digest: this.deps.sourceDigest,
-          operation_ref: `tools/${tool}`,
-        },
+        actor: contextActor,
+        capability_source: capabilitySource,
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
@@ -748,26 +755,41 @@ export class Pep {
         }
       : undefined;
 
-    this.deps.evidence.record({
-      kind: "decision",
-      decision: decision.decision,
-      decision_id: decision.context.decision_id as string,
-      policy_view_id: decision.context.policy_view_id as string,
-      ...(decision.context.denial_reason ? { denial_reason: decision.context.denial_reason as string } : {}),
-      // @spec authzen `entry_digest`: the PDP's resolved-scope anchor, copied
-      // from the decision context so the retained record cites the entry.
-      ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
-      // @spec authzen#response-context: Decision Evidence records the SAME
-      // `evaluation_id` the PDP response carries, additive alongside the
-      // pre-existing `decision_id` copy this record already keeps.
-      ...(decision.context.evaluation_id ? { evaluation_id: decision.context.evaluation_id as string } : {}),
+    // @spec runtime-evidence#decision-evidence-object (issue #649): this
+    // deployment co-locates the PDP and PEP in one process/component
+    // (`evaluate()` is called in-process, never over a wire hop), so the
+    // Decision Evidence emitter is `role: "pdp"` under the SAME component id
+    // as the PEP's own `role: "pep"` records, signed with a distinct
+    // `pdp`-role key (see `EvidenceSigningConfig`) so a verifier's
+    // key-to-role binding still distinguishes the two.
+    await this.deps.evidence.recordDecision(CANONICAL_RESOURCE, {
+      mission: {
+        id: view.id,
+        issuer: view.issuer,
+        policy_view_id: decision.context.policy_view_id as string,
+        authority_hash: view.authority_hash,
+      },
+      subject: {
+        id: req.subject.id,
+        ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
+      },
+      resource: { type: req.resource.type, id: req.resource.id },
+      action: { name: mapping.action },
+      audience: req.context.audience,
+      evaluation_id: decision.context.evaluation_id as string,
+      decision: decision.decision ? "permit" : "deny",
+      ...(req.context.action_class !== undefined
+        ? { action_class: req.context.action_class as RuntimeActionClass }
+        : {}),
+      actor: contextActor,
+      capability_source: capabilitySource,
       ...(protectedPrincipalMapping ? { principal_mapping: protectedPrincipalMapping } : {}),
-      mission_id: view.id,
-      authority_hash: view.authority_hash,
-      action: mapping.action,
       ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
-      instance_epoch: this.deps.instanceEpoch,
-      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
+      ...(decision.context.conditions
+        ? { conditions: decision.context.conditions as RuntimeConditions }
+        : {}),
+      ...(decision.context.denial_reason ? { denial_reason: decision.context.denial_reason as string } : {}),
+      ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
     });
 
     if (!decision.decision) {
@@ -880,7 +902,7 @@ export class Pep {
       ? Object.keys(conditions).filter((k) => !RECOGNIZED_CONDITIONS.has(k))
       : [];
     if (unrecognizedConditions.length > 0) {
-      this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
+      await this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
@@ -894,7 +916,7 @@ export class Pep {
     // conditions refusal reason above (a distinct rule, a distinct reason).
     const obligations = decision.context.obligations as unknown[] | undefined;
     if (obligations && obligations.length > 0) {
-      this.recordRefusal(token, "unfulfillable_obligation", mapping.action, view);
+      await this.recordRefusal(token, "unfulfillable_obligation", mapping.action, view);
       return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }
 
@@ -912,16 +934,16 @@ export class Pep {
    * effective parameters immediately before execution. A digest mismatch
    * (record changed under us) is a refusal, not an execution.
    */
-  reverify(effective: EffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
+  async reverify(effective: EffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
-      this.recordRefusal(token, "parameter_mismatch", effective.action);
+      await this.recordRefusal(token, "parameter_mismatch", effective.action);
       return false;
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource });
     if (parameterDigest(fresh) !== expectedDigest) {
-      this.recordRefusal(token, "parameter_mismatch", effective.action);
+      await this.recordRefusal(token, "parameter_mismatch", effective.action);
       return false;
     }
     return true;
@@ -941,7 +963,7 @@ export class Pep {
    * (present, as `vendor_scope[0]`, exactly when `vendor_scope_source` is
    * `"requested"`), so no separate input needs to be threaded through.
    */
-  reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): boolean {
+  async reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
     const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
@@ -954,32 +976,43 @@ export class Pep {
       ...deriveVendorScope(entry, requestedVendorId),
     });
     if (parameterDigest(fresh) !== expectedDigest) {
-      this.recordRefusal(token, "parameter_mismatch", effective.action);
+      await this.recordRefusal(token, "parameter_mismatch", effective.action);
       return false;
     }
     return true;
   }
 
-  private refuse(token: TokenFacts, reason: string, action: string, view?: MissionView): EnforceResult {
-    this.recordRefusal(token, reason, action, view);
+  private async refuse(token: TokenFacts, reason: string, action: string, view?: MissionView): Promise<EnforceResult> {
+    await this.recordRefusal(token, reason, action, view);
     return { permitted: false, refusal_reason: reason };
   }
 
-  private recordRefusal(token: TokenFacts, reason: string, action: string, view?: MissionView): void {
-    // @spec runtime-evidence#refusal-record (#702) — `authority_hash` where
-    // the refusing component holds it: the resolved `MissionView` when one
-    // was loaded, else the verified token's own (now OPTIONAL) copy, else
-    // omitted entirely (exactOptionalPropertyTypes forbids an explicit
-    // `undefined` value on an optional member).
-    const authorityHash = view?.authority_hash ?? token.mission.authority_hash;
-    this.deps.evidence.record({
-      kind: "refusal",
-      refusal_reason: reason,
-      mission_id: token.mission.id,
-      ...(authorityHash !== undefined ? { authority_hash: authorityHash } : {}),
-      action,
-      instance_epoch: this.deps.instanceEpoch,
-      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
+  /**
+   * @spec runtime-evidence#pre-decision-refusal (issue #649): `mission` is
+   * present only when `view` was successfully loaded (an ESTABLISHED
+   * reference, per the spec's own rule: absent is not itself a defect, it is
+   * exactly what an establishment failure like `unknown_mission` looks
+   * like). `missionId` (the wrapper's store-level correlation key, always
+   * `token.mission.id`, the credential's CLAIMED reference) is separate and
+   * always present, so an operator timeline can still bucket a
+   * pre-establishment refusal under the mission the caller named, without
+   * the signed record itself asserting that reference was ever verified.
+   */
+  private async recordRefusal(
+    token: TokenFacts,
+    reason: string,
+    action: string,
+    view?: MissionView,
+  ): Promise<void> {
+    await this.deps.evidence.recordRefusal(CANONICAL_RESOURCE, "pep", {
+      missionId: token.mission.id,
+      audience: CANONICAL_RESOURCE,
+      action: { name: action },
+      denial_reason: reason,
+      subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
+      ...(view !== undefined
+        ? { mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } }
+        : {}),
     });
   }
 }

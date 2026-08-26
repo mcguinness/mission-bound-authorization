@@ -11232,7 +11232,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/enforcement.test.ts",
-     "name": "M4 core enforcement tier > Decision Evidence carries the PEP emitter and the recomputable entry_digest",
+     "name": "M4 core enforcement tier > Decision Evidence carries the PDP emitter and the recomputable entry_digest",
      "level": "endpoint",
      "surface": "propagation"
     }

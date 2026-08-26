@@ -9,11 +9,12 @@
  * no-issuer-source path; and the ConsoleBff read surface (operator role + join).
  */
 
+import { generateKeyPairSync } from "node:crypto";
 import { exportJWK, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { MissionKernel, validateMissionIntent } from "@mission/authorization-server";
 import type { ContainmentEvidence } from "@mission/authorization-server";
-import type { Evidence } from "@mission/mcp-payments";
+import type { DecisionEvidenceObject, EvidenceEnvelope, Evidence, ExecutionEvidenceObject, RefusalRecordObject } from "@mission/mcp-payments";
 import { EvidenceStore } from "@mission/mcp-payments";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { activityByTrace, AuthzError, buildActivityLog, ConsoleBff } from "../src/index.js";
@@ -21,48 +22,112 @@ import { activityByTrace, AuthzError, buildActivityLog, ConsoleBff } from "../sr
 const M = "msn_run_1";
 const TRACE = "trace-abc";
 
+/**
+ * A structurally-shaped but unverified `evidence_envelope`: these fixtures
+ * are hand-built `Evidence` rows exercising the read-side JOIN
+ * (`toEntry`/`buildActivityLog`), never signature verification, so a fixed
+ * placeholder is fine wherever a `content` object's REQUIRED envelope member
+ * is needed only to satisfy the type.
+ */
+const FAKE_ENVELOPE: EvidenceEnvelope = {
+  format: "jws-compact",
+  value: "eyJhbGciOiJFUzI1NiIsImtpZCI6ImsxIiwidHlwIjoieCIsImN0eSI6InkifQ.e30.sig",
+};
+
+/** The emitter role of a raw `Evidence` row, decision/refusal/execution's now living under `.content`. */
+function emitterRoleOf(r: Evidence): string | undefined {
+  switch (r.kind) {
+    case "decision":
+    case "refusal":
+    case "execution":
+      return r.content.emitter.role;
+    default:
+      return r.emitter?.role;
+  }
+}
+
 /** One record per emitter role, one Mission, ascending timestamps. */
 function allRoleRecords(): Evidence[] {
+  const decisionContent: DecisionEvidenceObject = {
+    evidence_id: "evd_1",
+    evaluation_id: "dec_1",
+    mission: { id: M, issuer: "https://as.test", policy_view_id: "pv-1", authority_hash: "sha-256:ah" },
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1" },
+    action: { name: "payments:invoice.read" },
+    audience: "https://payments.example",
+    action_class: "consequential_read",
+    class_source: "default",
+    decision: "permit",
+    entry_digest: "sha-256:entry",
+    sequence: 0,
+    emitter: { id: "pdp-1", role: "pdp" },
+    evaluated_at: "2026-01-01T00:00:01.000Z",
+    evidence_envelope: FAKE_ENVELOPE,
+  };
+  const deniedContent: DecisionEvidenceObject = {
+    evidence_id: "evd_2",
+    evaluation_id: "dec_2",
+    mission: { id: M, issuer: "https://as.test", policy_view_id: "pv-1", authority_hash: "sha-256:ah" },
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1" },
+    action: { name: "payments:payment.execute" },
+    audience: "https://payments.example",
+    action_class: "irreversible_action",
+    class_source: "deployment",
+    decision: "deny",
+    denial_reason: "out_of_authority",
+    sequence: 0,
+    emitter: { id: "pep-1", role: "pdp" },
+    evaluated_at: "2026-01-01T00:00:02.000Z",
+    evidence_envelope: FAKE_ENVELOPE,
+  };
+  const executionContent: ExecutionEvidenceObject = {
+    execution_id: "exe_1",
+    evaluation_id: "dec_2",
+    mission_id: M,
+    audience: "https://payments.example",
+    outcome: "completed",
+    outcome_at: "2026-01-01T00:00:03.000Z",
+    sequence: 0,
+    emitter: { id: "exec-1", role: "executor" },
+    evidence_envelope: FAKE_ENVELOPE,
+  };
+  const refusalContent: RefusalRecordObject = {
+    refusal_id: "ref_1",
+    audience: "https://payments.example",
+    action: { name: "egress:webhook" },
+    decision: "deny",
+    denial_reason: "egress_undeclared:webhook",
+    evaluated_at: "2026-01-01T00:00:05.000Z",
+    mission: { id: M, issuer: "https://as.test", authority_hash: "sha-256:ah" },
+    sequence: 1,
+    emitter: { id: "harness-1", role: "pep" },
+    evidence_envelope: FAKE_ENVELOPE,
+  };
   return [
     {
       kind: "decision",
-      decision: true,
       mission_id: M,
-      authority_hash: "sha-256:ah",
-      action: "payments:invoice.read",
-      instance_epoch: "e",
       at: "2026-01-01T00:00:01.000Z",
       trace_id: TRACE,
-      decision_id: "dec_1",
-      policy_view_id: "pv-1",
-      entry_digest: "sha-256:entry",
-      emitter: { id: "pdp-1", role: "pdp" },
+      content: decisionContent,
     },
     {
       kind: "decision",
-      decision: false,
       mission_id: M,
-      authority_hash: "sha-256:ah",
-      action: "payments:payment.execute",
-      instance_epoch: "e",
       at: "2026-01-01T00:00:02.000Z",
       trace_id: TRACE,
-      decision_id: "dec_2",
-      denial_reason: "out_of_authority",
-      emitter: { id: "pep-1", role: "pep" },
+      content: deniedContent,
     },
     {
       kind: "execution",
+      mission_id: M,
       permit_id: "p1",
       op_key: "op:1",
-      outcome: "committed",
-      mission_id: M,
-      authority_hash: "sha-256:ah",
-      action: "payments:payment.execute",
-      instance_epoch: "e",
       at: "2026-01-01T00:00:03.000Z",
       trace_id: TRACE,
-      emitter: { id: "exec-1", role: "executor" },
+      content: executionContent,
     },
     {
       kind: "egress",
@@ -80,14 +145,10 @@ function allRoleRecords(): Evidence[] {
     },
     {
       kind: "refusal",
-      refusal_reason: "egress_undeclared:webhook",
       mission_id: M,
-      authority_hash: "sha-256:ah",
-      action: "egress:webhook",
-      instance_epoch: "e",
       at: "2026-01-01T00:00:05.000Z",
       trace_id: TRACE,
-      emitter: { id: "harness-1", role: "harness" },
+      content: refusalContent,
     },
     {
       kind: "ingestion",
@@ -111,8 +172,10 @@ describe("activity-log join: all emitter roles, one Mission, stable order", () =
     expect(run.mission_id).toBe(M);
     expect(run.children).toEqual([]);
     expect(run.entries).toHaveLength(6);
-    // Stable order (by timestamp): pdp, pep, executor, egress, harness, issuer.
-    expect(run.entries.map((e) => e.role)).toEqual(["pdp", "pep", "executor", "egress", "harness", "issuer"]);
+    // Stable order (by timestamp). Decision Evidence's emitter role is
+    // ALWAYS `pdp` (runtime-evidence.md #decision-evidence-object); a
+    // Refusal Record's is `pdp` or `pep` (this fixture uses `pep`).
+    expect(run.entries.map((e) => e.role)).toEqual(["pdp", "pdp", "executor", "egress", "pep", "issuer"]);
     expect(run.entries.map((e) => e.kind)).toEqual([
       "decision",
       "decision",
@@ -122,23 +185,23 @@ describe("activity-log join: all emitter roles, one Mission, stable order", () =
       "ingestion",
     ]);
 
-    const [pdp, pep, exec, egress, harness, ing] = run.entries;
+    const [pdp, deny, exec, egress, refusal, ing] = run.entries;
     // PDP decision: resolved-scope anchor + verdict + decision id.
     expect(pdp?.decision).toBe(true);
     expect(pdp?.entry_digest).toBe("sha-256:entry");
     expect(pdp?.decision_id).toBe("dec_1");
     expect(pdp?.emitter_id).toBe("pdp-1");
-    // PEP denial: normalized denial_reason.
-    expect(pep?.decision).toBe(false);
-    expect(pep?.denial_reason).toBe("out_of_authority");
-    // Executor: outcome.
-    expect(exec?.outcome).toBe("committed");
+    // Denial: normalized denial_reason.
+    expect(deny?.decision).toBe(false);
+    expect(deny?.denial_reason).toBe("out_of_authority");
+    // Executor: outcome (runtime-evidence.md's closed enum: completed/failed/suppressed).
+    expect(exec?.outcome).toBe("completed");
     // Egress: destination as the requested resource + scope digest.
     expect(egress?.resource).toBe("https://api.anthropic.com/v1/messages");
     expect(egress?.outcome).toBe("permitted");
     expect(egress?.scope_statement_digest).toBe("sha-256:scope");
-    // Harness refusal: refusal_reason normalized to denial_reason.
-    expect(harness?.denial_reason).toBe("egress_undeclared:webhook");
+    // Refusal: denial_reason.
+    expect(refusal?.denial_reason).toBe("egress_undeclared:webhook");
     // Issuer ingestion: event type + event id + outcome.
     expect(ing?.action).toBe("vendor.compromised");
     expect(ing?.event_id).toBe("evt-1");
@@ -149,7 +212,7 @@ describe("activity-log join: all emitter roles, one Mission, stable order", () =
 
     // The trace-grouped view reads the same run as one flat ordered sequence.
     const byTrace = activityByTrace(TRACE, { evidence: allRoleRecords() });
-    expect(byTrace.map((e) => e.role)).toEqual(["pdp", "pep", "executor", "egress", "harness", "issuer"]);
+    expect(byTrace.map((e) => e.role)).toEqual(["pdp", "pdp", "executor", "egress", "pep", "issuer"]);
     expect(activityByTrace("nope", { evidence: allRoleRecords() })).toEqual([]);
   });
 });
@@ -172,32 +235,48 @@ describe("activity-log task-run graph: template -> dispatched Mission -> hop -> 
     };
     const evidence: Evidence[] = [
       // A continued hop on the root: hop_reference is the join key to the hop.
+      // @spec runtime-evidence#decision-evidence-object: Decision Evidence
+      // carries no `hop_reference` in this deployment (only Execution
+      // Evidence and Refusal Records do; see evidence.ts's file header),
+      // so the hop join here is exercised on a Refusal Record instead.
       {
-        kind: "decision",
-        decision: true,
+        kind: "refusal",
         mission_id: "msn_root",
-        authority_hash: "sha-256:ah",
-        action: "payments:invoice.read",
-        instance_epoch: "e",
         at: "2026-02-01T00:00:01.000Z",
         trace_id: "t-graph",
-        decision_id: "dec_root",
-        hop_reference: { jti: "jag-1", mission_id: "msn_root", continuation_handle: "handle-1" },
-        emitter: { id: "pep-1", role: "pep" },
+        content: {
+          refusal_id: "ref_root",
+          audience: "https://payments.example",
+          action: { name: "payments:invoice.read" },
+          decision: "deny",
+          denial_reason: "permit_expired",
+          evaluated_at: "2026-02-01T00:00:01.000Z",
+          mission: { id: "msn_root", issuer: "https://as.test", authority_hash: "sha-256:ah" },
+          hop_reference: { jti: "jag-1", mission_id: "msn_root", continuation_handle: "handle-1" },
+          sequence: 0,
+          emitter: { id: "pep-1", role: "pep" },
+          evidence_envelope: FAKE_ENVELOPE,
+        },
       },
       // A record on the Child Mission.
       {
         kind: "execution",
+        mission_id: "msn_child",
         permit_id: "p2",
         op_key: "op:child",
-        outcome: "committed",
-        mission_id: "msn_child",
-        authority_hash: "sha-256:ah-child",
-        action: "payments:payment.execute",
-        instance_epoch: "e",
         at: "2026-02-01T00:00:02.000Z",
         trace_id: "t-graph",
-        emitter: { id: "pep-1", role: "pep" },
+        content: {
+          execution_id: "exe_2",
+          evaluation_id: "dec_child",
+          mission_id: "msn_child",
+          audience: "https://payments.example",
+          outcome: "completed",
+          outcome_at: "2026-02-01T00:00:02.000Z",
+          sequence: 0,
+          emitter: { id: "pep-1", role: "pep" },
+          evidence_envelope: FAKE_ENVELOPE,
+        },
       },
     ];
     const run = buildActivityLog("msn_root", {
@@ -221,7 +300,7 @@ describe("activity-log task-run graph: template -> dispatched Mission -> hop -> 
     expect(child?.mission_id).toBe("msn_child");
     expect(child?.lineage.parent?.id).toBe("msn_root");
     expect(child?.entries).toHaveLength(1);
-    expect(child?.entries[0]?.outcome).toBe("committed");
+    expect(child?.entries[0]?.outcome).toBe("completed");
   });
 });
 
@@ -254,16 +333,26 @@ describe("activity-log correlation: ingestion -> containment -> authority_contai
     };
     const denial: Evidence = {
       kind: "decision",
-      decision: false,
       mission_id: M,
-      authority_hash: "sha-256:ah",
-      action: "payments:payment.execute",
-      instance_epoch: "e",
       at: "2026-03-01T00:00:03.000Z",
       trace_id: "t-contain",
-      decision_id: "dec_contained",
-      denial_reason: "authority_contained",
-      emitter: { id: "pep-1", role: "pep" },
+      content: {
+        evidence_id: "evd_contained",
+        evaluation_id: "dec_contained",
+        mission: { id: M, issuer: "https://as.test", policy_view_id: "pv-1", authority_hash: "sha-256:ah" },
+        subject: { id: "alice" },
+        resource: { type: "invoice", id: "inv-1" },
+        action: { name: "payments:payment.execute" },
+        audience: "https://payments.example",
+        action_class: "irreversible_action",
+        class_source: "deployment",
+        decision: "deny",
+        denial_reason: "authority_contained",
+        sequence: 1,
+        emitter: { id: "pep-1", role: "pdp" },
+        evaluated_at: "2026-03-01T00:00:03.000Z",
+        evidence_envelope: FAKE_ENVELOPE,
+      },
     };
 
     const run = buildActivityLog(M, { evidence: [ingestion, denial], containment: [containment] });
@@ -298,7 +387,7 @@ describe("activity-log determinism and absent sources", () => {
   it("returns a well-formed run when issuer/lineage sources are absent", () => {
     // The no-auth-server demo surface retains no issuer records and passes no
     // Mission lineage: PEP records only, empty children, empty lineage.
-    const pepOnly: Evidence[] = allRoleRecords().filter((r) => r.emitter?.role === "pep");
+    const pepOnly: Evidence[] = allRoleRecords().filter((r) => emitterRoleOf(r) === "pep");
     const run = buildActivityLog(M, { evidence: pepOnly });
     expect(run.mission_id).toBe(M);
     expect(run.lineage).toEqual({});
@@ -338,16 +427,22 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
 
     // Two producer-retained stores, read in place (D32): a PEP store and an
     // egress store. The gate/PEP stay the sole writers; the BFF only reads.
-    const pepStore = new EvidenceStore();
+    const pdpKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const pepStore = new EvidenceStore({ pdp: { kid: "pdp-test", key: pdpKeys.privateKey } });
     const egressStore = new EvidenceStore();
-    pepStore.record({
-      kind: "decision",
-      decision: true,
-      mission_id: missionId,
-      authority_hash: mission.authority_hash,
-      action: "payments:invoice.read",
-      instance_epoch: "e",
-      emitter: { id: "pep", role: "pep" },
+    await pepStore.recordDecision("pep", {
+      mission: {
+        id: missionId,
+        issuer: "https://as.test",
+        policy_view_id: "pv-1",
+        authority_hash: mission.authority_hash,
+      },
+      subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" },
+      action: { name: "payments:invoice.read" },
+      audience: "https://payments.example",
+      evaluation_id: "dec_activity",
+      decision: "permit",
     });
     egressStore.record({
       kind: "egress",
@@ -387,7 +482,7 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     const run = bff.activityLog(op, missionId);
     expect(run.mission_id).toBe(missionId);
     expect(run.entries).toHaveLength(2);
-    expect(new Set(run.entries.map((e) => e.role))).toEqual(new Set(["pep", "egress"]));
+    expect(new Set(run.entries.map((e) => e.role))).toEqual(new Set(["pdp", "egress"]));
     // The trace method reads the same injected sources; an unmatched trace joins
     // to nothing (record() stamps trace_id only under an active span, absent here).
     expect(bff.activityByTrace(op, "no-such-trace")).toEqual([]);

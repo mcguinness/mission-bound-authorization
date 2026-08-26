@@ -21,9 +21,11 @@ import { Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
+  createEphemeralEvidenceKeys,
   createMcpChannel,
   createMediatedClient,
   EvidenceStore,
+  type ExecutionEvidence,
   type MediatedClient,
   McpPaymentsServer,
   PaymentsStore,
@@ -134,7 +136,7 @@ async function build(): Promise<{
       { id: "inv-3", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
     ],
   );
-  const evidence = new EvidenceStore();
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
@@ -205,8 +207,15 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     // Side-effect oracle: exactly one authorized ledger entry.
     expect(connectors.ledgerEntries()).toHaveLength(1);
     const ev = evidence.forMission("msn_m4");
-    expect(ev.some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:payment.execute")).toBe(true);
-    expect(ev.some((e) => e.kind === "execution" && e.outcome === "committed")).toBe(true);
+    expect(
+      ev.some(
+        (e) =>
+          e.kind === "decision" &&
+          e.content.decision === "permit" &&
+          e.content.action.name === "payments:payment.execute",
+      ),
+    ).toBe(true);
+    expect(ev.some((e) => e.kind === "execution" && e.content.outcome === "completed")).toBe(true);
   });
 
   it("2c: a continued credential's jti + continuation handle reach Execution Evidence as hop_reference", async () => {
@@ -219,8 +228,8 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const jwt = await signMissionToken({ jti: JTI, identityContinuationHandle: HANDLE });
     const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, jwt);
     expect(res.ok, JSON.stringify(res)).toBe(true);
-    const exec = evidence.forMission("msn_m4").find((e) => e.kind === "execution");
-    expect(exec?.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m4", continuation_handle: HANDLE });
+    const exec = evidence.forMission("msn_m4").find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(exec?.content.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m4", continuation_handle: HANDLE });
   });
 
   // Each adversarial input is run twice on fresh stacks -- once over the direct
@@ -260,8 +269,8 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
         .all()
         .some(
           (e) =>
-            (e.kind === "decision" && e.decision === false && e.denial_reason === mcpReason) ||
-            (e.kind === "refusal" && e.refusal_reason === mcpReason),
+            (e.kind === "decision" && e.content.decision === "deny" && e.content.denial_reason === mcpReason) ||
+            (e.kind === "refusal" && e.content.denial_reason === mcpReason),
         );
       expect(recorded, "expected a decision-deny or refusal record for this reason").toBe(true);
     });

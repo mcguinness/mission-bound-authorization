@@ -21,6 +21,7 @@ import {
   buildEffectiveParams,
   CANONICAL_RESOURCE,
   Connectors,
+  createEphemeralEvidenceKeys,
   createMediatedClient,
   EvidenceStore,
   McpPaymentsServer,
@@ -30,6 +31,7 @@ import {
   sourceDigestOf,
   TransactionEngine,
   type ActionApprovalInput,
+  type DecisionEvidence,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -75,7 +77,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
     [{ id: "acme", name: "Acme", status: "approved" }],
     [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
   );
-  const evidence = new EvidenceStore();
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
@@ -159,7 +161,14 @@ describe("every consequential operation passes through a PEP that can refuse it 
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(connectors.ledgerEntries()).toHaveLength(1);
     expect(
-      evidence.all().some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:payment.execute"),
+      evidence
+        .all()
+        .some(
+          (e) =>
+            e.kind === "decision" &&
+            e.content.decision === "permit" &&
+            e.content.action.name === "payments:payment.execute",
+        ),
     ).toBe(true);
   });
 });
@@ -174,8 +183,10 @@ describe("high-consequence actions are always gated by a PDP permit, never left 
     const granted = buildStack(view(["payments:payment.execute"]), alwaysAllowFga);
     const permit = await granted.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
     expect(permit.ok, JSON.stringify(permit)).toBe(true);
-    const dec = granted.evidence.all().find((e) => e.kind === "decision" && e.decision === true);
-    expect(dec?.action).toBe("payments:payment.execute");
+    const dec = granted.evidence
+      .all()
+      .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "permit");
+    expect(dec?.content.action.name).toBe("payments:payment.execute");
   });
 
   it("send_remittance_email (external_commitment) always reaches a PDP decision: refused without authority, permitted-with-decision-evidence with it", async () => {
@@ -187,8 +198,10 @@ describe("high-consequence actions are always gated by a PDP permit, never left 
     const granted = buildStack(view(["payments:remittance.send"]), alwaysAllowFga);
     const permit = await granted.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
     expect(permit.ok, JSON.stringify(permit)).toBe(true);
-    const dec = granted.evidence.all().find((e) => e.kind === "decision" && e.decision === true);
-    expect(dec?.action).toBe("payments:remittance.send");
+    const dec = granted.evidence
+      .all()
+      .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "permit");
+    expect(dec?.content.action.name).toBe("payments:remittance.send");
   });
 });
 
@@ -237,7 +250,7 @@ describe("a PDP deny is terminal for the attempted action: no execution, and no 
       [{ id: "acme", name: "Acme", status: "approved" }],
       [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
     );
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     let current: MissionView = view(["payments:invoice.read"]);
     const pep = new Pep({
       payments,
@@ -288,7 +301,7 @@ describe("a decision bound to one resource is never honored at another (@spec ru
 describe("the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation)", () => {
   async function buildTokenValidationServer(pubJwk: Record<string, unknown>) {
     const payments = new PaymentsStore();
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const pep = new Pep({
       payments,
       evidence,

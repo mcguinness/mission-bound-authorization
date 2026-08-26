@@ -1,16 +1,40 @@
 /**
  * @spec authzen evidence objects (Decision Evidence, Refusal Record)
  * @spec D13 (trace_id extension member), D32 (producers retain their own)
+ * @spec draft-mcguinness-mission-runtime-evidence.md #decision-evidence-object,
+ * #pre-decision-refusal, #execution-evidence-object,
+ * #decision-evidence-integrity (issue #649, ruling at 41f66a4a): Decision
+ * Evidence, Refusal Records, and Execution Evidence are the CURRENT
+ * spec-native closed objects (see `DecisionEvidenceObject`,
+ * `RefusalRecordObject`, `ExecutionEvidenceObject` below), genuinely signed
+ * under runtime-evidence.md's own integrity algorithm
+ * (`runtime-evidence-integrity.ts`). `EvidenceStore` fails closed: there is
+ * no public unsigned-record path left for these three kinds. Egress and
+ * Ingestion (Harness/Containment, issue #649's deferred slices B/C) keep the
+ * pre-existing unsigned retention path unchanged.
  *
- * The PEP retains its own evidence (feed-driven distributed, D32). Signing
- * and SCITT registration land in M10; M4 records the retained objects and
- * the members the operation profile fixes.
+ * SCITT/transparency registration remains M10 future work.
  */
 
-import { createHash } from "node:crypto";
-import { computeAnchor, type JsonValue } from "@mission/core";
+import { createHash, randomBytes } from "node:crypto";
+import type { ContextActor } from "@mission/actor-chain";
+import { canonicalDigest, computeAnchor, type JsonValue } from "@mission/core";
 import { currentTraceId } from "@mission/telemetry";
 import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
+import {
+  DECISION_EVIDENCE_MEDIA_TYPE,
+  EXECUTION_EVIDENCE_MEDIA_TYPE,
+  type EvidenceEmitterRef,
+  type EvidenceEnvelope,
+  type EvidenceKeyLike,
+  type EvidenceKeyResolver,
+  type EvidenceVerifyResult,
+  MISSION_RECEIPT_MEDIA_TYPE,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  RUNTIME_EVIDENCE_JWS_TYP,
+  signEvidenceEnvelope,
+  verifyEvidenceEnvelope,
+} from "./runtime-evidence-integrity.js";
 
 /**
  * @spec authzen `emitter.role`: the coordinated set of enforcement-point roles
@@ -70,58 +94,223 @@ export interface EvidenceBase {
   scope_statement_digest?: string;
 }
 
-export interface DecisionEvidence extends EvidenceBase {
-  kind: "decision";
-  decision: boolean;
-  policy_view_id?: string;
+// ---------------------------------------------------------------------------
+// Runtime Evidence: spec-native signed objects (issue #649)
+// ---------------------------------------------------------------------------
+//
+// @spec draft-mcguinness-mission-runtime-evidence.md #decision-evidence-object
+// (lines 331-573), #pre-decision-refusal (575-773), #execution-evidence-object
+// (982-1116), #decision-evidence-integrity (775-872): all anchors at
+// 41f66a4a.
+//
+// Each `*Object` type below is EXACTLY runtime-evidence.md's closed member
+// set for that record: the core REQUIRED/OPTIONAL/CONDITIONAL members this
+// deployment populates, plus the coordinated extension members it genuinely
+// carries (`actor`, `capability_source`, `hop_reference`, `principal_mapping`,
+// {{evidence-extensions}}). It is the ONLY thing that gets JCS-canonicalized
+// and signed: `signEvidenceEnvelope`/`verifyEvidenceEnvelope` see exactly this
+// object (minus `evidence_envelope` while signing), never the wrapper below.
+//
+// Members this deployment does not yet populate (`contributing_constraints`:
+// the PDP does not track which constraint/authorization_details entries a
+// decision turned on; `mission_state_version`; `credential` on Decision
+// Evidence; `authorizing_entry`, `obligations`, `mission_history`, `taint` on
+// Decision Evidence; `compensates_evaluation_id`) are simply absent from the
+// type, not stubbed: see the issue #649 PR body for the full list and why.
+//
+// Store/query bookkeeping that has no home in a closed member set (a flat
+// `mission_id` join key even where the spec's own `mission` member is
+// nested, or genuinely OPTIONAL on Refusal Record; `trace_id`; the payments
+// domain's own `permit_id`/`op_key` correlation) lives OUTSIDE `content`, as
+// a plain sibling on the retained `DecisionEvidence` / `RefusalRecord` /
+// `ExecutionEvidence` wrapper (the same treatment `trace_id` already had
+// (it was never a runtime-evidence.md member either). `mission_id` on the
+// wrapper is DERIVED from `content` wherever `content` carries a Mission
+// reference; it exists independently of `content` only for a Refusal Record
+// whose `mission` is genuinely absent (no Mission established before the
+// failure), so the record still files under its CLAIMED mission for
+// operator-facing correlation without asserting establishment anywhere.
+
+/** @spec runtime-evidence#decision-evidence-object mission sub-object (REQUIRES `policy_view_id`). */
+export interface RuntimeMissionRef {
+  id: string;
+  issuer: string;
+  policy_view_id: string;
+  authority_hash?: string;
+  intent_hash?: string;
+  policy_version?: string;
+}
+
+/** @spec runtime-evidence#pre-decision-refusal `mission` member: no `policy_view_id` requirement. */
+export interface RuntimeMissionRefBasic {
+  id: string;
+  issuer: string;
+  authority_hash?: string;
+}
+
+export interface RuntimeSubjectRef {
+  id: string;
+  type?: string;
+  properties?: { iss?: string };
+}
+
+export interface RuntimeResourceRef {
+  type: string;
+  id: string;
+}
+
+export interface RuntimeActionRef {
+  name: string;
+}
+
+/** @spec runtime-evidence#decision-evidence-object `conditions` (normalized permit form). */
+export interface RuntimeConditions {
+  valid_until: string;
+  use_limit?: number;
+  parameter_digest?: string;
+}
+
+/** @spec runtime-evidence#decision-evidence-object `action_class` (runtime profile's classes). */
+export type RuntimeActionClass =
+  | "consequential_read"
+  | "consequential_write"
+  | "irreversible_action"
+  | "external_commitment"
+  | "privileged_administration";
+
+/** @spec runtime-evidence#decision-evidence-object `class_source`. */
+export type RuntimeClassSource = "default" | "resource_floor" | "deployment";
+
+/** @spec runtime-evidence#decision-evidence-object `hop_reference` (also Refusal/Execution). */
+export interface RuntimeHopReference {
+  jti: string;
+  mission_id: string;
+  continuation_handle?: string;
+}
+
+/**
+ * @spec runtime-evidence#evidence-extensions `principal_mapping`: coordinated
+ * extension member, protected references only (never raw `{iss,sub}`), per
+ * the privacy rule ({{evidence-pii}}).
+ */
+export interface RuntimePrincipalMapping {
+  origin: string;
+  local: string;
+  policy: { id: string; version: string };
+  observed_at: string;
+  valid_until: string;
+}
+
+/** @spec runtime-evidence#evidence-extensions `capability_source`: coordinated extension member. */
+export interface RuntimeCapabilitySource {
+  tool_id: string;
+  source_uri: string;
+  source_digest: string;
+  operation_ref: string;
+}
+
+/** @spec runtime-evidence#decision-evidence-object (lines 331-573): the closed wire object. */
+export interface DecisionEvidenceObject {
+  evidence_id: string;
+  evaluation_id: string;
+  mission: RuntimeMissionRef;
+  subject: RuntimeSubjectRef;
+  resource: RuntimeResourceRef;
+  action: RuntimeActionRef;
+  audience: string;
+  action_class: RuntimeActionClass;
+  class_source: RuntimeClassSource;
+  actor?: ContextActor;
+  capability_source?: RuntimeCapabilitySource;
+  principal_mapping?: RuntimePrincipalMapping;
+  hop_reference?: RuntimeHopReference;
+  parameter_digest?: string;
+  evaluation_request_digest?: string;
+  conditions?: RuntimeConditions;
+  decision: "permit" | "deny";
   denial_reason?: string;
-  /**
-   * @spec authzen `entry_digest`: the integrity-anchor encoded digest of the
-   * Authority Set entry the decision was evaluated against (the resolved-scope
-   * anchor), copied from the PDP's decision context when present.
-   */
   entry_digest?: string;
-  /**
-   * @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
-   * runtime-evidence#evidence-pii — present whenever the decision evaluated the
-   * cross-domain Origin Principal profile's mapping (permit or a later-step
-   * denial that still passed the mapping check), never a partial object.
-   * `origin`/`local` are PROTECTED subject references (the family anchor
-   * idiom, `typ` `mission-origin-subject`, {@link MISSION_ORIGIN_SUBJECT_TYP}),
-   * never the raw `{iss, sub}` pair: this is a RETAINED record, and the
-   * privacy rule requires a protected reference here, not the ephemeral
-   * PDP decision context's raw values.
-   *
-   * DISCLOSURE (@spec runtime-evidence#evidence-pii): this deployment uses
-   * the deterministic-digest form of protected reference (a keyed
-   * pseudonym or an opaque, auditor-resolvable reference are the other two
-   * forms the spec allows). A deterministic digest of an enumerable
-   * identifier is dictionary-attackable: it is correlation infrastructure,
-   * not concealment. Anyone who can enumerate candidate `{iss, sub}` pairs
-   * (a small, known population) can confirm membership by recomputing the
-   * digest; it does not hide WHICH known principal a record is about, only
-   * that raw identity is not stored verbatim.
-   */
-  principal_mapping?: {
-    origin: string;
-    local: string;
-    policy: { id: string; version: string };
-    observed_at: string;
-    valid_until: string;
-  };
+  sequence: number;
+  emitter: { id: string; role: "pdp" };
+  evaluated_at: string;
+  evidence_envelope: EvidenceEnvelope;
 }
 
-export interface RefusalRecord extends EvidenceBase {
+/** @spec runtime-evidence#pre-decision-refusal (lines 575-773): the closed wire object. */
+export interface RefusalRecordObject {
+  refusal_id: string;
+  audience: string;
+  action: RuntimeActionRef;
+  resource?: RuntimeResourceRef;
+  decision: "deny";
+  denial_reason: string;
+  evaluated_at: string;
+  parameter_digest?: string;
+  evaluation_request_digest?: string;
+  mission?: RuntimeMissionRefBasic;
+  subject?: RuntimeSubjectRef;
+  actor?: ContextActor;
+  principal_mapping?: RuntimePrincipalMapping;
+  hop_reference?: RuntimeHopReference;
+  sequence?: number;
+  emitter: { id: string; role: "pdp" | "pep" };
+  evidence_envelope: EvidenceEnvelope;
+}
+
+/** @spec runtime-evidence#execution-evidence-object (lines 982-1116): the closed wire object. */
+export interface ExecutionEvidenceObject {
+  execution_id: string;
+  evaluation_id: string;
+  mission_id: string;
+  audience: string;
+  authorized_parameter_digest?: string;
+  effective_parameter_digest?: string;
+  outcome: "completed" | "failed" | "suppressed";
+  outcome_at: string;
+  error?: string;
+  obligation_outcomes?: Array<{
+    id: string;
+    type: string;
+    outcome: "fulfilled" | "failed" | "unsupported";
+    error?: string;
+  }>;
+  sequence: number;
+  emitter: { id: string; role: "pep" | "executor" };
+  hop_reference?: RuntimeHopReference;
+  attempted_at?: string;
+  completed_at?: string;
+  result_summary?: Record<string, JsonValue>;
+  evidence_envelope: EvidenceEnvelope;
+}
+
+/** The retained Decision Evidence row: `content` is the exact signed spec object. */
+export interface DecisionEvidence {
+  kind: "decision";
+  mission_id: string;
+  trace_id?: string;
+  at: string;
+  content: DecisionEvidenceObject;
+}
+
+/** The retained Refusal Record row: `content` is the exact signed spec object. */
+export interface RefusalRecord {
   kind: "refusal";
-  refusal_reason: string;
+  mission_id: string;
+  trace_id?: string;
+  at: string;
+  content: RefusalRecordObject;
 }
 
-/** @spec authzen Execution Evidence: the outcome joined to the decision. */
-export interface ExecutionEvidence extends EvidenceBase {
+/** The retained Execution Evidence row: `content` is the exact signed spec object. */
+export interface ExecutionEvidence {
   kind: "execution";
+  mission_id: string;
+  /** Payments-domain join keys (reconcile.ts); not spec members. */
   permit_id: string;
   op_key: string;
-  outcome: "committed" | "deduped";
+  trace_id?: string;
+  at: string;
+  content: ExecutionEvidenceObject;
 }
 
 /**
@@ -473,21 +662,343 @@ export type Evidence =
 
 /** Distributive omit so the union's discriminated shapes are preserved. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-export type EvidenceInput = DistributiveOmit<Evidence, "trace_id" | "at">;
 
 /**
- * @spec runtime-evidence#decision-evidence-object, runtime-evidence#pre-decision-refusal:
- * an append-only, in-memory, per-attempt retained store: `record` only ever
- * pushes, never amends or replaces an existing entry, so a retried refusal
- * or decision yields its own distinct record. PEP-side and per-request; the
- * Controller-owned Mission Record (approval evidence and lifecycle history,
- * mission-substrate#governance-record) is a separate, not-yet-implemented
- * surface this store does not provide.
+ * The kinds {@link EvidenceStore.record} still accepts: Egress and Ingestion
+ * (issue #649's deferred slices B/C keep the pre-existing unsigned path
+ * unchanged) plus Artifact (never emitted through `record` in practice, see
+ * {@link buildArtifactEvidence}, kept here only because it always was).
+ * Decision/Refusal/Execution are deliberately NOT in this union: there is no
+ * public unsigned-record path for them any more. Use {@link
+ * EvidenceStore.recordDecision}, {@link EvidenceStore.recordRefusal}, or
+ * {@link EvidenceStore.recordExecution}.
+ */
+type UnsignedEvidence = EgressEvidence | IngestionEvidence | ArtifactEvidence;
+export type EvidenceInput = DistributiveOmit<UnsignedEvidence, "trace_id" | "at">;
+
+/** Recursively freezes a plain JSON-shaped value so a caller cannot mutate a retained record after signing. */
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      deepFreeze(v);
+    }
+  }
+  return value;
+}
+
+/** At least 128 bits of entropy, ABNF `1*64( ALPHA / DIGIT / "-" / "_" )` (runtime-evidence.md, every `*_id` member). */
+function newRecordId(prefix: string): string {
+  return `${prefix}_${randomBytes(20).toString("base64url")}`;
+}
+
+/**
+ * @spec runtime-evidence#request-digest-worked: the `evaluation_request_digest`
+ * fallback: a canonical-object digest of exactly the worked example's summary
+ * shape (`action`, `audience`, `mission_id`, `resource`, `subject`, all flat
+ * strings). Used whenever `parameter_digest` is absent, so Decision Evidence
+ * and Refusal Record always carry one or the other as the runtime profile
+ * requires. The runtime profile does not standardize the digested request
+ * form; this deployment states exactly this input, matching the spec's own
+ * non-normative worked value byte-for-byte (pinned in
+ * `packages/mission-core/test/canonical-digest.test.ts`).
+ */
+function requestDigestFallback(input: {
+  action: string;
+  audience: string;
+  mission_id: string;
+  resource: string;
+  subject: string;
+}): string {
+  return canonicalDigest(input as unknown as JsonValue);
+}
+
+/** One emitter-scoped ES256 signing identity: a `kid` plus the private key it names. */
+export interface EvidenceSigningKey {
+  kid: string;
+  key: EvidenceKeyLike;
+}
+
+/**
+ * The signer configuration {@link EvidenceStore} needs to emit signed
+ * records. Every role is OPTIONAL at the type level so a deployment that
+ * only ever plays some roles configures only those (a store that never
+ * issues receipts need not carry a `receipt_issuer` key), but each
+ * `record*` method fails closed (throws) if the role IT needs is absent,
+ * per runtime-evidence.md's own emitter roles ({{decision-evidence-object}}).
+ */
+export type EvidenceSigningConfig = Partial<Record<"pdp" | "pep" | "executor" | "receipt_issuer", EvidenceSigningKey>>;
+
+/** Input to {@link EvidenceStore.recordDecision}: everything the caller already knows. */
+export interface DecisionEvidenceInput {
+  mission: RuntimeMissionRef;
+  subject: RuntimeSubjectRef;
+  resource: RuntimeResourceRef;
+  action: RuntimeActionRef;
+  audience: string;
+  evaluation_id: string;
+  decision: "permit" | "deny";
+  /** Absent when the deployment has not classified this action; defaults to `consequential_read` / `class_source: "default"`. */
+  action_class?: RuntimeActionClass;
+  actor?: ContextActor;
+  capability_source?: RuntimeCapabilitySource;
+  principal_mapping?: RuntimePrincipalMapping;
+  hop_reference?: RuntimeHopReference;
+  parameter_digest?: string;
+  conditions?: RuntimeConditions;
+  denial_reason?: string;
+  entry_digest?: string;
+  trace_id?: string;
+}
+
+/** Input to {@link EvidenceStore.recordRefusal}. `missionId` is store-level correlation only (see the file header note); `mission` is the spec's own OPTIONAL, established-only reference. */
+export interface RefusalRecordInput {
+  missionId: string;
+  audience: string;
+  action: RuntimeActionRef;
+  resource?: RuntimeResourceRef;
+  denial_reason: string;
+  parameter_digest?: string;
+  mission?: RuntimeMissionRefBasic;
+  subject?: RuntimeSubjectRef;
+  actor?: ContextActor;
+  principal_mapping?: RuntimePrincipalMapping;
+  hop_reference?: RuntimeHopReference;
+  trace_id?: string;
+}
+
+/** Input to {@link EvidenceStore.recordExecution}. `permitId`/`opKey` are payments-domain join keys (reconcile.ts), not spec members. */
+export interface ExecutionEvidenceInput {
+  permitId: string;
+  opKey: string;
+  evaluation_id: string;
+  mission_id: string;
+  audience: string;
+  authorized_parameter_digest?: string;
+  effective_parameter_digest?: string;
+  outcome: "completed" | "failed" | "suppressed";
+  error?: string;
+  obligation_outcomes?: ExecutionEvidenceObject["obligation_outcomes"];
+  hop_reference?: RuntimeHopReference;
+  attempted_at?: string;
+  completed_at?: string;
+  result_summary?: Record<string, JsonValue>;
+  trace_id?: string;
+}
+
+/**
+ * @spec runtime-evidence#decision-evidence-object, runtime-evidence#pre-decision-refusal,
+ * runtime-evidence#execution-evidence-object, runtime-evidence#decision-evidence-integrity
+ * (issue #649): an append-only, in-memory, per-attempt retained store.
+ * `recordDecision`/`recordRefusal`/`recordExecution` build the current
+ * spec-native closed object, allocate a cryptographically random record id
+ * and a monotonically increasing per-(mission, emitter) `sequence`, JCS
+ * canonicalize it without `evidence_envelope`, sign ES256 with the
+ * configured emitter role's key, and retain the deep-frozen, complete signed
+ * object. There is no public path to retain an UNSIGNED Decision, Refusal,
+ * or Execution record: a store with no key configured for the role a call
+ * needs throws (fail closed) rather than falling back to an unsigned record.
+ * `record` keeps the pre-existing unsigned path for Egress and Ingestion
+ * (issue #649's deferred slices B/C).
+ *
+ * PEP-side and per-request; the Controller-owned Mission Record (approval
+ * evidence and lifecycle history, mission-substrate#governance-record) is a
+ * separate, not-yet-implemented surface this store does not provide.
  */
 export class EvidenceStore {
   private readonly records: Evidence[] = [];
+  private readonly sequences = new Map<string, number>();
 
+  constructor(private readonly signer?: EvidenceSigningConfig) {}
+
+  private requireSigner(role: "pdp" | "pep" | "executor" | "receipt_issuer"): EvidenceSigningKey {
+    const key = this.signer?.[role];
+    if (!key) {
+      throw new Error(
+        `EvidenceStore: no signer configured for emitter role "${role}" (fail closed: this record kind has no unsigned retention path)`,
+      );
+    }
+    return key;
+  }
+
+  /**
+   * @spec runtime-evidence#decision-evidence-object (line 508): "each emitter
+   * maintains its own monotonically increasing per-Mission sequence."
+   * `emitter` is itself the `{id, role}` object ({{decision-evidence-object}}
+   * `emitter` member), so the sequence is scoped per (mission, id, role): a
+   * component playing multiple roles under one `id` (this deployment's
+   * co-located pdp/pep/executor) gets one counter PER ROLE, matching the
+   * distinct signing key each role already carries. This reading is stated
+   * explicitly in the issue #649 PR body for an owner ruling.
+   */
+  private nextSequence(missionId: string, emitterId: string, role: string): number {
+    const key = `${missionId} ${emitterId} ${role}`;
+    const n = this.sequences.get(key) ?? 0;
+    this.sequences.set(key, n + 1);
+    return n;
+  }
+
+  /** @spec runtime-evidence#decision-evidence-object: sign and retain a Decision Evidence Object. */
+  async recordDecision(emitterId: string, input: DecisionEvidenceInput): Promise<DecisionEvidence> {
+    const signer = this.requireSigner("pdp");
+    const missionId = input.mission.id;
+    const sequence = this.nextSequence(missionId, emitterId, "pdp");
+    const action_class = input.action_class ?? "consequential_read";
+    const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
+    const evaluation_request_digest =
+      input.parameter_digest === undefined
+        ? requestDigestFallback({
+            action: input.action.name,
+            audience: input.audience,
+            mission_id: missionId,
+            resource: input.resource.id,
+            subject: input.subject.id,
+          })
+        : undefined;
+    const evaluated_at = new Date().toISOString();
+    const unsigned = {
+      evidence_id: newRecordId("evd"),
+      evaluation_id: input.evaluation_id,
+      mission: input.mission,
+      subject: input.subject,
+      resource: input.resource,
+      action: input.action,
+      audience: input.audience,
+      action_class,
+      class_source,
+      ...(input.actor !== undefined ? { actor: input.actor } : {}),
+      ...(input.capability_source !== undefined ? { capability_source: input.capability_source } : {}),
+      ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
+      ...(input.hop_reference !== undefined ? { hop_reference: input.hop_reference } : {}),
+      ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
+      ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
+      ...(input.conditions !== undefined ? { conditions: input.conditions } : {}),
+      decision: input.decision,
+      ...(input.denial_reason !== undefined ? { denial_reason: input.denial_reason } : {}),
+      ...(input.entry_digest !== undefined ? { entry_digest: input.entry_digest } : {}),
+      sequence,
+      emitter: { id: emitterId, role: "pdp" as const },
+      evaluated_at,
+    };
+    const evidence_envelope = await signEvidenceEnvelope(unsigned as unknown as JsonValue, DECISION_EVIDENCE_MEDIA_TYPE, signer);
+    const content = deepFreeze({ ...unsigned, evidence_envelope }) as DecisionEvidenceObject;
+    const traceId = input.trace_id ?? currentTraceId();
+    const record: DecisionEvidence = deepFreeze({
+      kind: "decision",
+      mission_id: missionId,
+      ...(traceId !== undefined ? { trace_id: traceId } : {}),
+      at: evaluated_at,
+      content,
+    });
+    this.records.push(record);
+    return record;
+  }
+
+  /** @spec runtime-evidence#pre-decision-refusal: sign and retain a Refusal Record. */
+  async recordRefusal(
+    emitterId: string,
+    role: "pdp" | "pep",
+    input: RefusalRecordInput,
+  ): Promise<RefusalRecord> {
+    const signer = this.requireSigner(role);
+    const sequence = input.mission !== undefined ? this.nextSequence(input.mission.id, emitterId, role) : undefined;
+    const evaluation_request_digest =
+      input.parameter_digest === undefined
+        ? requestDigestFallback({
+            action: input.action.name,
+            audience: input.audience,
+            mission_id: input.mission?.id ?? "",
+            resource: input.resource?.id ?? "",
+            subject: input.subject?.id ?? "",
+          })
+        : undefined;
+    const evaluated_at = new Date().toISOString();
+    const unsigned = {
+      refusal_id: newRecordId("ref"),
+      audience: input.audience,
+      action: input.action,
+      ...(input.resource !== undefined ? { resource: input.resource } : {}),
+      decision: "deny" as const,
+      denial_reason: input.denial_reason,
+      evaluated_at,
+      ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
+      ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
+      ...(input.mission !== undefined ? { mission: input.mission } : {}),
+      ...(input.subject !== undefined ? { subject: input.subject } : {}),
+      ...(input.actor !== undefined ? { actor: input.actor } : {}),
+      ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
+      ...(input.hop_reference !== undefined ? { hop_reference: input.hop_reference } : {}),
+      ...(sequence !== undefined ? { sequence } : {}),
+      emitter: { id: emitterId, role },
+    };
+    const evidence_envelope = await signEvidenceEnvelope(unsigned as unknown as JsonValue, REFUSAL_RECORD_MEDIA_TYPE, signer);
+    const content = deepFreeze({ ...unsigned, evidence_envelope }) as RefusalRecordObject;
+    const traceId = input.trace_id ?? currentTraceId();
+    const record: RefusalRecord = deepFreeze({
+      kind: "refusal",
+      mission_id: input.missionId,
+      ...(traceId !== undefined ? { trace_id: traceId } : {}),
+      at: evaluated_at,
+      content,
+    });
+    this.records.push(record);
+    return record;
+  }
+
+  /** @spec runtime-evidence#execution-evidence-object: sign and retain an Execution Evidence Object. */
+  async recordExecution(
+    emitterId: string,
+    role: "pep" | "executor",
+    input: ExecutionEvidenceInput,
+  ): Promise<ExecutionEvidence> {
+    const signer = this.requireSigner(role === "executor" ? "executor" : "pep");
+    const sequence = this.nextSequence(input.mission_id, emitterId, role);
+    const outcome_at = new Date().toISOString();
+    const unsigned = {
+      execution_id: newRecordId("exe"),
+      evaluation_id: input.evaluation_id,
+      mission_id: input.mission_id,
+      audience: input.audience,
+      ...(input.authorized_parameter_digest !== undefined
+        ? { authorized_parameter_digest: input.authorized_parameter_digest }
+        : {}),
+      ...(input.effective_parameter_digest !== undefined
+        ? { effective_parameter_digest: input.effective_parameter_digest }
+        : {}),
+      outcome: input.outcome,
+      outcome_at,
+      ...(input.error !== undefined ? { error: input.error } : {}),
+      ...(input.obligation_outcomes !== undefined ? { obligation_outcomes: input.obligation_outcomes } : {}),
+      sequence,
+      emitter: { id: emitterId, role },
+      ...(input.hop_reference !== undefined ? { hop_reference: input.hop_reference } : {}),
+      ...(input.attempted_at !== undefined ? { attempted_at: input.attempted_at } : {}),
+      ...(input.completed_at !== undefined ? { completed_at: input.completed_at } : {}),
+      ...(input.result_summary !== undefined ? { result_summary: input.result_summary } : {}),
+    };
+    const evidence_envelope = await signEvidenceEnvelope(unsigned as unknown as JsonValue, EXECUTION_EVIDENCE_MEDIA_TYPE, signer);
+    const content = deepFreeze({ ...unsigned, evidence_envelope }) as ExecutionEvidenceObject;
+    const traceId = input.trace_id ?? currentTraceId();
+    const record: ExecutionEvidence = deepFreeze({
+      kind: "execution",
+      mission_id: input.mission_id,
+      permit_id: input.permitId,
+      op_key: input.opKey,
+      ...(traceId !== undefined ? { trace_id: traceId } : {}),
+      at: outcome_at,
+      content,
+    });
+    this.records.push(record);
+    return record;
+  }
+
+  /** The pre-existing unsigned path: Egress and Ingestion only (see {@link UnsignedEvidence}). */
   record(e: EvidenceInput): Evidence {
+    if ((e.kind as string) === "decision" || (e.kind as string) === "refusal" || (e.kind as string) === "execution") {
+      throw new Error(
+        `EvidenceStore.record(): kind "${e.kind}" is signed evidence; use recordDecision/recordRefusal/recordExecution (fail closed, no unsigned path)`,
+      );
+    }
     const full = { ...e, trace_id: currentTraceId(), at: new Date().toISOString() } as Evidence;
     this.records.push(full);
     return full;
@@ -501,3 +1012,40 @@ export class EvidenceStore {
     return this.records;
   }
 }
+
+/**
+ * Build a {@link EvidenceKeyResolver} that binds each published key to its
+ * `kid`, emitter `role`, and (unless `audience` is omitted, e.g. a
+ * `receipt_issuer` key) a specific `audience`: the scope/audience binding
+ * runtime-evidence.md's integrity algorithm requires of a verifier
+ * ({{decision-evidence-integrity}}). A record whose `kid`/`role`/`audience`
+ * do not match any entry resolves to `undefined` (rejected upstream as
+ * `key_not_resolvable`), covering both an unknown `kid` and a genuine
+ * cross-role or cross-audience substitution.
+ */
+export interface EvidenceVerificationKey {
+  kid: string;
+  publicKey: EvidenceKeyLike;
+  role: "pdp" | "pep" | "executor" | "receipt_issuer";
+  /** Omit only for a role (e.g. `receipt_issuer`) whose key is not audience-scoped. */
+  audience?: string;
+}
+
+export function buildEvidenceKeyResolver(keys: readonly EvidenceVerificationKey[]): EvidenceKeyResolver {
+  return ({ kid, emitter, audience }) => {
+    const match = keys.find(
+      (k) => k.kid === kid && k.role === emitter.role && (k.audience === undefined || k.audience === audience),
+    );
+    return match ? { key: match.publicKey } : undefined;
+  };
+}
+
+export {
+  DECISION_EVIDENCE_MEDIA_TYPE,
+  EXECUTION_EVIDENCE_MEDIA_TYPE,
+  MISSION_RECEIPT_MEDIA_TYPE,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  RUNTIME_EVIDENCE_JWS_TYP,
+  verifyEvidenceEnvelope,
+};
+export type { EvidenceEmitterRef, EvidenceEnvelope, EvidenceKeyLike, EvidenceKeyResolver, EvidenceVerifyResult };
