@@ -9,7 +9,10 @@
 import {
   chainDigest,
   ChainPresentationError,
+  type EntitlementResolver,
+  type LocalMappingPolicy,
   parseChainPresentation,
+  resolveLocalPrincipal,
 } from "@mission/core";
 import type { AuthorityEntry } from "../kernel/types.js";
 import {
@@ -30,23 +33,44 @@ import {
 } from "../kernel/cross-org-chain.js";
 import type { KoaContextWithOIDC } from "oidc-provider";
 
-/** A recorded origin-to-local principal mapping row (config-registered). */
-export interface PrincipalMappingEntry {
-  origin_iss: string;
-  origin_sub: string;
-  local_sub: string;
-}
+/**
+ * @spec runtime#state-freshness — the same small future-skew tolerance the
+ * PDP's own dual-axis check applies: absorbs ordinary clock drift without
+ * meaningfully widening the entitlement freshness bound.
+ */
+const FRESHNESS_SKEW_TOLERANCE_MS = 5_000;
+
+/**
+ * A recorded origin-to-local principal mapping row (config-registered).
+ * @spec cross-domain#origin-principal-mapping (#539) — re-export of the
+ * shared reference resolver's entry shape (mission-core's
+ * `LocalPrincipalMapping`), so a caller of this adapter's public API keeps
+ * its existing import name.
+ */
+export type { LocalPrincipalMapping as PrincipalMappingEntry } from "@mission/core";
 
 export interface CrossOrgOptions {
   federation: FederationConfig;
   stateSource: (missionId: string, issuer: string) => { state: string; observedAtS: number } | undefined;
-  mappingPolicy: { id: string; version: string; entries: PrincipalMappingEntry[] };
+  mappingPolicy: LocalMappingPolicy;
   /** The destination's local authority ceiling; output never exceeds it. */
   localCeiling: readonly AuthorityEntry[];
   /** Retained derivation records (@spec cross-org-delegation#projection). */
   evidence: CrossOrgDerivationRecord[];
   /** Local access-token lifetime ceiling (seconds). */
   accessTokenTTL: number;
+  /**
+   * @spec cross-domain#dual-axis (#539) — current entitlement of the mapped
+   * local principal, the profile's second axis alongside the static
+   * `localCeiling` below. The whole endpoint IS the cross-domain Origin
+   * Principal profile (there is no unclaimed-profile case to fall back to),
+   * so this is a REQUIRED construction-time dependency rather than an
+   * optional, fail-closed-on-absence one: a deployment cannot forget to
+   * wire it and still exchange chains.
+   */
+  entitlement: EntitlementResolver;
+  /** Independent freshness bound for the entitlement observation, seconds. */
+  entitlementStalenessBoundSeconds: number;
 }
 
 export interface CrossOrgDerivationRecord {
@@ -175,11 +199,42 @@ export async function handleCrossOrgChainExchange(
 
   // Origin-principal mapping (@spec cross-domain#origin-principal-mapping):
   // authenticated issuer-qualified input, registered policy, refusal on a
-  // missing mapping; the local account is a local fact, never agent-selected.
-  const mapping = crossOrg.mappingPolicy.entries.find(
-    (m) => m.origin_iss === verified.subject.iss && m.origin_sub === verified.subject.sub,
-  );
+  // missing, ambiguous, disabled, future-dated, or expired mapping; the
+  // local account is a local fact, never agent-selected. `resolveLocalPrincipal`
+  // (mission-core, #539) replaces the previous first-match `.find()`, which
+  // could not reject a duplicate/ambiguous entry.
+  const nowDate = opts.now();
+  const mapping = resolveLocalPrincipal(crossOrg.mappingPolicy, verified.subject, requestedAud, nowDate);
   if (!mapping) {
+    fail(ctx, "invalid_grant", "chain verification failed");
+    return;
+  }
+
+  // @spec cross-domain#dual-axis (#539): current entitlement of the mapped
+  // local principal — independent of the static `localCeiling` intersection
+  // below and of the mapping's own validity bound. A missing resolver
+  // result, `entitled !== true`, a future-dated or stale-beyond-bound
+  // observation, or a throwing resolver are all a failed result here, never
+  // a distinct outcome or an unclassified transport exception.
+  let entitlementObservedMs: number;
+  try {
+    const entitlement = await crossOrg.entitlement.resolve({
+      local: { iss: opts.issuer, sub: mapping.local_sub },
+      audience: requestedAud,
+    });
+    const observedMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
+    const ageMs = nowDate.getTime() - observedMs;
+    const current =
+      entitlement?.entitled === true &&
+      Number.isFinite(observedMs) &&
+      ageMs >= -FRESHNESS_SKEW_TOLERANCE_MS &&
+      ageMs <= crossOrg.entitlementStalenessBoundSeconds * 1000;
+    if (!current) {
+      fail(ctx, "invalid_grant", "chain verification failed");
+      return;
+    }
+    entitlementObservedMs = observedMs;
+  } catch {
     fail(ctx, "invalid_grant", "chain verification failed");
     return;
   }
@@ -197,7 +252,11 @@ export async function handleCrossOrgChainExchange(
 
   const clientId = ctx.oidc.client?.clientId ?? "";
   const leafExp = Number(verified.leaf.payload.exp);
-  const exp = Math.min(nowS + crossOrg.accessTokenTTL, leafExp);
+  // exp never outlives the leaf's own lease, the mapping's own validity
+  // bound, or the entitlement observation's freshness horizon (#539).
+  const mappingValidMs = Date.parse(mapping.valid_until);
+  const entitlementHorizonS = Math.floor(entitlementObservedMs / 1000) + crossOrg.entitlementStalenessBoundSeconds;
+  const exp = Math.min(nowS + crossOrg.accessTokenTTL, leafExp, Math.floor(mappingValidMs / 1000), entitlementHorizonS);
   const jti = `xorg_${randomBytes(9).toString("base64url")}`;
   // The audience-local token: local iss/sub, restarted local act, invariant
   // mission claim including subject, bound to the presenting (leaf) key.
@@ -235,9 +294,13 @@ export async function handleCrossOrgChainExchange(
     principal_mapping: {
       origin: verified.subject,
       local: mapping.local_sub,
-      policy: { id: crossOrg.mappingPolicy.id, version: crossOrg.mappingPolicy.version },
-      observed_at: new Date(nowS * 1000).toISOString(),
-      valid_until: new Date(exp * 1000).toISOString(),
+      policy: mapping.policy,
+      // @spec cross-domain#origin-principal-mapping (#539) — genuine
+      // mapping-source facts (the registered entry's own observed_at/
+      // valid_until), never the adapter's own clock or the minted token's
+      // expiry.
+      observed_at: mapping.observed_at,
+      valid_until: mapping.valid_until,
     },
   });
 

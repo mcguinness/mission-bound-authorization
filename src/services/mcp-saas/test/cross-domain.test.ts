@@ -107,6 +107,25 @@ beforeAll(async () => {
       [agentJkt]: RAS_LOCAL_CLIENT_ID,
       [secondAgentJkt]: RAS_LOCAL_CLIENT_ID_2,
     },
+    // @spec cross-domain#origin-principal-mapping (#539): every approve()
+    // call below uses subject { iss: AS_ISS, sub: "alice" } as BOTH the
+    // Mission's global subject and (since this AS is its own issuer) the
+    // ID-JAG's own top-level (iss, sub) -- one registered entry covers the
+    // co-resolution check for every base grant this file mints.
+    mapping: {
+      id: "ras-test-map",
+      version: "v1",
+      entries: [
+        {
+          origin: { iss: AS_ISS, sub: "alice" },
+          local_sub: "alice-ledgercloud",
+          observed_at: "2020-01-01T00:00:00Z",
+          valid_until: "2099-01-01T00:00:00Z",
+        },
+      ],
+    },
+    entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
+    entitlementStalenessBoundSeconds: 86_400,
   });
   saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
 });

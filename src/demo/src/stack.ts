@@ -309,6 +309,26 @@ export async function composeStack(opts: {
       // exhibit.ts); it is onboarded via ras.registerClient() once that key
       // exists, before any cross-domain redemption is attempted.
       registeredClients: {},
+      // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): the
+      // demo's ID-JAG grants are all base grants over the mission subject
+      // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
+      // grant's own (iss, sub) and mission.subject co-resolve via this one
+      // entry). Entitlement is this deployment's own always-true source
+      // (the demo runs no separate entitlement service).
+      mapping: {
+        id: "demo-ras-mapping",
+        version: "v1",
+        entries: [
+          {
+            origin: { iss: ISS, sub: "alice" },
+            local_sub: "alice-ledgercloud",
+            observed_at: "2020-01-01T00:00:00Z",
+            valid_until: "2099-01-01T00:00:00Z",
+          },
+        ],
+      },
+      entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
+      entitlementStalenessBoundSeconds: 86_400,
     });
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,

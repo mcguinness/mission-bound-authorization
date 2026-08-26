@@ -101,12 +101,21 @@ export async function issueCrossDomainGrant(
   // The five legacy claims, in their legacy insertion order. `sub` defaults to
   // the GLOBAL subject; an audience-local `sub` (when passed) replaces it. Any
   // continuation claims below are appended AFTER these, so a legacy call (all
-  // continuation fields omitted) serializes byte-identically to before.
+  // continuation fields omitted) serializes byte-identically to before (the
+  // pinned TOP-LEVEL key order is unaffected by `mission.subject`, added below).
   const payload: JWTPayload = {
     mission: {
       id: record.id,
       issuer: record.issuer,
       authority_hash: record.authority_hash,
+      // @spec cross-domain#mission-subject, #origin-principal-mapping — the
+      // immutable origin principal, carried unchanged so a Resource AS (the
+      // ID-JAG RAS) can co-resolve it against the grant's own (iss, sub) at
+      // redemption. Always the Mission's GLOBAL subject, never the
+      // audience-local `sub` this function may substitute below (the
+      // continuation profile's own per-audience value is a distinct
+      // resolution mechanism, not a new origin principal).
+      subject: record.subject,
     },
     authorization_details: scoped,
     cnf: { jkt: input.cnfJkt },
