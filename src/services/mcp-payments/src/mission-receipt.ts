@@ -150,12 +150,16 @@ export type ReceiptVerifyFailure =
   | "envelope_invalid"
   | "combination_invalid"
   | "reference_unresolvable"
+  /** The resolver's returned record kind does not equal the reference's own declared `type` (#739 review point 2). */
+  | "reference_type_mismatch"
   | "referenced_record_invalid"
   | "digest_mismatch"
   | "identifier_mismatch"
   | "emitter_mismatch"
   | "join_failure"
   | "copied_member_mismatch"
+  /** The receipt carries an optional copied-member projection (`policy`, `executor`, `target`) this verifier does not implement a comparison for (#739 review point 4). */
+  | "unimplemented_projection"
   | "chain_not_supported";
 
 export type ReceiptVerifyResult = { valid: true } | { valid: false; reason: ReceiptVerifyFailure };
@@ -218,6 +222,20 @@ export async function verifyMissionReceipt(
     if (!r) {
       return { valid: false, reason: "reference_unresolvable" };
     }
+    // @spec runtime-evidence#receipt-evidence (lines 1409-1415, #739 review
+    // point 2): `type` is the reference's OWN declared claim. The resolver's
+    // returned kind MUST equal it BEFORE the resolved record is verified at
+    // all: otherwise a reference declared as one record kind could be
+    // satisfied by a resolver returning a DIFFERENT kind that genuinely
+    // verifies under its own `cty` (checked next, against `r.type` rather
+    // than `ref.type`), silently swapping what the receipt actually
+    // projects. Checked here, ahead of `verifyEvidenceEnvelope` and the
+    // digest compare, so this exact substitution is rejected under its own
+    // specific reason rather than incidentally caught (and masked) by a
+    // later digest mismatch.
+    if (CTY_FOR[r.type] !== ref.type) {
+      return { valid: false, reason: "reference_type_mismatch" };
+    }
     const v = await verifyEvidenceEnvelope(
       r.record as unknown as Parameters<typeof verifyEvidenceEnvelope>[0],
       CTY_FOR[r.type],
@@ -253,11 +271,39 @@ export async function verifyMissionReceipt(
   if (decisionRec && (decisionRec.mission.id !== receipt.mission.id || decisionRec.mission.issuer !== receipt.mission.issuer)) {
     return { valid: false, reason: "join_failure" };
   }
-  if (
-    refusalRec?.mission &&
-    (refusalRec.mission.id !== receipt.mission.id || refusalRec.mission.issuer !== receipt.mission.issuer)
-  ) {
-    return { valid: false, reason: "join_failure" };
+  // @spec runtime-evidence#receipt-kinds (lines 1291-1300, #739 review point
+  // 3): "A `refusal` receipt exists only for a Refusal Record whose own
+  // `mission` member carries the verified Mission reference the receipt's
+  // REQUIRED `mission` member repeats." Unlike the prior (pre-#739-review)
+  // check this replaces, this is NOT conditional on `refusalRec.mission`
+  // happening to be present: for a `refusal`-kind receipt specifically, an
+  // ABSENT Refusal Record `mission` is itself the join failure (a
+  // `mission_context_missing` refusal never becomes a Mission Receipt).
+  if (receipt.kind === "refusal") {
+    if (
+      !refusalRec?.mission ||
+      refusalRec.mission.id !== receipt.mission.id ||
+      refusalRec.mission.issuer !== receipt.mission.issuer
+    ) {
+      return { valid: false, reason: "join_failure" };
+    }
+  }
+  if (executionRec) {
+    // @spec runtime-evidence#execution-evidence-object `mission_id` (lines
+    // 1010-1012, #739 review point 3): "mirrored from the linked Decision
+    // Evidence for join-key convenience" — the receipt's own `mission.id`
+    // MUST equal it too. The pre-#739-review check joined Decision Evidence
+    // and Refusal Record to `receipt.mission` but never checked Execution
+    // Evidence's `mission_id` against it at all.
+    if (executionRec.mission_id !== receipt.mission.id) {
+      return { valid: false, reason: "join_failure" };
+    }
+    // @spec runtime-evidence#execution-evidence-object `effective_parameter_digest`
+    // (lines 1025-1027, #739 review point 3): "REQUIRED whenever
+    // `authorized_parameter_digest` is present."
+    if (executionRec.authorized_parameter_digest !== undefined && executionRec.effective_parameter_digest === undefined) {
+      return { valid: false, reason: "join_failure" };
+    }
   }
   if (executionRec && decisionRec) {
     if (executionRec.evaluation_id !== decisionRec.evaluation_id) {
@@ -266,10 +312,17 @@ export async function verifyMissionReceipt(
     if (executionRec.audience !== decisionRec.audience) {
       return { valid: false, reason: "join_failure" };
     }
-    if (
-      decisionRec.parameter_digest !== undefined &&
-      executionRec.authorized_parameter_digest !== decisionRec.parameter_digest
-    ) {
+    // @spec runtime-evidence#execution-evidence-object `authorized_parameter_digest`
+    // (lines 1020-1023, #739 review point 3): "REQUIRED when the linked
+    // Decision Evidence carries `parameter_digest`; MUST equal it" — an
+    // EXACT mirror in both directions. The pre-#739-review check only
+    // caught the case where `decisionRec.parameter_digest` was present and
+    // unequal; it silently passed the reverse case (Execution Evidence
+    // asserting an `authorized_parameter_digest` the Decision Evidence
+    // never carried at all). `!==` on two `string | undefined` values
+    // covers presence and equality together: both absent is not a failure,
+    // exactly one present is, and both present-but-different is.
+    if (executionRec.authorized_parameter_digest !== decisionRec.parameter_digest) {
       return { valid: false, reason: "join_failure" };
     }
   }
@@ -278,6 +331,24 @@ export async function verifyMissionReceipt(
   }
 
   // Step 5 (line 1520): every copied optional member equals its source.
+  // @spec runtime-evidence#mission-receipt Members (lines 1361-1383, #739
+  // review point 4): `policy`, `executor`, and `target` are each, like
+  // `decision`, "a projection from the evidence a receipt of that content
+  // already carries" that step 5 MUST verify equal to its source
+  // (`profile` and `issuer_assertions` are excluded: the spec calls them
+  // "structurally separate from the projections above", issuer-asserted
+  // facts with profile-defined semantics, never a copy step 5 checks
+  // against a source record; `chain` is step 6, separately unimplemented).
+  // This verifier does not implement the `policy`/`executor`/`target`
+  // comparisons, and nothing in this deployment builds a receipt carrying
+  // any of them (`buildAndSignMissionReceipt` only ever projects
+  // `decision`/`outcome`) — so per the review, a receipt carrying one is
+  // REJECTED here rather than silently accepted with that member
+  // unverified. Implement the comparison instead of removing this guard if
+  // a future profile needs to carry one.
+  if ("policy" in receipt || "executor" in receipt || "target" in receipt) {
+    return { valid: false, reason: "unimplemented_projection" };
+  }
   if (receipt.decision && decisionRec) {
     if (receipt.decision.id !== decisionRec.evidence_id || receipt.decision.result !== decisionRec.decision) {
       return { valid: false, reason: "copied_member_mismatch" };

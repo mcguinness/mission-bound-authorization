@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
+  REFUSAL_RECORD_MEDIA_TYPE,
   type EvidenceSigningKey,
   signEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
@@ -25,10 +26,12 @@ import {
 
 const pdpKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const executorKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
+const pepKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const receiptKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
 
 const PDP_SIGNER: EvidenceSigningKey = { kid: "pdp-1", key: pdpKeys.privateKey };
 const EXECUTOR_SIGNER: EvidenceSigningKey = { kid: "exec-1", key: executorKeys.privateKey };
+const PEP_SIGNER: EvidenceSigningKey = { kid: "pep-1", key: pepKeys.privateKey };
 const RECEIPT_SIGNER: EvidenceSigningKey = { kid: "receipt-1", key: receiptKeys.privateKey };
 
 const MISSION = { id: "msn_1", issuer: "https://as.example.com", authority_hash: "sha-256:ah" };
@@ -74,6 +77,22 @@ async function signedExecution(overrides: Partial<ExecutionEvidenceObject> = {})
   return { ...unsigned, evidence_envelope };
 }
 
+async function signedRefusal(overrides: Partial<RefusalRecordObject> = {}): Promise<RefusalRecordObject> {
+  const unsigned = {
+    refusal_id: "ref_1",
+    audience: "https://erp.example.com",
+    action: { name: "payments:invoice.read" },
+    decision: "deny" as const,
+    denial_reason: "out_of_authority",
+    evaluated_at: "2026-01-01T00:00:01.000Z",
+    mission: { id: MISSION.id, issuer: MISSION.issuer },
+    emitter: { id: "pep.example.com", role: "pep" as const },
+    ...overrides,
+  };
+  const evidence_envelope = await signEvidenceEnvelope(unsigned, REFUSAL_RECORD_MEDIA_TYPE, PEP_SIGNER);
+  return { ...unsigned, evidence_envelope };
+}
+
 function resolverFor(records: {
   decision?: DecisionEvidenceObject;
   execution?: ExecutionEvidenceObject;
@@ -90,6 +109,7 @@ function resolverFor(records: {
 const resolveEvidenceKey = ({ emitter }: { emitter: { role: string } }) => {
   if (emitter.role === "pdp") return { key: pdpKeys.publicKey };
   if (emitter.role === "executor") return { key: executorKeys.publicKey };
+  if (emitter.role === "pep") return { key: pepKeys.publicKey };
   return undefined;
 };
 const resolveReceiptKey = ({ emitter }: { emitter: { role: string } }) =>
@@ -333,5 +353,152 @@ describe("Mission Receipt build + verify", () => {
     );
     const result = await verifyMissionReceipt(receipt, resolverFor({ decision }), () => undefined, resolveEvidenceKey);
     expect(result).toEqual({ valid: false, reason: "envelope_invalid" });
+  });
+
+  it("builds and verifies a 'refusal' receipt", async () => {
+    const refusal = await signedRefusal();
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "refusal", mission: MISSION, refusalRecord: refusal },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    expect(receipt.kind).toBe("refusal");
+    const result = await verifyMissionReceipt(
+      receipt,
+      resolverFor({ refusal }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("rejects a reference declared as Decision Evidence that resolves to a genuinely-verifying Execution record instead (#739 review point 2, step 3, before record verification)", async () => {
+    const decision = await signedDecision();
+    const execution = await signedExecution();
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    // The resolver ignores the reference's declared `type` and returns a
+    // DIFFERENT, independently well-signed record kind instead. The
+    // Execution record verifies fine under its OWN `cty`, so if the
+    // verifier checked only the resolver's claimed kind (`r.type`) rather
+    // than requiring it to equal the reference's OWN declared `type`, this
+    // substitution would slip past record verification entirely.
+    const result = await verifyMissionReceipt(
+      receipt,
+      () => ({ type: "execution", record: execution }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "reference_type_mismatch" });
+  });
+
+  it("rejects a join failure: Execution Evidence's mission_id does not match the receipt's mission (#739 review point 3)", async () => {
+    const decision = await signedDecision();
+    const execution = await signedExecution({ mission_id: "msn_DIFFERENT" });
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    const result = await verifyMissionReceipt(
+      receipt,
+      resolverFor({ decision, execution }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("rejects a 'refusal' receipt whose Refusal Record carries no established Mission (#739 review point 3)", async () => {
+    const refusal = await signedRefusal({ mission: undefined });
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "refusal", mission: MISSION, refusalRecord: refusal },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    const result = await verifyMissionReceipt(
+      receipt,
+      resolverFor({ refusal }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("rejects a join failure: Execution Evidence carries no authorized_parameter_digest while the Decision Evidence carries a parameter_digest (#739 review point 3, exact mirror)", async () => {
+    const decision = await signedDecision(); // parameter_digest: "sha-256:paramdigest"
+    const execution = await signedExecution({ authorized_parameter_digest: undefined, effective_parameter_digest: undefined });
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    const result = await verifyMissionReceipt(
+      receipt,
+      resolverFor({ decision, execution }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)", async () => {
+    const decision = await signedDecision({ parameter_digest: undefined });
+    const execution = await signedExecution(); // still carries authorized_parameter_digest
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    const result = await verifyMissionReceipt(
+      receipt,
+      resolverFor({ decision, execution }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)", async () => {
+    const decision = await signedDecision();
+    const execution = await signedExecution({ effective_parameter_digest: undefined });
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    const result = await verifyMissionReceipt(
+      receipt,
+      resolverFor({ decision, execution }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("rejects a receipt carrying an unimplemented copied-member projection (target) rather than accepting it unverified (#739 review point 4)", async () => {
+    const decision = await signedDecision();
+    const receiptBase = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    // Re-sign with an added `target` projection: this verifier does not
+    // implement the comparison, so it must reject rather than let the
+    // member through unverified.
+    const { evidence_envelope: _drop, ...unsignedBase } = receiptBase;
+    const unsigned = { ...unsignedBase, target: { resource: decision.resource, audience: decision.audience } };
+    const evidence_envelope = await signEvidenceEnvelope(unsigned, "application/mission-receipt+json", RECEIPT_SIGNER);
+    const receiptWithTarget = { ...unsigned, evidence_envelope };
+    const result = await verifyMissionReceipt(
+      receiptWithTarget,
+      resolverFor({ decision }),
+      resolveReceiptKey,
+      resolveEvidenceKey,
+    );
+    expect(result).toEqual({ valid: false, reason: "unimplemented_projection" });
   });
 });
