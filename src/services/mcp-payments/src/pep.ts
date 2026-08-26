@@ -289,7 +289,12 @@ export interface PepDeps {
   loadView: (ref: MissionReference) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
-  /** Vestigial (#657); see `sourceDigestOf` below. OPTIONAL: unused by this class. */
+  /**
+   * @deprecated Unused by this class; no code path reads it. Compatibility
+   * seam only, kept because ~15 existing callers still construct it. Removed
+   * once #657 PR B replaces it with the real per-action capability-binding
+   * resolver. See `sourceDigestOf` below.
+   */
   sourceDigest?: string;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
@@ -994,6 +999,8 @@ export class Pep {
  * deployment did not have. Retained only because existing tests, the demo
  * stack, and the eval harness still construct `PepDeps.sourceDigest` with
  * it; both are dropped once #657 PR A/B land the real per-action binding.
+ *
+ * @deprecated Do not add new callers. Tracked for removal in #657 PR B.
  */
 export function sourceDigestOf(serverCard: unknown): string {
   return `sha-256:${createHash("sha256").update(JSON.stringify(serverCard), "utf8").digest("base64url")}`;
