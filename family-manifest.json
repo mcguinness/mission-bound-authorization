@@ -207,7 +207,8 @@
    "pull_when": "Approval authority itself needs authenticated, policy-backed provenance.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-progressive"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"

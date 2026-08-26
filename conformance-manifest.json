@@ -16064,8 +16064,15 @@
     "normative": "Given the same Mission Record, computing the Approval Context Manifest twice (by any two parties, or by the same party at two different times) yields the same set of present conditional members (proposal_hash, ceiling_hash, submission_evidence_commitment), independent of which optional companion profiles either party's deployment runs."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
   },
   {
    "id": "approval-context.manifest.ceiling-hash-conditional",
@@ -16085,8 +16092,21 @@
     "normative": "The Approval Context Manifest carries ceiling_hash as its fourth anchor, alongside intent_hash, proposal_hash, and authority_hash, exactly when the Mission Record carries a Progressive ceiling_hash (I-D.draft-mcguinness-oauth-mission-progressive), and never otherwise."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > includes ceiling_hash iff the input carries one",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 3: conditional ceiling_hash",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
   },
   {
    "id": "approval-context.construction.envelope-anchor",
@@ -16106,8 +16126,21 @@
     "normative": "approval_context_commitment is computed as typ mission-approval-context-v1 under the issuance profile's Integrity Anchors/Commitment Mechanisms envelope (JCS canonicalization, SHA-256, sha-256: prefix, reject-unknown-prefix), never a bespoke construction."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 1: base manifest (no conditional members)",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
   },
   {
    "id": "approval-context.construction.submission-evidence-anchor",
@@ -16127,8 +16160,15 @@
     "normative": "submission_evidence_commitment is computed as typ mission-submission-evidence-v1 over the Mission Record's retained submission_evidence array exactly as recorded, and is present in the manifest iff the Mission Record carries submission_evidence."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
   },
   {
    "id": "approval-context.computation.recompute-on-demand",
@@ -16210,9 +16250,22 @@
    "observation": {
     "normative": "A verifier holding the Mission's immutable creation facts and an artifact's disclosed approval_context_commitment rejects the artifact's reference whenever its own recomputed digest differs from the disclosed value."
    },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "approval-context.versioning.new-typ-required",
@@ -16232,8 +16285,15 @@
     "normative": "A change to the manifest's member set, a member's meaning, or the submission_evidence_commitment construction is published under a new typ value; mission-approval-context-v1 always denotes exactly the v1 member set this document defines."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
   },
   {
    "id": "approval-context.limits.mechanism-scope",
