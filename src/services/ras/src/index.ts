@@ -141,7 +141,15 @@ export class ResourceAuthorizationServer {
     } catch {
       throw new RasError("invalid_grant", "malformed grant");
     }
-    const issuer = unverified.iss as string;
+    // @spec cross-domain#origin-principal-mapping (#539): require a
+    // non-empty string iss before it is used as a trust-anchor lookup key
+    // or fed into the base grant's co-resolution identity below. A missing
+    // or malformed iss was previously fail-closed only incidentally (an
+    // unrecognized lookup key denies as "untrusted"); this is now explicit.
+    const issuer = unverified.iss;
+    if (typeof issuer !== "string" || !issuer) {
+      throw new RasError("invalid_grant", "grant missing or malformed iss");
+    }
     const anchor = this.cfg.trustedIssuers[issuer];
     if (!anchor) throw new RasError("invalid_grant", "untrusted grant issuer");
 

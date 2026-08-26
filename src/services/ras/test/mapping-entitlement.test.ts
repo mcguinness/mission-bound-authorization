@@ -58,6 +58,7 @@ function basePolicy(entries?: LocalPrincipalMapping[]): LocalMappingPolicy {
 }
 
 interface GrantOverrides {
+  iss?: string | null; // null = omit entirely, "" = present but empty (malformed)
   sub?: string | null; // null = omit entirely, "" = present but empty (malformed)
   missionSubject?: { iss: string; sub: string } | null; // null = omit entirely
   missionId?: string | null; // null = omit entirely, "" = present but empty (malformed)
@@ -84,9 +85,9 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
       ? { identity_continuation_handle: overrides.identityContinuationHandle }
       : {}),
   };
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: "ES256", kid: "as-token", typ: ID_JAG_TYP })
-    .setIssuer(AS_ISS)
+  let signer = new SignJWT(payload).setProtectedHeader({ alg: "ES256", kid: "as-token", typ: ID_JAG_TYP });
+  if (overrides.iss !== null) signer = signer.setIssuer(overrides.iss ?? AS_ISS);
+  return signer
     .setAudience(RAS_ISS)
     .setIssuedAt(nowS)
     .setExpirationTime(overrides.exp ?? nowS + 300)
@@ -149,6 +150,24 @@ describe("RAS co-resolution: base grant (@spec cross-domain#origin-principal-map
     const server = await ras();
     const grant = await mintGrant({ missionSubject: { iss: IDP_ISS, sub: "" } });
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when the grant's own top-level iss is missing, before any trust-anchor lookup or jwtVerify call", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ iss: null });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
+      code: "invalid_grant",
+      message: "grant missing or malformed iss",
+    });
+  });
+
+  it("denies invalid_grant when the grant's own top-level iss is present but empty", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ iss: "" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
+      code: "invalid_grant",
+      message: "grant missing or malformed iss",
+    });
   });
 
   it("denies invalid_grant when the grant's own sub is missing (never coerced to the literal string \"undefined\")", async () => {

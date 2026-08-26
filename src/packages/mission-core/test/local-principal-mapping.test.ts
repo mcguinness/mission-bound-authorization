@@ -59,7 +59,11 @@ describe("resolveLocalPrincipal: complete-mapping validation (@spec cross-domain
   });
 
   it("rejects a selected entry with an empty (but present) audience", () => {
-    const resolved = resolveLocalPrincipal(policy([entry({ audience: "" })]), ORIGIN_A, AUDIENCE, NOW);
+    // The requested audience must equal the entry's malformed value ("")
+    // for the entry to survive the candidate filter at all and reach the
+    // new completeness check below; a mismatched request would already be
+    // filtered out as "missing" for an unrelated reason.
+    const resolved = resolveLocalPrincipal(policy([entry({ audience: "" })]), ORIGIN_A, "", NOW);
     expect(resolved).toBeUndefined();
   });
 

@@ -67,9 +67,10 @@ export interface CrossOrgOptions {
    * so this is a REQUIRED construction-time dependency rather than an
    * optional, fail-closed-on-absence one: a deployment cannot forget to
    * wire it and still exchange chains. Audience-wide, all-or-none: a
-   * positive result authorizes the complete verified-delegated-authority ∩
-   * localCeiling set below, unmodified; it does not narrow individual
-   * entries by action or resource (see `EntitlementResolver`'s own doc).
+   * positive result authorizes the complete set below (the verified
+   * delegated authority intersected with localCeiling), unmodified; it does
+   * not narrow individual entries by action or resource (see
+   * `EntitlementResolver`'s own doc).
    */
   entitlement: EntitlementResolver;
   /** Independent freshness bound for the entitlement observation, seconds. */
@@ -260,6 +261,21 @@ export async function handleCrossOrgChainExchange(
   const mappingValidMs = Date.parse(mapping.valid_until);
   const entitlementHorizonS = Math.floor(entitlementObservedMs / 1000) + crossOrg.entitlementStalenessBoundSeconds;
   const exp = Math.min(nowS + crossOrg.accessTokenTTL, leafExp, Math.floor(mappingValidMs / 1000), entitlementHorizonS);
+  // @spec cross-domain#dual-axis (#539): refuse rather than mint an
+  // already-expired token when the tightest bound (mapping validity or
+  // entitlement freshness horizon) has already elapsed. Mirrors the RAS's
+  // exp-before-consumption fix (ras/src/index.ts); here the presenter's
+  // one-time DPoP proof jti was already consumed earlier (line ~169,
+  // `opts.proofJtiFresh`), a structural difference from the RAS's grant jti
+  // this endpoint does not resolve: DPoP proof-of-possession validation
+  // runs, by design, before the chain/mapping/entitlement checks that
+  // determine exp, and reordering it was judged out of scope here. A
+  // presenter that hits this refusal simply mints a fresh DPoP proof and
+  // retries; no token is issued either way.
+  if (exp <= nowS) {
+    fail(ctx, "invalid_grant", "chain verification failed");
+    return;
+  }
   const jti = `xorg_${randomBytes(9).toString("base64url")}`;
   // The audience-local token: local iss/sub, restarted local act, invariant
   // mission claim including subject, bound to the presenting (leaf) key.
