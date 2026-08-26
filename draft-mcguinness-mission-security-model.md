@@ -97,6 +97,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -628,8 +636,8 @@ Event source:
   authenticated. A compromised event source can keep a discharged entry
   derivable or falsely discharge one; the Authorization Server fails
   closed when it cannot determine the event status
-  ({{I-D.draft-mcguinness-oauth-mission-status}}, Completion
-  section).
+  ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
+  "Mission Completion and Entry Discharge").
 
 Instance identity is identity substrate, like agent identity
 generally. The instance issuer or agent attester that mints instance

@@ -58,6 +58,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime-oauth:
     title: "Mission Runtime OAuth Adapter"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html
@@ -731,13 +739,13 @@ the Containment profile, does not. The OAuth binding formalizes this
 as the Effective Authority Set, defined by its Status profile
 ({{I-D.draft-mcguinness-oauth-mission-status}}).
 
-Where the deployment runs discharge
-({{I-D.draft-mcguinness-oauth-mission-status}}), this input excludes
-a discharged entry once the PDP can establish discharge state from
-its Mission state source. A PDP that recognizes `terminal_when`
-SHOULD refuse an action within a discharged entry at the point of
-use, learning discharge state from the surfaces that report it
-({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+Where the deployment runs the Entry Discharge companion's discharge
+mechanism ({{I-D.draft-mcguinness-oauth-mission-discharge}}), this
+input excludes a discharged entry once the PDP can establish discharge
+state from its Mission state source. A PDP that recognizes
+`terminal_when` SHOULD refuse an action within a discharged entry at
+the point of use, learning discharge state from the surfaces that
+report it ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
 "Relationship to Runtime Enforcement").
 
 Where a Mission participates in the Containment profile

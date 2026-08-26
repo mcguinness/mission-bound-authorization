@@ -83,6 +83,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-status-list:
+    title: "Mission Status List for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -331,7 +339,7 @@ concrete instantiations of that dial:
 | State-gated refresh | lifecycle-gated | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
 | Token introspection ({{RFC7662}}) | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | issuer availability | revocation inside the bound |
 | Mission Status operation ({{I-D.draft-mcguinness-oauth-mission-status}}) | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status}}) | state-observable | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | state-observable | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
 | Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) | state-observable | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
 
 When the credential issuer also holds the Mission, a PDP on this
@@ -347,9 +355,9 @@ freshness mechanism that reflects a revocation within the staleness
 bound ({{I-D.draft-mcguinness-mission-runtime}}); on this binding,
 that is token introspection, the Mission Status profile, a Mission
 Status List whose Status List Token TTL is within the bound (the
-status profile's swarm-scale pull floor,
-{{I-D.draft-mcguinness-oauth-mission-status}}), or Mission Lifecycle
-Signals.
+Status List companion's swarm-scale pull floor,
+{{I-D.draft-mcguinness-oauth-mission-status-list}}), or Mission
+Lifecycle Signals.
 
 Where derivation and refresh of a Mission-bound token are gated on
 `active` ({{I-D.draft-mcguinness-oauth-mission}}), token-lifetime

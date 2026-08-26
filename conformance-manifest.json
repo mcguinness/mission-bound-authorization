@@ -38,9 +38,13 @@
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "c81f44df912afe207aa66e6ac0623de038348c31f527b856146acc80e2544863"
    },
+   "draft-mcguinness-oauth-mission-discharge.md": {
+    "revision": "0000000000000000000000000000000000000000",
+    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000"
+   },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "c3362e1bf99169497428f7db00a6332832e3bca1faa9b8976d88a3f6f187ee29"
+    "revision": "0000000000000000000000000000000000000000",
+    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -2149,7 +2153,7 @@
   },
   {
    "id": "status.discharge.grant-distinct-from-lifecycle",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "Authorization for `discharge` requires a distinct `mission_discharge` scope or an equivalent deployment-defined grant.",
    "role": "AS",
@@ -2180,7 +2184,7 @@
   },
   {
    "id": "status.discharge.lifecycle-grant-not-implied",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "or being the Mission's Subject, Approver, or an administrator, MUST NOT by itself imply discharge authority",
    "role": "AS",
@@ -2211,7 +2215,7 @@
   },
   {
    "id": "status.discharge.anti-oracle-collapse",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
    "text": "An unknown `mission_id`, an unknown `entry_digest`, an unknown `condition_digest`, an entry with no `terminal_when`, an `event_type` that does not match the condition `condition_digest` names, and a caller not authorized for that target all collapse to the endpoint's existing `not_found` treatment",
    "role": "AS",
@@ -2242,7 +2246,7 @@
   },
   {
    "id": "status.discharge.selector-mismatch-refusal",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "a mismatch joins the `not_found` collapse, since distinguishing it would reveal information about a condition selected by digest",
    "role": "AS",
@@ -2273,7 +2277,7 @@
   },
   {
    "id": "status.discharge.duplicate-entry-equivalence",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "One `entry_digest` discharges every recorded entry resolving to that digest as a single equivalence-class transition, and therefore one version increment",
    "role": "AS",
@@ -2372,7 +2376,7 @@
   },
   {
    "id": "status.discharge.same-nonce-verbatim-replay",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "The stored signed response is returned verbatim, per the `nonce` rule above.",
    "role": "AS",
@@ -2403,7 +2407,7 @@
   },
   {
    "id": "status.discharge.event-replay",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and selectors, and the original `prior_version` and `current_version` the first commit produced.",
    "role": "AS",
@@ -2434,7 +2438,7 @@
   },
   {
    "id": "status.discharge.event-fingerprint-conflict",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "the same tuple with a different fingerprint is refused `conflict`",
    "role": "AS",
@@ -2465,7 +2469,7 @@
   },
   {
    "id": "status.discharge.event-cross-target-valid",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "the same `event_id` asserted against another Mission, entry, or condition is a valid, independent assertion, since one real-world event legitimately fans out to more than one target.",
    "role": "AS",
@@ -2496,7 +2500,7 @@
   },
   {
    "id": "status.discharge.already-discharged-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "MUST NOT discharge the entry again or increment the version again",
    "role": "AS",
@@ -2533,7 +2537,7 @@
   },
   {
    "id": "status.discharge.terminal-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "A delivery reaching the endpoint after `completed`, `revoked`, `expired`, or another terminal state returns an authenticated `terminal_noop` acknowledgement",
    "role": "AS",
@@ -2570,7 +2574,7 @@
   },
   {
    "id": "status.discharge.suspended-applies",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "`discharge` applies while the Mission is `active` or `suspended`: a suspended Mission still narrows monotonically.",
    "role": "AS",
@@ -2607,7 +2611,7 @@
   },
   {
    "id": "status.discharge.signed-result-binding",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-result",
    "text": "one of `discharged` (this request committed the latch), `already_discharged` (a sibling condition, or the same condition under a different `event_id`, presented against an already-latched entry), or `terminal_noop` (the Mission was already in a terminal state).",
    "role": "AS",
@@ -2650,7 +2654,7 @@
   },
   {
    "id": "status.discharge.atomic-commit",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "The entry latch (or its equivalence-class latch), the version increment, the audit and result record, and the durable propagation work (an outbox entry or a signal enqueue) commit as one unit.",
    "role": "AS",
@@ -2681,7 +2685,7 @@
   },
   {
    "id": "status.discharge.child-propagation",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "the child-delegation profile's entry-wise propagation to an already-justified Child Mission",
    "role": "AS",
@@ -2713,7 +2717,7 @@
   },
   {
    "id": "status.discharge.policy-resolution-on-condition-entry",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "The AS MUST resolve and validate the selector whenever a condition first enters an immutable Mission-record entry",
    "role": "AS",
@@ -2744,7 +2748,7 @@
   },
   {
    "id": "status.discharge.evidence-non-dereference-non-authorization",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "The AS MUST NOT dereference `evidence_ref` in baseline processing and MUST NOT treat either member as authorization input.",
    "role": "AS",
@@ -2775,7 +2779,7 @@
   },
   {
    "id": "status.discharge.validation-order-before-terminal-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
    "text": "The AS validates selector existence (`mission_id`, `entry_digest`, and `condition_digest` all resolve, the entry carries `terminal_when`, and `event_type` matches the named condition), then condition membership (the named condition belongs to the named entry), then target authorization",
    "role": "AS",
@@ -2808,7 +2812,7 @@
    "id": "status.effective-set.single-computation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
-   "text": "Every issuer-held narrowing mechanism a deployment runs, this profile's discharge or a companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
+   "text": "Every issuer-held narrowing mechanism a deployment runs, an adopted companion's discharge mechanism or another companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -2820,12 +2824,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issuer-held narrowing mechanism a deployment runs (this profile's discharge and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
+    "normative": "every issuer-held narrowing mechanism a deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example this profile's discharge and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -2921,7 +2925,7 @@
    "id": "signals.discharge.producer-gating-undeclared-stream",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "discharge-compatibility",
-   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-status}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
