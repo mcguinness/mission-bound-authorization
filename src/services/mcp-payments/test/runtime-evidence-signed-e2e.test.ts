@@ -110,7 +110,12 @@ function buildServer(missionView: MissionView, fga: Fga) {
 
 describe("a permit and a denial through the real PEP/PDP call sites produce a genuinely signed, independently verifiable retained Decision Evidence record", () => {
   it("permit: the RETAINED artifact (not a hand-built object) verifies against a resolver built from public keys alone", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    // The real PEP/PDP call sites sign under `emitterId: CANONICAL_RESOURCE`
+    // and `audience: CANONICAL_RESOURCE` (pep.ts's own convention: the
+    // resource IS the emitter in this co-located deployment); #739 review
+    // point 1 means a resolver no longer verifies a genuinely signed record
+    // unless BOTH are supplied exactly.
+    const keys = createEphemeralEvidenceKeys({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     const resolver = buildEvidenceKeyResolver(keys.verification);
     const payments = seededPayments();
     const evidence = new EvidenceStore(keys.signing);
@@ -159,7 +164,12 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
   });
 
   it("denial: a genuine PDP out_of_authority deny (FGA never consulted) is retained as a signed Decision Evidence record that independently verifies", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    // The real PEP/PDP call sites sign under `emitterId: CANONICAL_RESOURCE`
+    // and `audience: CANONICAL_RESOURCE` (pep.ts's own convention: the
+    // resource IS the emitter in this co-located deployment); #739 review
+    // point 1 means a resolver no longer verifies a genuinely signed record
+    // unless BOTH are supplied exactly.
+    const keys = createEphemeralEvidenceKeys({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     const resolver = buildEvidenceKeyResolver(keys.verification);
     const payments = seededPayments();
     const evidence = new EvidenceStore(keys.signing);
@@ -217,5 +227,81 @@ describe("EvidenceStore per-(mission, emitter, role) sequence allocation", () =>
     // Every decision here is emitted under role "pdp": the per-role scoping
     // does not change the within-role monotonic guarantee.
     expect(decisions.every((d) => d.content.emitter.role === "pdp")).toBe(true);
+  });
+});
+
+describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1)", () => {
+  it("rejects a genuinely signed, independently-verifiable retained record when the resolver's keys are registered for a DIFFERENT emitter id (same kid, role, and audience)", async () => {
+    const keys = createEphemeralEvidenceKeys({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+    // A resolver built for an IMPERSONATOR component: identical kid/role/
+    // audience, but registered under a different emitter.id than the one
+    // that actually signed. Pre-#739-review-point-1, `buildEvidenceKeyResolver`
+    // never looked at `emitterId` at all, so this would have verified.
+    const wronglyScoped = keys.verification.map((k) => ({ ...k, emitterId: "https://impersonator.example.com/mcp" }));
+    const resolver = buildEvidenceKeyResolver(wronglyScoped);
+    const payments = seededPayments();
+    const evidence = new EvidenceStore(keys.signing);
+    const missionView = view(["payments:invoice.read"]);
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === missionView.id && ref.issuer === missionView.issuer
+        ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        : undefined;
+    const pep = new Pep({
+      payments,
+      evidence,
+      fga: alwaysAllowFga,
+      modelId: "unit-test-model",
+      loadView,
+      instanceEpoch: "epoch-1",
+      sourceDigest: sourceDigestOf({ name: "payments" }),
+      allowedFreshnessSources: new Set(["load_view"]),
+    });
+    const server = new McpPaymentsServer({
+      pep,
+      payments,
+      loadView,
+      jwks: { keys: [] },
+      issuer: ISSUER,
+      serverCard: { name: "payments" },
+    });
+    const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok).toBe(true);
+    const permitRecord = evidence
+      .all()
+      .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "permit");
+    expect(permitRecord).toBeDefined();
+    const verified = await verifyEvidenceEnvelope(permitRecord!.content, DECISION_EVIDENCE_MEDIA_TYPE, resolver);
+    expect(verified).toEqual({ valid: false, reason: "key_not_resolvable" });
+  });
+
+  it("never wildcards a missing audience for a pdp/pep/executor key, even when one is registered without one", () => {
+    const keys = createEphemeralEvidenceKeys({
+      roles: ["pdp"],
+      emitterId: "pdp.example.com",
+      audience: "https://erp.example.com",
+    });
+    // Bypass the type-level requirement the way a deployment misconfiguration
+    // (or a pre-#739-review-point-1 caller) might: an audience-unbound pdp
+    // key entry.
+    const pdpKey = keys.verification[0]!;
+    const { audience: _drop, ...audienceless } = pdpKey as { audience?: string } & typeof pdpKey;
+    const resolver = buildEvidenceKeyResolver([audienceless as typeof pdpKey]);
+    const resolved = resolver({
+      kid: pdpKey.kid,
+      emitter: { id: "pdp.example.com", role: "pdp" },
+      audience: "https://totally-different.example.com",
+    });
+    expect(resolved).toBeUndefined();
+  });
+
+  it("a receipt_issuer key MAY stay audience-unbound (the one role the binding does not require it for)", () => {
+    const keys = createEphemeralEvidenceKeys({ roles: ["receipt_issuer"], emitterId: "receipts.example.com" });
+    const resolver = buildEvidenceKeyResolver(keys.verification);
+    const resolved = resolver({
+      kid: keys.verification[0]!.kid,
+      emitter: { id: "receipts.example.com", role: "receipt_issuer" },
+      audience: "https://anything.example.com",
+    });
+    expect(resolved).toBeDefined();
   });
 });

@@ -1015,27 +1015,60 @@ export class EvidenceStore {
 
 /**
  * Build a {@link EvidenceKeyResolver} that binds each published key to its
- * `kid`, emitter `role`, and (unless `audience` is omitted, e.g. a
- * `receipt_issuer` key) a specific `audience`: the scope/audience binding
+ * `kid`, the EXACT emitter identifier named in the record's `emitter`
+ * member, the emitter `role`, and (for every role except `receipt_issuer`)
+ * a specific `audience`: the full scope/audience binding
  * runtime-evidence.md's integrity algorithm requires of a verifier
- * ({{decision-evidence-integrity}}). A record whose `kid`/`role`/`audience`
+ * ({{decision-evidence-integrity}}, lines 808-818: "the published key of
+ * the component named in the record's `emitter` member ... bound to the
+ * enforcement scope and audience the record serves"). Matching on `kid` and
+ * `role` alone (the pre-#739-review-point-1 shape) lets a key registered
+ * for one component authenticate a record CLAIMING a different one; a `kid`
+ * collision across two components' published sets is exactly the case this
+ * guards. `receipt_issuer` keys MAY stay audience-unbound (a receipt is not
+ * itself scoped to the audience the way an enforcement-point record is);
+ * `pdp`/`pep`/`executor` keys MUST carry one, enforced at the type level
+ * below and defensively again at match time since TypeScript types do not
+ * survive to runtime. A record whose `kid`/`emitter.id`/`role`/`audience`
  * do not match any entry resolves to `undefined` (rejected upstream as
- * `key_not_resolvable`), covering both an unknown `kid` and a genuine
- * cross-role or cross-audience substitution.
+ * `key_not_resolvable`), covering an unknown `kid`, a genuine cross-role or
+ * cross-audience substitution, AND a cross-emitter substitution.
  */
-export interface EvidenceVerificationKey {
-  kid: string;
-  publicKey: EvidenceKeyLike;
-  role: "pdp" | "pep" | "executor" | "receipt_issuer";
-  /** Omit only for a role (e.g. `receipt_issuer`) whose key is not audience-scoped. */
-  audience?: string;
-}
+export type EvidenceVerificationKey =
+  | {
+      kid: string;
+      publicKey: EvidenceKeyLike;
+      role: "pdp" | "pep" | "executor";
+      /** The exact `emitter.id` this key authenticates. */
+      emitterId: string;
+      /** REQUIRED for every enforcement-point role: an audience-unbound pdp/pep/executor key is exactly the wildcard the #739 review flagged. */
+      audience: string;
+    }
+  | {
+      kid: string;
+      publicKey: EvidenceKeyLike;
+      role: "receipt_issuer";
+      /** The exact `emitter.id` this key authenticates. */
+      emitterId: string;
+      /** A receipt issuer's key MAY stay audience-unbound; omit or supply one to narrow it. */
+      audience?: string;
+    };
 
 export function buildEvidenceKeyResolver(keys: readonly EvidenceVerificationKey[]): EvidenceKeyResolver {
   return ({ kid, emitter, audience }) => {
-    const match = keys.find(
-      (k) => k.kid === kid && k.role === emitter.role && (k.audience === undefined || k.audience === audience),
-    );
+    const match = keys.find((k) => {
+      if (k.kid !== kid || k.role !== emitter.role || k.emitterId !== emitter.id) {
+        return false;
+      }
+      // Defensive runtime re-check of the type-level audience requirement
+      // (#739 review point 1): only `receipt_issuer` may wildcard a
+      // missing `audience`; every other role requires an exact match even
+      // if a caller's own object construction bypassed the type above.
+      if (k.role === "receipt_issuer") {
+        return k.audience === undefined || k.audience === audience;
+      }
+      return k.audience === audience;
+    });
     return match ? { key: match.publicKey } : undefined;
   };
 }
