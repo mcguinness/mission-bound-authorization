@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-08-26T04:26:30Z
-Source repository commit: 2cf2392fb3c21c82a5d4cf8f843a78f890e1143a
+Generated: 2026-08-26T21:29:40Z
+Source repository commit: 68f6a07ec1e509f507554c1aea8871650a75ebeb
 Member count: 9
 
 Reading order:
@@ -16871,8 +16871,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 121 conformance rows in conformance-manifest.json (30
-   tested, 19 partial, 69 todo, 3 blocked).  Adopt when: Actions need a
+   Implementation: 122 conformance rows in conformance-manifest.json (30
+   tested, 19 partial, 70 todo, 3 blocked).  Adopt when: Actions need a
    point-of-use check, not just issuance-time gating.  Requires: Mission
    Substrate Requirements.  Also requires, conditionally: Mission-Bound
    Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when
