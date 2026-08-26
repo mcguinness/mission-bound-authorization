@@ -182,9 +182,10 @@ depends on no deferral substrate.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
+Implementation: 15 conformance rows in conformance-manifest.json (15 todo).
 Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
 Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling).
 <!-- family-status: END -->
 
 # Conventions and Definitions {#conventions-and-definitions}
@@ -652,6 +653,136 @@ recorded, it owns the narrowing history, through its `narrowed`
 entries and `predecessor_intent_hashes`. Where an AGR is recorded for
 the final approval, it owns the final approval-governance facts. This
 is a deliberate artifact separation, not an authority conflict.
+
+# Approval Context Commitment {#approval-context-commitment}
+
+This section defines an OPTIONAL profile: one commitment over a
+Mission's immutable creation facts, so an artifact that authenticates
+a reference to it can be checked against another authenticated
+artifact's reference to the same Mission without either re-deriving
+the other's fields. Adopting this profile is independent of whether
+a deployment records an Approval Governance Record for a given
+Mission.
+
+## Manifest {#approval-context-manifest}
+
+The **Approval Context Manifest** is a closed, enumerated v1 object
+built from Mission Record members
+({{I-D.draft-mcguinness-oauth-mission}}). Its members:
+
+| Member | Source | Presence |
+|---|---|---|
+| `issuer` | Mission Record `issuer` | always |
+| `id` | Mission Record `id` | always |
+| `intent_hash` | Mission Record `intent_hash` | always |
+| `proposal_hash` | Mission Record `proposal_hash` | iff the Mission Record carries it |
+| `authority_hash` | Mission Record `authority_hash` | always |
+| `ceiling_hash` | Progressive's `ceiling_hash` anchor ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
+| `subject` | Mission Record `subject` | always |
+| `approver` | Mission Record `approver` | always |
+| `client_id` | Mission Record `client_id` | always |
+| `created_at` | Mission Record `created_at` | always |
+| `expires_at` | Mission Record `expires_at` | always |
+| `approval_basis` | Mission Record `approval_basis`, verbatim | always |
+| `authority_source` | Mission Record `authority_source`, verbatim | always |
+| `policy_version` | Mission Record `policy_version` | always |
+| `approval_event_id` | Mission Record `approval_event_id` | always |
+| `submission_evidence_commitment` | {{approval-context-construction}} | iff the Mission Record carries `submission_evidence` |
+{: title="Approval Context Manifest v1 members"}
+
+The presence of every conditional member MUST be a deterministic
+function of the Mission Record alone, never of which companion
+profiles a deployment runs: two parties holding the same record
+compute the same manifest.
+
+`ceiling_hash` is the manifest's fourth anchor alongside `intent_hash`,
+`proposal_hash`, and `authority_hash`: the manifest MUST include
+`ceiling_hash` when the Mission Record carries one and MUST omit it
+when the Mission Record carries none.
+
+The manifest excludes the Mission Record's one mutable member,
+`state`, and every value that is not itself a member of the
+immutable record: a running derivation count, and a containment or
+discharge state a companion profile tracks outside the record. This
+is not a separate exclusion rule; it follows from building the
+manifest from Mission Record members only.
+
+## Construction {#approval-context-construction}
+
+The manifest is an envelope anchor under the issuance profile's
+commitment mechanisms, which this document imports normatively
+({{I-D.draft-mcguinness-oauth-mission}}): `typ` is
+`mission-approval-context-v1`, `iss` is the Mission `issuer`, and
+`value` is the manifest object of {{approval-context-manifest}}. The
+result, `approval_context_commitment`, is one `sha-256:`-prefixed
+string.
+
+`submission_evidence_commitment` is a second envelope anchor under
+the same mechanism, present only when the Mission Record carries
+`submission_evidence`: `typ` is `mission-submission-evidence-v1`,
+`iss` is the Mission `issuer`, and `value` is the recorded
+`submission_evidence` array exactly as retained, preserving its
+canonical element order ({{I-D.draft-mcguinness-oauth-mission}}).
+
+## Computation and Versioning {#approval-context-computation}
+
+An issuer computes `approval_context_commitment` on demand from the
+Mission's immutable creation facts, fixed at the approval event
+({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
+Mission Record member for it. A deployment MAY cache the computed
+value; a cached value is derived state and MUST NOT be treated as
+authoritative where it disagrees with a fresh computation from the
+record.
+
+A verifier that recomputes `approval_context_commitment` from the
+Mission's immutable creation facts and obtains a value different from
+the one an artifact discloses MUST reject that artifact's reference
+as invalid.
+
+The member list of {{approval-context-manifest}} is closed for
+`mission-approval-context-v1`. Adding, removing, or redefining a
+member, or changing how `submission_evidence_commitment` is
+constructed, MUST use a new `typ`, never a silent reinterpretation of
+this one.
+
+## Limits {#approval-context-limits}
+
+Reusing the issuance profile's commitment mechanisms supplies
+canonicalization and algorithm identification and agility. It
+supplies nothing else:
+
+- No authenticity. The commitment is an unkeyed digest over Mission
+  Record fields held under the same trust as the record itself. An
+  issuer that can rewrite the record can recompute a matching
+  commitment; authentication comes entirely from the signature of
+  whichever artifact discloses the commitment, never from the digest
+  construction.
+- No approval-time existence. A matching commitment shows the
+  disclosed facts are internally consistent with the retained
+  record. It does not show the facts were true, or that an approval
+  occurred, at the time claimed.
+- No selective disclosure. The commitment is a flat digest over the
+  complete manifest object; proving anything about one member
+  requires disclosing the whole object.
+
+## Carriage {#approval-context-carriage}
+
+`approval_context_commitment` MAY appear as a signed member of an
+artifact that already authenticates a reference to the Mission, for
+example a Consent Evidence object
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), or under
+an introspection caller's member-scoped disclosure privilege, the
+same privilege that already gates `proposal_hash`
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+`approval_context_commitment` MUST NOT be carried on a Mission-bound
+access token's baseline `mission` claim
+({{I-D.draft-mcguinness-oauth-mission}}) or on a credential-bound
+Mission descriptor a companion profile mints for correlation, for
+example the Mission Authority Server's Join Assertion
+({{I-D.draft-mcguinness-mission-authority-server}}): each already
+fixes its own minimal member set, and this commitment is correlation
+and evidence metadata, never authority.
 
 # Boundaries {#boundaries}
 

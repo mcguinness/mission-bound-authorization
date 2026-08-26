@@ -212,6 +212,14 @@
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
    ],
+   "requires_when": [
+    {
+     "when": "the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling",
+     "requires": [
+      "draft-mcguinness-oauth-mission-progressive"
+     ]
+    }
+   ],
    "references": [
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
