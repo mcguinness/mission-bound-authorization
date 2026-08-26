@@ -1084,7 +1084,8 @@
    "summary": "A binding-neutral decision contract for enforcing a Mission-bound credential at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission.",
    "pull_when": "Actions need a point-of-use check, not just issuance-time gating.",
    "normative_references": [
-    "draft-mcguinness-mission-substrate"
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
