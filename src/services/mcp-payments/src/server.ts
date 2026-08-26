@@ -26,7 +26,9 @@ import {
   type InsufficientAuthorization,
   type LoadedView,
   loadCheckedView,
+  type MissionBoundTokenFacts,
   type MissionReference,
+  type OrdinaryTokenFacts,
   type Pep,
   type RequestSignals,
   type TokenFacts,
@@ -150,7 +152,7 @@ export interface McpServerDeps {
  * check the credential failed.
  */
 export type VerifiedTxnCredential =
-  | { ok: true; facts: TokenFacts }
+  | { ok: true; facts: MissionBoundTokenFacts }
   | { ok: false; refusal_reason: string };
 
 export interface TransactionToolResult {
@@ -237,7 +239,7 @@ export class McpPaymentsServer {
    * Validate a DPoP-bound access token, returning TokenFacts.
    * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
    */
-  async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<TokenFacts> {
+  async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
@@ -298,7 +300,7 @@ export class McpPaymentsServer {
    * or {@link validateCredential}: a documented remainder, not a silent gap
    * -- those stay Mission-bound-only.
    */
-  async validateOrdinaryToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<TokenFacts> {
+  async validateOrdinaryToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<OrdinaryTokenFacts> {
     refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
@@ -331,7 +333,7 @@ export class McpPaymentsServer {
    * a validated token here, never passed through untouched.
    * @spec draft-mcguinness-mission-harness (mediated execution environment)
    */
-  async validateMissionToken(accessToken: string): Promise<TokenFacts> {
+  async validateMissionToken(accessToken: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
@@ -541,7 +543,7 @@ export class McpPaymentsServer {
     dpopProof: string,
     htu: string,
     htm: string,
-  ): Promise<TokenFacts> {
+  ): Promise<MissionBoundTokenFacts> {
     if (chain.length === 0) throw new Error("empty attenuation chain");
 
     // Root: under the AS JWKS, audience-scoped, iss == mission.issuer.

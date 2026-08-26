@@ -3,9 +3,14 @@
  *
  * The PEP's gateway wiring for the baseline MAS Join: an ordinary OAuth
  * credential (TokenFacts.mission absent) joined against a PEP-supplied
- * propagated Mission reference. Covers the configured/unconfigured gate,
- * the mission_mismatch denial path (subject, client, delegate), rule 8's
- * fail-closed acting-credential-authority bound, and that the existing
+ * propagated Mission reference. Rules 3-6 (the join proper) are resolved by
+ * the PDP itself (#557 review point 1; see `services/pdp/test/mas-join.test.ts`
+ * for standalone `resolveBaselineJoin` coverage) -- a mission_mismatch here
+ * is a genuine Decision, `res.decision` defined, `res.denial_reason` set,
+ * never a pre-evaluate() PEP refusal. This file covers the PEP's OWN gateway
+ * duties: the configured/unconfigured gate, propagated-reference selection
+ * (rule 1) and `context.mission_join` construction, rule 8's fail-closed
+ * acting-credential-authority bound (still PEP-side), and that the existing
  * Mission-bound path is completely unaffected when masJoin is configured.
  */
 
@@ -135,6 +140,70 @@ describe("baseline MAS Join: successful join (@spec authority-server#mission-joi
   });
 });
 
+describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authority-server#mission-join rule 5, #557 review point 1)", () => {
+  const SHALLOW_DELEGABLE_ENTRY: AuthorityEntry = {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: [READ],
+    join_delegation: { max_depth: 0, allowed_delegates: ["delegate-client"] },
+  };
+  const shallowView: MissionView = { ...view, authority_set: [DIRECT_ENTRY, SHALLOW_DELEGABLE_ENTRY] };
+  const delegateToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "delegate-client" };
+
+  it("resolves depth FRESH per request and carries it onto the PDP request: a depth within the entry's own max_depth permits", async () => {
+    const pep = build(
+      {
+        masJoin: {
+          delegatePolicy: { delegates: { "delegate-client": {} } },
+          resolveOrdinaryAuthority: FULL_AUTHORITY,
+          resolveDelegateDepth: () => 0,
+        },
+      },
+      shallowView,
+    );
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+  });
+
+  it("denies mission_mismatch when the resolved depth exceeds the entry's own join_delegation.max_depth", async () => {
+    const pep = build(
+      {
+        masJoin: {
+          delegatePolicy: { delegates: { "delegate-client": {} } },
+          resolveOrdinaryAuthority: FULL_AUTHORITY,
+          resolveDelegateDepth: () => 1, // exceeds SHALLOW_DELEGABLE_ENTRY's max_depth: 0
+        },
+      },
+      shallowView,
+    );
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("mission_mismatch");
+  });
+
+  it("treats an unconfigured resolveDelegateDepth as unbounded depth, denying closed against a max_depth-bearing entry", async () => {
+    const pep = build(
+      {
+        masJoin: {
+          delegatePolicy: { delegates: { "delegate-client": {} } },
+          resolveOrdinaryAuthority: FULL_AUTHORITY,
+          // resolveDelegateDepth intentionally absent
+        },
+      },
+      shallowView,
+    );
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("mission_mismatch");
+  });
+});
+
 describe("baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6)", () => {
   it("denies mission_mismatch when the authenticated subject does not match the Mission's subject", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
@@ -143,7 +212,12 @@ describe("baseline MAS Join: mission_mismatch (@spec authority-server#mission-jo
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
-    expect(res.refusal_reason).toBe("mission_mismatch");
+    // @spec authority-server#mission-join (#557 review point 1) — this is
+    // now a genuine PDP decision (denial_reason on a Decision Evidence
+    // record), not a PEP-only refusal: the PDP resolves rules 3-6 itself.
+    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.decision).toBeDefined();
+    expect(res.decision?.decision).toBe(false);
   });
 
   it("denies mission_mismatch for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority", async () => {
@@ -153,8 +227,13 @@ describe("baseline MAS Join: mission_mismatch (@spec authority-server#mission-jo
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
-    expect(res.refusal_reason).toBe("mission_mismatch");
-    expect(res.decision).toBeUndefined();
+    // @spec authority-server#mission-join (#557 review point 1) — the PDP
+    // itself denies this now (a real Decision, not a pre-evaluate() PEP
+    // refusal): res.decision is DEFINED and carries no authoritySet the
+    // caller could accidentally evaluate against (rule 6, no fallback).
+    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.decision).toBeDefined();
+    expect(res.decision?.decision).toBe(false);
   });
 
   it("denies mission_mismatch for a referenced Mission that does not resolve at all", async () => {
