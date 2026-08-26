@@ -33,7 +33,7 @@ const REGISTERED_COMMON_CONSTRAINTS = new Set([
   "data_classification",
   "allowed_tools",
   "requires_action_approval",
-  // @spec status#terminal-when — a specification-defined Common Constraint
+  // @spec discharge#terminal-when — a specification-defined Common Constraint
   // registered by the Status profile (its completion capability), IMPLEMENTED
   // below: entry completion conditions, narrowed by union.
   "terminal_when",
@@ -41,7 +41,7 @@ const REGISTERED_COMMON_CONSTRAINTS = new Set([
 
 /**
  * Common Constraint keys this derivation engine implements narrowing for.
- * `terminal_when` (@spec status#terminal-when) joins them: its narrowing is the
+ * `terminal_when` (@spec discharge#terminal-when) joins them: its narrowing is the
  * UNION of the two condition arrays ({@link unionConditions}), the direction
  * the subset rule fixes (a candidate must carry every reference condition and
  * MAY add more).
@@ -185,7 +185,7 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   if (ceiling.constraints?.requires_action_approval === true || proposal.constraints?.requires_action_approval === true) {
     constraints.requires_action_approval = true;
   }
-  // @spec status#terminal-when, status#subset-extension — monotonic UNION: the
+  // @spec discharge#terminal-when, discharge#subset-extension — monotonic UNION: the
   // derived entry carries every completion condition either operand names, so a
   // ceiling condition cannot be shed by a proposal that omits it and a proposal
   // MAY add its own (an added condition only discharges sooner, a narrowing).
@@ -388,7 +388,7 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
       candidate.constraints?.requires_action_approval !== true) {
     return false;
   }
-  // @spec status#subset-extension — a derived entry carries every parent
+  // @spec discharge#subset-extension — a derived entry carries every parent
   // completion condition unchanged and MAY add more: dropping or altering one
   // WIDENS (a verifier cannot tell from opaque event types whether a changed
   // condition discharges earlier or later), so it is not a subset.
@@ -465,7 +465,7 @@ const PROJECTABLE_CONSTRAINTS = new Set([
   "max_amount",
   "vendors",
   "requires_action_approval",
-  // @spec status#terminal-when — projectable: the fragment carries the UNION of
+  // @spec discharge#terminal-when — projectable: the fragment carries the UNION of
   // both sides' conditions, which is no broader than either.
   "terminal_when",
 ]);
@@ -586,7 +586,7 @@ function intersectForProjection(
   ) {
     constraints.requires_action_approval = true;
   }
-  // @spec status#terminal-when — the union of both sides' completion
+  // @spec discharge#terminal-when — the union of both sides' completion
   // conditions: the fragment stays a subset of both (each side's conditions are
   // all present). A malformed condition makes the pairing unprovable, and this
   // projection is fail-closed-by-DROPPING rather than throwing.

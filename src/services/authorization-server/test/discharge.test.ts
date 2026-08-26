@@ -714,7 +714,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     // A sibling of `mission`, which reports the UNCHANGED state and the new version.
     expect(payload.mission).toMatchObject({ id: record.id, state: "active", version: 2 });
     expect(payload.nonce).toBe(body.nonce);
-    // @spec status#visibility — the discharged entry is omitted from the
+    // @spec discharge#visibility — the discharged entry is omitted from the
     // audience-scoped authorization_details the Status surface returns.
     const status = await fetch(
       `${ISSUER}/missions/${record.id}/status?audience=${encodeURIComponent(CANONICAL_RESOURCE)}`,

@@ -58,7 +58,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           additionalProperties: false,
         },
         vendors: { type: "array", items: { type: "string" } },
-        // @spec status#terminal-when — the completion-condition constraint. Its
+        // @spec discharge#terminal-when — the completion-condition constraint. Its
         // member set is CLOSED (additionalProperties: false): condition identity
         // is byte equality of the canonical form, which `condition_digest`
         // digests, so an unrecognized member would silently change identity.
@@ -197,11 +197,11 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         return "constraints.vendors must be an array of strings";
       }
     }
-    // @spec status#terminal-when — one or more completion conditions, each a
+    // @spec discharge#terminal-when — one or more completion conditions, each a
     // CLOSED { event_type, discharge_policy? } object (identity is the canonical
     // form of exactly these members). The selector's own charset and its
     // resolution against the issuer-held mapping are checked at derivation and
-    // record creation (@spec status#discharge-authority), not here: this is the
+    // record creation (@spec discharge#discharge-authority), not here: this is the
     // wire-shape gate the published schema describes.
     if (c.terminal_when !== undefined) {
       if (!Array.isArray(c.terminal_when) || c.terminal_when.length === 0) {
