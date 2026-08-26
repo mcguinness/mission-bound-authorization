@@ -7,7 +7,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize } from "@mission/core";
+import { canonicalize, type JsonValue } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
 
 /**
@@ -102,6 +102,40 @@ export function policyViewId(view: MissionView, modelId: string): string {
     mission_version: view.version,
     authority_hash: view.authority_hash,
     model_id: modelId,
+  });
+  return `sha-256:${createHash("sha256").update(commitment, "utf8").digest("base64url")}`;
+}
+
+/**
+ * @spec authority-server#mission-join (#557 review point 4) — a SEPARATE
+ * commitment for a decision reached over a baseline-Join's resolved
+ * (subject/client/delegate-narrowed) authority set, distinct from
+ * `policyViewId`. `policyViewId` commits only `(mission_id, mission_version,
+ * authority_hash, model_id)`: none of these change when the join's inputs
+ * (the acting subject, the acting client, the delegate's narrowing) change,
+ * or when the narrowed effective authority differs from the Mission's own
+ * full authority_set -- so a Decision Evidence record carrying only
+ * `policy_view_id` cannot distinguish a joined decision from a direct
+ * Mission-bound one, nor one joined view from a differently-joined one
+ * (e.g. two different delegates narrowed to two different subsets). This
+ * commitment additionally binds the join disposition, the joining client,
+ * and the resolved authority set itself, so it changes whenever any of
+ * those does. Computed only on the baseline-Join path; `policyViewId` keeps
+ * its existing meaning and is carried alongside this, never replaced by it.
+ */
+export function joinViewId(
+  view: MissionView,
+  modelId: string,
+  joined: { disposition: "direct" | "delegate"; clientId: string; authoritySet: AuthorityEntry[] },
+): string {
+  const commitment = canonicalize({
+    mission_id: view.id,
+    mission_version: view.version,
+    authority_hash: view.authority_hash,
+    model_id: modelId,
+    join_disposition: joined.disposition,
+    join_client_id: joined.clientId,
+    join_authority_set: joined.authoritySet as unknown as JsonValue,
   });
   return `sha-256:${createHash("sha256").update(commitment, "utf8").digest("base64url")}`;
 }
