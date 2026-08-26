@@ -4907,7 +4907,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement naming its mediated resources, classes, PEP locations, custody mode, tiers, PDPs, supported detail types, state sources, failure posture, and evidence mechanism"
+    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement whose baseline declaration names its mediated resources/action classes/execution paths, PEP locations, excluded paths, and Mission-establishment mode; its supported authority-entry types and the evaluator for each; the PDP or PDPs; the Mission state source, maximum staleness bound, and PDP-unavailability posture; the remote decision-channel trust mode for every non-co-resident PEP/PDP boundary; and the append-only integrity-protection mechanism for its records (#724: custody mode, evidence mechanism, and retention are named-extension declarations attached only when claimed, never universal baseline members)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4917,9 +4917,63 @@
      "name": "harness scope statement: compromise-resistant claim enumerates every channel class > emits a disposition for every channel class and marks the enumeration complete",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a complete baseline statement is valid",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a statement claiming one extension with its attached declaration is valid",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting mediated_scope fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting authority_entry_types fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting pdps fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting state_source fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting remote_decision_channels fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting record_integrity_mechanism fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > claiming an extension with no attached declaration fails validation",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "The harness profile's execution-environment scope statement tests channel-enumeration completeness and containment-claim honesty; the remaining ESS fields (PDP identity, evidence mechanism, retention window, staleness bounds per class) are not exercised by a test."
+   "notes": "The harness profile's execution-environment scope statement tests channel-enumeration completeness and containment-claim honesty at endpoint level. src/services/pdp/src/enforcement-scope.ts now separately proves, at unit level, that the six post-#724 baseline members are each required (an omission fails validation, naming the member) and that a named extension claimed with no attached declaration also fails validation, while a claim carrying its declaration is accepted -- the corrected post-#724 shape, not the stale pre-#724 twelve-item universal list this row's observation previously described. Kept partial: no test wires a real deployment's own published statement through this validator end to end at the row's declared resource-operation surface."
   },
   {
    "id": "runtime.conformance.no-claim-outside-declared-scope",
@@ -5960,7 +6014,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "src/services/pdp/src/server.ts (PDP) and src/services/pdp/src/client.ts (PEP) are a genuinely separated topology over a real 127.0.0.1 HTTP hop, not another direct function call: the request and response are domain-separated HMAC'd end to end (src/services/pdp/src/channel-mac.ts), the PDP authenticates the PEP by a registered per-identity secret and accepts credential-derived inputs only from a PEP whose registered scopes include the request's audience, and the PEP authenticates the PDP by verifying the response MAC before trusting the decision it carries. Every channel-boundary refusal is proven non-vacuous (evaluate() call count stays 0, via an injectable counter) and followed by a valid signed request on the SAME running server that permits. The co-resident case (mcp-payments/src/pep.ts calling evaluate() directly) is unaffected and is exercised separately to show it satisfies the requirement structurally. Not covered: mutual TLS as an alternative trust mode, and wiring this channel into mcp-payments' own production PEP path (it remains a standalone reference adapter validating the contract, per the issue's own scoping)."
+   "notes": "src/services/pdp/src/server.ts (PDP) and src/services/pdp/src/client.ts (PEP) are a genuinely separated topology over a real 127.0.0.1 HTTP hop, not another direct function call: the request and response are domain-separated HMAC'd end to end (src/services/pdp/src/channel-mac.ts), the PDP authenticates the PEP by a registered per-identity secret and accepts credential-derived inputs only from a PEP whose registered scopes include the request's audience, and the PEP authenticates the PDP by verifying the response MAC before trusting the decision it carries. Every channel-boundary refusal is proven non-vacuous (evaluate() call count stays 0, via an injectable counter) and followed by a valid signed request on the SAME running server that permits. The co-resident case (mcp-payments/src/pep.ts calling evaluate() directly) is unaffected and is exercised separately to show it satisfies the requirement structurally. Not covered: mutual TLS as an alternative trust mode; wiring this channel into mcp-payments' own production PEP path (it remains a standalone reference adapter validating the contract, per the issue's own scoping); and the row's third observation clause on a PDP that receives the raw access token (this topology's EvaluationRequest carries no raw-credential field to mishandle, so there is nothing to exercise that clause against here)."
   },
   {
    "id": "runtime.token-validation.minimize-claims-sent-should",
