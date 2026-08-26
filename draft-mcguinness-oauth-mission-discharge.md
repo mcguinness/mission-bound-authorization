@@ -119,17 +119,9 @@ profile"), adding an entry-grain completion mechanism.
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") gates
 issuance on Mission state but has no notion of an approved entry
-being **done**. A Mission granted authority to release a record "for
-this enrollment" keeps deriving that authority after the enrollment
-closes, until a clock or a revoke stops it. The Intent's
-`success_criteria` describe when the task is complete, but the
-issuance profile keeps them inert: they are rendered and committed,
-and carry no machine effect ({{I-D.draft-mcguinness-oauth-mission}}).
-The Status profile's Mission Lifecycle endpoint adds Mission-level
-`revoke`, `suspend`, `resume`, and `complete` operations
-({{I-D.draft-mcguinness-oauth-mission-status}}), but these act on the
-whole Mission; none of them ends one Authority Set entry's authority
-while the Mission continues.
+being **done**, and the Status profile's Mission Lifecycle endpoint
+operations ({{I-D.draft-mcguinness-oauth-mission-status}}) act on the
+whole Mission, not one Authority Set entry.
 
 This document supplies that enforceable counterpart. It registers
 `terminal_when`, an OPTIONAL Common Constraint
@@ -142,33 +134,15 @@ that endpoint's other operations, that commits a condition's firing.
 When a condition is met, the entry is **discharged**: the
 Authorization Server no longer derives a token carrying that entry
 ({{discharge}}), exactly as it refuses derivation for a non-`active`
-Mission.
-
-Three properties make this safe inside the Mission model and this
-document requires all three:
-
-- **Discharge is monotonic.** It only removes an entry's authority; it
-  can never widen the entry or the Mission.
-- **Discharge composes with the subset rule.** A derived entry carries
-  its parent's completion conditions unchanged and MAY add more, the
-  same way constraints may be added or tightened but never dropped.
-- **Discharge fails closed on the constraint.** A consumer that does
-  not understand `terminal_when` refuses the entry rather than
-  ignoring the condition.
-
-The threat analysis of these properties, including why a
-prompt-injected agent cannot use discharge to escalate and the
-forced-premature-discharge residual, is given in
-{{completion-security}}.
+Mission. {{completion}} states the properties this mechanism requires
+and the threat analysis, including why a prompt-injected agent cannot
+use discharge to escalate, is given in {{completion-security}}.
 
 This document is optional and depends normatively on the issuance
 profile, its Mission Resource Access Profile, and the Status profile;
 it is not implementable alone. A deployment that ends an entry's
 authority only by Mission revocation or expiry is fully conformant to
-the issuance profile and is unaffected by this document, which places
-no new requirement on the issuance profile or the Status profile: it
-defines one OPTIONAL entry member, one OPTIONAL Mission Lifecycle
-extension operation, and the rules for handling them. A deployment
+the issuance profile and is unaffected by this document. A deployment
 claims this capability only when it issues or consumes entries
 carrying `terminal_when`. The capability is newer and less exercised
 than baseline issuance and runtime enforcement, and is not required by
