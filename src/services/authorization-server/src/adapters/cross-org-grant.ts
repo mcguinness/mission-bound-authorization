@@ -66,7 +66,10 @@ export interface CrossOrgOptions {
    * Principal profile (there is no unclaimed-profile case to fall back to),
    * so this is a REQUIRED construction-time dependency rather than an
    * optional, fail-closed-on-absence one: a deployment cannot forget to
-   * wire it and still exchange chains.
+   * wire it and still exchange chains. Audience-wide, all-or-none: a
+   * positive result authorizes the complete verified-delegated-authority ∩
+   * localCeiling set below, unmodified; it does not narrow individual
+   * entries by action or resource (see `EntitlementResolver`'s own doc).
    */
   entitlement: EntitlementResolver;
   /** Independent freshness bound for the entitlement observation, seconds. */

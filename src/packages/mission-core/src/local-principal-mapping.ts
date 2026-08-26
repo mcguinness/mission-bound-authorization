@@ -54,11 +54,12 @@ export interface ResolvedLocalPrincipal {
 
 /**
  * Resolve ONE origin principal to its destination-local mapping. Returns
- * `undefined` for a missing, duplicate/ambiguous, disabled, future-dated, or
- * expired mapping: @spec cross-domain#origin-principal-continuity requires
- * the caller to deny uniformly for all of these ("missing, ambiguous,
- * disabled, stale beyond the declared bound"), never distinguishing them at
- * the enforcement point.
+ * `undefined` for a missing, duplicate/ambiguous, disabled, future-dated,
+ * expired, or malformed (empty `local_sub`, empty `audience`, or an
+ * unidentified `policy.id`/`policy.version`) mapping: @spec
+ * cross-domain#origin-principal-continuity requires the caller to deny
+ * uniformly for all of these ("missing, ambiguous, disabled, stale beyond
+ * the declared bound"), never distinguishing them at the enforcement point.
  */
 export function resolveLocalPrincipal(
   policy: LocalMappingPolicy,
@@ -76,6 +77,14 @@ export function resolveLocalPrincipal(
   if (candidates.length !== 1) return undefined; // zero (missing) or >1 (ambiguous)
   const [entry] = candidates;
   if (!entry) return undefined; // unreachable given the length check above
+  // Validate the complete selected mapping -- its own local_sub and audience,
+  // and the policy metadata identifying it -- before treating it as an
+  // unambiguous current mapping. An empty local_sub or an unidentified
+  // policy is a malformed record, never a usable resolution.
+  if (typeof entry.local_sub !== "string" || !entry.local_sub) return undefined;
+  if (entry.audience !== undefined && (typeof entry.audience !== "string" || !entry.audience)) return undefined;
+  if (typeof policy.id !== "string" || !policy.id) return undefined;
+  if (typeof policy.version !== "string" || !policy.version) return undefined;
   const observedMs = Date.parse(entry.observed_at);
   const validMs = Date.parse(entry.valid_until);
   if (!Number.isFinite(observedMs) || !Number.isFinite(validMs)) return undefined;

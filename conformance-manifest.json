@@ -15351,10 +15351,10 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled"
+    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The entitlement axis itself is profiled audience-wide and all-or-none: a positive result authorizes the complete already-intersected authorization_details set for that audience, unmodified; it does not narrow individual entries by action or resource, so this row does not exercise the quoted text's general per-entry three-bound intersection, only the audience-wide instance of it"
    },
    "level": "cross-component",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
@@ -15417,7 +15417,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. Action/resource-scoped entitlement queries are NOT implemented (the shared EntitlementResolver contract is audience-scoped only, matching its existing PDP-side shape); extending it is left as a documented remainder rather than risking the already-tested PDP dual-axis rows."
+   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. Kept partial (not flipped to tested) per review: a Boolean audience-level `entitled` result gates the complete delegated authorization_details set for the audience but cannot narrow individual entries by action or resource, so it is an audience-wide all-or-none instance of the quoted text's three-bound intersection, not the general per-entry one. Action/resource-scoped entitlement queries are NOT implemented (the shared EntitlementResolver contract is audience-scoped only, matching its existing PDP-side shape); extending it is left as a documented remainder rather than risking the already-tested PDP dual-axis rows."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

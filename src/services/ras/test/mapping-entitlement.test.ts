@@ -58,19 +58,19 @@ function basePolicy(entries?: LocalPrincipalMapping[]): LocalMappingPolicy {
 }
 
 interface GrantOverrides {
-  sub?: string;
+  sub?: string | null; // null = omit entirely, "" = present but empty (malformed)
   missionSubject?: { iss: string; sub: string } | null; // null = omit entirely
+  missionId?: string | null; // null = omit entirely, "" = present but empty (malformed)
+  missionAuthorityHash?: string | null; // null = omit entirely, "" = present but empty (malformed)
   identityContinuationHandle?: string;
   exp?: number; // absolute epoch seconds
 }
 
 async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
   const nowS = Math.floor(Date.now() / 1000);
-  const mission: Record<string, unknown> = {
-    id: "mission-1",
-    issuer: AS_ISS,
-    authority_hash: "sha-256:test",
-  };
+  const mission: Record<string, unknown> = { issuer: AS_ISS };
+  if (overrides.missionId !== null) mission.id = overrides.missionId ?? "mission-1";
+  if (overrides.missionAuthorityHash !== null) mission.authority_hash = overrides.missionAuthorityHash ?? "sha-256:test";
   if (overrides.missionSubject !== null) {
     mission.subject = overrides.missionSubject ?? { iss: IDP_ISS, sub: IDP_SUB };
   }
@@ -78,7 +78,7 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
     mission,
     authorization_details: [],
     cnf: { jkt: clientJkt },
-    sub: overrides.sub ?? GRANT_SUB,
+    ...(overrides.sub !== null ? { sub: overrides.sub ?? GRANT_SUB } : {}),
     client_id: "ap-agent",
     ...(overrides.identityContinuationHandle !== undefined
       ? { identity_continuation_handle: overrides.identityContinuationHandle }
@@ -148,6 +148,42 @@ describe("RAS co-resolution: base grant (@spec cross-domain#origin-principal-map
   it("denies invalid_grant when mission.subject is malformed (missing sub)", async () => {
     const server = await ras();
     const grant = await mintGrant({ missionSubject: { iss: IDP_ISS, sub: "" } });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when the grant's own sub is missing (never coerced to the literal string \"undefined\")", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ sub: null });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when the grant's own sub is present but empty", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ sub: "" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when mission.id is missing", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ missionId: null });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when mission.id is present but empty", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ missionId: "" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when mission.authority_hash is missing", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ missionAuthorityHash: null });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when mission.authority_hash is present but empty", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ missionAuthorityHash: "" });
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
   });
 
@@ -292,5 +328,51 @@ describe("RAS continuation carve-out (@spec id-continuation-assertion)", () => {
     });
     const grant = await mintGrant({ sub: "acct_deterministic456", identityContinuationHandle: "handle-2" });
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant for a continuation grant when sub is missing (never coerced to the literal string \"undefined\")", async () => {
+    const server = await ras({ mapping: basePolicy([]) });
+    const grant = await mintGrant({ sub: null, identityContinuationHandle: "handle-3" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant for a continuation grant when sub is present but empty", async () => {
+    const server = await ras({ mapping: basePolicy([]) });
+    const grant = await mintGrant({ sub: "", identityContinuationHandle: "handle-4" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+});
+
+describe("RAS expiry clamp rejected before jti consumption (@spec cross-domain#dual-axis)", () => {
+  it("refuses a grant whose clamped expiry has already elapsed, without consuming its one-time jti", async () => {
+    const fixedNowS = Math.floor(Date.now() / 1000);
+    const fixedNow = new Date(fixedNowS * 1000);
+    const staleness = 300;
+    let entitlementCalls = 0;
+    const server = await ras({
+      now: () => fixedNow,
+      entitlementStalenessBoundSeconds: staleness,
+      entitlement: {
+        resolve: async () => {
+          entitlementCalls += 1;
+          if (entitlementCalls === 1) {
+            // Exactly at the staleness boundary: the entitlement observation
+            // is still "current" (age == the declared bound), but it clamps
+            // the entitlement freshness horizon down to fixedNowS itself --
+            // an expiry that has already elapsed, not merely tight.
+            return { entitled: true, observed_at: new Date((fixedNowS - staleness) * 1000).toISOString() };
+          }
+          // Second call: comfortably fresh, so the clamp no longer elapses.
+          return { entitled: true, observed_at: fixedNow.toISOString() };
+        },
+      },
+    });
+    const grant = await mintGrant({ exp: fixedNowS + 600 });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    // The one-time jti was NOT consumed by the rejected attempt: redeeming
+    // the SAME grant again (now with a fresh entitlement observation)
+    // succeeds rather than failing on replay.
+    const { access_token } = await server.redeem(grant, clientJkt);
+    expect(access_token).toBeTruthy();
   });
 });
