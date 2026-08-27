@@ -10,10 +10,10 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  resolveCoResolvedLocalPrincipal,
-  resolveLocalPrincipal,
   type LocalMappingPolicy,
   type LocalPrincipalMapping,
+  resolveCoResolvedLocalPrincipal,
+  resolveLocalPrincipal,
 } from "../src/index.js";
 
 const ORIGIN_A = { iss: "https://as.example.test", sub: "svc-acct-42" };
@@ -33,7 +33,10 @@ function entry(overrides: Partial<LocalPrincipalMapping> = {}): LocalPrincipalMa
   };
 }
 
-function policy(entries: LocalPrincipalMapping[], overrides: Partial<LocalMappingPolicy> = {}): LocalMappingPolicy {
+function policy(
+  entries: LocalPrincipalMapping[],
+  overrides: Partial<LocalMappingPolicy> = {},
+): LocalMappingPolicy {
   return { id: "test-map", version: "v1", entries, ...overrides };
 }
 
@@ -49,7 +52,12 @@ describe("resolveLocalPrincipal: complete-mapping validation (@spec cross-domain
   });
 
   it("rejects a selected entry with an empty local_sub", () => {
-    const resolved = resolveLocalPrincipal(policy([entry({ local_sub: "" })]), ORIGIN_A, AUDIENCE, NOW);
+    const resolved = resolveLocalPrincipal(
+      policy([entry({ local_sub: "" })]),
+      ORIGIN_A,
+      AUDIENCE,
+      NOW,
+    );
     expect(resolved).toBeUndefined();
   });
 
@@ -68,7 +76,12 @@ describe("resolveLocalPrincipal: complete-mapping validation (@spec cross-domain
   });
 
   it("still matches any audience when the entry's audience is genuinely absent", () => {
-    const resolved = resolveLocalPrincipal(policy([entry({ audience: undefined })]), ORIGIN_A, AUDIENCE, NOW);
+    const resolved = resolveLocalPrincipal(
+      policy([entry({ audience: undefined })]),
+      ORIGIN_A,
+      AUDIENCE,
+      NOW,
+    );
     expect(resolved?.local_sub).toBe("local-alice");
   });
 
@@ -78,7 +91,12 @@ describe("resolveLocalPrincipal: complete-mapping validation (@spec cross-domain
   });
 
   it("rejects the mapping when the policy version is empty", () => {
-    const resolved = resolveLocalPrincipal(policy([entry()], { version: "" }), ORIGIN_A, AUDIENCE, NOW);
+    const resolved = resolveLocalPrincipal(
+      policy([entry()], { version: "" }),
+      ORIGIN_A,
+      AUDIENCE,
+      NOW,
+    );
     expect(resolved).toBeUndefined();
   });
 });
@@ -97,7 +115,9 @@ describe("resolveCoResolvedLocalPrincipal: complete-mapping validation propagate
   });
 
   it("denies co-resolution when the shared policy's version is empty", () => {
-    const table = policy([entry({ origin: ORIGIN_A }), entry({ origin: ORIGIN_B })], { version: "" });
+    const table = policy([entry({ origin: ORIGIN_A }), entry({ origin: ORIGIN_B })], {
+      version: "",
+    });
     const resolved = resolveCoResolvedLocalPrincipal(table, ORIGIN_A, ORIGIN_B, AUDIENCE, NOW);
     expect(resolved).toBeUndefined();
   });

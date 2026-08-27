@@ -82,7 +82,8 @@ export function resolveLocalPrincipal(
   // unambiguous current mapping. An empty local_sub or an unidentified
   // policy is a malformed record, never a usable resolution.
   if (typeof entry.local_sub !== "string" || !entry.local_sub) return undefined;
-  if (entry.audience !== undefined && (typeof entry.audience !== "string" || !entry.audience)) return undefined;
+  if (entry.audience !== undefined && (typeof entry.audience !== "string" || !entry.audience))
+    return undefined;
   if (typeof policy.id !== "string" || !policy.id) return undefined;
   if (typeof policy.version !== "string" || !policy.version) return undefined;
   const observedMs = Date.parse(entry.observed_at);
