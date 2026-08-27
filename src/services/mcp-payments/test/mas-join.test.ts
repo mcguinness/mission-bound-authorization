@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import type { AuthorityEntry, Fga, MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   PaymentsStore,
   Pep,
@@ -64,7 +65,10 @@ const FULL_AUTHORITY: () => AuthorityEntry[] | undefined = () => [
 function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = view): Pep {
   return new Pep({
     payments: new PaymentsStore(),
-    evidence: new EvidenceStore(),
+    // @spec runtime-evidence#decision-evidence-integrity (issue #649):
+    // EvidenceStore fails closed without a signer configured for the
+    // emitter role a call needs; every enforce() path here goes through it.
+    evidence: new EvidenceStore(createEphemeralEvidenceKeys().signing),
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView: loadViewFor(viewOverride),
