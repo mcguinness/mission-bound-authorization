@@ -16,6 +16,7 @@ import type { Fga, MissionView } from "@mission/pdp";
 import {
   buildListEffectiveParams,
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   parameterDigest,
@@ -69,7 +70,7 @@ const nonconformingLoadView = (ref: { id: string }) =>
 
 function build(): { pep: Pep; server: McpPaymentsServer } {
   const payments = new PaymentsStore();
-  const evidence = new EvidenceStore();
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   const pep = new Pep({
     payments,
     evidence,
@@ -97,7 +98,7 @@ describe("a same-ID different-issuer collision is a miss for every loadView cons
     expect(server.toolsList(WRONG_ISSUER_TOKEN)).toEqual([]);
   });
 
-  it("reverifyList() cannot consume the wrong Mission's data: a digest crafted to match what the wrongly-returned view would produce still fails closed", () => {
+  it("reverifyList() cannot consume the wrong Mission's data: a digest crafted to match what the wrongly-returned view would produce still fails closed", async () => {
     const { pep } = build();
     // The normal form reverifyList would (wrongly) recompute if it used
     // REAL_VIEW's own entry: its `vendors` constraint, no requested vendor.
@@ -112,7 +113,7 @@ describe("a same-ID different-issuer collision is a miss for every loadView cons
     });
     const wronglyConsumableDigest = parameterDigest(effective);
 
-    const ok = pep.reverifyList(effective, wronglyConsumableDigest, WRONG_ISSUER_TOKEN);
+    const ok = await pep.reverifyList(effective, wronglyConsumableDigest, WRONG_ISSUER_TOKEN);
     expect(ok).toBe(false);
   });
 });

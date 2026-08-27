@@ -26,7 +26,9 @@ import {
   type InsufficientAuthorization,
   type LoadedView,
   loadCheckedView,
+  type MissionBoundTokenFacts,
   type MissionReference,
+  type OrdinaryTokenFacts,
   type Pep,
   type RequestSignals,
   type TokenFacts,
@@ -150,7 +152,7 @@ export interface McpServerDeps {
  * check the credential failed.
  */
 export type VerifiedTxnCredential =
-  | { ok: true; facts: TokenFacts }
+  | { ok: true; facts: MissionBoundTokenFacts }
   | { ok: false; refusal_reason: string };
 
 export interface TransactionToolResult {
@@ -237,7 +239,7 @@ export class McpPaymentsServer {
    * Validate a DPoP-bound access token, returning TokenFacts.
    * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
    */
-  async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<TokenFacts> {
+  async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
@@ -280,6 +282,47 @@ export class McpPaymentsServer {
   }
 
   /**
+   * @spec authority-server#mission-join (#557) — validates an ORDINARY DPoP-
+   * bound OAuth credential (issuer, audience, `cnf.jkt`, DPoP proof: all the
+   * SAME checks {@link validateToken} performs) that carries NO `mission`
+   * claim at all. Returns `TokenFacts` with `mission` absent, `sub`/
+   * `clientId` from the credential's own authenticated claims. A gateway
+   * chooses to route a given HTTP request here instead of
+   * {@link validateToken}; {@link validateToken} itself is UNCHANGED and
+   * still rejects a no-claim token outright, so an existing Mission-bound
+   * route configured to call it keeps doing exactly that. `Pep.enforce`
+   * separately refuses `unknown_mission` when `PepDeps.masJoin` is not
+   * configured, so a gateway calling this method without ALSO configuring
+   * the PEP for the baseline Join gets a working validator with no usable
+   * permit, never a silently unbounded one.
+   *
+   * Not wired for the MCP-mediated transport ({@link validateMissionToken})
+   * or {@link validateCredential}: a documented remainder, not a silent gap
+   * -- those stay Mission-bound-only.
+   */
+  async validateOrdinaryToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<OrdinaryTokenFacts> {
+    refuseTransactionToken(accessToken);
+    const { payload } = await jwtVerify(accessToken, this.resolveKey, {
+      issuer: this.deps.issuer,
+      audience: CANONICAL_RESOURCE,
+    });
+    const cnf = payload.cnf as { jkt?: string } | undefined;
+    if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
+    await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
+
+    return {
+      sub: payload.sub as string,
+      clientId: payload.client_id as string,
+      // @spec authzen#pdp-request rule 10 — this resource's own verified
+      // issuer, never a claim on the (nonexistent) mission.
+      iss: this.deps.issuer,
+      ...(payload.act ? { act: payload.act as ActObject } : {}),
+      cnfJkt: cnf.jkt,
+      ...(payload.jti ? { jti: payload.jti as string } : {}),
+    };
+  }
+
+  /**
    * Increment-1 mediated-channel credential validation: a documented
    * simplification of {@link validateToken}. Over the in-process MCP transport
    * there is no HTTP request to bind a DPoP proof to (no htu/htm), so this
@@ -290,7 +333,7 @@ export class McpPaymentsServer {
    * a validated token here, never passed through untouched.
    * @spec draft-mcguinness-mission-harness (mediated execution environment)
    */
-  async validateMissionToken(accessToken: string): Promise<TokenFacts> {
+  async validateMissionToken(accessToken: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
@@ -500,7 +543,7 @@ export class McpPaymentsServer {
     dpopProof: string,
     htu: string,
     htm: string,
-  ): Promise<TokenFacts> {
+  ): Promise<MissionBoundTokenFacts> {
     if (chain.length === 0) throw new Error("empty attenuation chain");
 
     // Root: under the AS JWKS, audience-scoped, iss == mission.issuer.
@@ -587,6 +630,11 @@ export class McpPaymentsServer {
    * action is within the mission's authority are shown.
    */
   toolsList(token: TokenFacts): ToolDef[] {
+    // @spec authority-server#mission-join (#557): the baseline-Join gateway
+    // path is not wired into least-exposure tool listing (a documented
+    // remainder); an ordinary credential with no `mission` claim sees no
+    // tools here rather than the full unfiltered set.
+    if (!token.mission) return [];
     const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     if (!loaded) return [];
     const granted = new Set(loaded.view.authority_set.flatMap((e) => e.actions));
@@ -628,7 +676,7 @@ export class McpPaymentsServer {
       // normalized parameters immediately before execution, exactly as
       // callWriteTool/callTransactionTool already do for a write.
       const digest = permitConditions(res.decision)?.parameter_digest as string | undefined;
-      if (!digest || !this.deps.pep.reverifyList(res.listEffective, digest, token)) {
+      if (!digest || !(await this.deps.pep.reverifyList(res.listEffective, digest, token))) {
         return { ok: false, refusal_reason: "parameter_mismatch" };
       }
     }
@@ -665,7 +713,7 @@ export class McpPaymentsServer {
     }
     beforeReverify?.();
     const digest = permitConditions(res.decision)?.parameter_digest as string;
-    if (!this.deps.pep.reverify(res.effective, digest, token)) {
+    if (!(await this.deps.pep.reverify(res.effective, digest, token))) {
       return { ok: false, refusal_reason: "parameter_mismatch" };
     }
     return { ok: true, result: this.execute(tool, args) };
@@ -708,7 +756,7 @@ export class McpPaymentsServer {
     // pending operation when it issues the challenge; the later transaction
     // token is matched against THAT record, never against its own assertions.
     if (res.challenge) this.txnPending.put(res.challenge.pending);
-    if (!res.permitted || !res.effective || !res.decision) {
+    if (!res.permitted || !res.effective || !res.decision || !res.resolvedMission) {
       return {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
@@ -723,15 +771,20 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
+    // @spec authority-server#mission-join (#557) — the governing Mission for
+    // everything past the permit, never `token.mission` directly: on the
+    // baseline-Join path `token.mission` stays absent even after a permit,
+    // since the credential itself never carried the claim.
+    const resolvedMission = res.resolvedMission;
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const permitId = res.decision.context.decision_id as string;
-    const opKey = operationKey(token.mission.id, res.effective.action, digest);
+    const opKey = operationKey(resolvedMission.id, res.effective.action, digest);
 
     // Single-use permit redemption (D28): replay -> permit_consumed refusal.
     const redeem = tx.engine.redeemPermit({
       permitId,
       opKey,
-      missionId: token.mission.id,
+      missionId: resolvedMission.id,
       action: res.effective.action,
       leaseSeconds: 30,
     });
@@ -740,7 +793,7 @@ export class McpPaymentsServer {
     beforeCommit?.();
 
     // TOCTOU re-verify inside the lease, before commit.
-    if (!tx.engine.leaseValid(opKey) || !this.deps.pep.reverify(res.effective, digest, token)) {
+    if (!tx.engine.leaseValid(opKey) || !(await this.deps.pep.reverify(res.effective, digest, token))) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: "parameter_mismatch" };
     }
@@ -787,14 +840,14 @@ export class McpPaymentsServer {
             amount: res.effective.amount.amount,
             currency: res.effective.amount.currency,
             permitId,
-            missionId: token.mission.id,
+            missionId: resolvedMission.id,
           })
         : tx.connectors.sendEmail({
             opKey,
             invoiceId: res.effective.invoice_id,
             to: `${res.effective.vendor_id}@vendor.example`,
             permitId,
-            missionId: token.mission.id,
+            missionId: resolvedMission.id,
           });
     tx.engine.advance(opKey, "connector_committed");
     // The effect is durable, so the consumption row says so. A failure to write
@@ -810,32 +863,35 @@ export class McpPaymentsServer {
     }
 
     // Execution Evidence, then reconciliation state.
-    tx.evidence.record({
-      kind: "execution",
-      permit_id: permitId,
-      op_key: opKey,
-      outcome: commit.deduped ? "deduped" : "committed",
-      decision_id: permitId,
-      mission_id: token.mission.id,
-      // @spec runtime-evidence#execution-evidence (#702) — carried only when
-      // the executing credential's own copy is present (#the-mission-claim:
-      // not on the baseline claim).
-      ...(token.mission.authority_hash !== undefined
-        ? { authority_hash: token.mission.authority_hash }
-        : {}),
-      action: res.effective.action,
-      parameter_digest: digest,
-      instance_epoch: tx.engine.instanceEpoch,
-      // @spec authzen `emitter`: the executing PEP identifies itself on the
-      // record it retains, same base as its decision/refusal records.
-      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
-      // @spec continuation: attribute the execution to the specific hop that
-      // authorized it. Guarded on jti so non-JWT/older tokens are unaffected.
+    // @spec runtime-evidence#execution-evidence-object (issue #649):
+    // `outcome` is `completed` whether or not the connector commit itself was
+    // a dedup of an already-committed effect (`commit.deduped`): either way
+    // the action's final disposition IS completed, and the spec's outcome
+    // enum has no distinct "deduped" value (dedup is delivery/idempotency
+    // bookkeeping, not an execution outcome). `commit.deduped` stays on the
+    // caller's own return value (`ok: true, deduped`) below, unchanged.
+    // Both parameter-digest members are the SAME `digest`: `reverify()`
+    // above already re-confirmed the effective parameters match what the
+    // permit authorized before this commit point, the binding-held case.
+    //
+    // @spec authority-server#mission-join (#557): `mission_id` is
+    // `resolvedMission.id`, never `token.mission.id` -- a baseline-Join
+    // credential carries no `mission` claim at all, and this write path
+    // (execute_wire_transfer / send_email) is reachable on that path too.
+    await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+      permitId,
+      opKey,
+      evaluation_id: permitId,
+      mission_id: resolvedMission.id,
+      audience: CANONICAL_RESOURCE,
+      authorized_parameter_digest: digest,
+      effective_parameter_digest: digest,
+      outcome: "completed",
       ...(token.jti
         ? {
             hop_reference: {
               jti: token.jti,
-              mission_id: token.mission.id,
+              mission_id: resolvedMission.id,
               ...(token.identityContinuationHandle
                 ? { continuation_handle: token.identityContinuationHandle }
                 : {}),

@@ -13,7 +13,10 @@ import {
   buildEffectiveParams,
   CANONICAL_RESOURCE,
   Connectors,
+  createEphemeralEvidenceKeys,
+  type DecisionEvidence,
   EvidenceStore,
+  type ExecutionEvidence,
   McpPaymentsServer,
   parameterDigest,
   PaymentsStore,
@@ -148,7 +151,7 @@ function build(
     [{ id: "acme", name: "Acme", status: "approved" }],
     [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
   );
-  const evidence = new EvidenceStore();
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
@@ -271,15 +274,15 @@ d("M5 transaction-assurance tier", () => {
 
     // Execution Evidence + ledger entry both exist.
     const ev = evidence.forMission("msn_m5");
-    expect(ev.some((e) => e.kind === "decision" && e.decision === true)).toBe(true);
-    expect(ev.some((e) => e.kind === "execution" && e.outcome === "committed")).toBe(true);
+    expect(ev.some((e) => e.kind === "decision" && e.content.decision === "permit")).toBe(true);
+    expect(ev.some((e) => e.kind === "execution" && e.content.outcome === "completed")).toBe(true);
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(1);
 
-    // Every record on the shared base identifies its emitting PEP.
-    const exec = ev.find((e) => e.kind === "execution");
-    expect(exec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
-    const dec = ev.find((e) => e.kind === "decision");
-    expect(dec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    // Every record identifies its emitting component and runtime-evidence.md role.
+    const exec = ev.find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(exec?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "executor" });
+    const dec = ev.find((e): e is DecisionEvidence => e.kind === "decision");
+    expect(dec?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pdp" });
 
     // Reconciliation joins evidence to the ledger with no anomalies.
     const report = reconcile("msn_m5", evidence, connectors);
@@ -299,8 +302,8 @@ d("M5 transaction-assurance tier", () => {
     const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, continued);
     expect(res.ok, JSON.stringify(res)).toBe(true);
 
-    const exec = evidence.forMission("msn_m5").find((e) => e.kind === "execution");
-    expect(exec?.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m5", continuation_handle: HANDLE });
+    const exec = evidence.forMission("msn_m5").find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(exec?.content.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m5", continuation_handle: HANDLE });
   });
 
   it("execution under a jti-bearing credential with no continuation handle omits continuation_handle", async () => {
@@ -311,8 +314,8 @@ d("M5 transaction-assurance tier", () => {
     const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, continued);
     expect(res.ok, JSON.stringify(res)).toBe(true);
 
-    const exec = evidence.forMission("msn_m5").find((e) => e.kind === "execution");
-    expect(exec?.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m5" });
+    const exec = evidence.forMission("msn_m5").find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(exec?.content.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m5" });
   });
 
   it("execution under a non-JWT credential (no jti) omits hop_reference entirely", async () => {
@@ -322,8 +325,8 @@ d("M5 transaction-assurance tier", () => {
     const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
 
-    const exec = evidence.forMission("msn_m5").find((e) => e.kind === "execution");
-    expect(exec?.hop_reference).toBeUndefined();
+    const exec = evidence.forMission("msn_m5").find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(exec?.content.hop_reference).toBeUndefined();
   });
 
   it("replayed permit is refused as permit_consumed and does not double-execute", async () => {

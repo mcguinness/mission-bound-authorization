@@ -273,36 +273,45 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     // Attempted with the terminated Mission's own authority => refused.
     expect(
       resolveCompensationAuthority({
-        reversedDecisionId: "dec_x",
+        reversedEvaluationId: "dec_x",
         presentsTerminatedMissionAuthority: true,
       }).decision,
     ).toBe("deny");
 
     // No basis => human review.
-    expect(resolveCompensationAuthority({ reversedDecisionId: "dec_x" }).decision).toBe(
+    expect(resolveCompensationAuthority({ reversedEvaluationId: "dec_x" }).decision).toBe(
       "human_review",
     );
 
     // A separate_mission that is not active does not apply => human review.
     expect(
-      resolveCompensationAuthority({ reversedDecisionId: "dec_x", basis: "separate_mission" })
+      resolveCompensationAuthority({ reversedEvaluationId: "dec_x", basis: "separate_mission" })
         .decision,
     ).toBe("human_review");
 
-    // A valid active separate_mission permits, bound to the reversed decision_id.
+    // A valid active separate_mission permits, bound to the reversed evaluation_id.
     const r = resolveCompensationAuthority({
-      reversedDecisionId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+      reversedEvaluationId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
       basis: "separate_mission",
       separateMissionActive: true,
     });
     expect(r.decision).toBe("permit");
     expect(r.authority_basis).toBe("separate_mission");
-    expect(r.compensates_decision_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
+    expect(r.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
+
+    // resource_policy also binds to the reversed evaluation_id.
+    const rp = resolveCompensationAuthority({
+      reversedEvaluationId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+      basis: "resource_policy",
+    });
+    expect(rp.decision).toBe("permit");
+    expect(rp.authority_basis).toBe("resource_policy");
+    expect(rp.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
   });
 
   it("5b: compensate evidence for a high-risk class carries basis, binding, and a signed envelope", () => {
     const r = resolveCompensationAuthority({
-      reversedDecisionId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+      reversedEvaluationId: "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
       basis: "separate_mission",
       separateMissionActive: true,
     });
@@ -319,23 +328,28 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         reason: "committed_step_reversed_after_review",
         occurred_at: "2026-11-02T09:03:00Z",
         outcome_state: "committed",
-        linked_evidence: ["orch_4r9SqLm8tY2p"],
+        linked_evidence: ["orch_4r9SqLm8tY2p", "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA"],
         authority_basis: r.authority_basis,
         compensation_action: "erp.journal_entry.reverse",
         compensation_outcome: "completed",
-        compensates_decision_id: r.compensates_decision_id,
+        compensates_evaluation_id: r.compensates_evaluation_id,
         compensated_reversibility: "irreversible_action",
       },
       { signEnvelope: signer },
     );
     expect(ev.authority_basis).toBe("separate_mission");
-    expect(ev.compensates_decision_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
-    expect(ev.linked_evidence).toContain("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
-    expect(ev.linked_evidence).toContain("orch_4r9SqLm8tY2p");
+    expect(ev.compensates_evaluation_id).toBe("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
+    // linked_evidence carries only the supplied evidence-record identifiers;
+    // the compensated evaluation_id is never folded into it.
+    expect(ev.linked_evidence).toEqual([
+      "orch_4r9SqLm8tY2p",
+      "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+    ]);
+    expect(ev.linked_evidence).not.toContain("dec_8K2nP4qV9rL3tY6sB1zN0eF7jB");
     expect(ev.evidence_envelope).toBeDefined();
 
-    const headerB64 = (ev.evidence_envelope ?? "").split(".")[0] ?? "";
-    const header = JSON.parse(Buffer.from(headerB64, "base64url").toString("utf8")) as {
+    const [headerB64, payloadB64] = (ev.evidence_envelope ?? "").split(".");
+    const header = JSON.parse(Buffer.from(headerB64 ?? "", "base64url").toString("utf8")) as {
       alg?: string;
       kid?: string;
       typ?: string;
@@ -343,6 +357,11 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     expect(header.alg).toBe("HS256");
     expect(header.kid).toBe("test-kid");
     expect(header.typ).toBe("mission-orchestration-evidence");
+
+    // The signed JCS payload carries the new member and never the old name.
+    const payload = Buffer.from(payloadB64 ?? "", "base64url").toString("utf8");
+    expect(payload).toContain('"compensates_evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"');
+    expect(payload).not.toContain("compensates_decision_id");
   });
 
   it("5c: high-risk compensation without a signer fails closed", () => {
@@ -356,13 +375,33 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         orchestration_decision: "compensate",
         reason: "reversed",
         occurred_at: "2026-11-02T09:03:00Z",
-        linked_evidence: ["dec_1"],
+        linked_evidence: ["evd_1"],
         authority_basis: "resource_policy",
         compensation_action: "erp.journal_entry.reverse",
         compensation_outcome: "completed",
+        compensates_evaluation_id: "dec_1",
         compensated_reversibility: "external_commitment",
       }),
     ).toThrow();
+  });
+
+  it("5d: compensate evidence missing compensates_evaluation_id fails closed", () => {
+    expect(() =>
+      buildOrchestrationEvidence({
+        event_id: "orch_bad2",
+        mission: MISSION,
+        workflow_id: "wf",
+        mission_state: "revoked",
+        state_source: "status",
+        orchestration_decision: "compensate",
+        reason: "reversed",
+        occurred_at: "2026-11-02T09:03:00Z",
+        linked_evidence: ["evd_1"],
+        authority_basis: "resource_policy",
+        compensation_action: "erp.journal_entry.reverse",
+        compensation_outcome: "completed",
+      }),
+    ).toThrow(/compensates_evaluation_id/);
   });
 
   it("runs compensations in reverse dependency order; partial failure => compensation_incomplete", () => {

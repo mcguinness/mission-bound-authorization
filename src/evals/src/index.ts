@@ -13,6 +13,7 @@
 
 import {
   Connectors,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   type MissionReference,
@@ -92,7 +93,7 @@ function loadHarnessView(view: MissionView, ref: MissionReference) {
 /** Run one case against a fresh composed stack; measure side effects + evidence. */
 export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResult> {
   const payments = deps.seedStore();
-  const evidence = new EvidenceStore();
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-eval");
   const pep = new Pep({

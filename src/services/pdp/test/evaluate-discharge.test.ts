@@ -1,6 +1,6 @@
 /**
- * @spec draft-mcguinness-mission-runtime (#input-authority), status#runtime,
- * status#visibility
+ * @spec draft-mcguinness-mission-runtime (#input-authority), discharge#runtime,
+ * discharge#visibility
  *
  * The PDP's authority input EXCLUDES a discharged entry: an entry whose
  * `terminal_when` completion condition has fired is refused at the point of use
@@ -14,7 +14,7 @@
  *    approved-then-done apart from never-approved (the containment precedent);
  *  - the EFFECTIVE-SET path: the view is materialized from the Mission's
  *    effective set (what Mission Status and the introspection projection
- *    publish, @spec status#visibility), so the entry is simply absent and the
+ *    publish, @spec discharge#visibility), so the entry is simply absent and the
  *    action denies as out of authority.
  *
  * No OpenFGA is needed: every assertion here is a deny reached before the FGA
@@ -117,7 +117,7 @@ describe("discharged entries are excluded from the PDP's authority input", () =>
   });
 
   it("denies out_of_authority when the view is materialized from the effective set", async () => {
-    // @spec status#visibility — Mission Status and the introspection projection
+    // @spec discharge#visibility — Mission Status and the introspection projection
     // OMIT a discharged entry, so a view built from what they publish simply
     // does not contain it.
     const effective = view({ version: 2, authority_set: [READ_ENTRY] });

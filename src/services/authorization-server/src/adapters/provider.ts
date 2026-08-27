@@ -233,7 +233,7 @@ export const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mis
 export const MISSION_LIFECYCLE_SCOPE = "mission_lifecycle";
 
 /**
- * @spec status#discharge-authority — the DISTINCT scope `discharge` requires.
+ * @spec discharge#discharge-authority — the DISTINCT scope `discharge` requires.
  * Possession of {@link MISSION_LIFECYCLE_SCOPE}, or being the Mission's
  * Subject, Approver, or an administrator, MUST NOT by itself imply it: a
  * `terminal_when` condition is asserted by a resource or event authority, not by
@@ -270,11 +270,11 @@ export interface AdapterOptions {
   issuer: string;
   kernel: MissionKernel;
   /**
-   * @spec status#discharge-authority — service-token principals and their
+   * @spec discharge#discharge-authority — service-token principals and their
    * scopes, merged OVER {@link DEFAULT_SERVICE_TOKEN_PRINCIPALS}. A caller
    * holding `mission_lifecycle` alone is refused `discharge` with the
    * endpoint's `not_found` (an authorization failure never distinguishes
-   * itself, @spec status#discharge-anti-oracle).
+   * itself, @spec discharge#discharge-anti-oracle).
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   clients: Record<string, unknown>[];
@@ -330,7 +330,7 @@ export interface AdapterOptions {
   expansionDeferrals?: ExpansionDeferralStore;
   /**
    * Mission Status List republisher. When set, GET /statuslist/{id} serves the
-   * current whole-list token (@spec status#status-list).
+   * current whole-list token (@spec status-list#status-list).
    */
   statusListPublisher?: StatusListPublisher;
   /**
@@ -1568,7 +1568,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   );
 
   /**
-   * @spec status#mission-status-authentication, status#discharge-authority —
+   * @spec status#mission-status-authentication, discharge#discharge-authority —
    * AUTHENTICATE the operational caller and resolve the principal its token is
    * registered for, with the scopes that token carries. AUTHENTICATION failure
    * (an absent or unregistered token) is the endpoint's only `unauthorized`
@@ -1592,7 +1592,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
 
   /**
-   * @spec status#discharge-idempotency — the lifecycle endpoint's `nonce`
+   * @spec discharge#discharge-idempotency — the lifecycle endpoint's `nonce`
    * replay store, constructed once per provider on the kernel's own database.
    */
   const lifecycleResponses = new LifecycleResponseStore(kernel.db, {
@@ -1702,7 +1702,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
-    // --- Mission Status List whole-list fetch (@spec status#status-list) ---
+    // --- Mission Status List whole-list fetch (@spec status-list#status-list) ---
     // Deliberately unauthenticated (NOT behind requireServiceToken): the fetch
     // covers every opaque index at once and reveals no per-mission interest, so
     // it is anti-oracle-safe by design (@spec status#mission-status-anti-oracle).
@@ -1772,7 +1772,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const sendJson = (status: number, json: Record<string, unknown>): void =>
         send(status, "application/json", JSON.stringify(json));
       /**
-       * @spec status#mission-status-errors, status#discharge-anti-oracle — the
+       * @spec status#mission-status-errors, discharge#discharge-anti-oracle — the
        * ONE not-found shape every unknown, invisible, and unauthorized reference
        * collapses to. `error_description` is diagnostic and identical across the
        * cases; `nonce` is echoed whenever the request carried a well-formed one.
@@ -1807,7 +1807,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
       }
-      // @spec status#discharge-operation — the fifth operation: it changes no
+      // @spec discharge#discharge-operation — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
       // below, under its own DISTINCT authority.
       if (body.operation === "discharge") {
@@ -2998,7 +2998,7 @@ function str(v: string | string[] | undefined): string | undefined {
 export const MISSION_STATUS_RESPONSE_MEDIA_TYPE = "application/mission-status-response+jwt";
 
 /**
- * @spec status#discharge-operation ("observed_at") — the caller's asserted
+ * @spec discharge#discharge-operation ("observed_at") — the caller's asserted
  * observation time is validated for syntax and REASONABLE CLOCK BOUNDS only,
  * never as trusted ordering or freshness. One day either side of the AS's own
  * clock; the AS records its own commit time as `received_at` regardless.
@@ -3023,8 +3023,8 @@ function isFamilyDigest(value: unknown): value is string {
 const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
 
 /**
- * @spec status#discharge-operation, status#discharge-anti-oracle,
- * status#discharge-result — the `discharge` operation on the Mission Lifecycle
+ * @spec discharge#discharge-operation, discharge#discharge-anti-oracle,
+ * discharge#discharge-result — the `discharge` operation on the Mission Lifecycle
  * endpoint. Request-shape failures are `invalid_request`; the six selector,
  * membership, and target-authorization refusals are ONE `not_found`; a divergent
  * re-assertion of the same event tuple is `conflict`; success is the endpoint's
@@ -3043,13 +3043,13 @@ async function handleDischarge(input: {
   sendInvalidRequest: (description: string, echoNonce?: boolean) => void;
 }): Promise<void> {
   const { kernel, principal, missionId, body, nonce } = input;
-  // @spec status#discharge-operation — `nonce` is REQUIRED, and a request whose
+  // @spec discharge#discharge-operation — `nonce` is REQUIRED, and a request whose
   // nonce is absent or malformed is refused with NO nonce echoed.
   if (nonce === undefined) {
     input.sendInvalidRequest("discharge requires a well-formed nonce", false);
     return;
   }
-  // @spec status#discharge-authority — the DISTINCT grant, checked before any
+  // @spec discharge#discharge-authority — the DISTINCT grant, checked before any
   // selector work. A caller holding only `mission_lifecycle` (or acting as the
   // Subject, Approver, or an administrator) is refused with the same
   // indistinguishable not-found body every unauthorized reference gets.
@@ -3122,7 +3122,7 @@ async function handleDischarge(input: {
       ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
       ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
     });
-    // @spec status#discharge-result — the endpoint's existing signed envelope,
+    // @spec discharge#discharge-result — the endpoint's existing signed envelope,
     // state-only (the request carries no `audience`), echoing this request's own
     // nonce: the durable acknowledgement an at-least-once sender stops retrying
     // against.

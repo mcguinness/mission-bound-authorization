@@ -1,6 +1,7 @@
 export { Fga, DOMAIN_MODEL, loadCa, type FgaConfig } from "./fga.js";
 export {
   policyViewId,
+  joinViewId,
   deriveContextualTuples,
   MISSION_RESOURCE_ACCESS_TYPE,
   type MissionView,
@@ -38,3 +39,11 @@ export {
   type EnforcementScopeFinding,
   type EnforcementScopeStatement,
 } from "./enforcement-scope.js";
+export {
+  resolveBaselineJoin,
+  deriveJoinDelegation,
+  type BaselineJoinInput,
+  type BaselineJoinResult,
+  type DelegatePolicy,
+  type KernelDelegationPolicy,
+} from "./mas-join.js";

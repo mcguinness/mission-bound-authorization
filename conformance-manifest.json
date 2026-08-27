@@ -3,24 +3,24 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "93b4a3bc6c059c409685768680e73124e2148434a9d3319601493142ca24e2ab"
+    "revision": "73ebc0577a34d8a8b53e1a578d9301a3af71c1ad",
+    "content_sha256": "66578aedc2a28f8c907969cc2dcd019ac738a96423ec66f0ba49855994a81edd"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "bb7eee08f80b1d48f2f1b8a6ebe146ce40a346e210f520a53b14cea10ad67d24"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "fc4062116a18e6a89a316a0309ebd3c58bebbcc2b9a9968bf547919c687f6714"
+    "revision": "2c58ddec84bb7ca58bb7be4a8615f3e08e4fd1a9",
+    "content_sha256": "b9caa933d2da82196299f57b1e5bdaf0c2cba4edeaca7031ee4969a8105447ca"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "1ff9ea4805d0e8fc995ae5b44c0a1c1add131803",
-    "content_sha256": "f9fea53805319e823685424c2b7960338333e2bd07d441a973291c3246344fba"
+    "revision": "PENDING-REPIN-MERGE-COMMIT",
+    "content_sha256": "15e8eb3f394428bab07be2eb17c3537abdbad6a03b4c867f6e6d942d16285df1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "6b16343b04fc5a9cf006037db31983bee8c99908066b7e7bca7055c1ac4fbc87"
+    "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
+    "content_sha256": "f64ca556e82c272cf61ad1f5967a837b9a4021fd28f3282ac70d41787d707698"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
@@ -35,20 +35,24 @@
     "content_sha256": "d4eca352c06575a341fd975983f6858c38452dcc8e790c38452ecb232a647215"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "c81f44df912afe207aa66e6ac0623de038348c31f527b856146acc80e2544863"
+    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
+    "content_sha256": "1722dd6c39d6e5fc39db0b5f0bf8797363cfe631ab7e342b4cf4f86a45d17a02"
+   },
+   "draft-mcguinness-oauth-mission-discharge.md": {
+    "revision": "172fb46606ec02b2942cac492b28c181c60bae2f",
+    "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "c3362e1bf99169497428f7db00a6332832e3bca1faa9b8976d88a3f6f187ee29"
+    "revision": "49fc10f054ae34b36db4b931801c2b7b9db746c8",
+    "content_sha256": "a8212952fbe9fd97ce345b648d596f041f081941b31e5e7ff96018477c4dc542"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "c46703c3740d19dcaa21aa1f348708da36729f6cac54626874b29ef3851763d9"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "aa8e62ece9b39ebf702115f8f4583bfb547d63512e778b3cf2a087b83acb1cc6"
+    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
+    "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
@@ -63,16 +67,20 @@
     "content_sha256": "d5b5241febce4112972747fd8f23fc096404d17bfa435cffa84ebc51c08e1b7d"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "b3d451ce9c68b20d613679ba6616b1b194f0d7d991f383ba7d6fb81f1d3a5be3"
+    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
+    "content_sha256": "cdddf812643f212137bc8b05a8d0fc59232b9901421227fa9667a6bd14a88016"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "0e6b41a5ca8addbdbf0f3119a007b535d5c02f83cd18bc69b2b043bab6a2460f"
+    "revision": "24df23f65b43e8d33704d1ac085d513ea11d0eb4",
+    "content_sha256": "b4e676024651ceebcca58b32fca3f2420aace171d16bed677e0d431c1064f514"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
+   },
+   "draft-mcguinness-mission-approval-governance.md": {
+    "revision": "e566e1a5dc65d21b378560b4b381643c9009a7c8",
+    "content_sha256": "4f4482abf41e6454a59346089f0e5fbda3328f26a717eb1a5494b4d26bb14842"
    }
   }
  },
@@ -165,6 +173,7 @@
    "substrate.portable-evidence",
    "issuance-grant.state-integration",
    "mas.enterprise",
+   "mas.baseline-join",
    "core.standing-consent",
    "core.standing-consent-recency",
    "template.dispatch",
@@ -174,7 +183,8 @@
    "authzen.runtime-evidence",
    "authzen.obligations",
    "authzen.arap",
-   "authzen.batch"
+   "authzen.batch",
+   "approval-context.manifest"
   ]
  },
  "profiles": [
@@ -2149,7 +2159,7 @@
   },
   {
    "id": "status.discharge.grant-distinct-from-lifecycle",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "Authorization for `discharge` requires a distinct `mission_discharge` scope or an equivalent deployment-defined grant.",
    "role": "AS",
@@ -2180,7 +2190,7 @@
   },
   {
    "id": "status.discharge.lifecycle-grant-not-implied",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "or being the Mission's Subject, Approver, or an administrator, MUST NOT by itself imply discharge authority",
    "role": "AS",
@@ -2211,7 +2221,7 @@
   },
   {
    "id": "status.discharge.anti-oracle-collapse",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
    "text": "An unknown `mission_id`, an unknown `entry_digest`, an unknown `condition_digest`, an entry with no `terminal_when`, an `event_type` that does not match the condition `condition_digest` names, and a caller not authorized for that target all collapse to the endpoint's existing `not_found` treatment",
    "role": "AS",
@@ -2242,7 +2252,7 @@
   },
   {
    "id": "status.discharge.selector-mismatch-refusal",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "a mismatch joins the `not_found` collapse, since distinguishing it would reveal information about a condition selected by digest",
    "role": "AS",
@@ -2273,7 +2283,7 @@
   },
   {
    "id": "status.discharge.duplicate-entry-equivalence",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "One `entry_digest` discharges every recorded entry resolving to that digest as a single equivalence-class transition, and therefore one version increment",
    "role": "AS",
@@ -2372,7 +2382,7 @@
   },
   {
    "id": "status.discharge.same-nonce-verbatim-replay",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "The stored signed response is returned verbatim, per the `nonce` rule above.",
    "role": "AS",
@@ -2403,7 +2413,7 @@
   },
   {
    "id": "status.discharge.event-replay",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and selectors, and the original `prior_version` and `current_version` the first commit produced.",
    "role": "AS",
@@ -2434,7 +2444,7 @@
   },
   {
    "id": "status.discharge.event-fingerprint-conflict",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "the same tuple with a different fingerprint is refused `conflict`",
    "role": "AS",
@@ -2465,7 +2475,7 @@
   },
   {
    "id": "status.discharge.event-cross-target-valid",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "the same `event_id` asserted against another Mission, entry, or condition is a valid, independent assertion, since one real-world event legitimately fans out to more than one target.",
    "role": "AS",
@@ -2496,7 +2506,7 @@
   },
   {
    "id": "status.discharge.already-discharged-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "MUST NOT discharge the entry again or increment the version again",
    "role": "AS",
@@ -2533,7 +2543,7 @@
   },
   {
    "id": "status.discharge.terminal-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "A delivery reaching the endpoint after `completed`, `revoked`, `expired`, or another terminal state returns an authenticated `terminal_noop` acknowledgement",
    "role": "AS",
@@ -2570,7 +2580,7 @@
   },
   {
    "id": "status.discharge.suspended-applies",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "`discharge` applies while the Mission is `active` or `suspended`: a suspended Mission still narrows monotonically.",
    "role": "AS",
@@ -2607,7 +2617,7 @@
   },
   {
    "id": "status.discharge.signed-result-binding",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-result",
    "text": "one of `discharged` (this request committed the latch), `already_discharged` (a sibling condition, or the same condition under a different `event_id`, presented against an already-latched entry), or `terminal_noop` (the Mission was already in a terminal state).",
    "role": "AS",
@@ -2650,7 +2660,7 @@
   },
   {
    "id": "status.discharge.atomic-commit",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "The entry latch (or its equivalence-class latch), the version increment, the audit and result record, and the durable propagation work (an outbox entry or a signal enqueue) commit as one unit.",
    "role": "AS",
@@ -2681,7 +2691,7 @@
   },
   {
    "id": "status.discharge.child-propagation",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "the child-delegation profile's entry-wise propagation to an already-justified Child Mission",
    "role": "AS",
@@ -2713,7 +2723,7 @@
   },
   {
    "id": "status.discharge.policy-resolution-on-condition-entry",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "The AS MUST resolve and validate the selector whenever a condition first enters an immutable Mission-record entry",
    "role": "AS",
@@ -2744,7 +2754,7 @@
   },
   {
    "id": "status.discharge.evidence-non-dereference-non-authorization",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "The AS MUST NOT dereference `evidence_ref` in baseline processing and MUST NOT treat either member as authorization input.",
    "role": "AS",
@@ -2775,7 +2785,7 @@
   },
   {
    "id": "status.discharge.validation-order-before-terminal-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
    "text": "The AS validates selector existence (`mission_id`, `entry_digest`, and `condition_digest` all resolve, the entry carries `terminal_when`, and `event_type` matches the named condition), then condition membership (the named condition belongs to the named entry), then target authorization",
    "role": "AS",
@@ -2808,7 +2818,7 @@
    "id": "status.effective-set.single-computation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
-   "text": "Every issuer-held narrowing mechanism a deployment runs, this profile's discharge or a companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
+   "text": "Every issuer-held narrowing mechanism a deployment runs, an adopted companion's discharge mechanism or another companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -2820,12 +2830,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issuer-held narrowing mechanism a deployment runs (this profile's discharge and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
+    "normative": "every issuer-held narrowing mechanism a deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example this profile's discharge and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -2921,7 +2931,7 @@
    "id": "signals.discharge.producer-gating-undeclared-stream",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "discharge-compatibility",
-   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-status}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -3773,6 +3783,379 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "mas.baseline-join.reference-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}) or from deployment configuration.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference; missing or malformed carriage refuses unknown_mission, never a silent no-op or fallback to some other guess"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for a malformed propagated reference",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits a direct-client ordinary credential whose subject matches the Mission's subject",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path."
+  },
+  {
+   "id": "mas.baseline-join.subject-join",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "The PDP MUST verify that the presented credential's authenticated subject equals the Mission's `subject.sub` under the deployment's account mapping. Where the credential's issuer and the Mission's `subject.iss` name the same namespace, equality is byte-equality; otherwise the deployment MUST document the mapping, and a subject the mapping does not cover fails the join.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evaluate() (services/pdp/src/evaluate.ts step 4b) itself calls resolveBaselineJoin when the decision request carries context.mission_join, comparing the authenticated subject {iss, sub} (req.subject.id/properties.iss, already-verified request facts) against the loaded MissionView's own subject by byte-equality; a mismatch on either member denies mission_mismatch as a genuine PDP Decision. Resolved IN the PDP (#557 review point 1), not by a PEP-side helper call the PDP never observes: the PEP no longer calls resolveBaselineJoin directly (src/services/mcp-payments/src/pep.ts)",
+    "local": "the same-namespace case only: an account-mapping contract for a differing AS/MAS subject namespace is not implemented (a deployment would supply an already-mapped subject to the resolver, per its own documented mapping)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > joins when the authenticated subject matches the Mission's subject exactly",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_mismatch when the subject sub differs",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_mismatch when the subject issuer differs (same sub)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_mismatch when the authenticated subject does not match the Mission's subject, resolved BY THE PDP",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch when the authenticated subject does not match the Mission's subject",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. observation.local: cross-namespace account mapping is out of scope for this resolver (see PR body). #557 review point 1: the join relocated from a PEP-side helper call into evaluate() itself; evaluate-mission-join.test.ts exercises evaluate() directly with context.mission_join set, proving the PDP resolves this, not merely that the pure resolver function is correct in isolation."
+  },
+  {
+   "id": "mas.baseline-join.client-join",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "The PDP MUST verify that the presented credential's authenticated client identifier equals the Mission's `client_id`, or names a delegate that deployment policy explicitly authorizes to act under that Mission's client. Delegate authorization MUST be explicit, an enumerated policy, never a default.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_mismatch -- never a default admission"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > joins directly when the client_id matches the Mission's own client_id",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_mismatch for an unrecognized client with no delegate policy at all",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_mismatch for a client not named in the delegate policy (no default)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_mismatch for an unrecognized client with no delegate policy configured, never falling back to the Mission's full authority",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin."
+  },
+  {
+   "id": "mas.baseline-join.delegate-narrowing",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "When the joined party is a delegate rather than the Mission's `client_id`, the PDP MUST narrow the effective Authority Set to the delegable subset under the issuance profile's per-entry `delegation` rules ({{I-D.draft-mcguinness-oauth-mission}}): entries without a `delegation` member are excluded, `allowed_delegates` is applied, and `max_depth` is evaluated from the deployment's actor records rather than from a Mission-bound token's `act` chain.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3)",
+    "local": "join_delegation is a PDP-package-local field (MissionView.authority_set[].join_delegation), not the kernel's own AuthorityEntry.delegation (authorization-server/src/kernel/types.ts, a richer DelegateMatcher-based shape this package has no dependency on). #557 review point 2: deriveJoinDelegation (services/pdp/src/mas-join.ts) is a deterministic adapter from the kernel shape, and the canonical Mission loader (src/demo/src/stack.ts's viewFor) now applies it when materializing a MissionView's authority_set, closing the 'no canonical loader populates it' gap; the client_id-vs-{sub,sub_profile} matching-semantics divergence itself remains (only an exact sub matcher maps deterministically, a sub_profile matcher is dropped fail-closed, see the adapter's own doc)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > joins as a delegate and narrows to only the delegable, allowed entries",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > excludes an entry with no delegation member entirely, even for an authorized delegate",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > excludes an entry whose allowed_delegates does not name this delegate",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_mismatch when the recorded depth exceeds the delegate's max_depth",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > joins as a delegate when the recorded depth is within max_depth",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: per-entry join_delegation.max_depth (@spec authority-server#mission-join rule 5, #557 review point 3) > excludes an entry whose own max_depth is 0 for a delegate with nonzero recorded depth, even though the deployment's DelegatePolicy permits deeper delegation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, delegate narrowing (@spec authority-server#mission-join rule 5, #557 review point 1) > permits an authorized delegate within its recorded depth, narrowed to the delegable subset, and carries delegate_depth from the request",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits an authorized delegate and narrows the effective authority to the delegable subset",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authority-server#mission-join rule 5, #557 review point 1) > denies mission_mismatch when the resolved depth exceeds the entry's own join_delegation.max_depth",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2)."
+  },
+  {
+   "id": "mas.baseline-join.no-fallback-denial",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A failure of the subject or client join MUST be denied with the `mission_mismatch` denial reason: the presented credential does not join to the referenced Mission because its authenticated subject or client identifier does not match the Mission's `subject.sub` or `client_id` under the deployment's documented mapping and delegate policy. The PDP MUST NOT fall back to evaluating the action against the referenced Mission's authority when the join fails.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "resolveBaselineJoin's failure variant carries no authoritySet member at all (a discriminated union, not an optional field defaulting to empty); evaluate() (step 4b) returns deny(\"mission_mismatch\") immediately on that failure and never reaches step 5's entry match, so a failed join is a genuine PDP Decision with nothing for ANY caller -- PEP or otherwise -- to accidentally evaluate against (#557 review point 1)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: no fallback (@spec authority-server#mission-join rule 6) > a failed join never returns a partial or unjoined authoritySet",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_mismatch when the authenticated subject does not match the Mission's subject, resolved BY THE PDP",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch for a referenced Mission that does not resolve at all",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. DenialReason gains \"mission_mismatch\" (services/pdp/src/evaluate.ts) as the registered vocabulary member this reason rides; distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined."
+  },
+  {
+   "id": "mas.baseline-join.authority-from-mission",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "On a successful join, the PDP evaluates the action under the runtime profile's decision contract, drawing the Authority Set from the Mission (the audience-scoped Mission Status response or a materialized policy view), since the credential carries none.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permitted joined decision's authority always traces to the resolved MissionView's authority_set (direct or delegate-narrowed), never to any claim on the ordinary credential itself, which carries no authorization_details at all in this reference implementation"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits a direct-client ordinary credential whose subject matches the Mission's subject",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. Partial: the positive case (authority sourced from the Mission) is exercised; no dedicated negative test proves the credential's OWN claims can never substitute for it, since this reference implementation's ordinary credentials carry no authorization_details member to attempt that substitution with."
+  },
+  {
+   "id": "mas.baseline-join.three-bound-intersection",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the Resource Server or gateway), the Mission's approved authority, and current Resource policy.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "PepDeps.masJoin.resolveOrdinaryAuthority supplies bound 1 (the acting credential's own authority); its result is intersected against the joined Mission authority (bound 2) by resource+action before the existing FGA/PDP call independently enforces bound 3 (current Resource policy) unchanged. Absent, bound 1 cannot be honestly evaluated, so the joined route fails closed with out_of_authority on every request rather than treating an unconfigured bound as unbounded"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8, bound 1 (acting credential authority) > fails closed with out_of_authority when no resolveOrdinaryAuthority evaluator is configured, even after a successful join",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8, bound 1 (acting credential authority) > intersects the acting credential's own authority with the joined Mission authority: an action outside the credential's own authority is refused out_of_authority",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557. Partial: bound 1's contract and fail-closed default, plus its intersection with bound 2, are tested. No deployment-side resolveOrdinaryAuthority evaluator (an OAuth-scope-to-authority model) is implemented here -- a documented remainder, not a silent gap (see the PR body). Kept partial per review: bound 3 (\"current Resource policy\") is exercised as the existing FGA/PDP call (deriveContextualTuples + fga.checkWithContext), but that check's contextual tuples are themselves DERIVED from the matched Mission authority entry's own constraints (its vendors/amount scope), the same relationship policy-view.ts's own doc records (\"authority + constraint -> ephemeral grant\") -- not the independent, Mission-authority-agnostic Resource-policy arm the quoted text's third bound describes. This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it."
+  },
+  {
+   "id": "mas.baseline-join.join-view-commitment",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A decision reached over a successful join MUST carry a joined-view commitment (`join_view_id`) separate from `policy_view_id`, which alone does not distinguish a joined decision from a direct one. `join_view_id` MUST change whenever the joining client identifier, the join disposition (the Mission's own `client_id` or an authorized delegate), or the resulting effective Authority Set differs, so a verifier can tell a joined decision's evidence from a direct Mission-bound decision's, and one joined view from a differently-joined one.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "evaluate() (step 4b) stamps join_view_id (services/pdp/src/policy-view.ts's joinViewId) on the SAME base() context that always carries policy_view_id, additive and never a replacement, whenever the request resolved a baseline Join (joinedAuthority set); a decision reached with no context.mission_join, or over a join that itself failed (mission_mismatch, rule 6, no authoritySet ever exposed), never carries it. joinViewId's commitment is computed over the join disposition, the joining client_id, and the resolved (possibly delegate-narrowed) authoritySet, alongside the same (mission_id, mission_version, authority_hash, model_id) policyViewId already commits, so it changes whenever any of the three join-specific inputs differs",
+    "local": "join_view_id does not itself commit the acting subject: resolveBaselineJoin (mas-join.ts) requires byte-equality between the presented subject and the Mission's own view.subject as the join's own precondition (rule 3), so on any successful join the subject cannot differ from the Mission's own and adds nothing a separate commitment input would distinguish. The per-request recorded delegate depth is likewise not itself committed, only its filtering effect on the resolved authoritySet"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits and stamps join_view_id when context.mission_join is present and the subject/client match directly",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never carries join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, delegate narrowing (@spec authority-server#mission-join rule 5, #557 review point 1) > stamps a DIFFERENT join_view_id for the delegate's narrowed view than the direct client's full view",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557 review point 4, ruled: promote distinguishability normative (rule 9), leave the digest construction unfixed (only one implementation exists; freezing it now would make a later correction a breaking change to evidence joins). The first two cited tests together prove the row's actual clause -- a SEPARATE-MEMBER claim, not a same-response value-inequality claim: join_view_id is truthy on a joined permit and undefined on a non-joined one, so presence/absence alone already separates joined evidence from direct evidence, which is exactly the defect the review identified (a joined decision's policy_view_id alone cannot be told apart from a direct decision's). No test asserts join_view_id !== policy_view_id within one response; that inequality follows structurally from joinViewId's commitment strictly extending policyViewId's inputs, not from a dedicated assertion, so it is not claimed as tested here. The third cited test proves the second sentence's input-sensitivity clause: a differently-joined view (a narrowed delegate vs. the direct client) yields a different join_view_id."
   },
   {
    "id": "txn-authorization.challenge.not-client-supplied",
@@ -6462,9 +6845,27 @@
      "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed cap in the Mission view is denied (fail closed), never treated as unbounded",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "a bound max_amount the PDP cannot supply an amount input for refuses, never permits open (@spec runtime#input-parameters) > a bound max_amount with no context.amount at all is denied, never permitted for lack of an input to check",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "a bound max_amount the PDP cannot supply an amount input for refuses, never permits open (@spec runtime#input-parameters) > a max_amount bound to an action the deployment's own mapping marks needsAmount: false is still enforced, not silently unenforceable",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a cap denominated in a different currency than the request refuses as incomparable, never converted",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Tested only for the numeric max_amount constraint (a malformed cap is denied fail-closed, never treated as unbounded); the general rule also covers non-numeric constraint types, a constraint whose declared inputs the PDP was not given, and a constraint the PDP cannot meter, none of which has a test asserting refusal."
+   "notes": "Tested for the numeric max_amount constraint: a malformed cap is denied fail-closed, never treated as unbounded; a bound max_amount the PDP cannot supply the input for (an absent context.amount, including on an action the deployment's own mapping marks needsAmount: false) is denied rather than permitted or ignored; and a cap denominated in a different currency than the request refuses as incomparable, never converted. The general rule also covers non-numeric constraint types and a constraint the PDP cannot meter, neither of which has a test asserting refusal."
   },
   {
    "id": "runtime.decision-inputs.actor-context-required-and-not-shortcut",
@@ -11558,7 +11959,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/enforcement.test.ts",
-     "name": "M4 core enforcement tier > Decision Evidence carries the PEP emitter and the recomputable entry_digest",
+     "name": "M4 core enforcement tier > Decision Evidence carries the PDP emitter and the recomputable entry_digest",
      "level": "endpoint",
      "surface": "propagation"
     }
@@ -13557,9 +13958,28 @@
     "normative": "the verifier confirms the kid-selected key is the named emitter's published key and is bound to the enforcement scope and audience the record serves; a record whose signing key is not published for that scope is rejected, so one component's key cannot sign evidence for a resource, audience, or scope it does not serve"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects a key not bound to this record's emitter role / scope / audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-signed-e2e.test.ts",
+     "name": "buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1) > rejects a genuinely signed, independently-verifiable retained record when the resolver's keys are registered for a DIFFERENT emitter id (same kid, role, and audience)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-signed-e2e.test.ts",
+     "name": "buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1) > never wildcards a missing audience for a pdp/pep/executor key, even when one is registered without one",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. Partial, not tested: the cited tests exercise the resolver-contract level (a resolver that ignores emitter.id, role, or audience fails to authenticate); this deployment's own `buildEvidenceKeyResolver` (src/services/mcp-payments/src/evidence.ts) is the only resolver implementation exercised, and its keys are ephemeral, per-process test fixtures, not resolved through a genuinely published, deployment-scoped enforcement-scope-statement key set, so the \"published key of the component named in the record's emitter member\" half of this requirement (as opposed to the binding logic itself) remains unexercised."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
@@ -14198,8 +14618,34 @@
     "normative": "step 3 resolves and independently verifies each referenced record, recomputes its digest and requires equality with the reference, and requires the resolved record's own identifier and emitter/key to match the reference"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a reference declared as Decision Evidence that resolves to a genuinely-verifying Execution record instead (#739 review point 2, step 3, before record verification)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects when a referenced record is unresolvable",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects when the referenced record's own signature does not verify",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a digest mismatch: the resolved record verifies on its own but does not match the receipt's committed digest",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial, not tested: the cited tests cover resolve-and-verify-under-own-rules, digest recomputation and equality, and (#739 review point 2) the resolved kind matching the reference's own declared type. No test currently exercises the resolved record's own identifier or its emitter/key failing to equal the reference's `evidence_id`/`emitter` (the `identifier_mismatch` and `emitter_mismatch` reasons the code returns are untested)."
   },
   {
    "id": "evidence.receipt.step4-cross-record-joins",
@@ -14220,8 +14666,94 @@
     "normative": "step 4 joins the resolved records: the same mission.id/mission.issuer as the receipt's own mission; the Execution Evidence joins the Decision Evidence on evaluation_id; audience, target, and the authorized/effective parameter digests are consistent across records; for an execution receipt, the receipt's outcome equals the Execution Evidence's terminal outcome"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > builds and verifies an 'execution' receipt, joined on evaluation_id",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > builds and verifies a 'refusal' receipt",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence's evaluation_id does not match the Decision Evidence it is paired with",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence's mission_id does not match the receipt's mission (#739 review point 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a 'refusal' receipt whose Refusal Record carries no established Mission (#739 review point 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries no authorized_parameter_digest while the Decision Evidence carries a parameter_digest (#739 review point 3, exact mirror)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial, not tested: mission.id/mission.issuer joins (Decision Evidence, Execution Evidence via mission_id, and now (#739 review point 3) Refusal Record for a 'refusal'-kind receipt), the evaluation_id join, and authorized/effective parameter-digest consistency (exact-mirror in both directions, and effective_parameter_digest's own required-when-authorized-present rule) are exercised. Audience consistency across Decision and Execution Evidence (`executionRec.audience !== decisionRec.audience`) and target consistency are implemented but not separately exercised by a dedicated negative test. The reverse-direction parameter-digest mirror was, at the time this row was written, stricter than the draft's own literal text; that gap is now closed (issue #649 finding): the draft's `authorized_parameter_digest` member is biconditional (execution-evidence-object) and step 4 states the join failure explicitly, so the verifier's exact-mirror check and the draft agree. See evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest and evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present for the rows tracking the new text directly."
+  },
+  {
+   "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "exactly one of the Decision Evidence's `parameter_digest` and the Execution Evidence's `authorized_parameter_digest` present is a join failure",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Receipt verifier rejects the join between a referenced Decision Evidence and Execution Evidence pair as a join failure when exactly one of the Decision Evidence's parameter_digest and the Execution Evidence's authorized_parameter_digest is present, in either direction, so the execution side cannot assert an authorized digest the decision never established and cannot silently omit the digest the decision did establish (issue #649 finding, closing the reverse direction the draft's member text left silent)"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries no authorized_parameter_digest while the Decision Evidence carries a parameter_digest (#739 review point 3, exact mirror)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Both tests are already mapped to evidence.receipt.step4-cross-record-joins, which covers step 4 as a whole; this row is reused test coverage, cited here specifically because it exercises the exactly-one-present join failure this row's quoted text now states explicitly. The first test proves the forward direction (Decision Evidence carries parameter_digest, Execution Evidence carries neither authorized_ nor effective_parameter_digest); the second proves the reverse direction this issue's finding closed (Decision Evidence carries no parameter_digest, Execution Evidence still carries authorized_parameter_digest). Both assert { valid: false, reason: 'join_failure' } from verifyMissionReceipt (src/services/mcp-payments/src/mission-receipt.ts, the `executionRec.authorized_parameter_digest !== decisionRec.parameter_digest` comparison)."
   },
   {
    "id": "evidence.receipt.step5-copied-members-equal-source",
@@ -14242,8 +14774,22 @@
     "normative": "every copied optional member on the receipt equals the corresponding member of the record it projects"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a copied member mismatch: the receipt's own embedded decision.result disagrees with the resolved Decision Evidence it references (step 5)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a receipt carrying an unimplemented copied-member projection (target) rather than accepting it unverified (#739 review point 4)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial, not tested: the `decision` copied member is verified equal to its source; `policy`, `executor`, and `target` are, per the #739 review, REJECTED rather than compared (evidence.receipt.optional-members-selected-not-defaulted / this row's own text both require every copied member be verified, so an unimplemented one is refused rather than silently accepted unverified). Nothing in this deployment emits a receipt carrying any of the three (`buildAndSignMissionReceipt` never populates them), so the actual comparison logic for those three members remains unimplemented, tracked here as the remaining gap rather than claimed tested."
   },
   {
    "id": "evidence.receipt.step6-chain-verification-and-monotonicity",
@@ -14735,6 +15281,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "MUST be absent when the linked Decision Evidence carries no `parameter_digest`.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "authorized_parameter_digest MUST NOT be present on an Execution Evidence Object when the linked Decision Evidence carries no parameter_digest, so the execution side can never assert an authorized digest the decision itself never established; the member is biconditional on the Decision Evidence's own parameter_digest, not merely REQUIRED-and-equal in one direction (issue #649 finding)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No producer-side test exercises a PEP declining to emit authorized_parameter_digest when the linked Decision Evidence carries no parameter_digest: recordExecution (src/services/mcp-payments/src/evidence.ts) passes through whatever the caller supplies with no such guard, so no test could assert the PEP itself withholds the field. The only test touching this exact combination, 'Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)' (src/services/mcp-payments/test/mission-receipt.test.ts), is a RECEIPT-VERIFIER test that catches an already-malformed record after the fact; it is cited on evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present instead, the row whose role and surface it actually exercises."
   },
   {
    "id": "evidence.execution.effective-digest-required-when-authorized-present",
@@ -15339,6 +15908,70 @@
     }
    ],
    "notes": "Split from the single #670 row per PR #683 review 1. Unlike its sibling rows, this claim is a restraint (an absence of action) fully decidable from the pure function alone, with no missing integration piece, so coverage is 'tested' rather than 'partial'."
+  },
+  {
+   "id": "orchestration.compensation-authority.compensates-evaluation-id-required",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "compensation-authority",
+   "text": "the compensating action's decision MUST carry the `evaluation_id` of the decision it reverses in `compensates_evaluation_id`",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the compensating action's decision carries the evaluation_id of the decision the compensation reverses in compensates_evaluation_id",
+    "local": "resolveCompensationAuthority (src/packages/orchestration/src/compensation.ts) returns compensates_evaluation_id bound to the caller-supplied reversedEvaluationId under both the resource_policy and separate_mission permit bases. Its own doc comment states the value is 'surfaced here so the caller can carry it onto both the decision and the Orchestration Evidence record': no test exercises an actual compensating decision-request artifact carrying the member end to end. Evidence-record carriage is verified separately (see compensates-evaluation-id-evidence-emission)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5: refuses terminated-Mission authority; no basis => human review; separate_mission permits",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Added for #654: the correlator was previously named compensates_decision_id, a runtime member that does not exist (Runtime and Runtime Evidence already define compensates_evaluation_id); renamed and given its own Orchestration Evidence member definition, distinct from linked_evidence, which previously folded the correlator in. Marked partial per the PR #731 review (P2): the listed test proves resolveCompensationAuthority returns the correlator under both permit bases, not that an actual compensating decision-request artifact carries it forward; integration coverage through the compensating decision path remains open. The evidence-emission facet, which is fully proven, is split out below."
+  },
+  {
+   "id": "orchestration.compensation-authority.compensates-evaluation-id-evidence-emission",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "orchestration-evidence",
+   "text": "REQUIRED when `orchestration_decision` is `compensate`. The `evaluation_id` of the decision this compensation reverses, carrying the runtime profile's compensation link ({{I-D.draft-mcguinness-mission-runtime}}) so the compensating action reconciles against the specific evaluation it offsets. Distinct from `linked_evidence`: this member names the evaluation being reversed, never an evidence record identifier.",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Orchestration Evidence record for a compensate decision carries compensates_evaluation_id, required independently of and never folded into linked_evidence",
+    "local": "buildOrchestrationEvidence (src/packages/orchestration/src/evidence.ts) requires compensates_evaluation_id whenever orchestration_decision is compensate and throws (fail closed) when it is absent; it is emitted as the record's own compensates_evaluation_id member and is never inserted into linked_evidence, which carries only caller-supplied evidence identifiers."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5b: compensate evidence for a high-risk class carries basis, binding, and a signed envelope",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5d: compensate evidence missing compensates_evaluation_id fails closed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Split from compensates-evaluation-id-required per the PR #731 review (P2): the evidence-emission facet of the compensation correlator (required when compensate, fail closed when absent, never folded into linked_evidence) is fully tested; the decision-request facet is tracked separately as partial on the sibling row above."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",
@@ -16298,6 +16931,381 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "verifying a mission-intent-admission instance against its Mission Record proves the Mission issuer's own attestation, never independent proof of the admission issuer's original Intent Admission Assertion, since no assertion bytes are carried in the payload"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.manifest.deterministic-presence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "The presence of every conditional member MUST be a deterministic function of the Mission Record alone, never of which companion profiles a deployment runs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Given the same Mission Record, computing the Approval Context Manifest twice (by any two parties, or by the same party at two different times) yields the same set of present conditional members (proposal_hash, ceiling_hash, submission_evidence_commitment), independent of which optional companion profiles either party's deployment runs."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.manifest.ceiling-hash-conditional",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "the manifest MUST include `ceiling_hash` when the Mission Record carries one and MUST omit it when the Mission Record carries none",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Approval Context Manifest carries ceiling_hash as its fourth anchor, alongside intent_hash, proposal_hash, and authority_hash, exactly when the Mission Record carries a Progressive ceiling_hash (I-D.draft-mcguinness-oauth-mission-progressive), and never otherwise."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > includes ceiling_hash iff the input carries one",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 3: conditional ceiling_hash",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.construction.envelope-anchor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-construction",
+   "text": "The manifest is an envelope anchor under the issuance profile's commitment mechanisms, which this document imports normatively",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment is computed as typ mission-approval-context-v1 under the issuance profile's Integrity Anchors/Commitment Mechanisms envelope (JCS canonicalization, SHA-256, sha-256: prefix, reject-unknown-prefix), never a bespoke construction."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 1: base manifest (no conditional members)",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.construction.submission-evidence-anchor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-construction",
+   "text": "`submission_evidence_commitment` is a second envelope anchor under the same mechanism, present only when the Mission Record carries `submission_evidence`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "submission_evidence_commitment is computed as typ mission-submission-evidence-v1 over the Mission Record's retained submission_evidence array exactly as recorded, and is present in the manifest iff the Mission Record carries submission_evidence."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.computation.recompute-on-demand",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "An issuer computes `approval_context_commitment` on demand from the Mission's immutable creation facts, fixed at the approval event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment is derived on demand from the Mission's immutable creation facts (fixed at the approval event) each time it is needed, not read from a stored field minted once at creation."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.no-record-member",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "This document adds no Mission Record member for it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.cache-is-derived-state",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "a cached value is derived state and MUST NOT be treated as authoritative where it disagrees with a fresh computation from the record",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Where a deployment caches approval_context_commitment for efficiency, a fresh recomputation from the retained Mission Record always governs over a stale or diverging cached value."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.verifier-mismatch-refusal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "A verifier that recomputes `approval_context_commitment` from the Mission's immutable creation facts and obtains a value different from the one an artifact discloses MUST reject that artifact's reference as invalid",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A verifier holding the Mission's immutable creation facts and an artifact's disclosed approval_context_commitment rejects the artifact's reference whenever its own recomputed digest differs from the disclosed value."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.versioning.new-typ-required",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "is closed for `mission-approval-context-v1`. Adding, removing, or redefining a member, or changing how `submission_evidence_commitment` is constructed, MUST use a new `typ`, never a silent reinterpretation of this one",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A change to the manifest's member set, a member's meaning, or the submission_evidence_commitment construction is published under a new typ value; mission-approval-context-v1 always denotes exactly the v1 member set this document defines."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.limits.mechanism-scope",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "Reusing the issuance profile's commitment mechanisms supplies canonicalization and algorithm identification and agility. It supplies nothing else",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Default Commitment Construction reused by this profile supplies only canonicalization (JCS, I-JSON) and algorithm identification/agility (the sha-256: prefix and reject-unknown-prefix rule); it supplies no authenticity, approval-time-existence, or selective-disclosure property."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-authenticity",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "The commitment is an unkeyed digest over Mission Record fields held under the same trust as the record itself. An issuer that can rewrite the record can recompute a matching commitment; authentication comes entirely from the signature of whichever artifact discloses the commitment, never from the digest construction",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A bare approval_context_commitment proves nothing an attacker who controls the Mission Record cannot reproduce; whatever authenticates a disclosed commitment is the signature of the artifact carrying it (a Consent Evidence object, an Approval Governance Record, or a future Mandate claim), never the digest itself."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-approval-time-existence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "A matching commitment shows the disclosed facts are internally consistent with the retained record. It does not show the facts were true, or that an approval occurred, at the time claimed",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A verifier that confirms a matching approval_context_commitment has confirmed internal consistency with the retained record only, never that the recorded approval genuinely occurred at the claimed instant."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-selective-disclosure",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "The commitment is a flat digest over the complete manifest object; proving anything about one member requires disclosing the whole object",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "There is no mechanism to prove one manifest member (for example, subject) without disclosing every other member of the same manifest."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.carriage.may-signed-artifact-or-introspection",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-carriage",
+   "text": "`approval_context_commitment` MAY appear as a signed member of an artifact that already authenticates a reference to the Mission",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A companion artifact that already authenticates a reference to the Mission (for example, a Consent Evidence object) may add approval_context_commitment as an OPTIONAL signed member, and an introspection response may disclose it to a caller holding the existing member-scoped disclosure privilege that already gates proposal_hash."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.carriage.must-not-token-or-descriptor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-carriage",
+   "text": "`approval_context_commitment` MUST NOT be carried on a Mission-bound access token's baseline `mission` claim",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment never appears on a Mission-bound access token's baseline mission claim, and never on another credential-bound Mission descriptor a companion profile mints for correlation (for example, the Mission Authority Server's Join Assertion): each such descriptor keeps to its own already-fixed minimal member set."
    },
    "level": "unit",
    "coverage": "todo",

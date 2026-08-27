@@ -85,7 +85,7 @@ beforeAll(async () => {
   }
 });
 
-describe("Mission Status List (@spec status#status-list)", () => {
+describe("Mission Status List (@spec status-list#status-list)", () => {
   it("allocates non-sequential, non-creation-order indices (anti-oracle)", () => {
     expect(idxs).toEqual(ALLOC);
     // distinct

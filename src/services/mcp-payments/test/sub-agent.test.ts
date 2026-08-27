@@ -10,7 +10,15 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { ActObject } from "@mission/actor-chain";
 import { Fga, type MissionView } from "@mission/pdp";
-import { CANONICAL_RESOURCE, EvidenceStore, PaymentsStore, Pep, sourceDigestOf, type TokenFacts } from "../src/index.js";
+import {
+  CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
+  EvidenceStore,
+  PaymentsStore,
+  Pep,
+  sourceDigestOf,
+  type TokenFacts,
+} from "../src/index.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -86,7 +94,7 @@ function pep(): Pep {
   );
   return new Pep({
     payments,
-    evidence: new EvidenceStore(),
+    evidence: new EvidenceStore(createEphemeralEvidenceKeys().signing),
     fga,
     modelId,
     // @spec runtime#state-freshness: a synchronous live read, freshness-

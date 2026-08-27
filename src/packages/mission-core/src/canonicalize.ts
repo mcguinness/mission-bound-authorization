@@ -6,6 +6,8 @@
  * (core § canonicalization: array order is significant and fixed by the AS).
  */
 
+import { createHash } from "node:crypto";
+
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
 
 export function canonicalize(value: JsonValue): string {
@@ -41,4 +43,19 @@ function compareUtf16(a: string, b: string): number {
     if (d !== 0) return d;
   }
   return a.length - b.length;
+}
+
+/**
+ * @spec runtime-evidence#receipt-evidence, runtime-evidence#request-digest-worked:
+ * a "canonical-object digest": SHA-256 over the JCS canonical bytes of a JSON
+ * value directly, encoded `sha-256:` + base64url (no padding). Distinct from
+ * {@link computeAnchor} (anchors.ts): that helper hashes a `{typ, iss, value}`
+ * domain-separated envelope; this one hashes the value's own canonical bytes
+ * with no wrapper, matching the Mission Receipt evidence-reference digest and
+ * the Decision/Refusal `evaluation_request_digest` fallback exactly as those
+ * sections define them.
+ */
+export function canonicalDigest(value: JsonValue): string {
+  const digest = createHash("sha256").update(canonicalize(value), "utf8").digest();
+  return `sha-256:${digest.toString("base64url")}`;
 }

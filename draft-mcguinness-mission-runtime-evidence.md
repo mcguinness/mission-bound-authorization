@@ -199,7 +199,7 @@ are referenced, not duplicated, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 89 conformance rows in conformance-manifest.json (7 tested, 2 partial, 80 todo).
+Implementation: 91 conformance rows in conformance-manifest.json (8 tested, 6 partial, 77 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).
@@ -1019,8 +1019,9 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 
 `authorized_parameter_digest`:
 : CONDITIONAL. A string. REQUIRED when the linked Decision Evidence
-  carries `parameter_digest`; MUST equal it. The link to what the
-  permit authorized.
+  carries `parameter_digest`; MUST equal it. MUST be absent when the
+  linked Decision Evidence carries no `parameter_digest`. The link to
+  what the permit authorized.
 
 `effective_parameter_digest`:
 : CONDITIONAL. A string. REQUIRED whenever
@@ -1514,9 +1515,11 @@ additionally governed by the compromise-boundary rule of
    {{execution-evidence-object}}); audience and target, and the
    authorized and effective parameter digests, are consistent across
    the records per the runtime's rules
-   ({{I-D.draft-mcguinness-mission-runtime}}); for `execution`, the
-   receipt's `outcome` equals the Execution Evidence's terminal
-   `outcome`.
+   ({{I-D.draft-mcguinness-mission-runtime}}); exactly one of the
+   Decision Evidence's `parameter_digest` and the Execution
+   Evidence's `authorized_parameter_digest` present is a join failure
+   ({{execution-evidence-object}}); for `execution`, the receipt's
+   `outcome` equals the Execution Evidence's terminal `outcome`.
 5. Require every copied optional member to equal the corresponding
    member of the record it projects.
 6. When `chain` is present ({{receipt-chaining}}): resolve each

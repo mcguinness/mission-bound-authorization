@@ -543,21 +543,21 @@ export async function buildAuthorizationServer(opts: {
   /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
   stateRecoveryRetryAfter?: number;
   /**
-   * @spec status#discharge-authority — additional service-token principals and
+   * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
    * `mission_lifecycle` and `mission_discharge`). A test registers a
    * lifecycle-only token to prove the two grants do not imply one another.
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
-   * @spec status#discharge-authority — the issuer-held discharge-authority
+   * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
    * `event_type`, resolved through a condition's `discharge_policy` selector or
    * the baseline mapping. Absent (the default) FAILS CLOSED: no condition can
    * enter a record and no discharge is ever authorized.
    */
   dischargeAuthority?: DischargeAuthorityPolicy;
-  /** @spec status#discharge-idempotency — event-dedup retention override (seconds). */
+  /** @spec discharge#discharge-idempotency — event-dedup retention override (seconds). */
   dischargeEventRetentionSeconds?: number;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
@@ -654,7 +654,7 @@ export async function buildAuthorizationServer(opts: {
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
     // only containOnEvent reads it (the manual contain path is unaffected).
     containmentPolicy: CONTAINMENT_POLICY as never,
-    // @spec status#discharge-authority — the issuer-held discharge-authority
+    // @spec discharge#discharge-authority — the issuer-held discharge-authority
     // policy. Absent as shipped: no deployment config declares a
     // `terminal_when` mapping, so the completion capability stays off and fails
     // closed until one does.
@@ -762,7 +762,7 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
     introspectionPrincipals: INTROSPECTION_PRINCIPALS,
-    // @spec status#discharge-authority — service-token principals and their
+    // @spec discharge#discharge-authority — service-token principals and their
     // scopes; merged over the default (the dev token holds both grants).
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
