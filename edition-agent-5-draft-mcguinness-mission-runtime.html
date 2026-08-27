@@ -2553,7 +2553,7 @@ record them, consistent with <span>[<a href="#I-D.draft-mcguinness-oauth-mission
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-3-1">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 119 conformance rows in conformance-manifest.json (27 tested, 17 partial, 72 todo, 3 blocked).
+Implementation: 122 conformance rows in conformance-manifest.json (30 tested, 19 partial, 70 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).<a href="#section-3-1" class="pilcrow">¶</a></p>
@@ -4843,6 +4843,83 @@ deployment claiming it <span class="bcp14">SHOULD</span> demonstrate, per covere
 <p id="section-13-6">These tests demonstrate the exposed control surface; they do not
 prove the absence of a hidden bypass, which remains an attestation,
 audit, and path-completeness property.<a href="#section-13-6" class="pilcrow">¶</a></p>
+<p id="section-13-7">The Remote Decision Channel's baseline requirements
+(<a href="#decision-channel" class="auto internal xref">Section 2.4</a>) are not a claimed extension: they apply to
+every PEP/PDP boundary that is not co-resident. A deployment with
+such a boundary <span class="bcp14">SHOULD</span> demonstrate them with negative tests: each of
+the following bypass attempts <span class="bcp14">MUST</span> be refused, and a deployment
+<span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-7" class="pilcrow">¶</a></p>
+<table class="center" id="table-11">
+        <caption><a href="#table-11" class="selfRef">Table 11</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>
+            <th class="text-left" rowspan="1" colspan="1">Required outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A PEP omits the request signature, or presents an unregistered PEP identity</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused before evaluation, with no PDP evaluation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A decision request is modified after the PEP signs it</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused before evaluation, with no PDP evaluation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A PEP submits a decision request for an enforcement scope it is not authorized for</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused before evaluation, with no PDP evaluation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A decision response carries no signature, or one the PEP does not recognize</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused; the PEP <span class="bcp14">MUST NOT</span> act on the decision</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A decision response is modified after the PDP signs it</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused; the PEP <span class="bcp14">MUST NOT</span> act on the decision</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A validly signed decision response captured for one request is presented as the response to a different request</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused; the PEP <span class="bcp14">MUST NOT</span> act on the decision</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-13-9">A co-resident PDP and PEP satisfy <a href="#decision-channel" class="auto internal xref">Section 2.4</a> structurally
+and need no separate channel mechanism; these tests apply only where
+the boundary is not co-resident.<a href="#section-13-9" class="pilcrow">¶</a></p>
+<p id="section-13-10">This profile's enforcement claim is bounded by declared scope
+(<a href="#runtime-conformance" class="auto internal xref">Section 6.2</a>). A deployment <span class="bcp14">MUST NOT</span> claim runtime
+enforcement for a resource, action class, authority-entry type, or
+execution path outside that scope, and a deployment <span class="bcp14">SHOULD</span>
+demonstrate that the boundary fails closed:<a href="#section-13-10" class="pilcrow">¶</a></p>
+<table class="center" id="table-12">
+        <caption><a href="#table-12" class="selfRef">Table 12</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>
+            <th class="text-left" rowspan="1" colspan="1">Required outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">An Enforcement Scope Statement omits a required baseline declaration</td>
+            <td class="text-left" rowspan="1" colspan="1">The statement fails validation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">An Enforcement Scope Statement claims a named assurance extension with no attached declaration</td>
+            <td class="text-left" rowspan="1" colspan="1">The statement fails validation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A claim names a resource, action class, authority-entry type, or execution path outside the declared scope</td>
+            <td class="text-left" rowspan="1" colspan="1">The claim is rejected as out of scope</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-13-12">These tests exercise the statement's own validator and the scope
+predicate a claim is checked against; they do not by themselves
+prove that everything a live deployment actually mediates matches
+its own published statement, which remains an audit property of
+that statement.<a href="#section-13-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="runtime-deployment">

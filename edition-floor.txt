@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-27T04:11:11Z
-Source repository commit: 8c5a18e1c1733f746ee179a6f5a59ff43e66b73c
+Generated: 2026-08-27T05:06:24Z
+Source repository commit: e819debf5851e171a3235148d20b66570d645631
 Member count: 7
 
 Reading order:
@@ -16141,8 +16141,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 119 conformance rows in conformance-manifest.json (27
-   tested, 17 partial, 72 todo, 3 blocked).  Adopt when: Actions need a
+   Implementation: 122 conformance rows in conformance-manifest.json (30
+   tested, 19 partial, 70 todo, 3 blocked).  Adopt when: Actions need a
    point-of-use check, not just issuance-time gating.  Requires: Mission
    Substrate Requirements.  Also requires, conditionally: Mission-Bound
    Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when
@@ -18129,6 +18129,76 @@ Table of Contents
    prove the absence of a hidden bypass, which remains an attestation,
    audit, and path-completeness property.
 
+   The Remote Decision Channel's baseline requirements (Section 2.4) are
+   not a claimed extension: they apply to every PEP/PDP boundary that is
+   not co-resident.  A deployment with such a boundary SHOULD
+   demonstrate them with negative tests: each of the following bypass
+   attempts MUST be refused, and a deployment SHOULD retain evidence
+   that it ran them.
+
+      +========================================+===================+
+      | Bypass attempt                         | Required outcome  |
+      +========================================+===================+
+      | A PEP omits the request signature, or  | Refused before    |
+      | presents an unregistered PEP identity  | evaluation, with  |
+      |                                        | no PDP evaluation |
+      +----------------------------------------+-------------------+
+      | A decision request is modified after   | Refused before    |
+      | the PEP signs it                       | evaluation, with  |
+      |                                        | no PDP evaluation |
+      +----------------------------------------+-------------------+
+      | A PEP submits a decision request for   | Refused before    |
+      | an enforcement scope it is not         | evaluation, with  |
+      | authorized for                         | no PDP evaluation |
+      +----------------------------------------+-------------------+
+      | A decision response carries no         | Refused; the PEP  |
+      | signature, or one the PEP does not     | MUST NOT act on   |
+      | recognize                              | the decision      |
+      +----------------------------------------+-------------------+
+      | A decision response is modified after  | Refused; the PEP  |
+      | the PDP signs it                       | MUST NOT act on   |
+      |                                        | the decision      |
+      +----------------------------------------+-------------------+
+      | A validly signed decision response     | Refused; the PEP  |
+      | captured for one request is presented  | MUST NOT act on   |
+      | as the response to a different request | the decision      |
+      +----------------------------------------+-------------------+
+
+                                 Table 11
+
+   A co-resident PDP and PEP satisfy Section 2.4 structurally and need
+   no separate channel mechanism; these tests apply only where the
+   boundary is not co-resident.
+
+   This profile's enforcement claim is bounded by declared scope
+   (Section 6.2).  A deployment MUST NOT claim runtime enforcement for a
+   resource, action class, authority-entry type, or execution path
+   outside that scope, and a deployment SHOULD demonstrate that the
+   boundary fails closed:
+
+      +=========================================+==================+
+      | Bypass attempt                          | Required outcome |
+      +=========================================+==================+
+      | An Enforcement Scope Statement omits a  | The statement    |
+      | required baseline declaration           | fails validation |
+      +-----------------------------------------+------------------+
+      | An Enforcement Scope Statement claims a | The statement    |
+      | named assurance extension with no       | fails validation |
+      | attached declaration                    |                  |
+      +-----------------------------------------+------------------+
+      | A claim names a resource, action class, | The claim is     |
+      | authority-entry type, or execution path | rejected as out  |
+      | outside the declared scope              | of scope         |
+      +-----------------------------------------+------------------+
+
+                                 Table 12
+
+   These tests exercise the statement's own validator and the scope
+   predicate a claim is checked against; they do not by themselves prove
+   that everything a live deployment actually mediates matches its own
+   published statement, which remains an audit property of that
+   statement.
+
 14.  Deployment Considerations
 
    Three properties govern how this profile scales.
@@ -19072,8 +19142,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 89 conformance rows in conformance-manifest.json (7
-   tested, 2 partial, 80 todo).  Adopt when: Runtime enforcement is
+   Implementation: 91 conformance rows in conformance-manifest.json (8
+   tested, 6 partial, 77 todo).  Adopt when: Runtime enforcement is
    deployed and decisions need durable, verifiable records.  Requires:
    Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
    Also requires, conditionally: Mission Cross-Domain Projection for
@@ -19871,7 +19941,8 @@ Table of Contents
 
    authorized_parameter_digest:  CONDITIONAL.  A string.  REQUIRED when
       the linked Decision Evidence carries parameter_digest; MUST equal
-      it.  The link to what the permit authorized.
+      it.  MUST be absent when the linked Decision Evidence carries no
+      parameter_digest.  The link to what the permit authorized.
 
    effective_parameter_digest:  CONDITIONAL.  A string.  REQUIRED
       whenever authorized_parameter_digest is present.  The digest, in
@@ -20317,9 +20388,11 @@ Table of Contents
        Evidence on evaluation_id (Section 5, Section 6); audience and
        target, and the authorized and effective parameter digests, are
        consistent across the records per the runtime's rules
-       ([I-D.draft-mcguinness-mission-runtime]); for execution, the
-       receipt's outcome equals the Execution Evidence's terminal
-       outcome.
+       ([I-D.draft-mcguinness-mission-runtime]); exactly one of the
+       Decision Evidence's parameter_digest and the Execution Evidence's
+       authorized_parameter_digest present is a join failure
+       (Section 6); for execution, the receipt's outcome equals the
+       Execution Evidence's terminal outcome.
 
    5.  Require every copied optional member to equal the corresponding
        member of the record it projects.

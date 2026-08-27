@@ -171,8 +171,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 89 conformance rows in conformance-manifest.json (7
-   tested, 2 partial, 80 todo).  Adopt when: Runtime enforcement is
+   Implementation: 91 conformance rows in conformance-manifest.json (8
+   tested, 6 partial, 77 todo).  Adopt when: Runtime enforcement is
    deployed and decisions need durable, verifiable records.  Requires:
    Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
    Also requires, conditionally: Mission Cross-Domain Projection for
@@ -970,7 +970,8 @@ Table of Contents
 
    authorized_parameter_digest:  CONDITIONAL.  A string.  REQUIRED when
       the linked Decision Evidence carries parameter_digest; MUST equal
-      it.  The link to what the permit authorized.
+      it.  MUST be absent when the linked Decision Evidence carries no
+      parameter_digest.  The link to what the permit authorized.
 
    effective_parameter_digest:  CONDITIONAL.  A string.  REQUIRED
       whenever authorized_parameter_digest is present.  The digest, in
@@ -1416,9 +1417,11 @@ Table of Contents
        Evidence on evaluation_id (Section 5, Section 6); audience and
        target, and the authorized and effective parameter digests, are
        consistent across the records per the runtime's rules
-       ([I-D.draft-mcguinness-mission-runtime]); for execution, the
-       receipt's outcome equals the Execution Evidence's terminal
-       outcome.
+       ([I-D.draft-mcguinness-mission-runtime]); exactly one of the
+       Decision Evidence's parameter_digest and the Execution Evidence's
+       authorized_parameter_digest present is a join failure
+       (Section 6); for execution, the receipt's outcome equals the
+       Execution Evidence's terminal outcome.
 
    5.  Require every copied optional member to equal the corresponding
        member of the record it projects.
