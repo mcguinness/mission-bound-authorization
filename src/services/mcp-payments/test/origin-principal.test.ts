@@ -16,6 +16,7 @@ import { computeAnchor, MISSION_ORIGIN_SUBJECT_TYP, verifyAnchor } from "@missio
 import type { EvaluationRequest, Fga, MissionView, OriginPrincipal } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   PaymentsStore,
   Pep,
@@ -58,7 +59,7 @@ function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
   const envelopes: EvaluationRequest[] = [];
   const pep = new Pep({
     payments: new PaymentsStore(),
-    evidence: new EvidenceStore(),
+    evidence: new EvidenceStore(createEphemeralEvidenceKeys().signing),
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView: loadViewFor(view),
@@ -132,7 +133,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
 
   function buildWithMapping(entitled: boolean): { pep: Pep; evidence: EvidenceStore; envelopes: EvaluationRequest[] } {
     const envelopes: EvaluationRequest[] = [];
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const pep = new Pep({
       payments: new PaymentsStore(),
       evidence,
@@ -183,8 +184,8 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, tokenFor());
     expect(res.permitted, JSON.stringify(res)).toBe(true);
     const rec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
-    expect(rec?.principal_mapping).toBeDefined();
-    const pm = rec?.principal_mapping;
+    expect(rec?.content.principal_mapping).toBeDefined();
+    const pm = rec?.content.principal_mapping;
     if (!pm) throw new Error("expected principal_mapping on the retained record");
     expect(pm.policy).toEqual(MAPPING_POLICY);
     expect(typeof pm.observed_at).toBe("string");
@@ -198,9 +199,21 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     expect(pm.local).toBe(computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, LOCAL));
     expect(verifyAnchor(pm.origin, MISSION_ORIGIN_SUBJECT_TYP, ISSUER, ORIGIN)).toBe(true);
     expect(verifyAnchor(pm.local, MISSION_ORIGIN_SUBJECT_TYP, ISSUER, LOCAL)).toBe(true);
+    // The privacy rule scopes "never raw" to principal_mapping's own
+    // origin/local sub-members ({{evidence-pii}}); it says nothing about
+    // Decision Evidence's separate, REQUIRED `subject` member, which legitimately
+    // carries the authenticated `token.sub` per {{decision-evidence-object}}'s
+    // worked example -- and in THIS fixture that happens to equal `LOCAL.sub`
+    // (the destination-local subject IS the token's own subject here), so a
+    // blanket whole-record check would fire on the wrong field. ORIGIN's raw
+    // values have no legitimate home anywhere on the record, so the blanket
+    // check still holds for them.
+    const pmSerialized = JSON.stringify(pm);
+    expect(pmSerialized).not.toContain(ORIGIN.sub);
+    expect(pmSerialized).not.toContain(LOCAL.sub);
+    expect(pmSerialized).not.toContain(ORIGIN.iss);
     const serialized = JSON.stringify(rec);
     expect(serialized).not.toContain(ORIGIN.sub);
-    expect(serialized).not.toContain(LOCAL.sub);
     expect(serialized).not.toContain(ORIGIN.iss);
   });
 
@@ -210,9 +223,9 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     expect(res.permitted).toBe(false);
     expect(res.denial_reason).toBe("principal_mapping_failed");
     const rec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
-    expect(rec?.decision).toBe(false);
-    expect(rec?.denial_reason).toBe("principal_mapping_failed");
-    expect(rec?.principal_mapping).toEqual({
+    expect(rec?.content.decision).toBe("deny");
+    expect(rec?.content.denial_reason).toBe("principal_mapping_failed");
+    expect(rec?.content.principal_mapping).toEqual({
       origin: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, ORIGIN),
       local: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, ISSUER, LOCAL),
       policy: MAPPING_POLICY,
@@ -227,7 +240,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
     const rec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
-    expect(rec?.principal_mapping).toBeUndefined();
+    expect(rec?.content.principal_mapping).toBeUndefined();
   });
 
   it("a profile-claiming token at a deployment with no principalMapping/entitlement configured denies principal_mapping_failed, never falls back to ordinary enforcement", async () => {

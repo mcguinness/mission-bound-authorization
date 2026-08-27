@@ -11,8 +11,8 @@
     "content_sha256": "bb7eee08f80b1d48f2f1b8a6ebe146ce40a346e210f520a53b14cea10ad67d24"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "fc4062116a18e6a89a316a0309ebd3c58bebbcc2b9a9968bf547919c687f6714"
+    "revision": "2c58ddec84bb7ca58bb7be4a8615f3e08e4fd1a9",
+    "content_sha256": "b9caa933d2da82196299f57b1e5bdaf0c2cba4edeaca7031ee4969a8105447ca"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -11633,7 +11633,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/enforcement.test.ts",
-     "name": "M4 core enforcement tier > Decision Evidence carries the PEP emitter and the recomputable entry_digest",
+     "name": "M4 core enforcement tier > Decision Evidence carries the PDP emitter and the recomputable entry_digest",
      "level": "endpoint",
      "surface": "propagation"
     }
@@ -13632,9 +13632,28 @@
     "normative": "the verifier confirms the kid-selected key is the named emitter's published key and is bound to the enforcement scope and audience the record serves; a record whose signing key is not published for that scope is rejected, so one component's key cannot sign evidence for a resource, audience, or scope it does not serve"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects a key not bound to this record's emitter role / scope / audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-signed-e2e.test.ts",
+     "name": "buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1) > rejects a genuinely signed, independently-verifiable retained record when the resolver's keys are registered for a DIFFERENT emitter id (same kid, role, and audience)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-signed-e2e.test.ts",
+     "name": "buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1) > never wildcards a missing audience for a pdp/pep/executor key, even when one is registered without one",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. Partial, not tested: the cited tests exercise the resolver-contract level (a resolver that ignores emitter.id, role, or audience fails to authenticate); this deployment's own `buildEvidenceKeyResolver` (src/services/mcp-payments/src/evidence.ts) is the only resolver implementation exercised, and its keys are ephemeral, per-process test fixtures, not resolved through a genuinely published, deployment-scoped enforcement-scope-statement key set, so the \"published key of the component named in the record's emitter member\" half of this requirement (as opposed to the binding logic itself) remains unexercised."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
@@ -14273,8 +14292,34 @@
     "normative": "step 3 resolves and independently verifies each referenced record, recomputes its digest and requires equality with the reference, and requires the resolved record's own identifier and emitter/key to match the reference"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a reference declared as Decision Evidence that resolves to a genuinely-verifying Execution record instead (#739 review point 2, step 3, before record verification)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects when a referenced record is unresolvable",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects when the referenced record's own signature does not verify",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a digest mismatch: the resolved record verifies on its own but does not match the receipt's committed digest",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial, not tested: the cited tests cover resolve-and-verify-under-own-rules, digest recomputation and equality, and (#739 review point 2) the resolved kind matching the reference's own declared type. No test currently exercises the resolved record's own identifier or its emitter/key failing to equal the reference's `evidence_id`/`emitter` (the `identifier_mismatch` and `emitter_mismatch` reasons the code returns are untested)."
   },
   {
    "id": "evidence.receipt.step4-cross-record-joins",
@@ -14295,8 +14340,94 @@
     "normative": "step 4 joins the resolved records: the same mission.id/mission.issuer as the receipt's own mission; the Execution Evidence joins the Decision Evidence on evaluation_id; audience, target, and the authorized/effective parameter digests are consistent across records; for an execution receipt, the receipt's outcome equals the Execution Evidence's terminal outcome"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > builds and verifies an 'execution' receipt, joined on evaluation_id",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > builds and verifies a 'refusal' receipt",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence's evaluation_id does not match the Decision Evidence it is paired with",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence's mission_id does not match the receipt's mission (#739 review point 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a 'refusal' receipt whose Refusal Record carries no established Mission (#739 review point 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries no authorized_parameter_digest while the Decision Evidence carries a parameter_digest (#739 review point 3, exact mirror)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial, not tested: mission.id/mission.issuer joins (Decision Evidence, Execution Evidence via mission_id, and now (#739 review point 3) Refusal Record for a 'refusal'-kind receipt), the evaluation_id join, and authorized/effective parameter-digest consistency (exact-mirror in both directions, and effective_parameter_digest's own required-when-authorized-present rule) are exercised. Audience consistency across Decision and Execution Evidence (`executionRec.audience !== decisionRec.audience`) and target consistency are implemented but not separately exercised by a dedicated negative test. The reverse-direction parameter-digest mirror was, at the time this row was written, stricter than the draft's own literal text; that gap is now closed (issue #649 finding): the draft's `authorized_parameter_digest` member is biconditional (execution-evidence-object) and step 4 states the join failure explicitly, so the verifier's exact-mirror check and the draft agree. See evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest and evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present for the rows tracking the new text directly."
+  },
+  {
+   "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "exactly one of the Decision Evidence's `parameter_digest` and the Execution Evidence's `authorized_parameter_digest` present is a join failure",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Receipt verifier rejects the join between a referenced Decision Evidence and Execution Evidence pair as a join failure when exactly one of the Decision Evidence's parameter_digest and the Execution Evidence's authorized_parameter_digest is present, in either direction, so the execution side cannot assert an authorized digest the decision never established and cannot silently omit the digest the decision did establish (issue #649 finding, closing the reverse direction the draft's member text left silent)"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries no authorized_parameter_digest while the Decision Evidence carries a parameter_digest (#739 review point 3, exact mirror)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Both tests are already mapped to evidence.receipt.step4-cross-record-joins, which covers step 4 as a whole; this row is reused test coverage, cited here specifically because it exercises the exactly-one-present join failure this row's quoted text now states explicitly. The first test proves the forward direction (Decision Evidence carries parameter_digest, Execution Evidence carries neither authorized_ nor effective_parameter_digest); the second proves the reverse direction this issue's finding closed (Decision Evidence carries no parameter_digest, Execution Evidence still carries authorized_parameter_digest). Both assert { valid: false, reason: 'join_failure' } from verifyMissionReceipt (src/services/mcp-payments/src/mission-receipt.ts, the `executionRec.authorized_parameter_digest !== decisionRec.parameter_digest` comparison)."
   },
   {
    "id": "evidence.receipt.step5-copied-members-equal-source",
@@ -14317,8 +14448,22 @@
     "normative": "every copied optional member on the receipt equals the corresponding member of the record it projects"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a copied member mismatch: the receipt's own embedded decision.result disagrees with the resolved Decision Evidence it references (step 5)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a receipt carrying an unimplemented copied-member projection (target) rather than accepting it unverified (#739 review point 4)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Partial, not tested: the `decision` copied member is verified equal to its source; `policy`, `executor`, and `target` are, per the #739 review, REJECTED rather than compared (evidence.receipt.optional-members-selected-not-defaulted / this row's own text both require every copied member be verified, so an unimplemented one is refused rather than silently accepted unverified). Nothing in this deployment emits a receipt carrying any of the three (`buildAndSignMissionReceipt` never populates them), so the actual comparison logic for those three members remains unimplemented, tracked here as the remaining gap rather than claimed tested."
   },
   {
    "id": "evidence.receipt.step6-chain-verification-and-monotonicity",
@@ -14810,6 +14955,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "MUST be absent when the linked Decision Evidence carries no `parameter_digest`.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "authorized_parameter_digest MUST NOT be present on an Execution Evidence Object when the linked Decision Evidence carries no parameter_digest, so the execution side can never assert an authorized digest the decision itself never established; the member is biconditional on the Decision Evidence's own parameter_digest, not merely REQUIRED-and-equal in one direction (issue #649 finding)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No producer-side test exercises a PEP declining to emit authorized_parameter_digest when the linked Decision Evidence carries no parameter_digest: recordExecution (src/services/mcp-payments/src/evidence.ts) passes through whatever the caller supplies with no such guard, so no test could assert the PEP itself withholds the field. The only test touching this exact combination, 'Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)' (src/services/mcp-payments/test/mission-receipt.test.ts), is a RECEIPT-VERIFIER test that catches an already-malformed record after the fact; it is cited on evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present instead, the row whose role and surface it actually exercises."
   },
   {
    "id": "evidence.execution.effective-digest-required-when-authorized-present",

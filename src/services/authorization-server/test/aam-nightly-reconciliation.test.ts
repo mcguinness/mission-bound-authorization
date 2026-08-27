@@ -40,6 +40,7 @@ import {
   type SeededTrustedSource,
 } from "@mission/demo-data";
 import {
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   PaymentsStore,
   Pep,
@@ -434,7 +435,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       [{ id: "acme", name: "Acme", status: "approved" }],
       [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
     );
-    pepEvidence = new EvidenceStore();
+    pepEvidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     pep = new Pep({
       payments,
       evidence: pepEvidence,
@@ -577,7 +578,12 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(
       pepEvidence
         .forMission(dispatchedMissionId)
-        .some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:invoice.read"),
+        .some(
+          (e) =>
+            e.kind === "decision" &&
+            e.content.decision === "permit" &&
+            e.content.action.name === "payments:invoice.read",
+        ),
     ).toBe(true);
 
     // The low-consequence dispatched Mission never held the external-comms

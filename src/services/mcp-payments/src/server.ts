@@ -676,7 +676,7 @@ export class McpPaymentsServer {
       // normalized parameters immediately before execution, exactly as
       // callWriteTool/callTransactionTool already do for a write.
       const digest = permitConditions(res.decision)?.parameter_digest as string | undefined;
-      if (!digest || !this.deps.pep.reverifyList(res.listEffective, digest, token)) {
+      if (!digest || !(await this.deps.pep.reverifyList(res.listEffective, digest, token))) {
         return { ok: false, refusal_reason: "parameter_mismatch" };
       }
     }
@@ -713,7 +713,7 @@ export class McpPaymentsServer {
     }
     beforeReverify?.();
     const digest = permitConditions(res.decision)?.parameter_digest as string;
-    if (!this.deps.pep.reverify(res.effective, digest, token)) {
+    if (!(await this.deps.pep.reverify(res.effective, digest, token))) {
       return { ok: false, refusal_reason: "parameter_mismatch" };
     }
     return { ok: true, result: this.execute(tool, args) };
@@ -793,7 +793,7 @@ export class McpPaymentsServer {
     beforeCommit?.();
 
     // TOCTOU re-verify inside the lease, before commit.
-    if (!tx.engine.leaseValid(opKey) || !this.deps.pep.reverify(res.effective, digest, token)) {
+    if (!tx.engine.leaseValid(opKey) || !(await this.deps.pep.reverify(res.effective, digest, token))) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: "parameter_mismatch" };
     }
@@ -863,27 +863,30 @@ export class McpPaymentsServer {
     }
 
     // Execution Evidence, then reconciliation state.
-    tx.evidence.record({
-      kind: "execution",
-      permit_id: permitId,
-      op_key: opKey,
-      outcome: commit.deduped ? "deduped" : "committed",
-      decision_id: permitId,
+    // @spec runtime-evidence#execution-evidence-object (issue #649):
+    // `outcome` is `completed` whether or not the connector commit itself was
+    // a dedup of an already-committed effect (`commit.deduped`): either way
+    // the action's final disposition IS completed, and the spec's outcome
+    // enum has no distinct "deduped" value (dedup is delivery/idempotency
+    // bookkeeping, not an execution outcome). `commit.deduped` stays on the
+    // caller's own return value (`ok: true, deduped`) below, unchanged.
+    // Both parameter-digest members are the SAME `digest`: `reverify()`
+    // above already re-confirmed the effective parameters match what the
+    // permit authorized before this commit point, the binding-held case.
+    //
+    // @spec authority-server#mission-join (#557): `mission_id` is
+    // `resolvedMission.id`, never `token.mission.id` -- a baseline-Join
+    // credential carries no `mission` claim at all, and this write path
+    // (execute_wire_transfer / send_email) is reachable on that path too.
+    await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+      permitId,
+      opKey,
+      evaluation_id: permitId,
       mission_id: resolvedMission.id,
-      // @spec runtime-evidence#execution-evidence (#702) — carried only when
-      // the executing credential's own copy is present (#the-mission-claim:
-      // not on the baseline claim).
-      ...(resolvedMission.authority_hash !== undefined
-        ? { authority_hash: resolvedMission.authority_hash }
-        : {}),
-      action: res.effective.action,
-      parameter_digest: digest,
-      instance_epoch: tx.engine.instanceEpoch,
-      // @spec authzen `emitter`: the executing PEP identifies itself on the
-      // record it retains, same base as its decision/refusal records.
-      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
-      // @spec continuation: attribute the execution to the specific hop that
-      // authorized it. Guarded on jti so non-JWT/older tokens are unaffected.
+      audience: CANONICAL_RESOURCE,
+      authorized_parameter_digest: digest,
+      effective_parameter_digest: digest,
+      outcome: "completed",
       ...(token.jti
         ? {
             hop_reference: {

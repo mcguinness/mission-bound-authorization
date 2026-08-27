@@ -8,10 +8,11 @@
  * execution), which needs only the local PaymentsStore and EvidenceStore,
  * not OpenFGA, so it runs unconditionally.
  *
- * "Signed" is not yet asserted here: EvidenceStore retains plain objects
- * (signing and SCITT registration are M10 future work, per its own header
- * comment), so this covers the append-only/immutable/per-attempt half of
- * the clause, not the signing half.
+ * @spec draft-mcguinness-mission-runtime-evidence.md#decision-evidence-integrity
+ * (issue #649): the retained Refusal Record is now genuinely signed
+ * (`EvidenceStore.recordRefusal`); this test still covers only the
+ * append-only/immutable/per-attempt half of the clause, not signature
+ * verification itself (see `runtime-evidence-integrity.test.ts` for that).
  */
 
 import type { Fga } from "@mission/pdp";
@@ -19,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEffectiveParams,
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   parameterDigest,
   PaymentsStore,
@@ -35,7 +37,7 @@ const TOKEN: TokenFacts = {
 };
 
 describe("Refusal Records are per-attempt, immutable, and append-only", () => {
-  it("a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place", () => {
+  it("a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place", async () => {
     const payments = new PaymentsStore();
     payments.seed(
       [{ id: "acme", name: "Acme", status: "approved" }],
@@ -50,7 +52,7 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
         },
       ],
     );
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const pep = new Pep({
       payments,
       evidence,
@@ -76,7 +78,7 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
 
     // Attempt 1: the same sustained failure condition (the caller's pinned
     // digest no longer matches the store's authoritative parameters).
-    expect(pep.reverify(effective, wrongDigest, TOKEN)).toBe(false);
+    expect(await pep.reverify(effective, wrongDigest, TOKEN)).toBe(false);
     const afterFirst = evidence.forMission(TOKEN.mission.id);
     expect(afterFirst).toHaveLength(1);
     expect(afterFirst[0]?.kind).toBe("refusal");
@@ -87,7 +89,7 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
     const firstSnapshot = structuredClone(afterFirst[0]);
 
     // Attempt 2: a retrying agent hits the identical failure condition again.
-    expect(pep.reverify(effective, wrongDigest, TOKEN)).toBe(false);
+    expect(await pep.reverify(effective, wrongDigest, TOKEN)).toBe(false);
     const afterSecond = evidence.forMission(TOKEN.mission.id);
 
     // Append-only: a second, distinct record now exists.

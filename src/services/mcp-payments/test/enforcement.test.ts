@@ -10,11 +10,14 @@ import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   PaymentsStore,
   Pep,
   sourceDigestOf,
+  type DecisionEvidence,
+  type RefusalRecord,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -98,7 +101,7 @@ d("M4 core enforcement tier", () => {
         { id: "inv-3", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
       ],
     );
-    evidence = new EvidenceStore();
+    evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const card = { name: "payments", tools: ["get_invoice"] };
     const pep = new Pep({
       payments,
@@ -126,17 +129,27 @@ d("M4 core enforcement tier", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect((res.result as { id: string }).id).toBe("inv-1");
     const ev = evidence.forMission("msn_m4");
-    expect(ev.some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:invoice.read")).toBe(true);
+    expect(
+      ev.some(
+        (e) =>
+          e.kind === "decision" &&
+          e.content.decision === "permit" &&
+          e.content.action.name === "payments:invoice.read",
+      ),
+    ).toBe(true);
   });
 
-  it("Decision Evidence carries the PEP emitter and the recomputable entry_digest", async () => {
+  it("Decision Evidence carries the PDP emitter and the recomputable entry_digest", async () => {
     build();
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
-    const dec = evidence.forMission("msn_m4").find((e) => e.kind === "decision");
-    expect(dec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    const dec = evidence.forMission("msn_m4").find((e): e is DecisionEvidence => e.kind === "decision");
+    // @spec runtime-evidence#decision-evidence-object (issue #649): Decision
+    // Evidence's emitter role is ALWAYS `pdp` (this deployment co-locates the
+    // PDP and PEP under the same component id, distinguished by role/key).
+    expect(dec?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pdp" });
     // The resolved-scope anchor recomputes over the matched Authority Set entry.
-    expect(dec?.kind === "decision" && dec.entry_digest).toBe(
+    expect(dec?.content.entry_digest).toBe(
       computeAnchor(AUTHORITY_ENTRY_TYP, VIEW.issuer, VIEW.authority_set[0] as never),
     );
   });
@@ -150,10 +163,12 @@ d("M4 core enforcement tier", () => {
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
-    const dec = evidence.forMission("msn_m4").find((e) => e.kind === "decision" && e.decision === false);
+    const dec = evidence
+      .forMission("msn_m4")
+      .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "deny");
     expect(dec).toBeDefined();
     expect(dec?.mission_id).toBe("msn_m4");
-    expect(dec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    expect(dec?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pdp" });
   });
 
   it("scenario 2: schedule under the cap permitted and reconciles digest at execute", async () => {
@@ -174,10 +189,10 @@ d("M4 core enforcement tier", () => {
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("parameter_mismatch");
     const ev = evidence.forMission("msn_m4");
-    expect(ev.some((e) => e.kind === "refusal" && e.refusal_reason === "parameter_mismatch")).toBe(true);
+    expect(ev.some((e) => e.kind === "refusal" && e.content.denial_reason === "parameter_mismatch")).toBe(true);
     // The Refusal Record identifies its emitting enforcement point too.
-    const refusal = ev.find((e) => e.kind === "refusal");
-    expect(refusal?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    const refusal = ev.find((e): e is RefusalRecord => e.kind === "refusal");
+    expect(refusal?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
   it("out-of-authority tool (over-cap invoice) denied out_of_authority... constraint path", async () => {
@@ -244,7 +259,7 @@ d("M4 core enforcement tier", () => {
         },
       ],
     );
-    evidence = new EvidenceStore();
+    evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const card = { name: "payments", tools: ["get_invoice"] };
     const pep = new Pep({
       payments,

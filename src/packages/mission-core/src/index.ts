@@ -52,7 +52,7 @@ export type {
   StateSource,
   StopPolicy,
 } from "./binding.js";
-export { canonicalize, type JsonValue } from "./canonicalize.js";
+export { canonicalDigest, canonicalize, type JsonValue } from "./canonicalize.js";
 export {
   type CompromiseBoundaryOutcome,
   evaluateCompromiseBoundary,

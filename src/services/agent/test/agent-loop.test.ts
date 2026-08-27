@@ -31,6 +31,7 @@ import { Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   PaymentsStore,
@@ -115,7 +116,7 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
       { id: "inv-3", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
     ],
   );
-  const evidence = new EvidenceStore();
+  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };

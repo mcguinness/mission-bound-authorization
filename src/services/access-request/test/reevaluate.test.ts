@@ -14,6 +14,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   PaymentsStore,
   Pep,
@@ -89,7 +90,7 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
     );
     pep = new Pep({
       payments,
-      evidence: new EvidenceStore(),
+      evidence: new EvidenceStore(createEphemeralEvidenceKeys().signing),
       fga,
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
