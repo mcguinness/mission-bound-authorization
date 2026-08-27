@@ -3,9 +3,10 @@
  *
  * The resource-server PEP for the payments estate. Validates the DPoP-bound
  * token and mission claim, builds the AuthZEN envelope (context.actor via
- * @mission/actor-chain, parameter_digest, capability_source), obtains a PDP
- * decision, and emits Decision Evidence / Refusal Records. Core enforcement
- * tier (M4); the transaction-assurance tier (permits/leases) lands in M5.
+ * @mission/actor-chain, parameter_digest), obtains a PDP decision, and emits
+ * Decision Evidence / Refusal Records. Core enforcement tier (M4); the
+ * transaction-assurance tier (permits/leases) lands in M5. Does not present
+ * `context.capability_source` (#657; see `sourceDigestOf` below).
  */
 
 import { createHash, randomUUID } from "node:crypto";
@@ -48,7 +49,6 @@ import type { PendingOperation } from "./txn-store.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 export const TOOL_BASE = "mcp://payments.demo/tools";
-const SERVER_CARD_URI = `${CANONICAL_RESOURCE.replace(/\/mcp$/, "")}/.well-known/mcp`;
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -335,7 +335,13 @@ export interface PepDeps {
   loadView: (ref: MissionReference) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
-  sourceDigest: string;
+  /**
+   * @deprecated Unused by this class; no code path reads it. Compatibility
+   * seam only, kept because ~15 existing callers still construct it. Removed
+   * once #657 PR B replaces it with the real per-action capability-binding
+   * resolver. See `sourceDigestOf` below.
+   */
+  sourceDigest?: string;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -859,12 +865,8 @@ export class Pep {
           ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
           ...(token.act !== undefined ? { act: token.act } : {}),
         }),
-        capability_source: {
-          tool_id: `${TOOL_BASE}/${tool}`,
-          source_uri: SERVER_CARD_URI,
-          source_digest: this.deps.sourceDigest,
-          operation_ref: `tools/${tool}`,
-        },
+        // `context.capability_source` intentionally absent (#657): see
+        // `sourceDigestOf` below for what stood here and why it was removed.
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
@@ -1201,6 +1203,22 @@ export class Pep {
   }
 }
 
+/**
+ * Vestigial (#657): hashes the whole `serverCard` via ordinary
+ * `JSON.stringify`, not a JCS-canonical digest over one capability's
+ * extracted definition, which is what the capability-binding draft's
+ * `source_digest` requires. Not a valid `catalog_digest` either, since
+ * parsing and reserializing `serverCard` loses the exact retrieved octets
+ * that member requires. Formerly attached to every enforced tool call as
+ * `context.capability_source`; removed from the request envelope entirely
+ * (`enforceInner` presents no such member, and no PDP here ever typed or
+ * verified one) because presenting the wrong bytes read as coverage this
+ * deployment did not have. Retained only because existing tests, the demo
+ * stack, and the eval harness still construct `PepDeps.sourceDigest` with
+ * it; both are dropped once #657 PR A/B land the real per-action binding.
+ *
+ * @deprecated Do not add new callers. Tracked for removal in #657 PR B.
+ */
 export function sourceDigestOf(serverCard: unknown): string {
   return `sha-256:${createHash("sha256").update(JSON.stringify(serverCard), "utf8").digest("base64url")}`;
 }
