@@ -345,15 +345,17 @@ export interface PepDeps {
   /**
    * @deprecated The digest this seam carries is `sourceDigestOf`'s whole-
    * server-card hash (#657), not a valid `source_digest` (JCS over one
-   * capability's extracted definition). No longer read for the PDP request
-   * envelope (`context.capability_source` was removed, #657/#730), but the
-   * retained Decision Evidence's `capability_source` coordinated extension
-   * member (@spec runtime-evidence#evidence-extensions, issue #649) still
-   * carries it, reusing exactly this value. Removed once #657 PR B replaces
-   * it with the real per-action capability-binding resolver. See
-   * `sourceDigestOf` below.
+   * capability's extracted definition). Optional (#657/#730): no longer read
+   * for the PDP request envelope (`context.capability_source` was removed
+   * there), and a new caller need not supply it. When present, the retained
+   * Decision Evidence's `capability_source` coordinated extension member
+   * (@spec runtime-evidence#evidence-extensions, issue #649) still carries
+   * it, reusing exactly this value; when absent, `capability_source` is
+   * simply omitted from that record too (it is itself OPTIONAL there).
+   * Removed once #657 PR B replaces it with the real per-action
+   * capability-binding resolver. See `sourceDigestOf` below.
    */
-  sourceDigest: string;
+  sourceDigest?: string;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -836,12 +838,19 @@ export class Pep {
       ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
       ...(token.act !== undefined ? { act: token.act } : {}),
     });
-    const capabilitySource = {
-      tool_id: `${TOOL_BASE}/${tool}`,
-      source_uri: SERVER_CARD_URI,
-      source_digest: this.deps.sourceDigest,
-      operation_ref: `tools/${tool}`,
-    };
+    // `capability_source` is itself an OPTIONAL coordinated extension member
+    // (@spec runtime-evidence#evidence-extensions): absent whenever this
+    // deployment has no `sourceDigest` configured (#657/#730 made the
+    // PepDeps field optional), never synthesized with a placeholder value.
+    const capabilitySource =
+      this.deps.sourceDigest !== undefined
+        ? {
+            tool_id: `${TOOL_BASE}/${tool}`,
+            source_uri: SERVER_CARD_URI,
+            source_digest: this.deps.sourceDigest,
+            operation_ref: `tools/${tool}`,
+          }
+        : undefined;
 
     const req: EvaluationRequest = {
       // @spec authzen#pdp-request rule 10 — `subject.properties.iss` is this
@@ -991,7 +1000,7 @@ export class Pep {
         ? { action_class: req.context.action_class as RuntimeActionClass }
         : {}),
       actor: contextActor,
-      capability_source: capabilitySource,
+      ...(capabilitySource !== undefined ? { capability_source: capabilitySource } : {}),
       ...(protectedPrincipalMapping ? { principal_mapping: protectedPrincipalMapping } : {}),
       ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
       ...(decision.context.conditions
