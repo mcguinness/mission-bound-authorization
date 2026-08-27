@@ -15,8 +15,8 @@
     "content_sha256": "b9caa933d2da82196299f57b1e5bdaf0c2cba4edeaca7031ee4969a8105447ca"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
-    "content_sha256": "691dcdd01e9b78ca4ddc782b57f097ac1fda9ba2cc4f77ce36a5a81636f3b293"
+    "revision": "c6a37a102a0ba2765759d64a3e970497e103c1ff",
+    "content_sha256": "15e8eb3f394428bab07be2eb17c3537abdbad6a03b4c867f6e6d942d16285df1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -5290,7 +5290,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement naming its mediated resources, classes, PEP locations, custody mode, tiers, PDPs, supported detail types, state sources, failure posture, and evidence mechanism"
+    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement whose baseline declaration names its mediated resources/action classes/execution paths, PEP locations, excluded paths, and Mission-establishment mode; its supported authority-entry types and the evaluator for each; the PDP or PDPs; the Mission state source, maximum staleness bound, and PDP-unavailability posture; the remote decision-channel trust mode for every non-co-resident PEP/PDP boundary; and the append-only integrity-protection mechanism for its records (#724: custody mode, evidence mechanism, and retention are named-extension declarations attached only when claimed, never universal baseline members)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -5300,9 +5300,63 @@
      "name": "harness scope statement: compromise-resistant claim enumerates every channel class > emits a disposition for every channel class and marks the enumeration complete",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a complete baseline statement is valid",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a statement claiming one extension with its attached declaration is valid",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting mediated_scope fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting authority_entry_types fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting pdps fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting state_source fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting remote_decision_channels fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting record_integrity_mechanism fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > claiming an extension with no attached declaration fails validation",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "The harness profile's execution-environment scope statement tests channel-enumeration completeness and containment-claim honesty; the remaining ESS fields (PDP identity, evidence mechanism, retention window, staleness bounds per class) are not exercised by a test."
+   "notes": "The harness profile's execution-environment scope statement tests channel-enumeration completeness and containment-claim honesty at endpoint level. src/services/pdp/src/enforcement-scope.ts now separately proves, at unit level, that the six post-#724 baseline members are each required (an omission fails validation, naming the member) and that a named extension claimed with no attached declaration also fails validation, while a claim carrying its declaration is accepted -- the corrected post-#724 shape, not the stale pre-#724 twelve-item universal list this row's observation previously described. Kept partial: no test wires a real deployment's own published statement through this validator end to end at the row's declared resource-operation surface."
   },
   {
    "id": "runtime.conformance.no-claim-outside-declared-scope",
@@ -5323,9 +5377,34 @@
     "normative": "a deployment's runtime-enforcement claim never extends past its declared enforcement scope"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Deployment-declaration duty (AS role): no Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against (`grep -rln \"Enforcement Scope Statement\" src` finds only comments referencing the concept, never a config, schema, or module implementing one). Nothing to assert without fabricating the artifact this row presupposes."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming a resource outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming an action class outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming an authority-entry type outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming an execution path outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "src/services/pdp/src/enforcement-scope.ts now exists (it did not at the last review): an executable EnforcementScopeStatement type plus claimsWithinScope, the scope predicate this MUST names. The four tests above prove the predicate rejects a claim outside each of the four declared-scope axes (resource, action class, authority-entry type, execution path). Kept partial, not tested: the row's own declared level/surface (endpoint/resource-operation) requires a mapping at that level, and claimsWithinScope is exercised at unit level against a hand-built statement, not wired into a live deployment's resource-operation boundary checking a REAL claim against its OWN published statement. That wiring, and the surface/level reclassification it would justify, stays open."
   },
   {
    "id": "runtime.conformance.remote-channel-trust-mode-declared",
@@ -5346,9 +5425,22 @@
     "normative": "a deployment's Enforcement Scope Statement names the remote decision-channel trust mode for every PEP/PDP boundary that is not co-resident (#238/#703: the minimal core declaration this profile's Enforcement Scope Statement requires of every conforming deployment, replacing the twelve-item universal list)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against, the same gap runtime.conformance.no-claim-outside-declared-scope already records."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting remote_decision_channels fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > an empty remote_decision_channels array is valid (a wholly co-resident deployment)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "src/services/pdp/src/enforcement-scope.ts's validateEnforcementScopeStatement checks this baseline member: a statement omitting remote_decision_channels entirely fails validation, while an explicit empty array (a wholly co-resident deployment declaring no non-co-resident boundary) is valid. Kept partial, not tested: the row's declared level/surface (endpoint/resource-operation) wants a mapping wiring a REAL deployment's published statement to its actual boundaries, which this unit-level validator test does not reach."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -6251,12 +6343,90 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a separate PEP and PDP mutually authenticate and integrity-protect the decision channel, the PDP accepts token-derived inputs only from an authorized PEP, and a PDP that receives the raw access token treats it as a credential it never uses outside the declared enforcement scope"
+    "normative": "a separate PEP and PDP mutually authenticate and integrity-protect the decision channel, and the PDP accepts token-derived inputs only from an authorized PEP"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a validly signed request over a real HTTP hop permits, and the PEP verifies the response signature",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a request with no channel signature is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > an unregistered PEP identity is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision request modified in transit after signing is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a PEP submitting a decision request outside its authorized enforcement scope is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a replayed request (same nonce) is refused the second time, with the PDP evaluated only once",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision response modified in transit after the PDP signs it is refused; the PEP MUST NOT act on it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision response with no signature is refused; the PEP MUST NOT act on it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > rejects a replayed permit response bound to a different request",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "src/services/pdp/src/server.ts (PDP) and src/services/pdp/src/client.ts (PEP) are a genuinely separated topology over a real 127.0.0.1 HTTP hop, not another direct function call: the request and response are domain-separated HMAC'd end to end (src/services/pdp/src/channel-mac.ts), the PDP authenticates the PEP by a registered per-identity secret and accepts credential-derived inputs only from a PEP whose registered scopes include the request's audience, and the PEP authenticates the PDP by verifying the response MAC, bound to pep_id, nonce, request_issued_at, the request digest, HTTP status, and the response body, before trusting the decision it carries: a response validly signed for one request cannot be replayed as the answer to another. Every channel-boundary refusal is proven non-vacuous (evaluate() call count stays 0, via an injectable counter) and followed by a valid signed request on the SAME running server that permits. The co-resident case (mcp-payments/src/pep.ts calling evaluate() directly) is unaffected and is exercised separately to show it satisfies the requirement structurally. Not covered: mutual TLS as an alternative trust mode; wiring this channel into mcp-payments' own production PEP path (it remains a standalone reference adapter validating the contract, per the issue's own scoping). The raw-token-forwarding clause of this section is tracked separately as runtime.token-validation.raw-credential-not-used-outside-scope."
+  },
+  {
+   "id": "runtime.token-validation.raw-credential-not-used-outside-scope",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "decision-channel",
+   "text": "Where a deployment instead sends the credential itself to the PDP, the PDP MUST treat it as a credential, protect it against disclosure, and MUST NOT use it outside the declared enforcement scope.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a PDP that receives the raw credential instead of minimized claims treats it as a credential, protects it against disclosure, and never uses it outside the declared enforcement scope"
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "No code path in this deployment: mcp-payments/src/pep.ts calls evaluate() as a direct in-process function call (grep confirms no HTTP/RPC hop, no signed decision-request envelope, no channel-authentication check anywhere in src/services/pdp). PEP and PDP are the same component here, so there is no decision-request channel to integrity-protect or mutually authenticate, and evaluate() performs no caller-provenance check on its EvaluationRequest argument. Testing this meaningfully needs a genuinely separated PEP/PDP topology, which this reference deployment does not have."
+   "notes": "This topology's EvaluationRequest carries no raw-credential field to mishandle: the reference PEP always sends minimized claims, the evidence backing runtime.token-validation.channel-integrity-and-token-forwarding's own tests. No deployment configuration here exercises this clause; it remains unimplemented and untested."
   },
   {
    "id": "runtime.token-validation.minimize-claims-sent-should",
@@ -8539,6 +8709,162 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Depends entirely on runtime.agent-isolated-evidence-emission, which is unimplemented (no evidence-signing key exists at all; see runtime.evidence-emission.signing-key-not-authority): the bypass-attempt table (key export, caller-supplied record, misdirected signature, cross-emitter key use, signer-unavailability fallback) has no signing path in this codebase to attack or demonstrate refusing."
+  },
+  {
+   "id": "runtime.negative-conformance.decision-channel-should-demonstrate",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "negative-conformance",
+   "text": "A deployment with such a boundary SHOULD demonstrate them with negative tests: each of the following bypass attempts MUST be refused, and a deployment SHOULD retain evidence that it ran them.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP/PDP boundary that is not co-resident demonstrates that an unauthenticated PEP, a tampered request, a PEP acting outside its authorized scope, an unauthenticated PDP response, a tampered response, and a validly signed response replayed as the answer to a different request are all refused before or without honoring a decision"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a request with no channel signature is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision request modified in transit after signing is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a PEP submitting a decision request outside its authorized enforcement scope is refused before evaluation, with zero PDP evaluation",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision response with no signature is refused; the PEP MUST NOT act on it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > a decision response modified in transit after the PDP signs it is refused; the PEP MUST NOT act on it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > rejects a replayed permit response bound to a different request",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > co-resident: calling evaluate() directly needs no channel signature, satisfying the requirement structurally",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "This is the negative-conformance table's own row for the Remote Decision Channel: the same evidence backing runtime.token-validation.channel-integrity-and-token-forwarding, plus the co-resident case exercised separately (calling evaluate() directly, no channel at all) to show the table's own carve-out (\"A co-resident PDP and PEP satisfy the requirement structurally\") without falsely exercising the remote branch."
+  },
+  {
+   "id": "runtime.negative-conformance.no-claim-outside-scope-should-demonstrate",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "negative-conformance",
+   "text": "A deployment MUST NOT claim runtime enforcement for a resource, action class, authority-entry type, or execution path outside that scope, and a deployment SHOULD demonstrate that the boundary fails closed:",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment demonstrates that an Enforcement Scope Statement missing a required baseline declaration, one claiming an extension with no attached declaration, and a claim naming a resource/action-class/authority-entry-type/execution-path outside the declared scope are all rejected"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting mediated_scope fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting authority_entry_types fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting pdps fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting state_source fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting remote_decision_channels fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > omitting record_integrity_mechanism fails validation, naming that member",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > claiming an extension with no attached declaration fails validation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming a resource outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming an action class outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming an authority-entry type outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > a claim naming an execution path outside the declared scope is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "This is the negative-conformance table's own row for the Enforcement Scope Statement: src/services/pdp/src/enforcement-scope.ts's validator and claimsWithinScope predicate, exercised at unit level against hand-built statements. It does not itself prove that any live deployment's own published statement matches what it actually mediates (an audit property the closing prose after the table names explicitly); see runtime.conformance.no-claim-outside-declared-scope and runtime.conformance.remote-channel-trust-mode-declared for that broader MUST's own (partial) coverage."
   },
   {
    "id": "runtime.decision-api-binding.custom-binding-must-be-specified",

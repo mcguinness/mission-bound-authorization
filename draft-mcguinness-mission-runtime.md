@@ -1078,7 +1078,7 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 119 conformance rows in conformance-manifest.json (27 tested, 17 partial, 72 todo, 3 blocked).
+Implementation: 122 conformance rows in conformance-manifest.json (30 tested, 19 partial, 70 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
@@ -2770,6 +2770,44 @@ deployment claiming it SHOULD demonstrate, per covered emitter:
 These tests demonstrate the exposed control surface; they do not
 prove the absence of a hidden bypass, which remains an attestation,
 audit, and path-completeness property.
+
+The Remote Decision Channel's baseline requirements
+({{decision-channel}}) are not a claimed extension: they apply to
+every PEP/PDP boundary that is not co-resident. A deployment with
+such a boundary SHOULD demonstrate them with negative tests: each of
+the following bypass attempts MUST be refused, and a deployment
+SHOULD retain evidence that it ran them.
+
+| Bypass attempt | Required outcome |
+|---|---|
+| A PEP omits the request signature, or presents an unregistered PEP identity | Refused before evaluation, with no PDP evaluation |
+| A decision request is modified after the PEP signs it | Refused before evaluation, with no PDP evaluation |
+| A PEP submits a decision request for an enforcement scope it is not authorized for | Refused before evaluation, with no PDP evaluation |
+| A decision response carries no signature, or one the PEP does not recognize | Refused; the PEP MUST NOT act on the decision |
+| A decision response is modified after the PDP signs it | Refused; the PEP MUST NOT act on the decision |
+| A validly signed decision response captured for one request is presented as the response to a different request | Refused; the PEP MUST NOT act on the decision |
+
+A co-resident PDP and PEP satisfy {{decision-channel}} structurally
+and need no separate channel mechanism; these tests apply only where
+the boundary is not co-resident.
+
+This profile's enforcement claim is bounded by declared scope
+({{runtime-conformance}}). A deployment MUST NOT claim runtime
+enforcement for a resource, action class, authority-entry type, or
+execution path outside that scope, and a deployment SHOULD
+demonstrate that the boundary fails closed:
+
+| Bypass attempt | Required outcome |
+|---|---|
+| An Enforcement Scope Statement omits a required baseline declaration | The statement fails validation |
+| An Enforcement Scope Statement claims a named assurance extension with no attached declaration | The statement fails validation |
+| A claim names a resource, action class, authority-entry type, or execution path outside the declared scope | The claim is rejected as out of scope |
+
+These tests exercise the statement's own validator and the scope
+predicate a claim is checked against; they do not by themselves
+prove that everything a live deployment actually mediates matches
+its own published statement, which remains an audit property of
+that statement.
 
 # Deployment Considerations {#runtime-deployment}
 
