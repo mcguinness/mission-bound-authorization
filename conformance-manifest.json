@@ -13990,7 +13990,43 @@
      "surface": "verification"
     }
    ],
-   "notes": "Partial, not tested: mission.id/mission.issuer joins (Decision Evidence, Execution Evidence via mission_id, and now (#739 review point 3) Refusal Record for a 'refusal'-kind receipt), the evaluation_id join, and authorized/effective parameter-digest consistency (exact-mirror in both directions, and effective_parameter_digest's own required-when-authorized-present rule) are exercised. Audience consistency across Decision and Execution Evidence (`executionRec.audience !== decisionRec.audience`) and target consistency are implemented but not separately exercised by a dedicated negative test; the reverse-direction parameter-digest mirror is stricter than the draft's own literal text (lines 1020-1023 state only the Decision-carries-it-so-Execution-MUST-equal-it direction), so that reverse case may be a spec finding rather than solely an implementation gap."
+   "notes": "Partial, not tested: mission.id/mission.issuer joins (Decision Evidence, Execution Evidence via mission_id, and now (#739 review point 3) Refusal Record for a 'refusal'-kind receipt), the evaluation_id join, and authorized/effective parameter-digest consistency (exact-mirror in both directions, and effective_parameter_digest's own required-when-authorized-present rule) are exercised. Audience consistency across Decision and Execution Evidence (`executionRec.audience !== decisionRec.audience`) and target consistency are implemented but not separately exercised by a dedicated negative test. The reverse-direction parameter-digest mirror was, at the time this row was written, stricter than the draft's own literal text; that gap is now closed (issue #649 finding): the draft's `authorized_parameter_digest` member is biconditional (execution-evidence-object) and step 4 states the join failure explicitly, so the verifier's exact-mirror check and the draft agree. See evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest and evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present for the rows tracking the new text directly."
+  },
+  {
+   "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "exactly one of the Decision Evidence's `parameter_digest` and the Execution Evidence's `authorized_parameter_digest` present is a join failure",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Receipt verifier rejects the join between a referenced Decision Evidence and Execution Evidence pair as a join failure when exactly one of the Decision Evidence's parameter_digest and the Execution Evidence's authorized_parameter_digest is present, in either direction, so the execution side cannot assert an authorized digest the decision never established and cannot silently omit the digest the decision did establish (issue #649 finding, closing the reverse direction the draft's member text left silent)"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries no authorized_parameter_digest while the Decision Evidence carries a parameter_digest (#739 review point 3, exact mirror)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Both tests are already mapped to evidence.receipt.step4-cross-record-joins, which covers step 4 as a whole; this row is reused test coverage, cited here specifically because it exercises the exactly-one-present join failure this row's quoted text now states explicitly. The first test proves the forward direction (Decision Evidence carries parameter_digest, Execution Evidence carries neither authorized_ nor effective_parameter_digest); the second proves the reverse direction this issue's finding closed (Decision Evidence carries no parameter_digest, Execution Evidence still carries authorized_parameter_digest). Both assert { valid: false, reason: 'join_failure' } from verifyMissionReceipt (src/services/mcp-payments/src/mission-receipt.ts, the `executionRec.authorized_parameter_digest !== decisionRec.parameter_digest` comparison)."
   },
   {
    "id": "evidence.receipt.step5-copied-members-equal-source",
@@ -14518,6 +14554,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "MUST be absent when the linked Decision Evidence carries no `parameter_digest`.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "authorized_parameter_digest MUST NOT be present on an Execution Evidence Object when the linked Decision Evidence carries no parameter_digest, so the execution side can never assert an authorized digest the decision itself never established; the member is biconditional on the Decision Evidence's own parameter_digest, not merely REQUIRED-and-equal in one direction (issue #649 finding)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No producer-side test exercises a PEP declining to emit authorized_parameter_digest when the linked Decision Evidence carries no parameter_digest: recordExecution (src/services/mcp-payments/src/evidence.ts) passes through whatever the caller supplies with no such guard, so no test could assert the PEP itself withholds the field. The only test touching this exact combination, 'Mission Receipt build + verify > rejects a join failure: Execution Evidence carries authorized_parameter_digest while the Decision Evidence carries no parameter_digest (#739 review point 3, exact mirror, reverse direction)' (src/services/mcp-payments/test/mission-receipt.test.ts), is a RECEIPT-VERIFIER test that catches an already-malformed record after the fact; it is cited on evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present instead, the row whose role and surface it actually exercises."
   },
   {
    "id": "evidence.execution.effective-digest-required-when-authorized-present",
