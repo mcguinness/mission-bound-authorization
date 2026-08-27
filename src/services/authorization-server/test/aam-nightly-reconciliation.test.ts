@@ -398,7 +398,16 @@ const evalAction = async (missionId: string, action: string) => {
       subject: { id: as.kernel.get(missionId)?.subject.sub ?? "unknown" },
       resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
       action: { name: action },
-      context: { audience: RESOURCE, mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } },
+      context: {
+        audience: RESOURCE,
+        mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
+        // The reconciliation ceiling/proposal entries bind a max_amount across
+        // invoice.read and remittance.send alike (@spec runtime#input-parameters:
+        // presence-based, not action-based), so this raw PDP call needs the
+        // same input the real Pep below already supplies from inv-1's actual
+        // amount (125.00 USD, seeded in beforeAll).
+        amount: { amount: "125.00", currency: "USD" },
+      },
     },
     { view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction },
   );
