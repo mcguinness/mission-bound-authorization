@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          25 August 2026
-Expires: 26 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -1150,11 +1150,11 @@ Table of Contents
    audit horizon; a deployment MUST retain their evidence for a
    deployment-declared window.
 
-   Entries discharged under the status profile's completion machinery
-   ([I-D.draft-mcguinness-oauth-mission-status]) disappear from status
-   surfaces while authority_hash still commits them, so an auditor
-   reconciling the recorded approval surface against later-enforced
-   authority consults discharge state.
+   Entries discharged under the Entry Discharge companion's completion
+   machinery ([I-D.draft-mcguinness-oauth-mission-discharge]) disappear
+   from status surfaces while authority_hash still commits them, so an
+   auditor reconciling the recorded approval surface against later-
+   enforced authority consults discharge state.
 
 10.1.  Minimization and Redaction
 
@@ -1550,15 +1550,16 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-approval-
               revision.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-discharge]
+              McGuinness, K., "Mission Completion and Entry Discharge
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-discharge.html>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-status]
-              McGuinness, K., "Mission Status and Lifecycle for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-status.html>.
 
    [I-D.draft-mcguinness-oauth-mission-template]
               McGuinness, K., "Mission Template for OAuth 2.0", 2026,

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          25 August 2026
-Expires: 26 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -668,14 +668,14 @@ Table of Contents
    this as the Effective Authority Set, defined by its Status profile
    ([I-D.draft-mcguinness-oauth-mission-status]).
 
-   Where the deployment runs discharge
-   ([I-D.draft-mcguinness-oauth-mission-status]), this input excludes a
-   discharged entry once the PDP can establish discharge state from its
-   Mission state source.  A PDP that recognizes terminal_when SHOULD
-   refuse an action within a discharged entry at the point of use,
-   learning discharge state from the surfaces that report it
-   ([I-D.draft-mcguinness-oauth-mission-status], Section "Relationship
-   to Runtime Enforcement").
+   Where the deployment runs the Entry Discharge companion's discharge
+   mechanism ([I-D.draft-mcguinness-oauth-mission-discharge]), this
+   input excludes a discharged entry once the PDP can establish
+   discharge state from its Mission state source.  A PDP that recognizes
+   terminal_when SHOULD refuse an action within a discharged entry at
+   the point of use, learning discharge state from the surfaces that
+   report it ([I-D.draft-mcguinness-oauth-mission-discharge],
+   Section "Relationship to Runtime Enforcement").
 
    Where a Mission participates in the Containment profile
    ([I-D.draft-mcguinness-oauth-mission-containment]), this input
@@ -3476,6 +3476,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -3657,16 +3662,17 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-discharge]
+              McGuinness, K., "Mission Completion and Entry Discharge
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-discharge.html>.
+
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-status]
-              McGuinness, K., "Mission Status and Lifecycle for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-status.html>.
 
    [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
               McGuinness, K., "Mission Transaction Authorization Profile

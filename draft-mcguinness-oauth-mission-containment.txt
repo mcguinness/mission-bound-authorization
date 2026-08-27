@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             25 August 2026
-Expires: 26 February 2027
+Intended status: Experimental                             27 August 2026
+Expires: 28 February 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -142,10 +142,11 @@ Table of Contents
    anchors are immutable; whether capability is contained is evaluated
    state, not part of authority_hash, and folding it into the anchor
    would make the committed authority time-varying.  This is the same
-   argument by which the Status profile keeps an entry's fired
-   completion status out of the anchor
-   ([I-D.draft-mcguinness-oauth-mission-status]).  The overlay is held
-   by the Mission Issuer, versions independently, and only ever grows.
+   argument by which the Entry Discharge companion keeps an entry's
+   fired completion status out of the anchor
+   ([I-D.draft-mcguinness-oauth-mission-discharge]).  The overlay is
+   held by the Mission Issuer, versions independently, and only ever
+   grows.
 
 2.  Status: An Experimental Extension
 
@@ -426,7 +427,7 @@ Table of Contents
    state, not part of authority_hash; folding containment into the
    anchor would make the committed authority time-varying, exactly as
    folding an entry's fired completion status into it would
-   ([I-D.draft-mcguinness-oauth-mission-status]).
+   ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
 7.1.  Removal-Only Expressiveness
 
@@ -441,7 +442,8 @@ Table of Contents
 
 7.2.  Relationship to Entry Discharge
 
-   Containment composes with the Status profile's entry discharge and
+   Containment composes with the Entry Discharge companion's discharge
+   mechanism ([I-D.draft-mcguinness-oauth-mission-discharge]) and
    duplicates none of it.  Discharge retires an entry because the task
    the entry was granted for is done, under a terminal_when condition
    the Approver committed inside the Authority Set; containment removes
@@ -704,9 +706,9 @@ Table of Contents
       Status List bit is unchanged: the list carries reliance bits only,
       and containment detail, like the state version, stays on the
       authoritative surfaces
-      ([I-D.draft-mcguinness-oauth-mission-status]).  Containment binds
-      derivation at the issuer, so a list-only consumer's staleness
-      never widens what a contained Mission can issue.
+      ([I-D.draft-mcguinness-oauth-mission-status-list]).  Containment
+      binds derivation at the issuer, so a list-only consumer's
+      staleness never widens what a contained Mission can issue.
 
    *  *Push.* Where Signals runs, the commit is emitted as a
       mission.lifecycle-change whose state equals its prior_state, that
@@ -1280,6 +1282,12 @@ Informative References
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-discharge]
+              McGuinness, K., "Mission Completion and Entry Discharge
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-discharge.html>.
+
    [I-D.draft-mcguinness-oauth-mission-management]
               McGuinness, K., "Mission Management for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1290,6 +1298,11 @@ Informative References
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status-list]
+              McGuinness, K., "Mission Status List for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-status-list.html>.
 
 Author's Address
 

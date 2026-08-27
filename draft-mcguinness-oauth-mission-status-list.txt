@@ -1,0 +1,274 @@
+
+
+
+
+Web Authorization Protocol                                 K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
+
+
+                   Mission Status List for OAuth 2.0
+           draft-mcguinness-oauth-mission-status-list-latest
+
+Abstract
+
+   The Mission Status and Lifecycle profile for OAuth 2.0 lets a
+   consumer holding a mission_id resolve current Mission state, one
+   Mission at a time, from a signed Mission Status Response or a token
+   introspection projection.  This document defines a companion surface
+   for fleet scale: a Mission Issuer MAY additionally publish Mission
+   state as an OAuth Status List, a signed, compressed bit array in
+   which each participating Mission holds an index, fetched once per
+   freshness window and read locally per action.  It is optional and
+   builds on the Mission Status and Lifecycle profile; a deployment that
+   does not adopt it is unaffected.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-oauth-mission-status-list.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-oauth-mission-status-list/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 28 February 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Status: An Optional Profile
+   3.  Conventions and Terminology
+   4.  Mission Status List
+   5.  Security Considerations
+   6.  Privacy Considerations
+   7.  IANA Considerations
+   8.  Conformance
+   Acknowledgments
+   References
+     Normative References
+     Informative References
+   Author's Address
+
+1.  Introduction
+
+   This document is a satellite of the Mission Status and Lifecycle
+   profile [I-D.draft-mcguinness-oauth-mission-status] ("the Status
+   profile"), adding a fleet-scale reliance surface.
+
+   The Status profile lets a consumer resolve current Mission state from
+   the dedicated Mission Status operation or the token introspection
+   projection, one Mission at a time.  A consumer that relies on many
+   Missions concurrently, such as a gateway fronting an agent fleet, can
+   instead read Mission state from a compact, signed bit array published
+   once and read locally per action.  This document defines that
+   surface: a Mission Status List ([I-D.draft-ietf-oauth-status-list])
+   profile of a status_list extension member the Status profile's
+   response and introspection surfaces already accommodate.
+
+   This document is optional.  A Mission Issuer that does not publish a
+   Status List, and a consumer that does not read one, are unaffected;
+   they rely on the Status profile's per-Mission surfaces directly.
+
+   This document defines no new Mission semantics and changes no meaning
+   of any existing member: the Mission, its lifecycle states, and the
+   Mission Status Response are defined in
+   [I-D.draft-mcguinness-oauth-mission-status].
+
+2.  Status: An Optional Profile
+
+   Role: companion.  Spec maturity: experimental.  Maintenance: active.
+   Implementation: not yet in the conformance ledger (conformance-
+   manifest.json).  Adopt when: A consumer relies on many Missions
+   concurrently and per-Mission status reads do not scale.  Requires:
+   Mission-Bound Authorization for OAuth 2.0; Mission Status and
+   Lifecycle for OAuth 2.0.
+
+3.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses the terms defined in the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] and the Status profile
+   [I-D.draft-mcguinness-oauth-mission-status], in particular Mission,
+   Mission Issuer, mission_id, the Mission lifecycle states, the Mission
+   Status Response, and the token introspection projection.
+
+   All JSON shown in this document is non-normative and illustrative;
+   the member definitions in the surrounding text are authoritative.
+
+4.  Mission Status List
+
+   This section is OPTIONAL.
+
+   One consumer often relies on many Missions at once: a gateway
+   fronting an agent fleet holds a Mission per unit of work, and per-
+   Mission status reads at that scale are a latency tax the Status
+   profile's caching rules cannot amortize.  A Mission Issuer MAY
+   additionally publish Mission state as a Status List
+   ([I-D.draft-ietf-oauth-status-list]): a signed, compressed bit array
+   in which each participating Mission holds an index, fetched once per
+   freshness window and read locally per action.
+
+   The arithmetic is the point.  A fleet of 100,000 participating
+   Missions at two bits per entry is 25,000 bytes before compression,
+   and a mostly-active population compresses far below that; a consumer
+   fetching that list once per 30-second window spends under a kilobyte
+   per second to hold fresh state for every Mission it relies on, where
+   per-Mission status reads would cost 100,000 requests per window.
+   Fleet scale makes state freshness cheaper per Mission, not more
+   expensive.
+
+   *  *Reference.* A participating Mission's status_list member (idx and
+      uri, the referenced-token shape of
+      [I-D.draft-ietf-oauth-status-list]) rides the Mission Status
+      Response and the introspection projection
+      ([I-D.draft-mcguinness-oauth-mission-status], Sections "Response"
+      and "Token Introspection Mission Projection"), so a consumer
+      learns its index from the authoritative surface it already reads.
+
+   *  *Mapping.* VALID (0x00) reports active; SUSPENDED (0x02) reports
+      suspended; INVALID (0x01) reports every terminal state.  A
+      consumer treats any other value as non-active, per the fail-safe
+      rule.  The list carries reliance bits only: which terminal state,
+      the successor, and the state version stay on the Status profile's
+      authoritative surfaces, and a consumer that observes a bit other
+      than VALID re-establishes state there before any further reliance.
+
+   *  *Freshness.* The Status List Token's ttl and exp are a published
+      staleness bound: within them a VALID bit permits reliance exactly
+      as a fresh Mission Status Response reporting active does, and an
+      expired or unfetchable list is stale state, never permission
+      ([I-D.draft-mcguinness-mission-runtime]).  A committed lifecycle
+      transition MUST be reflected in the next Status List Token
+      published for its list, and where Signals runs, the event is the
+      push complement to the list's pull floor.
+
+   *  *Privacy.* Index assignment MUST NOT be derivable from or
+      correlatable with the Mission Identifier, and the list conveys
+      bits at opaque indices only, so publishing it preserves the Status
+      profile's anti-oracle posture
+      ([I-D.draft-mcguinness-oauth-mission-status], Section "Anti-Oracle
+      Property") while the fetch itself, covering every index at once,
+      reveals no per-Mission interest.
+
+5.  Security Considerations
+
+   The security considerations of the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] and the Status profile
+   [I-D.draft-mcguinness-oauth-mission-status] apply in full.  This
+   document introduces no attack surface beyond the Mapping and
+   Freshness rules of Section 4, which are normative above: a consumer
+   that fails safe on a non-VALID bit and never relies past the Status
+   List Token's own exp inherits the Status profile's revocation-
+   propagation guarantees for the fleet-scale path.
+
+6.  Privacy Considerations
+
+   The privacy considerations of the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] and the Status profile
+   [I-D.draft-mcguinness-oauth-mission-status] apply in full.  The
+   Status List's own privacy rule, that index assignment MUST NOT be
+   derivable from or correlatable with the Mission Identifier, is given
+   in Section 4.
+
+7.  IANA Considerations
+
+   This document requests no IANA actions.  It defines no new OAuth
+   Authorization Server metadata member, media type, or registry: the
+   status_list object it profiles reuses the Status profile's existing
+   Mission Status Response and introspection extension point
+   ([I-D.draft-mcguinness-oauth-mission-status]).
+
+8.  Conformance
+
+   An implementation claiming this capability MUST publish a Mission
+   Status List meeting the Reference, Mapping, Freshness, and Privacy
+   rules of Section 4.  An implementation that does not claim it is
+   unaffected and remains conformant to the Status profile.
+
+Acknowledgments
+
+   The author thanks the implementers and reviewers of the Mission-Bound
+   Authorization work for feedback that shaped this extension.
+
+References
+
+Normative References
+
+   [I-D.draft-ietf-oauth-status-list]
+              Looker, T., Bastian, P., and C. Bormann, "Token Status
+              List (TSL)", Work in Progress, Internet-Draft, draft-ietf-
+              oauth-status-list-21, 21 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              status-list-21>.
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+Informative References
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com

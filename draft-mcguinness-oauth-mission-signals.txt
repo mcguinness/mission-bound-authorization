@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          25 August 2026
-Expires: 26 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -163,7 +163,8 @@ Table of Contents
    changes instead of polling per Mission.  Requires: Mission Status and
    Lifecycle for OAuth 2.0.  Also requires, conditionally: Mission-Bound
    Authorization for OAuth 2.0 (when the OAuth binding is the
-   substrate).
+   substrate); Mission Completion and Entry Discharge for OAuth 2.0
+   (when the deployment also runs the Entry Discharge companion).
 
 3.  Conventions and Terminology
 
@@ -376,13 +377,14 @@ Table of Contents
       true on any mission.lifecycle-change event whose commit narrows
       effective authority without changing state, whichever overlay
       narrowed it: an entry discharge
-      ([I-D.draft-mcguinness-oauth-mission-status]) is the current case,
-      containment ([I-D.draft-mcguinness-oauth-mission-containment]) is
-      another, and a future issuer-held narrowing overlay is expected to
-      set it the same way; delivery of such an event is itself subject
-      to the gate of Section 9.  OPTIONAL, and absent or false, on any
-      other transition, meaning it does not narrow effective authority
-      beyond state.
+      ([I-D.draft-mcguinness-oauth-mission-discharge]) is the current
+      case, containment
+      ([I-D.draft-mcguinness-oauth-mission-containment]) is another, and
+      a future issuer-held narrowing overlay is expected to set it the
+      same way; delivery of such an event is itself subject to the gate
+      of Section 9.  OPTIONAL, and absent or false, on any other
+      transition, meaning it does not narrow effective authority beyond
+      state.
 
    Following the issuance profile's forward-compatibility rule, an event
    consumer MUST treat every state value other than active as non-
@@ -672,7 +674,7 @@ Table of Contents
    only by the new member: a Mission Issuer MUST NOT deliver a
    mission.lifecycle-change event whose effective-authority change is
    represented by authority_changed alone (a discharge commit,
-   [I-D.draft-mcguinness-oauth-mission-status]) to a stream whose
+   [I-D.draft-mcguinness-oauth-mission-discharge]) to a stream whose
    consumer has not declared authority_changed in
    mission_capabilities_supported.  An event whose narrowing is also
    represented by containment_version follows the containment profile's
@@ -895,6 +897,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-discharge]
+              McGuinness, K., "Mission Completion and Entry Discharge
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-discharge.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth

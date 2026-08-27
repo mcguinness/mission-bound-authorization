@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             25 August 2026
-Expires: 26 February 2027
+Intended status: Experimental                             27 August 2026
+Expires: 28 February 2027
 
 
         Mission Transaction Authorization Profile for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -206,9 +206,9 @@ Table of Contents
    containment, the issuer-held narrowing of a live Mission's authority,
    as Mission Containment defines it
    ([I-D.draft-mcguinness-oauth-mission-containment]), and discharge,
-   the per-entry retirement of granted authority, as the status
-   profile's lifecycle suite defines it
-   ([I-D.draft-mcguinness-oauth-mission-status]).
+   the per-entry retirement of granted authority, as the Entry Discharge
+   companion defines it
+   ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
    Transaction Authorization Server (TAS):  The OAuth Authorization
       Server acting in the role
@@ -610,7 +610,8 @@ Table of Contents
        List MAY serve as a lifecycle prefilter only and MUST NOT alone
        satisfy this step, since its two-bit reliance state does not
        observe containment or discharge
-       ([I-D.draft-mcguinness-oauth-mission-status],
+       ([I-D.draft-mcguinness-oauth-mission-status-list],
+       [I-D.draft-mcguinness-oauth-mission-discharge],
        [I-D.draft-mcguinness-oauth-mission-signals],
        [I-D.draft-mcguinness-mission-runtime]); and
 
@@ -1347,16 +1348,22 @@ Informative References
               mission-bound-authorization/draft-mcguinness-oauth-
               mission-cross-org-delegation.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-discharge]
+              McGuinness, K., "Mission Completion and Entry Discharge
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-discharge.html>.
+
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-status]
-              McGuinness, K., "Mission Status and Lifecycle for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-status.html>.
+   [I-D.draft-mcguinness-oauth-mission-status-list]
+              McGuinness, K., "Mission Status List for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-status-list.html>.
 
    [I-D.draft-reece-wimse-cross-org-delegation]
               Reece, M., "Cross-Organizational Delegation for Workload

@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 26 February 2027</td>
+<td class="center">Expires 28 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-orchestration-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-25" class="published">25 August 2026</time>
+<time datetime="2026-08-27" class="published">27 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-28">28 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1132,7 +1132,7 @@ active Mission, never the terminated Mission.<a href="#section-abstract-1" class
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 28 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1339,7 +1339,7 @@ Mission Assurance Level
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-experimental-prof" class="section-name selfRef">Status: An Experimental Profile</a>
       </h2>
 <p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Implementation: 3 conformance rows in conformance-manifest.json (1 tested, 2 partial).
+Implementation: 5 conformance rows in conformance-manifest.json (2 tested, 3 partial).
 Adopt when: In-flight work must unwind safely if the Mission ends mid-workflow.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source); Mission Lifecycle Signals for OAuth 2.0 (when Signals is the authority-change trigger source).<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -2173,8 +2173,9 @@ If neither applies, the orchestrator <span class="bcp14">MUST</span> escalate to
 <p id="section-10-2">The compensation record is an Orchestration Evidence record
 (<a href="#orchestration-evidence" class="auto internal xref">Section 12</a>) with <code>orchestration_decision</code> set to
 <code>compensate</code>. In that case its <code>authority_basis</code>, <code>linked_evidence</code>,
-<code>compensation_action</code>, and <code>compensation_outcome</code> members are <span class="bcp14">REQUIRED</span>.
-Through those members the record links:<a href="#section-10-2" class="pilcrow">¶</a></p>
+<code>compensates_evaluation_id</code>, <code>compensation_action</code>, and
+<code>compensation_outcome</code> members are <span class="bcp14">REQUIRED</span>. Through those members the
+record links:<a href="#section-10-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10-3.1">
           <p id="section-10-3.1.1">the original Mission (the record's <code>mission</code>);<a href="#section-10-3.1.1" class="pilcrow">¶</a></p>
@@ -2184,17 +2185,21 @@ Through those members the record links:<a href="#section-10-2" class="pilcrow">�
 (<code>linked_evidence</code>);<a href="#section-10-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.3">
-          <p id="section-10-3.3.1">the state transition that triggered compensation (<code>mission_state</code>
-and <code>reason</code>);<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-10-3.3.1">the specific evaluation the compensation reverses
+(<code>compensates_evaluation_id</code>);<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.4">
-          <p id="section-10-3.4.1">the compensation action (<code>compensation_action</code>);<a href="#section-10-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-10-3.4.1">the state transition that triggered compensation (<code>mission_state</code>
+and <code>reason</code>);<a href="#section-10-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.5">
-          <p id="section-10-3.5.1">the authority basis for compensation (<code>authority_basis</code>); and<a href="#section-10-3.5.1" class="pilcrow">¶</a></p>
+          <p id="section-10-3.5.1">the compensation action (<code>compensation_action</code>);<a href="#section-10-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.6">
-          <p id="section-10-3.6.1">the outcome (<code>compensation_outcome</code>).<a href="#section-10-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-10-3.6.1">the authority basis for compensation (<code>authority_basis</code>); and<a href="#section-10-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.7">
+          <p id="section-10-3.7.1">the outcome (<code>compensation_outcome</code>).<a href="#section-10-3.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <div id="compensation-authority">
@@ -2232,10 +2237,12 @@ an authority basis: it does not create authority a PEP would enforce
 over a terminated Mission. If neither basis applies, the orchestrator
 <span class="bcp14">MUST NOT</span> compensate. It <span class="bcp14">MUST</span> record a <code>human_review</code> decision.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
 <p id="section-10.1-4">Under either basis, the compensating action's decision <span class="bcp14">MUST</span> carry the
-<code>decision_id</code> of the decision it reverses in the runtime profile's
-<code>compensates_decision_id</code> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
-binding each compensation to the specific committed step it offsets
-rather than standing as an open-ended remedial power.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<code>evaluation_id</code> of the decision it reverses in
+<code>compensates_evaluation_id</code> (<a href="#orchestration-evidence" class="auto internal xref">Section 12</a>), the
+Orchestration Evidence record's realization of the runtime profile's
+compensation link (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), binding
+each compensation to the specific committed step it offsets rather than
+standing as an open-ended remedial power.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="unwind-ordering">
@@ -2431,33 +2438,45 @@ of the compensation action.<a href="#section-12-2.30.1" class="pilcrow">¶</a></
 </dd>
         <dd class="break"></dd>
 <dt id="section-12-2.31">
-<code>evidence_envelope</code>:</dt>
+<code>compensates_evaluation_id</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-12-2.32">
-          <p id="section-12-2.32.1">Integrity protection over the Orchestration Evidence object.
+          <p id="section-12-2.32.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The
+<code>evaluation_id</code> of the decision this compensation reverses, carrying
+the runtime profile's compensation link
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) so the compensating
+action reconciles against the specific evaluation it offsets.
+Distinct from <code>linked_evidence</code>: this member names the evaluation
+being reversed, never an evidence record identifier.<a href="#section-12-2.32.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-12-2.33">
+<code>evidence_envelope</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-12-2.34">
+          <p id="section-12-2.34.1">Integrity protection over the Orchestration Evidence object.
 <span class="bcp14">OPTIONAL</span>, except <span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is
 <code>compensate</code> and the compensated step's reversibility class is
 <code>irreversible_action</code>, <code>external_commitment</code>, or
 <code>privileged_administration</code>. Compensation in those classes is
 consequential work in its own right; its record does not rest on
-an unsigned self-report by the orchestrator that performed it.<a href="#section-12-2.32.1" class="pilcrow">¶</a></p>
-<p id="section-12-2.32.2">When present:<a href="#section-12-2.32.2" class="pilcrow">¶</a></p>
+an unsigned self-report by the orchestrator that performed it.<a href="#section-12-2.34.1" class="pilcrow">¶</a></p>
+<p id="section-12-2.34.2">When present:<a href="#section-12-2.34.2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-12-2.32.3.1">
-              <p id="section-12-2.32.3.1.1">With <code>format</code> <code>jws-compact</code>, it is a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact
+<li class="normal" id="section-12-2.34.3.1">
+              <p id="section-12-2.34.3.1.1">With <code>format</code> <code>jws-compact</code>, it is a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact
 Serialization whose payload is the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical
-bytes of the object with <code>evidence_envelope</code> removed.<a href="#section-12-2.32.3.1.1" class="pilcrow">¶</a></p>
+bytes of the object with <code>evidence_envelope</code> removed.<a href="#section-12-2.34.3.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12-2.32.3.2">
-              <p id="section-12-2.32.3.2.1">It <span class="bcp14">MUST</span> identify the signer. The JWS protected header <span class="bcp14">MUST</span> carry
+            <li class="normal" id="section-12-2.34.3.2">
+              <p id="section-12-2.34.3.2.1">It <span class="bcp14">MUST</span> identify the signer. The JWS protected header <span class="bcp14">MUST</span> carry
 <code>kid</code>, whose resolution under deployment policy identifies the
 issuer, <code>alg</code>, and <code>typ</code>, matching the suite's evidence-envelope
-convention (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-12-2.32.3.2.1" class="pilcrow">¶</a></p>
+convention (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-12-2.34.3.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-12-2.32.4">This document registers no media type; its two local-use type
+<p id="section-12-2.34.4">This document registers no media type; its two local-use type
 identifiers are <code>mission-orchestration-evidence</code>, which <code>typ</code>
 carries here, and <code>mission-unwind-plan</code>
-(<a href="#unwind-plan-integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-12-2.32.4" class="pilcrow">¶</a></p>
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-12-2.34.4" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2490,8 +2509,9 @@ Review confirmed that the posting committed before the Mission was
 revoked; a pre-provisioned remedial Mission that is <code>active</code>
 authorizes the reversing entry (<a href="#compensation-authority" class="auto internal xref">Section 10.1</a>). The
 record links the review record above and the original runtime
-enforcement evidence, and omits <code>unwind_plan_hash</code> because it is not
-the step's first record:<a href="#section-12-5" class="pilcrow">¶</a></p>
+enforcement evidence in <code>linked_evidence</code>, carries the compensated
+decision's <code>evaluation_id</code> in <code>compensates_evaluation_id</code>, and omits
+<code>unwind_plan_hash</code> because it is not the step's first record:<a href="#section-12-5" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-12-6">
 <pre>
 {
@@ -2511,8 +2531,9 @@ the step's first record:<a href="#section-12-5" class="pilcrow">¶</a></p>
   "outcome_state": "committed",
   "linked_evidence": [
     "orch_4r9SqLm8tY2p",
-    "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"
+    "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA"
   ],
+  "compensates_evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "authority_basis": "separate_mission",
   "compensation_action": "erp.journal_entry.reverse",
   "compensation_outcome": "completed",

@@ -1073,7 +1073,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 26 February 2027</td>
+<td class="center">Expires 28 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authority-server-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-25" class="published">25 August 2026</time>
+<time datetime="2026-08-27" class="published">27 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-26">26 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-28">28 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1159,7 +1159,7 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 26 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 28 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1504,7 +1504,7 @@ the bindings rather than a maturity one.<a href="#section-1.1-2" class="pilcrow"
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-2-1">Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 18 conformance rows in conformance-manifest.json (4 tested, 1 partial, 13 todo).
+Implementation: 26 conformance rows in conformance-manifest.json (10 tested, 3 partial, 13 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -2825,6 +2825,19 @@ authority, and current Resource policy. The join adds the Mission
 bound; it <span class="bcp14">MUST NOT</span> widen either of the other two, and a PEP <span class="bcp14">MUST NOT</span> treat a Mission permit as overriding what the credential or
 the resource would refuse.<a href="#section-11-6.8.1" class="pilcrow">¶</a></p>
 </li>
+        <li id="section-11-6.9">
+          <p id="section-11-6.9.1"><strong>Joined-view evidence commitment.</strong> A decision reached over a
+successful join <span class="bcp14">MUST</span> carry a joined-view commitment
+(<code>join_view_id</code>) separate from <code>policy_view_id</code>, which alone does
+not distinguish a joined decision from a direct one. <code>join_view_id</code>
+            <span class="bcp14">MUST</span> change whenever the joining client identifier, the join
+disposition (the Mission's own <code>client_id</code> or an authorized
+delegate), or the resulting effective Authority Set differs, so a
+verifier can tell a joined decision's evidence from a direct
+Mission-bound decision's, and one joined view from a
+differently-joined one. This document does not fix the
+commitment's construction.<a href="#section-11-6.9.1" class="pilcrow">¶</a></p>
+</li>
       </ol>
 <p id="section-11-7">In the baseline mapping join the PDP compares the authenticated subject
 and client the PEP attests in the decision request, not the acting
@@ -2882,6 +2895,8 @@ the action under the Mission's Authority Set and permits:<a href="#section-11-11
     "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "join_view_id":
+      "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
     "action_class": "irreversible_action",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
@@ -2889,7 +2904,12 @@ the action under the Mission's Authority Set and permits:<a href="#section-11-11
 }
 </pre><a href="#section-11-12" class="pilcrow">¶</a>
 </div>
-<p id="section-11-13">The AuthZEN profile's denial-reason extensibility rule permits a
+<p id="section-11-13"><code>join_view_id</code> accompanies <code>policy_view_id</code> because this decision
+rode the join (<a href="#mission-join" class="auto internal xref">Section 11</a> rule 9): the direct-client disposition
+and <code>client_id</code> it binds distinguish it from a differently-joined
+decision (a narrowed delegate view) and from a direct Mission-bound
+decision, which never carries <code>join_view_id</code> at all.<a href="#section-11-13" class="pilcrow">¶</a></p>
+<p id="section-11-14">The AuthZEN profile's denial-reason extensibility rule permits a
 companion profile to extend the denial-reason set by specification,
 and requires a consumer to treat an unrecognized reason as a deny
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). <code>mission_mismatch</code> and
@@ -2898,10 +2918,10 @@ extensions: where this profile is implemented, they are members of
 that denial-reason set, and neither requires IANA action under the
 AuthZEN profile's extension-by-specification model. A consumer that
 does not implement this profile treats them as that rule requires:
-the action stays refused.<a href="#section-11-13" class="pilcrow">¶</a></p>
-<p id="section-11-14">Example AuthZEN denial for a credential whose <code>client_id</code> does not
-match the referenced Mission:<a href="#section-11-14" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-11-15">
+the action stays refused.<a href="#section-11-14" class="pilcrow">¶</a></p>
+<p id="section-11-15">Example AuthZEN denial for a credential whose <code>client_id</code> does not
+match the referenced Mission:<a href="#section-11-15" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-16">
 <pre>
 {
   "decision": false,
@@ -2914,18 +2934,18 @@ match the referenced Mission:<a href="#section-11-14" class="pilcrow">¶</a></p>
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   }
 }
-</pre><a href="#section-11-15" class="pilcrow">¶</a>
+</pre><a href="#section-11-16" class="pilcrow">¶</a>
 </div>
-<p id="section-11-16">The join proves that the credential belongs to the same subject and
+<p id="section-11-17">The join proves that the credential belongs to the same subject and
 client the Mission names. It does not prove the credential was derived
 under the Mission; no MAS-mode mechanism can, because the AS issues
 tokens with no knowledge of Missions (<a href="#limitations" class="auto internal xref">Section 14</a>,
-<a href="#join-spoofing" class="auto internal xref">Section 18.1</a>).<a href="#section-11-16" class="pilcrow">¶</a></p>
-<p id="section-11-17">A deployment <span class="bcp14">MAY</span> move the join's verification from each PDP to the
+<a href="#join-spoofing" class="auto internal xref">Section 18.1</a>).<a href="#section-11-17" class="pilcrow">¶</a></p>
+<p id="section-11-18">A deployment <span class="bcp14">MAY</span> move the join's verification from each PDP to the
 MAS with the Mission Join Assertion (<a href="#join-assertion" class="auto internal xref">Section 13</a>). That
 upgrade strengthens who verifies the join, not what the join can
-prove.<a href="#section-11-17" class="pilcrow">¶</a></p>
-<p id="section-11-18">Where the deployment's Authorization Server issues tokens under the
+prove.<a href="#section-11-18" class="pilcrow">¶</a></p>
+<p id="section-11-19">Where the deployment's Authorization Server issues tokens under the
 client-instance-assertion profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), the acting
 credential identifies a concrete runtime instance: the token's <code>act</code>
@@ -2934,7 +2954,7 @@ The PDP <span class="bcp14">SHOULD</span> include that instance in the join, so 
 binds (subject, client, instance) rather than (subject, client). This
 restores per-instance granularity behind a shared gateway <code>client_id</code>:
 the validated instance joins, not every workload in the <code>client_id</code>
-equivalence class.<a href="#section-11-18" class="pilcrow">¶</a></p>
+equivalence class.<a href="#section-11-19" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="reference-propagation">
@@ -4832,6 +4852,8 @@ re-check.<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
     "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "join_view_id":
+      "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
     "action_class": "irreversible_action",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
@@ -4839,6 +4861,8 @@ re-check.<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 }
 </pre><a href="#appendix-A.4-2" class="pilcrow">¶</a>
 </div>
+<p id="appendix-A.4-3"><code>join_view_id</code> marks this decision as reached over the Join
+(<a href="#mission-join" class="auto internal xref">Section 11</a> rule 9), distinct from <code>policy_view_id</code>.<a href="#appendix-A.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
