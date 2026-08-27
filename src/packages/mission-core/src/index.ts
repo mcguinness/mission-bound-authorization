@@ -15,6 +15,15 @@ export {
   verifyAnchor,
 } from "./anchors.js";
 export {
+  APPROVAL_CONTEXT_TYP,
+  type ApprovalContextManifestInput,
+  approvalContextCommitment,
+  approvalContextManifest,
+  SUBMISSION_EVIDENCE_TYP,
+  submissionEvidenceCommitment,
+  verifyApprovalContextCommitment,
+} from "./approvalContext.js";
+export {
   AAT_DETAIL_TYPE,
   AAT_TYP,
   type AATClaims,

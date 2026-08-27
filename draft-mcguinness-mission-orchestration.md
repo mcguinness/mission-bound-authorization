@@ -157,7 +157,7 @@ Mission Assurance Level
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Implementation: 3 conformance rows in conformance-manifest.json (1 tested, 2 partial).
+Implementation: 5 conformance rows in conformance-manifest.json (2 tested, 3 partial).
 Adopt when: In-flight work must unwind safely if the Mission ends mid-workflow.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Aware Agent Harnesses (when the harness profile is co-deployed); Mission Runtime Evidence (when compensation links runtime evidence); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status polling is the trigger source); Mission Lifecycle Signals for OAuth 2.0 (when Signals is the authority-change trigger source).
@@ -681,12 +681,15 @@ If neither applies, the orchestrator MUST escalate to human review.
 The compensation record is an Orchestration Evidence record
 ({{orchestration-evidence}}) with `orchestration_decision` set to
 `compensate`. In that case its `authority_basis`, `linked_evidence`,
-`compensation_action`, and `compensation_outcome` members are REQUIRED.
-Through those members the record links:
+`compensates_evaluation_id`, `compensation_action`, and
+`compensation_outcome` members are REQUIRED. Through those members the
+record links:
 
 - the original Mission (the record's `mission`);
 - the original runtime enforcement evidence when available
   (`linked_evidence`);
+- the specific evaluation the compensation reverses
+  (`compensates_evaluation_id`);
 - the state transition that triggered compensation (`mission_state`
   and `reason`);
 - the compensation action (`compensation_action`);
@@ -719,10 +722,12 @@ over a terminated Mission. If neither basis applies, the orchestrator
 MUST NOT compensate. It MUST record a `human_review` decision.
 
 Under either basis, the compensating action's decision MUST carry the
-`decision_id` of the decision it reverses in the runtime profile's
-`compensates_decision_id` ({{I-D.draft-mcguinness-mission-runtime}}),
-binding each compensation to the specific committed step it offsets
-rather than standing as an open-ended remedial power.
+`evaluation_id` of the decision it reverses in
+`compensates_evaluation_id` ({{orchestration-evidence}}), the
+Orchestration Evidence record's realization of the runtime profile's
+compensation link ({{I-D.draft-mcguinness-mission-runtime}}), binding
+each compensation to the specific committed step it offsets rather than
+standing as an open-ended remedial power.
 
 ## Unwind Ordering and Partial Failure {#unwind-ordering}
 
@@ -840,6 +845,15 @@ members:
 : REQUIRED when `orchestration_decision` is `compensate`. The outcome
   of the compensation action.
 
+`compensates_evaluation_id`:
+: REQUIRED when `orchestration_decision` is `compensate`. The
+  `evaluation_id` of the decision this compensation reverses, carrying
+  the runtime profile's compensation link
+  ({{I-D.draft-mcguinness-mission-runtime}}) so the compensating
+  action reconciles against the specific evaluation it offsets.
+  Distinct from `linked_evidence`: this member names the evaluation
+  being reversed, never an evidence record identifier.
+
 `evidence_envelope`:
 : Integrity protection over the Orchestration Evidence object.
   OPTIONAL, except REQUIRED when `orchestration_decision` is
@@ -893,8 +907,9 @@ Review confirmed that the posting committed before the Mission was
 revoked; a pre-provisioned remedial Mission that is `active`
 authorizes the reversing entry ({{compensation-authority}}). The
 record links the review record above and the original runtime
-enforcement evidence, and omits `unwind_plan_hash` because it is not
-the step's first record:
+enforcement evidence in `linked_evidence`, carries the compensated
+decision's `evaluation_id` in `compensates_evaluation_id`, and omits
+`unwind_plan_hash` because it is not the step's first record:
 
 ~~~ json
 {
@@ -914,8 +929,9 @@ the step's first record:
   "outcome_state": "committed",
   "linked_evidence": [
     "orch_4r9SqLm8tY2p",
-    "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"
+    "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA"
   ],
+  "compensates_evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "authority_basis": "separate_mission",
   "compensation_action": "erp.journal_entry.reverse",
   "compensation_outcome": "completed",

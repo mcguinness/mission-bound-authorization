@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { txnTaskId } from "@mission/access-request";
-import type { TokenFacts } from "@mission/mcp-payments";
+import type { MissionBoundTokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
 import { callWithTransactionCredential, composeStack } from "./stack.js";
@@ -140,7 +140,12 @@ async function main() {
   ]);
   const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
-  const facts: TokenFacts = {
+  // @spec authority-server#mission-join (#557 review point 5) — validateToken()
+  // returns MissionBoundTokenFacts specifically (mission REQUIRED, never
+  // optional), so `facts.mission.id` below needs no assertion: the type
+  // system proves presence, rather than this call site trusting a documented
+  // invariant on a single hybrid TokenFacts shape.
+  const facts: MissionBoundTokenFacts = {
     ...(await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST")),
     clientInstanceId: "inst-1",
   };
@@ -400,7 +405,9 @@ async function main() {
         return c.json({ approved: false, error: (e as Error).message }, 400);
       }
       const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST", issuedMission.accessToken);
-      const newFacts: TokenFacts = {
+      // Same as above: validateToken() returns MissionBoundTokenFacts, no
+      // assertion needed.
+      const newFacts: MissionBoundTokenFacts = {
         ...(await stack.server.validateToken(issuedMission.accessToken, proof, CANONICAL_RESOURCE, "POST")),
         clientInstanceId: "inst-1",
       };

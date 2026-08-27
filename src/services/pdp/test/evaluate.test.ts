@@ -35,6 +35,15 @@ let fga: Fga;
 let modelId: string;
 const NOW = new Date("2026-07-22T12:00:00Z");
 
+// Two entries, not one bundling both actions: a max_amount bound to the
+// entry now enforces against EVERY action that entry grants (@spec
+// runtime#input-parameters, keyed on the constraint's own presence, not on
+// whether the acting request happens to carry an amount). A single entry
+// covering both the read action and the money action would require every
+// read-action fixture below to also supply context.amount, which is not
+// what those fixtures are testing. `authority_set[0]` (referenced by a few
+// entry_digest assertions below) stays the read entry deliberately: every
+// such assertion uses the default req() action, payments:invoice.read.
 const view = (over: Partial<MissionView> = {}): MissionView => ({
   id: "msn_test_1",
   issuer: "https://as.test",
@@ -45,7 +54,13 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
     {
       type: "mission_resource_access",
       resource: RESOURCE,
-      actions: ["payments:invoice.read", "payments:payment.execute"],
+      actions: ["payments:invoice.read"],
+      constraints: { vendors: ["acme"] },
+    },
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
@@ -401,7 +416,12 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
     modelId = conn.modelId;
   });
 
-  /** A view whose matched entry carries the Common Constraint, with no deployment predicate. */
+  /** A view whose matched entry carries the Common Constraint, with no
+   *  deployment predicate. No max_amount here: these tests exercise the
+   *  entry-driven action-approval gate on payments:invoice.read (the
+   *  default req() action), which carries no amount, so a bound max_amount
+   *  would refuse at step 7 before ever reaching the approval gate this
+   *  block tests (@spec runtime#input-parameters). */
   const gatedView = view({
     authority_set: [
       {
@@ -409,7 +429,6 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
         resource: RESOURCE,
         actions: ["payments:invoice.read", "payments:payment.execute"],
         constraints: {
-          max_amount: { amount: "500.00", currency: "USD" },
           vendors: ["acme"],
           requires_action_approval: true,
         },

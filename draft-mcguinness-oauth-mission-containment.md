@@ -66,6 +66,22 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-status-list:
+    title: "Mission Status List for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -210,9 +226,9 @@ The approved Authority Set and its `intent_hash` and `authority_hash`
 anchors are immutable; whether capability is contained is evaluated
 state, not part of `authority_hash`, and folding it into the anchor
 would make the committed authority time-varying. This is the same
-argument by which the Status profile keeps an entry's fired
-completion status out of the anchor
-({{I-D.draft-mcguinness-oauth-mission-status}}). The overlay is held
+argument by which the Entry Discharge companion keeps an entry's
+fired completion status out of the anchor
+({{I-D.draft-mcguinness-oauth-mission-discharge}}). The overlay is held
 by the Mission Issuer, versions independently, and only ever grows.
 
 # Status: An Experimental Extension {#optional-status}
@@ -417,7 +433,7 @@ anchors are immutable. Whether capability is contained is evaluated
 state, not part of `authority_hash`; folding containment into the
 anchor would make the committed authority time-varying, exactly as
 folding an entry's fired completion status into it would
-({{I-D.draft-mcguinness-oauth-mission-status}}).
+({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 ## Removal-Only Expressiveness {#removal-only}
 
@@ -432,7 +448,8 @@ successor Mission ({{restoration}}).
 
 ## Relationship to Entry Discharge {#discharge-relationship}
 
-Containment composes with the Status profile's entry discharge and
+Containment composes with the Entry Discharge companion's discharge
+mechanism ({{I-D.draft-mcguinness-oauth-mission-discharge}}) and
 duplicates none of it. Discharge retires an entry because the task
 the entry was granted for is done, under a `terminal_when` condition
 the Approver committed inside the Authority Set; containment removes
@@ -689,9 +706,9 @@ none:
   its Status List bit is unchanged: the list carries reliance bits
   only, and containment detail, like the state version, stays on the
   authoritative surfaces
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). Containment binds
-  derivation at the issuer, so a list-only consumer's staleness never
-  widens what a contained Mission can issue.
+  ({{I-D.draft-mcguinness-oauth-mission-status-list}}). Containment
+  binds derivation at the issuer, so a list-only consumer's staleness
+  never widens what a contained Mission can issue.
 - **Push.** Where Signals runs, the commit is emitted as a
   `mission.lifecycle-change` whose `state` equals its `prior_state`,
   that profile's metadata-only shape, incrementing `version` like any

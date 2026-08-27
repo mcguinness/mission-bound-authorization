@@ -3,9 +3,10 @@
  *
  * The resource-server PEP for the payments estate. Validates the DPoP-bound
  * token and mission claim, builds the AuthZEN envelope (context.actor via
- * @mission/actor-chain, parameter_digest, capability_source), obtains a PDP
- * decision, and emits Decision Evidence / Refusal Records. Core enforcement
- * tier (M4); the transaction-assurance tier (permits/leases) lands in M5.
+ * @mission/actor-chain, parameter_digest), obtains a PDP decision, and emits
+ * Decision Evidence / Refusal Records. Core enforcement tier (M4); the
+ * transaction-assurance tier (permits/leases) lands in M5. Does not present
+ * `context.capability_source` (#657; see `sourceDigestOf` below).
  */
 
 import { createHash, randomUUID } from "node:crypto";
@@ -21,6 +22,7 @@ import {
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
+  type DelegatePolicy,
   type Decision,
   type EntitlementResolver,
   evaluate,
@@ -47,7 +49,6 @@ import type { PendingOperation } from "./txn-store.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 export const TOOL_BASE = "mcp://payments.demo/tools";
-const SERVER_CARD_URI = `${CANONICAL_RESOURCE.replace(/\/mcp$/, "")}/.well-known/mcp`;
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -68,31 +69,16 @@ export interface TxnCredential {
 }
 
 /** Validated token facts the PEP works from (token validation is upstream). */
-export interface TokenFacts {
+/**
+ * Fields common to both a Mission-bound and an ordinary (baseline-Join)
+ * credential; see {@link MissionBoundTokenFacts}, {@link OrdinaryTokenFacts},
+ * and {@link TokenFacts} below for why they are split.
+ */
+export interface CommonTokenFacts {
   sub: string;
   clientId: string;
   clientInstanceId?: string;
   act?: ActObject;
-  mission: {
-    id: string;
-    issuer: string;
-    /**
-     * @spec mission#the-mission-claim (#702) — NOT on the baseline `mission`
-     * claim; carried into the AuthZEN envelope only when the validated token
-     * happens to carry it (a companion profile's own extension member).
-     * Present-then-check downstream ({@link evaluate.ts}'s view-consistency
-     * rule 1), never required.
-     */
-    authority_hash?: string;
-    /**
-     * @spec cross-domain#mission-subject — the verified token's immutable
-     * origin principal, present only where the Origin Principal profile
-     * applies. Carried unchanged from the validated claim into the AuthZEN
-     * envelope's `context.mission.subject`, never from an unverified request
-     * value.
-     */
-    subject?: OriginPrincipal;
-  };
   /**
    * @spec authzen#pdp-request rule 10 — this resource's own issuer identity
    * (the `iss` every ordinary token here verifies against), carried so the
@@ -101,15 +87,6 @@ export interface TokenFacts {
    * not read from the presented token.
    */
   iss?: string;
-  /**
-   * @spec txn-authorization#resource-challenge — the VERIFIED token's whole
-   * `mission` claim. A challenge copies it unchanged (including the invariant
-   * origin principal where the Origin Principal profile applies), so the
-   * resource must keep the claim it verified, not just the two members the
-   * PDP envelope needs. Absent for a credential whose claim is not the
-   * profiled shape; the resource then issues no challenge.
-   */
-  missionClaim?: TxnMissionClaim;
   cnfJkt: string;
   /**
    * @spec continuation: the access token's `jti`, carried so an action taken
@@ -137,6 +114,75 @@ export interface TokenFacts {
    */
   txn?: TxnCredential;
 }
+
+/** A credential carrying the `mission` claim: the ordinary, pre-#557 shape. */
+export interface MissionBoundTokenFacts extends CommonTokenFacts {
+  mission: {
+    id: string;
+    issuer: string;
+    /**
+     * @spec mission#the-mission-claim (#702) — NOT on the baseline `mission`
+     * claim; carried into the AuthZEN envelope only when the validated token
+     * happens to carry it (a companion profile's own extension member).
+     * Present-then-check downstream ({@link evaluate.ts}'s view-consistency
+     * rule 1), never required.
+     */
+    authority_hash?: string;
+    /**
+     * @spec cross-domain#mission-subject — the verified token's immutable
+     * origin principal, present only where the Origin Principal profile
+     * applies. Carried unchanged from the validated claim into the AuthZEN
+     * envelope's `context.mission.subject`, never from an unverified request
+     * value.
+     */
+    subject?: OriginPrincipal;
+  };
+  /**
+   * @spec txn-authorization#resource-challenge — the VERIFIED token's whole
+   * `mission` claim. A challenge copies it unchanged (including the invariant
+   * origin principal where the Origin Principal profile applies), so the
+   * resource must keep the claim it verified, not just the two members the
+   * PDP envelope needs. Absent for a credential whose claim is not the
+   * profiled shape; the resource then issues no challenge.
+   */
+  missionClaim?: TxnMissionClaim;
+}
+
+/**
+ * @spec authority-server#mission-join (#557 review point 5) — an ordinary
+ * OAuth credential validated for a configured MAS-governed route
+ * (`PepDeps.masJoin`), carrying NO `mission` claim at all. `mission`/
+ * `missionClaim` are explicitly typed `undefined` (never simply omitted from
+ * the type), so `TokenFacts` below is a genuine discriminated union on
+ * `mission`'s presence, not a single hybrid shape with an optional field a
+ * caller could forget to check. `Pep.enforceInner` branches on `token.mission`
+ * once, at the top: present ({@link MissionBoundTokenFacts}), the
+ * credential-carried claim governs exactly as before; absent (this type),
+ * `enforceInner` resolves the baseline mapping Join against a PEP-supplied
+ * propagated reference (`RequestSignals.missionReference`) before anything
+ * else runs, and the PDP itself denies `mission_mismatch` on a failed
+ * subject/client join, never falling back to an unjoined decision (#557
+ * review point 1).
+ */
+export interface OrdinaryTokenFacts extends CommonTokenFacts {
+  mission?: undefined;
+  missionClaim?: undefined;
+}
+
+/**
+ * @spec authority-server#mission-join (#557 review point 5) — a discriminated
+ * union on `mission`'s presence, not `MissionBoundTokenFacts["mission"]`
+ * made optional on one hybrid interface: the previous single-interface shape
+ * with `mission?:` let a caller reach `token.mission!.id` (an unsafe
+ * assertion, `demo/src/server.ts`'s prior shape) instead of the type system
+ * proving presence. `validateToken`/`validateMissionToken` (server.ts) now
+ * return `Promise<MissionBoundTokenFacts>` specifically, so a caller of
+ * either needs no assertion at all; `validateOrdinaryToken` returns
+ * `Promise<OrdinaryTokenFacts>`. `TokenFacts` remains the type for a call
+ * site that accepts either (`Pep.enforce`, `toolsList`, `execute`, ...),
+ * where `if (token.mission)` narrows exactly as it always has.
+ */
+export type TokenFacts = MissionBoundTokenFacts | OrdinaryTokenFacts;
 
 export interface ActionMapping {
   action: string;
@@ -289,7 +335,13 @@ export interface PepDeps {
   loadView: (ref: MissionReference) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
-  sourceDigest: string;
+  /**
+   * @deprecated Unused by this class; no code path reads it. Compatibility
+   * seam only, kept because ~15 existing callers still construct it. Removed
+   * once #657 PR B replaces it with the real per-action capability-binding
+   * resolver. See `sourceDigestOf` below.
+   */
+  sourceDigest?: string;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -320,6 +372,48 @@ export interface PepDeps {
    * `entitlementStalenessBoundSeconds` unchanged.
    */
   entitlementStalenessBoundSeconds?: number;
+  /**
+   * @spec authority-server#mission-join (#557) — enables the baseline MAS
+   * Join gateway path for a credential validated with no `mission` claim
+   * (`TokenFacts.mission` absent). ABSENT (the default): `enforceInner`
+   * refuses `unknown_mission` for such a credential, exactly the prior
+   * behavior; this deployment claims no MAS-governed route at all.
+   */
+  masJoin?: {
+    /**
+     * @spec authority-server#mission-join rule 4 (#557) — the deployment's
+     * static delegate ceiling (which client ids may join as a delegate, and
+     * each one's own maxDepth). Forwarded to the PDP's `delegatePolicy`
+     * unchanged; the PDP resolves rules 3-6 itself (#557 review point 1),
+     * this PEP no longer calls `resolveBaselineJoin` directly.
+     */
+    delegatePolicy?: DelegatePolicy;
+    /**
+     * @spec authority-server#mission-join rule 8 — the acting credential's
+     * OWN authority bound (one of the permit's three independently
+     * evaluated bounds, alongside the joined Mission's authority and
+     * current Resource policy, the latter enforced downstream by the
+     * existing FGA/PDP call unchanged). ABSENT: the joined route fails
+     * closed with `out_of_authority` on every request -- rule 8 cannot be
+     * honestly evaluated without a credential-authority source, so an
+     * unconfigured deployment gets a working Join with no usable permit,
+     * never a silently unbounded one. A deployment supplies this to
+     * evaluate its own OAuth-scope-to-authority model; none is provided
+     * here (see the PR's documented remainder).
+     */
+    resolveOrdinaryAuthority?: (token: TokenFacts) => AuthorityEntry[] | undefined;
+    /**
+     * @spec authority-server#mission-join rule 5 (#557) — the deployment's
+     * own currently-recorded actor depth for a delegate client under a
+     * Mission, "evaluated from the deployment's actor records rather than
+     * from a Mission-bound token's `act` chain": resolved FRESH per
+     * request (never a token's own `act` chain) and carried onto the PDP
+     * request as `context.mission_join.delegate_depth`. Absent (including
+     * an absent hook): the PDP treats depth as unbounded, so a
+     * `max_depth`-bearing delegate policy or entry denies closed.
+     */
+    resolveDelegateDepth?: (clientId: string, missionId: string) => number | undefined;
+  };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
@@ -434,6 +528,17 @@ export interface EnforceResult {
    * (@spec mission#authority-proposal).
    */
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec authority-server#mission-join (#557) — the governing Mission
+   * {id, issuer} for this decision, ALWAYS present on a permit: the
+   * credential's own claim on the Mission-bound path, or the baseline
+   * Join's resolved reference on the joined path (where `token.mission`
+   * itself stays absent). The caller (server.ts) uses this, never
+   * `token.mission`, for anything past the permit -- operation keys,
+   * connector calls, execution evidence -- so a joined credential's write
+   * actually executes, not merely permits.
+   */
+  resolvedMission?: { id: string; issuer: string; authority_hash?: string };
 }
 
 /**
@@ -491,7 +596,9 @@ export class Pep {
   ): Promise<EnforceResult> {
     return getTracer("pep").startActiveSpan(`pep.enforce ${tool}`, async (span) => {
       span.setAttribute("mission.tool", tool);
-      span.setAttribute("mission.id", token.mission.id);
+      // @spec authority-server#mission-join (#557): absent for an ordinary
+      // credential on the baseline-Join path; enforceInner resolves it.
+      if (token.mission) span.setAttribute("mission.id", token.mission.id);
       try {
         const res = await this.enforceInner(tool, args, token, actionApproval, signals);
         span.setAttribute("mission.permitted", res.permitted);
@@ -514,33 +621,94 @@ export class Pep {
     const mapping = this.toolAction(tool);
     if (!mapping) return await this.refuse(token, "unknown_tool", tool);
 
-    // @spec authority-server#reference-verification — a propagated Mission
-    // Reference is a selection assertion, never authority. Every credential
-    // on this path carries the `mission` claim, so the credential-carried
-    // reference governs: a propagated reference naming a different Mission,
-    // and a malformed reference where governance requires one (every tool
-    // here is governed), deny as `mission_reference_conflict`, never a
-    // silent pick-one and never a silent ignore.
-    const propagated = signals?.missionReference;
-    if (propagated) {
-      const matches =
-        !("malformed" in propagated) &&
-        propagated.id === token.mission.id &&
-        propagated.issuer === token.mission.issuer;
-      if (!matches) return await this.refuse(token, "mission_reference_conflict", mapping.action);
-    }
+    let view: MissionView;
+    let freshness: Freshness;
+    // The governing Mission anchor for the AuthZEN envelope below: the
+    // credential's own claim on the Mission-bound path, or the PEP-supplied
+    // propagated reference (rule 1) on the baseline-Join path (never a raw
+    // request value either way; on the Join path this is what makes the
+    // PDP's own view-consistency check meaningful rather than tautological
+    // -- see the else branch below).
+    let missionAnchor: { id: string; issuer: string; authority_hash?: string; subject?: OriginPrincipal };
+    // @spec authority-server#mission-join (#557 review point 1) — set only
+    // on the baseline-Join path, below: signals the PDP request to carry
+    // `context.mission_join` and run rules 3-6 itself. `delegateDepth` is
+    // rule 5's per-request actor-depth fact (absent on the direct-client
+    // case, where no delegate policy is consulted at all).
+    let isBaselineJoin = false;
+    let delegateDepth: number | undefined;
 
-    const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-    if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action);
-    const { view, freshness } = loaded;
+    if (token.mission) {
+      // @spec authority-server#reference-verification — a propagated Mission
+      // Reference is a selection assertion, never authority. This credential
+      // carries the `mission` claim, so the credential-carried reference
+      // governs: a propagated reference naming a different Mission, and a
+      // malformed reference where governance requires one (every tool here
+      // is governed), deny as `mission_reference_conflict`, never a silent
+      // pick-one and never a silent ignore.
+      const propagated = signals?.missionReference;
+      if (propagated) {
+        const matches =
+          !("malformed" in propagated) &&
+          propagated.id === token.mission.id &&
+          propagated.issuer === token.mission.issuer;
+        if (!matches) return await this.refuse(token, "mission_reference_conflict", mapping.action);
+      }
 
-    // @spec authority-server#reference-verification — the locally loaded
-    // Mission view is the PEP's own binding source; a credential whose
-    // mission claim names a different issuer than the view it selects is
-    // reference sources disagreeing on the canonical (issuer, id) pair,
-    // refused as mission_reference_conflict, never resolved by picking one.
-    if (view.issuer !== token.mission.issuer) {
-      return await this.refuse(token, "mission_reference_conflict", mapping.action, view);
+      const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
+      if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action);
+
+      // @spec authority-server#reference-verification — the locally loaded
+      // Mission view is the PEP's own binding source; a credential whose
+      // mission claim names a different issuer than the view it selects is
+      // reference sources disagreeing on the canonical (issuer, id) pair,
+      // refused as mission_reference_conflict, never resolved by picking one.
+      if (loaded.view.issuer !== token.mission.issuer) {
+        return await this.refuse(token, "mission_reference_conflict", mapping.action, loaded.view);
+      }
+      view = loaded.view;
+      freshness = loaded.freshness;
+      missionAnchor = token.mission;
+    } else {
+      // @spec authority-server#mission-join (#557): an ordinary credential
+      // with no `mission` claim, joined against a PEP-supplied propagated
+      // Mission reference (rule 1). ABSENT masJoin config: this deployment
+      // claims no MAS-governed route, so refuse exactly as the prior
+      // behavior would have (an unrecognized/no-claim credential).
+      if (!this.deps.masJoin) return await this.refuse(token, "unknown_mission", mapping.action);
+
+      const propagated = signals?.missionReference;
+      if (!propagated || "malformed" in propagated) return await this.refuse(token, "unknown_mission", mapping.action);
+
+      const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
+      if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action, undefined, propagated.id);
+
+      // Rule 8, bound 1: the acting credential's OWN authority (a PEP-side
+      // deployment hook over TokenFacts, not a PDP concern -- @spec
+      // authority-server#mission-join rule 8 note; #557 review point 1
+      // moves rules 3-6, the subject/client/delegate join proper, into the
+      // PDP below, but rule 8's credential-authority bound stays exactly
+      // where it was). No evaluator configured -> fail closed (see
+      // PepDeps.masJoin doc): a working Join with no usable permit, never a
+      // silently unbounded one.
+      const ordinaryAuthority = this.deps.masJoin.resolveOrdinaryAuthority?.(token);
+      if (!ordinaryAuthority) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+      const boundAuthority = loaded.view.authority_set.filter((e) =>
+        ordinaryAuthority.some((o) => o.resource === e.resource && e.actions.every((a) => o.actions.includes(a))),
+      );
+      if (boundAuthority.length === 0) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+
+      // Rules 3, 4, 5, 6 (subject/client join, delegate narrowing, uniform
+      // mission_mismatch with no fallback) are NOT resolved here anymore:
+      // `context.mission_join` below tells the PDP to resolve them itself,
+      // against this (rule-8-narrowed) view -- the PDP is the party that
+      // can verify the credential inputs and tell whether the join actually
+      // ran (#557 review point 1).
+      view = { ...loaded.view, authority_set: boundAuthority };
+      freshness = loaded.freshness;
+      missionAnchor = { id: propagated.id, issuer: propagated.issuer };
+      isBaselineJoin = true;
+      delegateDepth = this.deps.masJoin.resolveDelegateDepth?.(token.clientId, propagated.id);
     }
 
     // @spec attenuation#mission-binding-check: when the credential is an
@@ -674,19 +842,29 @@ export class Pep {
       context: {
         audience: CANONICAL_RESOURCE,
         mission: {
-          id: view.id,
-          issuer: token.mission.issuer,
+          // @spec authority-server#mission-join rule 1/2, #557 review point
+          // 1 — `missionAnchor.id`, not `view.id`: on the Mission-bound path
+          // this is the credential's OWN verified claim; on the baseline-
+          // Join path it is the REAL propagated reference (rule 1), not a
+          // copy of the loaded view's own id. Sourcing this from `view`
+          // instead would make the PDP's step-1 view-consistency check
+          // compare the loaded view against itself -- tautological, unable
+          // to catch a loader that resolved the wrong Mission.
+          id: missionAnchor.id,
+          issuer: missionAnchor.issuer,
           // @spec mission#the-mission-claim, authzen#context-mission (#702) —
           // NOT on the baseline claim; carried into the envelope only when
           // the verified token's own profile added it. Present-then-check
-          // downstream (evaluate.ts's view-consistency rule 1).
-          ...(token.mission.authority_hash !== undefined
-            ? { authority_hash: token.mission.authority_hash }
+          // downstream (evaluate.ts's view-consistency rule 1). Always
+          // absent on the baseline-Join path (#557): an ordinary credential
+          // carries no such extension member.
+          ...(missionAnchor.authority_hash !== undefined
+            ? { authority_hash: missionAnchor.authority_hash }
             : {}),
           // @spec cross-domain#mission-subject, authzen#context-mission — the
           // verified token's immutable origin principal, carried unchanged;
           // never populated from `args` or any other unverified request value.
-          ...(token.mission.subject !== undefined ? { subject: token.mission.subject } : {}),
+          ...(missionAnchor.subject !== undefined ? { subject: missionAnchor.subject } : {}),
         },
         // @spec runtime#state-freshness: `freshness` is the loader's OWN
         // assertion of when it read authoritative state, propagated exactly
@@ -699,12 +877,27 @@ export class Pep {
         // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
         freshness,
         actor: contextActor,
-        capability_source: capabilitySource,
+        // `context.capability_source` intentionally absent (#657): see
+        // `sourceDigestOf` below for what stood here and why it was removed
+        // from the PDP-facing request envelope. The retained Decision
+        // Evidence below still carries `capability_source` (a coordinated
+        // extension member of the signed record, @spec
+        // runtime-evidence#evidence-extensions), reusing `capabilitySource`
+        // computed above -- that is a distinct, evidentiary use, not a
+        // second copy of what this request envelope presents to the PDP.
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
         ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
+        // @spec authority-server#mission-join (#557 review point 1) —
+        // present exactly on the baseline-Join path: tells the PDP to
+        // resolve rules 3-6 itself against this envelope's already-
+        // authenticated subject/context.actor.client_id, rather than
+        // trusting a pre-narrowed view the PEP resolved outside the PDP.
+        ...(isBaselineJoin
+          ? { mission_join: { ...(delegateDepth !== undefined ? { delegate_depth: delegateDepth } : {}) } }
+          : {}),
       } as EvaluationRequest["context"],
     };
 
@@ -724,6 +917,10 @@ export class Pep {
       ...(this.deps.entitlementStalenessBoundSeconds !== undefined
         ? { entitlementStalenessBoundSeconds: this.deps.entitlementStalenessBoundSeconds }
         : {}),
+      // @spec authority-server#mission-join rule 4 (#557 review point 1) —
+      // forwarded to the PDP unchanged; consulted only when this request
+      // carries `context.mission_join` above.
+      ...(this.deps.masJoin?.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
     });
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
@@ -923,6 +1120,11 @@ export class Pep {
     return {
       permitted: true,
       decision,
+      resolvedMission: {
+        id: missionAnchor.id,
+        issuer: missionAnchor.issuer,
+        ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
+      },
       ...(effective ? { effective } : {}),
       ...(listEffective ? { listEffective } : {}),
       ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
@@ -964,6 +1166,15 @@ export class Pep {
    * `"requested"`), so no separate input needs to be threaded through.
    */
   async reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
+    // @spec authority-server#mission-join (#557): the baseline-Join gateway
+    // path is not wired into read-binding reverification (a documented
+    // remainder -- doing so needs the resolved Mission anchor threaded back
+    // through the caller's post-decision call, which this PR does not
+    // build). Fails closed rather than dereferencing an absent claim.
+    if (!token.mission) {
+      await this.recordRefusal(token, "parameter_mismatch", effective.action);
+      return false;
+    }
     const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
@@ -982,8 +1193,14 @@ export class Pep {
     return true;
   }
 
-  private async refuse(token: TokenFacts, reason: string, action: string, view?: MissionView): Promise<EnforceResult> {
-    await this.recordRefusal(token, reason, action, view);
+  private async refuse(
+    token: TokenFacts,
+    reason: string,
+    action: string,
+    view?: MissionView,
+    missionIdOverride?: string,
+  ): Promise<EnforceResult> {
+    await this.recordRefusal(token, reason, action, view, missionIdOverride);
     return { permitted: false, refusal_reason: reason };
   }
 
@@ -992,20 +1209,26 @@ export class Pep {
    * present only when `view` was successfully loaded (an ESTABLISHED
    * reference, per the spec's own rule: absent is not itself a defect, it is
    * exactly what an establishment failure like `unknown_mission` looks
-   * like). `missionId` (the wrapper's store-level correlation key, always
-   * `token.mission.id`, the credential's CLAIMED reference) is separate and
-   * always present, so an operator timeline can still bucket a
-   * pre-establishment refusal under the mission the caller named, without
-   * the signed record itself asserting that reference was ever verified.
+   * like). `missionId` (the wrapper's store-level correlation key) is
+   * separate and always present: the resolved view's id, else the
+   * credential's own CLAIMED reference, else `missionIdOverride` for a
+   * baseline-Join refusal that precedes both (@spec
+   * authority-server#mission-join, #557) -- "unknown" is the last resort for
+   * a refusal that never identified a Mission at all. This lets an operator
+   * timeline bucket a pre-establishment refusal under the mission the
+   * caller named, without the signed record itself asserting that
+   * reference was ever verified.
    */
   private async recordRefusal(
     token: TokenFacts,
     reason: string,
     action: string,
     view?: MissionView,
+    missionIdOverride?: string,
   ): Promise<void> {
+    const missionId = view?.id ?? token.mission?.id ?? missionIdOverride ?? "unknown";
     await this.deps.evidence.recordRefusal(CANONICAL_RESOURCE, "pep", {
-      missionId: token.mission.id,
+      missionId,
       audience: CANONICAL_RESOURCE,
       action: { name: action },
       denial_reason: reason,
@@ -1017,6 +1240,22 @@ export class Pep {
   }
 }
 
+/**
+ * Vestigial (#657): hashes the whole `serverCard` via ordinary
+ * `JSON.stringify`, not a JCS-canonical digest over one capability's
+ * extracted definition, which is what the capability-binding draft's
+ * `source_digest` requires. Not a valid `catalog_digest` either, since
+ * parsing and reserializing `serverCard` loses the exact retrieved octets
+ * that member requires. Formerly attached to every enforced tool call as
+ * `context.capability_source`; removed from the request envelope entirely
+ * (`enforceInner` presents no such member, and no PDP here ever typed or
+ * verified one) because presenting the wrong bytes read as coverage this
+ * deployment did not have. Retained only because existing tests, the demo
+ * stack, and the eval harness still construct `PepDeps.sourceDigest` with
+ * it; both are dropped once #657 PR A/B land the real per-action binding.
+ *
+ * @deprecated Do not add new callers. Tracked for removal in #657 PR B.
+ */
 export function sourceDigestOf(serverCard: unknown): string {
   return `sha-256:${createHash("sha256").update(JSON.stringify(serverCard), "utf8").digest("base64url")}`;
 }

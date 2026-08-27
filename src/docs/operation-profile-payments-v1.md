@@ -31,6 +31,30 @@ document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
 scale (USD: exactly two fraction digits), never a JSON number. Comparison
 is numeric over the decimal string; serialization is byte-preserved.
 
+## Constraint enforcement: max_amount
+
+The matched Authority Set entry's `max_amount`, when bound, is checked
+against the authoritative invoice `{amount, currency}` mapping (Money,
+above), read from the payments store, never from a caller-supplied value.
+Comparison is exact decimal, per Money above; no currency conversion is
+performed anywhere in the chain.
+
+Enforcement is keyed on `max_amount` being present on the matched entry,
+never on which action it is bound to: a cap the PDP cannot supply an
+amount input for (a request with no `amount`, or one it cannot parse)
+refuses the same as an out-of-bound or currency-mismatched one (@spec
+runtime#input-parameters, "cannot supply the declared inputs for ... MUST
+cause refusal"). An entry with no `max_amount` never requires an amount
+merely because the mapped action's own schema declares one.
+
+| Case | Outcome |
+|---|---|
+| amount exactly at the cap | permits |
+| amount over the cap | refuses (`constraint_exceeded`) |
+| amount absent from the request context | refuses (`constraint_exceeded`) |
+| amount not a valid decimal string | refuses (`constraint_exceeded`) |
+| cap denominated in a different currency than the invoice's | refuses (`constraint_exceeded`), never converted |
+
 ## Parameter schemas and normalization
 
 All request parameters are JSON objects validated against the schemas

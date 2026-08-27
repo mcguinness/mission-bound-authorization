@@ -20,7 +20,7 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
-import { Fga, type MissionView, relationForAction } from "@mission/pdp";
+import { deriveJoinDelegation, Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
@@ -385,7 +385,15 @@ export async function composeStack(opts: {
       state: fresh.state,
       version: fresh.version,
       authority_hash: fresh.authority_hash,
-      authority_set: fresh.authority_set,
+      // @spec authority-server#mission-join rule 5 (#557 review point 2):
+      // this is the canonical Mission loader, so it is where a kernel
+      // AuthorityEntry's own `delegation` policy gets mapped to the PDP's
+      // `join_delegation` member via the shared deterministic adapter,
+      // rather than that member existing only in hand-built test fixtures.
+      authority_set: fresh.authority_set.map((e) => ({
+        ...e,
+        ...(e.delegation !== undefined ? { join_delegation: deriveJoinDelegation(e.delegation) } : {}),
+      })),
       subject: fresh.subject,
       client_id: fresh.client_id,
       // The containment DELTA (not a filtered set), so the PDP distinguishes

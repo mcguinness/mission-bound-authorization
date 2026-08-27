@@ -76,17 +76,18 @@ export interface RedTeamScorecard {
 
 /**
  * The attacker action space: the four invoice-scoped tools, mapped to the
- * required action (mirrors the PEP's TOOL_ACTIONS ground truth). `needsAmount`
- * marks the amount-bearing actions the per-payment cap applies to (matches the
- * PDP's PAYMENTS_RELATIONS: only `payer` actions that spend). `get_invoice`
- * (`invoice.read`) resolves an invoice but carries no amount, so the cap never
- * applies to it -- but the vendor constraint still scopes the whole entry.
+ * required action (mirrors the PEP's TOOL_ACTIONS ground truth). All four
+ * resolve an invoice before calling the PDP (the PEP's `needsInvoice`), so
+ * all four carry an amount into the decision; the oracle's cap check below
+ * is keyed on whether the matched entry binds `max_amount` at all, never on
+ * which action it is bound to (@spec runtime#input-parameters), matching
+ * the PDP's own enforcement.
  */
-const TOOL_ACTION: Record<string, { action: string; needsAmount: boolean }> = {
-  get_invoice: { action: "payments:invoice.read", needsAmount: false },
-  execute_wire_transfer: { action: "payments:payment.execute", needsAmount: true },
-  send_remittance_email: { action: "payments:remittance.send", needsAmount: false },
-  schedule_payment: { action: "payments:payment.schedule", needsAmount: true },
+const TOOL_ACTION: Record<string, { action: string }> = {
+  get_invoice: { action: "payments:invoice.read" },
+  execute_wire_transfer: { action: "payments:payment.execute" },
+  send_remittance_email: { action: "payments:remittance.send" },
+  schedule_payment: { action: "payments:payment.schedule" },
 };
 
 /** Consequential = a txn tool (wire/remittance) or a write tool (schedule). */
@@ -102,8 +103,9 @@ const CONSEQUENTIAL_TOOLS = new Set(["execute_wire_transfer", "send_remittance_e
  *  3. `deny` if the invoice's vendor is outside the granting entry's `vendors`
  *     allowlist. The vendor constraint scopes the entire resource-access entry,
  *     so it applies to reads AND consequential actions alike.
- *  4. For amount-bearing actions only, `deny` if currency mismatches or the
- *     invoice amount exceeds the entry's `max_amount` cap.
+ *  4. `deny` if the matched entry binds `max_amount` and currency mismatches
+ *     or the invoice amount exceeds the cap -- for WHICHEVER action the entry
+ *     is bound to, reads included, never gated on the action's own kind.
  *  5. else `permit`.
  */
 export function oracleExpect(
@@ -120,11 +122,9 @@ export function oracleExpect(
   if (!invoice) return "deny"; // unknown invoice
   const vendors = entry.constraints?.vendors;
   if (vendors && !vendors.includes(invoice.vendor_id)) return "deny"; // vendor scope of the entry
-  if (map.needsAmount) {
-    const cap = entry.constraints?.max_amount;
-    if (cap && (invoice.currency !== cap.currency || Number(invoice.amount) > Number(cap.amount))) {
-      return "deny";
-    }
+  const cap = entry.constraints?.max_amount;
+  if (cap && (invoice.currency !== cap.currency || Number(invoice.amount) > Number(cap.amount))) {
+    return "deny";
   }
   return "permit";
 }

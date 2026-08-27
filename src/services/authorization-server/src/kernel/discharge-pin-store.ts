@@ -1,5 +1,5 @@
 /**
- * @spec status#discharge-authority — the issuer-held pin binding each
+ * @spec discharge#discharge-authority — the issuer-held pin binding each
  * `terminal_when` condition, at the moment it entered an immutable
  * Mission-record entry, to the RESOLVED discharge-authority mapping: the
  * mapping's identifier and version plus the resolved content itself

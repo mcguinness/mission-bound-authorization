@@ -170,9 +170,17 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-status:
-    title: "Mission Status and Lifecycle for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
+  I-D.draft-mcguinness-oauth-mission-status-list:
+    title: "Mission Status List for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
     author:
       -
         ins: K. McGuinness
@@ -312,9 +320,9 @@ defines them ({{I-D.draft-rosomakho-oauth-txn-challenge}}). It uses
 containment, the issuer-held narrowing of a live Mission's
 authority, as Mission Containment defines it
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), and discharge,
-the per-entry retirement of granted authority, as the status
-profile's lifecycle suite defines it
-({{I-D.draft-mcguinness-oauth-mission-status}}).
+the per-entry retirement of granted authority, as the Entry Discharge
+companion defines it
+({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 Transaction Authorization Server (TAS):
 : The OAuth Authorization Server acting in the role
@@ -719,7 +727,8 @@ path:
    List MAY serve as a lifecycle prefilter only and MUST NOT alone
    satisfy this step, since its two-bit reliance state does not
    observe containment or discharge
-   ({{I-D.draft-mcguinness-oauth-mission-status}},
+   ({{I-D.draft-mcguinness-oauth-mission-status-list}},
+   {{I-D.draft-mcguinness-oauth-mission-discharge}},
    {{I-D.draft-mcguinness-oauth-mission-signals}},
    {{I-D.draft-mcguinness-mission-runtime}}); and
 6. atomic first use of the resource-scoped `txn` in the consumption

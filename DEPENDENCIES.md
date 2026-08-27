@@ -16,7 +16,7 @@ separately in [notes/oauth-wg-submission-set.md](notes/oauth-wg-submission-set.m
 - I-D.draft-ietf-cose-hash-envelope (cited normatively by: mission-audit)
 - I-D.draft-ietf-oauth-identity-assertion-authz-grant (cited normatively by: oauth-mission-cross-domain)
 - I-D.draft-ietf-oauth-identity-chaining (cited normatively by: oauth-mission-cross-domain)
-- I-D.draft-ietf-oauth-status-list (cited normatively by: oauth-mission-status)
+- I-D.draft-ietf-oauth-status-list (cited normatively by: oauth-mission-status-list)
 - I-D.draft-niyikiza-oauth-attenuating-agent-tokens (cited normatively by: oauth-mission-attenuation, oauth-mission-cross-org-delegation)
 - I-D.draft-rosomakho-oauth-txn-challenge (cited normatively by: oauth-mission-transaction-authorization)
 - I-D.draft-zehavi-oauth-rar-metadata (cited normatively by: mission-authzen)
@@ -35,8 +35,8 @@ SHOULD advertise it, conformance does not depend on it, and the
 stable baseline is RFC 9396's `authorization_details_types_supported`
 (a MUST for an advertising AS); its reference to the OAuth Actor
 Profile is likewise informative and confined to its optional
-Delegation capability; **status** depends on the OAuth Status List (a
-working-group document); **cross-domain** depends on OAuth
+Delegation capability; **status-list** depends on the OAuth Status
+List (a working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
 and in the RFC Editor queue; **approval**, **attenuation**,
