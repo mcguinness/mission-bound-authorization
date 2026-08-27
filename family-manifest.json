@@ -1043,6 +1043,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
