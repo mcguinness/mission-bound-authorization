@@ -15,7 +15,7 @@
     "content_sha256": "b9caa933d2da82196299f57b1e5bdaf0c2cba4edeaca7031ee4969a8105447ca"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "PENDING-REPIN-MERGE-COMMIT",
+    "revision": "c6a37a102a0ba2765759d64a3e970497e103c1ff",
     "content_sha256": "15e8eb3f394428bab07be2eb17c3537abdbad6a03b4c867f6e6d942d16285df1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
