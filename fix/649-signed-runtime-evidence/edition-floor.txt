@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-08-26T08:26:58Z
-Source repository commit: 88cc8d0876b432318a5bf3293a4d538732e18ffb
+Generated: 2026-08-27T03:52:20Z
+Source repository commit: 3b650385050063767c326a90f180e5a923cd0314
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            26 August 2026
-Expires: 27 February 2027
+Intended status: Informational                            27 August 2026
+Expires: 28 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -4409,8 +4409,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          26 August 2026
-Expires: 27 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                      Mission Substrate Requirements
@@ -4468,7 +4468,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -5952,8 +5952,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          26 August 2026
-Expires: 27 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -6012,7 +6012,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -13076,8 +13076,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          26 August 2026
-Expires: 27 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -13130,7 +13130,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -15772,8 +15772,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          26 August 2026
-Expires: 27 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -15832,7 +15832,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -19627,8 +19627,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          26 August 2026
-Expires: 27 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
                         Mission Runtime Evidence
@@ -19678,7 +19678,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
@@ -19794,8 +19794,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 89 conformance rows in conformance-manifest.json (7
-   tested, 2 partial, 80 todo).  Adopt when: Runtime enforcement is
+   Implementation: 91 conformance rows in conformance-manifest.json (8
+   tested, 6 partial, 77 todo).  Adopt when: Runtime enforcement is
    deployed and decisions need durable, verifiable records.  Requires:
    Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
    Also requires, conditionally: Mission Cross-Domain Projection for
@@ -20593,7 +20593,8 @@ Table of Contents
 
    authorized_parameter_digest:  CONDITIONAL.  A string.  REQUIRED when
       the linked Decision Evidence carries parameter_digest; MUST equal
-      it.  The link to what the permit authorized.
+      it.  MUST be absent when the linked Decision Evidence carries no
+      parameter_digest.  The link to what the permit authorized.
 
    effective_parameter_digest:  CONDITIONAL.  A string.  REQUIRED
       whenever authorized_parameter_digest is present.  The digest, in
@@ -21039,9 +21040,11 @@ Table of Contents
        Evidence on evaluation_id (Section 5, Section 6); audience and
        target, and the authorized and effective parameter digests, are
        consistent across the records per the runtime's rules
-       ([I-D.draft-mcguinness-mission-runtime]); for execution, the
-       receipt's outcome equals the Execution Evidence's terminal
-       outcome.
+       ([I-D.draft-mcguinness-mission-runtime]); exactly one of the
+       Decision Evidence's parameter_digest and the Execution Evidence's
+       authorized_parameter_digest present is a join failure
+       (Section 6); for execution, the receipt's outcome equals the
+       Execution Evidence's terminal outcome.
 
    5.  Require every copied optional member to equal the corresponding
        member of the record it projects.
@@ -22049,8 +22052,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          26 August 2026
-Expires: 27 February 2027
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -22106,7 +22109,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 February 2027.
+   This Internet-Draft will expire on 28 February 2027.
 
 Copyright Notice
 
