@@ -1,5 +1,5 @@
 /**
- * @spec status#idempotency, status#discharge-idempotency
+ * @spec status#idempotency, discharge#discharge-idempotency
  *
  * The Mission Lifecycle endpoint keeps TWO identities apart, and this module
  * holds one durable store for each:
@@ -27,7 +27,7 @@
  *
  * Both tables live in the KERNEL's own database (the creation-idempotency
  * precedent), so the event row can share ONE SQLite transaction with the latch
- * and version increment it records (@spec status#discharge-operation,
+ * and version increment it records (@spec discharge#discharge-operation,
  * "Atomicity"); nested `withTransaction` calls become savepoints.
  */
 
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS discharge_events (
 export const DEFAULT_LIFECYCLE_NONCE_TTL_S = 600;
 
 /**
- * @spec status#discharge-idempotency ("Retention") — event-dedup state is
+ * @spec discharge#discharge-idempotency ("Retention") — event-dedup state is
  * retained at least as long as the deployment's published retry horizon and the
  * replayable result's usable lifetime. One day, the same horizon the creation
  * tombstone uses. After eviction a repeated assertion is processed fresh
@@ -183,7 +183,7 @@ export class LifecycleResponseStore {
 }
 
 /**
- * @spec status#discharge-idempotency — the five-part event tuple: the
+ * @spec discharge#discharge-idempotency — the five-part event tuple: the
  * AUTHENTICATED discharge authority plus the three selectors and the asserted
  * occurrence's identifier.
  */
@@ -204,7 +204,7 @@ export interface StoredDischargeEvent {
 }
 
 /**
- * @spec status#discharge-operation — the audit members that ride the recorded
+ * @spec discharge#discharge-operation — the audit members that ride the recorded
  * occurrence and NOTHING else: `evidence_ref` is never dereferenced, and neither
  * evidence member nor the caller-asserted `observed_at` is authorization input.
  * `received_at` is the AS's own commit time.

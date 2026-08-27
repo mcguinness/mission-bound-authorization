@@ -1,7 +1,7 @@
 /**
- * @spec status#completion, status#terminal-when, status#discharge,
- * status#discharge-operation, status#discharge-authority,
- * status#discharge-anti-oracle, status#discharge-result, status#visibility
+ * @spec discharge#completion, discharge#terminal-when, discharge#discharge,
+ * discharge#discharge-operation, discharge#discharge-authority,
+ * discharge#discharge-anti-oracle, discharge#discharge-result, discharge#visibility
  *
  * Entry DISCHARGE: the selectors, digests, authority mapping, and refusal
  * classes of the Status profile's `discharge` operation. The kernel funnel
@@ -26,18 +26,18 @@ import { IntentError } from "./intent.js";
 import type { AuthorityEntry, TerminalWhenCondition } from "./types.js";
 
 /**
- * @spec status#discharge-operation — `event_id`:
+ * @spec discharge#discharge-operation — `event_id`:
  * `1*128( ALPHA / DIGIT / "-" / "_" / ":" / "." )`.
  */
 export const DISCHARGE_EVENT_ID_RE = /^[A-Za-z0-9\-_:.]{1,128}$/;
 
 /**
- * @spec status#terminal-when — `discharge_policy`:
+ * @spec discharge#terminal-when — `discharge_policy`:
  * `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`, opaque.
  */
 export const DISCHARGE_POLICY_RE = /^[A-Za-z0-9\-_:.]{1,64}$/;
 
-/** @spec status#discharge-operation — `evidence_ref` is a URI, max 512 chars. */
+/** @spec discharge#discharge-operation — `evidence_ref` is a URI, max 512 chars. */
 export const EVIDENCE_REF_MAX_CHARS = 512;
 
 /** The family's prefixed digest form (@spec mission#commitment-mechanisms). */
@@ -49,7 +49,7 @@ function canonicalObjectDigest(value: JsonValue): string {
 }
 
 /**
- * @spec status#discharge-operation — the Authority Set entry commitment of a
+ * @spec discharge#discharge-operation — the Authority Set entry commitment of a
  * `mission_resource_access` entry, computed over the immutable Mission-record
  * entry, NEVER over a narrowed token projection.
  */
@@ -58,7 +58,7 @@ export function entryDigest(iss: string, entry: AuthorityEntry): string {
 }
 
 /**
- * @spec status#terminal-when — condition IDENTITY: the canonical bytes of the
+ * @spec discharge#terminal-when — condition IDENTITY: the canonical bytes of the
  * single condition object. The registration's no-duplicate rule, the
  * intersection's dedup/sort order, and `condition_digest` all key on this one
  * value. Total: a structurally invalid condition yields `undefined` rather than
@@ -76,7 +76,7 @@ export function conditionCanonicalBytes(condition: unknown): string | undefined 
 }
 
 /**
- * @spec status#terminal-when — `condition_digest`: a canonical-object digest
+ * @spec discharge#terminal-when — `condition_digest`: a canonical-object digest
  * over the exact canonical bytes of the single condition object, the same
  * canonical form that fixes condition identity.
  */
@@ -98,7 +98,7 @@ export function terminalWhenOf(entry: AuthorityEntry): TerminalWhenCondition[] |
 }
 
 /**
- * @spec status#discharge-idempotency — the EVENT ASSERTION FINGERPRINT's input:
+ * @spec discharge#discharge-idempotency — the EVENT ASSERTION FINGERPRINT's input:
  * a semantic assertion object, never raw form bytes. `nonce`, client
  * authentication material, the DPoP proof, and transport headers are outside
  * it: none of them enter the object and none of them affect its value.
@@ -115,7 +115,7 @@ export interface DischargeAssertion {
 }
 
 /**
- * @spec status#discharge-idempotency — the assertion fingerprint: the JSON
+ * @spec discharge#discharge-idempotency — the assertion fingerprint: the JSON
  * object with exactly the decoded members `operation` (the literal
  * `discharge`), `mission_id`, `entry_digest`, `condition_digest`,
  * `event_type`, `event_id` and, when present, `evidence_ref`,
@@ -137,7 +137,7 @@ export function dischargeAssertionFingerprint(a: DischargeAssertion): string {
 }
 
 /**
- * @spec status#discharge-operation — one `discharge` delivery as the kernel
+ * @spec discharge#discharge-operation — one `discharge` delivery as the kernel
  * funnel takes it: the AUTHENTICATED discharge authority plus the request's own
  * selectors and audit metadata. The Mission Identifier is the funnel's own
  * argument. `evidence_ref` / `evidence_digest` are bounded audit metadata: the
@@ -157,11 +157,11 @@ export interface DischargeRequest {
   observed_at?: string;
 }
 
-/** @spec status#discharge-result — the three outcomes, and only these three. */
+/** @spec discharge#discharge-result — the three outcomes, and only these three. */
 export type DischargeOutcome = "discharged" | "already_discharged" | "terminal_noop";
 
 /**
- * @spec status#discharge-result — the `discharge_result` object the signed
+ * @spec discharge#discharge-result — the `discharge_result` object the signed
  * Mission Status Response carries as a sibling of `mission`. `prior_version` /
  * `current_version` are the versions of the commit THIS result reports: this
  * request's own commit, or, for the replayed event case, the versions the
@@ -177,7 +177,7 @@ export interface DischargeResult {
 }
 
 /**
- * @spec status#discharge-anti-oracle — the six refusal classes that COLLAPSE to
+ * @spec discharge#discharge-anti-oracle — the six refusal classes that COLLAPSE to
  * the endpoint's `not_found`. The reason is carried here for the issuer's own
  * audit record only; it MUST NOT reach the wire, where all six are one
  * indistinguishable response.
@@ -194,7 +194,7 @@ export type DischargeRefusalReason =
   | "unpinned_mapping"
   | "unauthorized_target";
 
-/** @spec status#discharge-anti-oracle — collapses to `not_found` on the wire. */
+/** @spec discharge#discharge-anti-oracle — collapses to `not_found` on the wire. */
 export class DischargeNotFoundError extends Error {
   constructor(
     readonly reason: DischargeRefusalReason,
@@ -205,14 +205,14 @@ export class DischargeNotFoundError extends Error {
 }
 
 /**
- * @spec status#discharge-idempotency — the same (discharge authority,
+ * @spec discharge#discharge-idempotency — the same (discharge authority,
  * mission_id, entry_digest, condition_digest, event_id) tuple asserted with a
  * DIFFERENT fingerprint: refused `conflict` (409).
  */
 export class DischargeConflictError extends Error {}
 
 /**
- * @spec status#discharge-authority — one AS-side discharge-authority mapping:
+ * @spec discharge#discharge-authority — one AS-side discharge-authority mapping:
  * WHICH authenticated principal may assert WHICH event types. Never a raw
  * principal structure a requesting client can select: a condition names a
  * mapping by opaque selector, and the AS resolves it.
@@ -230,7 +230,7 @@ export interface DischargeAuthorityMapping {
 }
 
 /**
- * @spec status#discharge-authority — the issuer-held discharge-authority
+ * @spec discharge#discharge-authority — the issuer-held discharge-authority
  * policy: `policies` resolves a condition's `discharge_policy` selector,
  * `baseline` is the mapping keyed by `event_type` for a condition carrying no
  * selector. FAIL CLOSED by construction: an absent policy resolves nothing, so
@@ -244,7 +244,7 @@ export interface DischargeAuthorityPolicy {
 }
 
 /**
- * @spec status#discharge-authority — resolve the mapping for one condition:
+ * @spec discharge#discharge-authority — resolve the mapping for one condition:
  * the `discharge_policy` selector when the condition carries one, else the
  * baseline mapping keyed by `event_type`. `undefined` means "maps to nothing".
  */
@@ -257,7 +257,7 @@ export function resolveConditionMapping(
 }
 
 /**
- * @spec status#discharge-authority — target authorization: the authenticated
+ * @spec discharge#discharge-authority — target authorization: the authenticated
  * principal is admitted by the resolved mapping FOR this event type. A
  * `mission_lifecycle` grant, or being the Subject/Approver/an administrator,
  * never reaches here: the scope gate is separate and this mapping is keyed by
@@ -273,7 +273,7 @@ export function mappingPermits(
 }
 
 /**
- * @spec status#discharge-authority — resolve and validate every
+ * @spec discharge#discharge-authority — resolve and validate every
  * `discharge_policy` selector carried by these entries, refusing when one maps
  * to nothing. Called at every point where a condition FIRST enters an immutable
  * Mission-record entry: the derivation (`MissionKernel.derive`, so Mission
@@ -284,7 +284,7 @@ export function mappingPermits(
  * policy for a condition it adds, nor fall back to an unapproved default.
  *
  * Also enforces the condition SHAPE and the registration's no-duplicate rule
- * (@spec status#terminal-when): a value carrying two identical conditions is
+ * (@spec discharge#terminal-when): a value carrying two identical conditions is
  * refused, since identity is byte equality of the canonical form.
  */
 export function assertDischargePoliciesResolvable(
@@ -328,7 +328,7 @@ export function assertDischargePoliciesResolvable(
       if (resolveConditionMapping(policy, condition) === undefined) {
         // The refusal is the point: an unchecked mapping choice for a newly
         // added condition could force a premature discharge, which is a
-        // denial of service on the task (@spec status#completion-security).
+        // denial of service on the task (@spec discharge#completion-security).
         throw new IntentError(
           "invalid_authorization_details",
           condition.discharge_policy !== undefined
@@ -341,7 +341,7 @@ export function assertDischargePoliciesResolvable(
 }
 
 /**
- * @spec status#terminal-when, status#subset-extension — the UNION of two
+ * @spec discharge#terminal-when, discharge#subset-extension — the UNION of two
  * condition arrays, deduplicated by condition identity and sorted by the
  * lexicographic order of the canonical bytes, so the intersected entry is one
  * reproducible array. Union is the narrowing direction: the result contains
@@ -390,7 +390,7 @@ function cloneCondition(condition: TerminalWhenCondition): TerminalWhenCondition
 }
 
 /**
- * @spec status#subset-extension — a candidate condition array is NO BROADER
+ * @spec discharge#subset-extension — a candidate condition array is NO BROADER
  * than a reference array when it contains every reference condition, compared
  * structurally after canonicalization; it MAY add further conditions. Total and
  * non-throwing (a malformed condition on either side fails closed), so

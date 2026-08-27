@@ -121,11 +121,11 @@ export type ChildFanoutControls = {
 };
 
 /**
- * @spec status#terminal-when — one entry completion condition carried in
+ * @spec discharge#terminal-when — one entry completion condition carried in
  * `constraints.terminal_when`. `event_type` identifies the completion event
  * (deployment- or registry-defined, opaque here). `discharge_policy` is a
  * stable, opaque selector naming the AS-side discharge-authority mapping for
- * this condition (@spec status#discharge-authority): the AS resolves it
+ * this condition (@spec discharge#discharge-authority): the AS resolves it
  * whenever the condition FIRST enters an immutable Mission-record entry and
  * refuses the derivation when it maps to nothing. Condition identity is byte
  * equality of the canonical form of THIS object, which is also what
@@ -146,13 +146,13 @@ export interface AuthorityEntry {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
     /**
-     * @spec status#terminal-when — the OPTIONAL Common Constraint carrying one
+     * @spec discharge#terminal-when — the OPTIONAL Common Constraint carrying one
      * or more entry completion conditions. When any condition is met the entry
-     * is DISCHARGED and no longer derives (@spec status#discharge). MONOTONIC
+     * is DISCHARGED and no longer derives (@spec discharge#discharge). MONOTONIC
      * under the subset rule: a derived entry carries every parent condition
      * unchanged and MAY add more (an added condition can only discharge
      * sooner), so dropping or altering one WIDENS and is refused
-     * (@spec status#subset-extension). Fired status is evaluated state, never
+     * (@spec discharge#subset-extension). Fired status is evaluated state, never
      * part of this array and never part of `authority_hash`.
      */
     terminal_when?: TerminalWhenCondition[];
@@ -315,16 +315,16 @@ export interface MissionContainment {
 }
 
 /**
- * @spec status#discharge-operation, status#determining — one committed entry
+ * @spec discharge#discharge-operation, discharge#determining — one committed entry
  * DISCHARGE latch: the issuer-held record that a `terminal_when` condition of
  * the named entry fired, so the entry no longer derives
- * (@spec status#discharge). Keyed by `entry_digest`, the Authority Set entry
+ * (@spec discharge#discharge). Keyed by `entry_digest`, the Authority Set entry
  * commitment over the IMMUTABLE Mission-record entry, which makes the latch an
  * EQUIVALENCE-CLASS latch: every recorded entry resolving to that digest is
  * discharged by this one row, in one transition with one version increment
- * (@spec status#discharge-operation, "Duplicate entries"). MONOTONIC: a latch
+ * (@spec discharge#discharge-operation, "Duplicate entries"). MONOTONIC: a latch
  * is never removed and never re-latched, so a later delivery is acknowledged
- * `already_discharged` (@spec status#discharge-result). `condition_digest` /
+ * `already_discharged` (@spec discharge#discharge-result). `condition_digest` /
  * `event_type` / `event_id` record WHICH condition fired and the asserted
  * occurrence, for audit and event correlation; the evidence members and
  * caller-asserted `observed_at` are audit metadata held by the event store,
@@ -511,7 +511,7 @@ export interface MissionRecord {
   derivation_count: number;
   grant_id: string | null;
   /**
-   * @spec status#status-list: the opaque Status List index, assigned only when
+   * @spec status-list#status-list: the opaque Status List index, assigned only when
    * a Mission participates (opt-in). Random, never derivable from `id`
    * (@spec status#mission-status-anti-oracle). Null for non-participants.
    */
@@ -543,7 +543,7 @@ export interface MissionRecord {
    */
   containment?: MissionContainment;
   /**
-   * @spec status#discharge, status#determining — the committed entry-discharge
+   * @spec discharge#discharge, discharge#determining — the committed entry-discharge
    * latches (see {@link DischargedEntry}), the SECOND issuer-held narrowing
    * overlay beside `containment` and, like it, evaluated state:
    * `authority_set`/`authority_hash` stay immutable. Absent means nothing has
@@ -554,7 +554,7 @@ export interface MissionRecord {
 }
 
 /**
- * @spec status#status-list — the shared lifecycle-commit event. The kernel
+ * @spec status-list#status-list — the shared lifecycle-commit event. The kernel
  * fires it from its four real commit funnels (`setState`,
  * `supersedeOnRedemption`, `insertRecord`, `contain`) so subscribers observe
  * every committed transition exactly once: the Status List republisher today,

@@ -125,6 +125,13 @@
    "examples_waiver": {
     "reason": "Single-member RFC 3339 date-time format profile with a two-item Conformance checklist; the format itself (a date-time value) is the only wire content, and a worked example would restate the RFC 3339 grammar rather than illustrate anything specific to this profile. Proportionality judgment, not an unconditional exemption: reversed the moment this document gains any structure beyond the one member."
    }
+  },
+  "draft-mcguinness-oauth-mission-status": {
+   "requirement_inventory": { "attested": false, "audited_by": null },
+   "decide_resolutions": [
+    { "issue": 242, "status": "resolved_in_tree", "commit": "5ec85bba40b36fddd59654ad9e7e94d6fa569b0a", "note": "PR #736 (branch split-status-list-discharge-242) executed the owner's ruling: split into three documents (base Status, the new draft-mcguinness-oauth-mission-discharge, the new draft-mcguinness-oauth-mission-status-list), content moved byte-for-byte with only cross-document citations rewritten, 21 conformance rows re-accounted with none lost, and the owner's round-2 review points closed on the same branch (SPEC_VERSIONS.md's status row split three ways and its 108 relocated-anchor @spec tags re-keyed; base Status's authorization_details projection generalized off mission_resource_access and Resource Access moved off its normative front matter, coordinating with #718). Recorded pre-merge, on the PR branch, per the review's own instruction to record this once the final executing commit was known; commit is this branch's tip at push time, not yet on main. If the PR merges via squash rather than fast-forward or an ordinary merge commit, this SHA will need updating to the squashed commit before Status next seeks candidacy." }
+   ],
+   "examples_waiver": null
   }
  }
 }

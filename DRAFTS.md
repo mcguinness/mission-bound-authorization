@@ -46,9 +46,9 @@ everything outside their markers is hand-authored.
 
 <!-- generated:family-counts:start -->
 
-44 documents: 1 core, 5 adapter-binding, 35 companion, 3 guide.
-Spec maturity: 1 candidate, 36 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
-Conformance ledger (`conformance-manifest.json`): 612 requirement rows across 19 audited specs (149 tested, 55 partial, 405 todo, 3 blocked); 25 documents carry no rows in the audited set yet.
+46 documents: 1 core, 5 adapter-binding, 37 companion, 3 guide.
+Spec maturity: 1 candidate, 38 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
+Conformance ledger (`conformance-manifest.json`): 612 requirement rows across 20 audited specs (149 tested, 55 partial, 405 todo, 3 blocked); 26 documents carry no rows in the audited set yet.
 
 <!-- generated:family-counts:end -->
 
@@ -90,6 +90,7 @@ Conformance ledger (`conformance-manifest.json`): 612 requirement rows across 19
 | [Mission Continuation: Authorization Continuity for Mission-Bound Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) | companion | experimental | continue | Cross-domain projection | Profiles authorization continuity: how a Mission's work continues across hops and over time without re-presenting the original credential and without widening authority. | Authorized work continues across hops or time without re-presented credentials. |
 | [Mission Cross-Domain Projection for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html) | companion | experimental | project | Cross-domain projection | Lets a single Mission be honored by Authorization Servers in other trust domains: the originating issuer projects audience-scoped authority through a short-lived, sender-constrained cross-domain grant, and the Resource AS mints its own local Mission-bound tokens preserving the `mission` claim. | A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency). |
 | [Mission Cross-Organizational Delegation for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html) | companion | experimental | delegate, project | Cross-domain projection | Profiles Mission Offline Attenuation across organizational trust domains: an agent in one organization delegates a narrowed slice to an agent in another, and the relying party verifies the complete narrowing chain without calling the origin on the request path. | An attenuation chain crosses organizational trust domains. |
+| [Mission Completion and Entry Discharge for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-discharge.html) | companion | experimental | govern | Lifecycle | Registers `terminal_when`, an OPTIONAL Common Constraint naming one or more entry-grain completion conditions, and the authenticated `discharge` operation, registered as an extension on the Status profile's Mission Lifecycle endpoint, that commits a condition's firing and retires the entry's authority without ending the Mission. | One Authority Set entry's task finishes before the rest of the Mission, and its authority should retire itself rather than wait for a Mission-level revoke, expiry, or complete. |
 | [Mission Expansion for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.html) | companion | experimental | govern | Lifecycle | How to widen a Mission's authority: because authority can only narrow within a Mission, widening requires a fresh approval that creates a successor Mission superseding its predecessor. | Approved authority will predictably need to widen mid-task via fresh approval. |
 | [Mission Issuance Grant for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html) | companion | experimental | approve | The substrate and the bindings | The issuance join: the middle integration between the standalone binding and a natively Mission-aware AS. | A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS. |
 | [Mission Management for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) | companion | experimental | govern | Lifecycle | The fleet-management surface the status profile defers: authenticated Mission enumeration and bulk lifecycle operations, dry-run first, with a per-Mission outcome manifest. | An operator needs fleet enumeration and bulk lifecycle across many Missions. |
@@ -97,6 +98,7 @@ Conformance ledger (`conformance-manifest.json`): 612 requirement rows across 19
 | [Mission Resource Access Profile for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-resource-access.html) | companion | experimental | approve | The substrate and the bindings | Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration. | The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics. |
 | [Mission Lifecycle Signals for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html) | companion | experimental | govern | Lifecycle | A profile of the OpenID Shared Signals Framework: the Mission Issuer emits a signed Security Event Token on each Mission lifecycle transition, delivered by push or poll, so a consumer learns of a transition promptly without polling. | Consumers need push notice of state changes instead of polling per Mission. |
 | [Mission Status and Lifecycle for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) | companion | experimental | govern | Lifecycle | A `mission_id`-keyed status surface with signed responses, plus a lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and `complete` transitions and the `suspended` and `completed` states. | You must observe or change Mission state beyond token expiry (revoke, suspend, complete). |
+| [Mission Status List for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status-list.html) | companion | experimental | govern | Lifecycle | Profiles a Mission Status List, a signed, compressed OAuth Status List bit array a consumer relying on many Missions at once fetches once per freshness window and reads locally per action, as a `status_list` extension member on the Status profile's response and introspection surfaces. | A consumer relies on many Missions concurrently and per-Mission status reads do not scale. |
 | [Mission Template for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) | companion | experimental | approve | Approval time | An Approver consents once to a task template (a ceiling of resources, actions, and constraints plus a dispatch policy), and each dispatch then instantiates an ordinary, independently gated Mission from it at machine speed. | Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling. |
 | [Mission Work Products](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-work-products.html) | companion | experimental | prove | Security model | Keeps information from carrying authority: a policy-free work-product provenance object attributes an artifact to the approved work that produced it, and a non-transitive handoff rule makes the receiving Mission re-evaluate any proposed action under its own Authority Set. | Artifacts cross into another Mission and must carry provenance, never authority. |
 | [Mission-Bound Authorization for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) | adapter-binding | experimental | approve | The substrate and the bindings | The OAuth 2.0 binding of the Mission model, the issuance profile to its OAuth companions: defines the OAuth realization of the Mission, the Mission Intent and Authority Set, the approval event and its `intent_hash` / `authority_hash` anchors, the `mission` token claim, the subset rule, and state-gated issuance. | Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses. |
@@ -274,14 +276,34 @@ A `mission_id`-keyed status surface with signed responses, plus a
 lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and
 `complete` transitions and the `suspended` and `completed` states. It
 lets a consumer holding only a `mission_id` ask the issuer for current
-Mission state, and an authorized party change it. It also defines
-Mission Completion, the narrowing counterpart of Expansion:
+Mission state, and an authorized party change it. It exposes an
+extension point on its response, introspection, and lifecycle-endpoint
+surfaces through which a companion profile MAY add a fleet-scale
+Status List or an entry-grain `discharge` operation.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
+
+#### Mission Status List for OAuth 2.0
+
+Profiles a Mission Status List: a signed, compressed OAuth Status List
+bit array a consumer relying on many Missions at once fetches once
+per freshness window and reads locally per action, carried as a
+`status_list` extension member on the Status profile's response and
+introspection surfaces.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status-list.html)
+
+#### Mission Completion and Entry Discharge for OAuth 2.0
+
+The narrowing counterpart of Expansion, at the entry grain:
 `terminal_when`, a Common Constraint that discharges a
 `mission_resource_access` entry when its completion condition fires,
 monotonic (only retires authority) and so safe against an injected
-agent.
+agent, and the authenticated `discharge` operation, registered as an
+extension on the Status profile's Mission Lifecycle endpoint, that
+commits a condition's firing.
 
-[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-discharge.html)
 
 #### Mission Lifecycle Signals for OAuth 2.0
 

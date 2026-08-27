@@ -55,6 +55,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -210,7 +218,7 @@ Role: companion. Spec maturity: experimental. Maintenance: active.
 Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: A sub-agent needs its own Mission outliving a call frame, with cascade termination.
 Requires: Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission Expansion for OAuth 2.0 and Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation reacts to parent lifecycle states).
+Also requires, conditionally: Mission Expansion for OAuth 2.0 and Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation reacts to parent lifecycle states); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
 <!-- family-status: END -->
 
 # Relationship to the Issuance Profile {#issuance-relationship}
@@ -1414,9 +1422,9 @@ A cascade in progress ({{cascade}}) opens no window: a descendant
 whose root ancestor is non-active is refused derivation even before
 its own cascade transition commits.
 
-Where a deployment also runs the status profile's completion
-machinery ({{I-D.draft-mcguinness-oauth-mission-status}}, Completion
-section), discharge propagates entry-wise: when a parent Authority Set
+Where a deployment also runs the Entry Discharge companion's
+completion machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}}),
+discharge propagates entry-wise: when a parent Authority Set
 entry is discharged, the Mission Issuer MUST discharge every child
 entry justified by it, so spent authority does not survive in the
 subtree.

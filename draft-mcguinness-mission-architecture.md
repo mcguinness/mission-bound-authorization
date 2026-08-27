@@ -202,6 +202,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-status-list:
+    title: "Mission Status List for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -712,7 +728,7 @@ under the OAuth binding: an operator gives an agent the task
    growth requires an approved successor
    ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and entries
    retire as their work completes
-   ({{I-D.draft-mcguinness-oauth-mission-status}}).
+   ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 7. **Stop.** Revocation or expiry turns every gate at once: issuance
    refuses, the PDP denies, the harness pauses bound sessions and
    queues, and the orchestrator unwinds in-flight work
@@ -893,8 +909,12 @@ a fresh human decision, per the progressive profile's prohibited set
 The question: how do consumers observe Mission state, and how does
 authority grow or retire mid-task? The boundary: between the issuer
 and every consumer relying on state. Owners: Status, the signed pull
-surface with a lifecycle endpoint and per-entry completion discharge
-({{I-D.draft-mcguinness-oauth-mission-status}}); Signals, the push
+surface with a lifecycle endpoint
+({{I-D.draft-mcguinness-oauth-mission-status}}), extended by the
+Status List companion for fleet-scale reliance
+({{I-D.draft-mcguinness-oauth-mission-status-list}}) and by the
+Entry Discharge companion for per-entry completion discharge
+({{I-D.draft-mcguinness-oauth-mission-discharge}}); Signals, the push
 complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
 Expansion, widening only via an approved successor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); Containment,
@@ -2235,7 +2255,8 @@ unit of work draws under it, as an in-ceiling successor or a
 policy-approved Child Mission
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), each
 expiring and discharging as its unit completes
-({{I-D.draft-mcguinness-oauth-mission-status}}).
+({{I-D.draft-mcguinness-oauth-mission-status}},
+{{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 The progressive profile's prohibited set keeps the high-consequence
 classes on a fresh human approval inside the ceiling, and its
@@ -3344,7 +3365,9 @@ bound profiled by `aauth-mission-expiry`.
 
 | Document | Role |
 |---|---|
-| `oauth-mission-status` | The signed pull surface and the lifecycle endpoint, with `suspended` and `completed`, and per-entry discharge via the `terminal_when` constraint. |
+| `oauth-mission-status` | The signed pull surface and the lifecycle endpoint, with `suspended` and `completed`, and an extension point for a fleet-scale Status List or an entry-grain `discharge` operation. |
+| `oauth-mission-status-list` | A fleet-scale Status List: a signed, compressed bit array read locally per action instead of per-Mission status reads. |
+| `oauth-mission-discharge` | Per-entry discharge via the `terminal_when` constraint, registered as an extension operation on the Status profile's lifecycle endpoint. |
 | `oauth-mission-signals` | A signed event per lifecycle transition, push or poll. |
 | `oauth-mission-expansion` | Widening through an approved successor Mission. |
 | `oauth-mission-containment` | Event-triggered, monotonic narrowing of a live Mission's effective authority, with restoration only through an approved successor. |

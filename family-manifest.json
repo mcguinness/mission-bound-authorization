@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 44,
+ "count": 46,
  "drafts": [
   {
    "file": "draft-mcguinness-aauth-mission-expiry.md",
@@ -279,6 +279,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-management",
@@ -286,6 +287,7 @@
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-status-list",
     "draft-mcguinness-oauth-mission-transaction-authorization",
     "draft-mcguinness-oauth-mission-work-products"
    ]
@@ -1077,7 +1079,8 @@
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-status-list"
    ]
   },
   {
@@ -1130,6 +1133,7 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-transaction-authorization"
@@ -1182,9 +1186,10 @@
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status-list"
    ]
   },
   {
@@ -1232,6 +1237,7 @@
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-work-products"
    ]
@@ -1482,6 +1488,7 @@
    "pull_when": "A sub-agent needs its own Mission outliving a call frame, with cascade termination.",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-status"
    ],
@@ -1495,6 +1502,12 @@
       "draft-mcguinness-oauth-mission-expansion",
       "draft-mcguinness-oauth-mission-status"
      ]
+    },
+    {
+     "when": "the deployment also runs the Entry Discharge companion",
+     "requires": [
+      "draft-mcguinness-oauth-mission-discharge"
+     ]
     }
    ],
    "references": [
@@ -1507,6 +1520,7 @@
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-signals",
@@ -1554,8 +1568,8 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-template"
    ]
   },
@@ -1605,10 +1619,12 @@
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-status-list"
    ]
   },
   {
@@ -1743,6 +1759,40 @@
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-status"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-discharge.md",
+   "slug": "draft-mcguinness-oauth-mission-discharge",
+   "title": "Mission Completion and Entry Discharge for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "lifecycle",
+   "verbs": [
+    "govern"
+   ],
+   "summary": "Registers `terminal_when`, an OPTIONAL Common Constraint naming one or more entry-grain completion conditions, and the authenticated `discharge` operation, registered as an extension on the Status profile's Mission Lifecycle endpoint, that commits a condition's firing and retires the entry's authority without ending the Mission.",
+   "pull_when": "One Authority Set entry's task finishes before the rest of the Mission, and its authority should retire itself rather than wait for a Mission-level revoke, expiry, or complete.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-resource-access",
+    "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
    ]
   },
@@ -1923,8 +1973,8 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-template"
    ]
   },
@@ -1969,6 +2019,7 @@
    "pull_when": "Consumers need push notice of state changes instead of polling per Mission.",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
@@ -1980,6 +2031,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission"
      ]
+    },
+    {
+     "when": "the deployment also runs the Entry Discharge companion",
+     "requires": [
+      "draft-mcguinness-oauth-mission-discharge"
+     ]
     }
    ],
    "references": [
@@ -1990,6 +2047,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-status"
@@ -2010,19 +2068,10 @@
    "summary": "A `mission_id`-keyed status surface with signed responses, plus a lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and `complete` transitions and the `suspended` and `completed` states.",
    "pull_when": "You must observe or change Mission state beyond token expiry (revoke, suspend, complete).",
    "normative_references": [
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-resource-access"
+    "draft-mcguinness-oauth-mission"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
-   ],
-   "requires_when": [
-    {
-     "when": "the completion capability's terminal_when Common Constraint is used",
-     "requires": [
-      "draft-mcguinness-oauth-mission-resource-access"
-     ]
-    }
    ],
    "references": [
     "draft-mcguinness-mission-aauth",
@@ -2033,10 +2082,40 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-resource-access",
-    "draft-mcguinness-oauth-mission-signals"
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status-list"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-status-list.md",
+   "slug": "draft-mcguinness-oauth-mission-status-list",
+   "title": "Mission Status List for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "lifecycle",
+   "verbs": [
+    "govern"
+   ],
+   "summary": "Profiles a Mission Status List, a signed, compressed OAuth Status List bit array a consumer relying on many Missions at once fetches once per freshness window and reads locally per action, as a `status_list` extension member on the Status profile's response and introspection surfaces.",
+   "pull_when": "A consumer relies on many Missions concurrently and per-Mission status reads do not scale.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
    ]
   },
   {

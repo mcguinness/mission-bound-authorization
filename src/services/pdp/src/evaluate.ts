@@ -140,7 +140,7 @@ export type DenialReason =
   | "out_of_authority"
   | "authority_contained"
   /**
-   * @spec status#runtime, runtime#input-authority — the entry was approved and
+   * @spec discharge#runtime, runtime#input-authority — the entry was approved and
    * its `terminal_when` completion condition has FIRED, so the Mission Issuer
    * discharged it: the task it was granted for is done. Distinct from
    * `authority_contained` (trust lost) and from `out_of_authority` (never
@@ -508,7 +508,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // 5b. Discharge overlay: the entry WAS approved (step 5 matched), but its
   //     `terminal_when` completion condition has fired and the Mission Issuer
   //     committed the discharge, so the entry no longer derives and MUST NOT be
-  //     honored at the point of use either (@spec status#runtime: a PEP/PDP that
+  //     honored at the point of use either (@spec discharge#runtime: a PEP/PDP that
   //     recognizes `terminal_when` denies a discharged entry, closing the window
   //     between discharge and token expiry). Keyed by the entry commitment, the
   //     same `entry_digest` a permit already carries, so an equivalence class of
