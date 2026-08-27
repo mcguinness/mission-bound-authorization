@@ -7,7 +7,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize } from "@mission/core";
+import { canonicalize, type JsonValue } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
 
 /**
@@ -33,6 +33,27 @@ export interface AuthorityEntry {
      */
     requires_action_approval?: boolean;
   };
+  /**
+   * @spec authority-server#mission-join rule 5 (#557) — this entry's
+   * baseline-Join delegate-narrowing rule, carried into the materialized
+   * view so mas-join.ts can read it without a second Mission-Record lookup.
+   * Absent means the entry is NOT delegable: rule 5 excludes it from a
+   * delegate's narrowed set entirely.
+   *
+   * @spec observation.local — the spec cross-references "the issuance
+   * profile's per-entry delegation rules" (the kernel's own
+   * `AuthorityEntry.delegation`, `authorization-server/src/kernel/types.ts`,
+   * matched by `DelegateMatcher {sub, sub_profile}`). This PDP package has
+   * no dependency on that package, so this is a PDP-local equivalent
+   * (`allowed_delegates` matched by bare `client_id` string, the identity
+   * the baseline Join's rule 4 already authenticates), not a shared type.
+   * Named distinctly (`join_delegation`, not `delegation`) so a MissionView
+   * ever assembled by widening a kernel `AuthorityEntry` cannot silently
+   * structurally satisfy or collide with this member.
+   * Not a `policyViewId` input (below): entry-level fields already sit
+   * outside that pinned commitment.
+   */
+  join_delegation?: { max_depth?: number; allowed_delegates?: string[] };
 }
 
 /** The subset of the Mission Record the PDP evaluates against. */
@@ -81,6 +102,40 @@ export function policyViewId(view: MissionView, modelId: string): string {
     mission_version: view.version,
     authority_hash: view.authority_hash,
     model_id: modelId,
+  });
+  return `sha-256:${createHash("sha256").update(commitment, "utf8").digest("base64url")}`;
+}
+
+/**
+ * @spec authority-server#mission-join (#557 review point 4) — a SEPARATE
+ * commitment for a decision reached over a baseline-Join's resolved
+ * (subject/client/delegate-narrowed) authority set, distinct from
+ * `policyViewId`. `policyViewId` commits only `(mission_id, mission_version,
+ * authority_hash, model_id)`: none of these change when the join's inputs
+ * (the acting subject, the acting client, the delegate's narrowing) change,
+ * or when the narrowed effective authority differs from the Mission's own
+ * full authority_set -- so a Decision Evidence record carrying only
+ * `policy_view_id` cannot distinguish a joined decision from a direct
+ * Mission-bound one, nor one joined view from a differently-joined one
+ * (e.g. two different delegates narrowed to two different subsets). This
+ * commitment additionally binds the join disposition, the joining client,
+ * and the resolved authority set itself, so it changes whenever any of
+ * those does. Computed only on the baseline-Join path; `policyViewId` keeps
+ * its existing meaning and is carried alongside this, never replaced by it.
+ */
+export function joinViewId(
+  view: MissionView,
+  modelId: string,
+  joined: { disposition: "direct" | "delegate"; clientId: string; authoritySet: AuthorityEntry[] },
+): string {
+  const commitment = canonicalize({
+    mission_id: view.id,
+    mission_version: view.version,
+    authority_hash: view.authority_hash,
+    model_id: modelId,
+    join_disposition: joined.disposition,
+    join_client_id: joined.clientId,
+    join_authority_set: joined.authoritySet as unknown as JsonValue,
   });
   return `sha-256:${createHash("sha256").update(commitment, "utf8").digest("base64url")}`;
 }

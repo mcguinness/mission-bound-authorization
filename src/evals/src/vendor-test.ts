@@ -10,11 +10,15 @@
 
 import { type EvalCase, runCase } from "./index.js";
 import type { HarnessDeps } from "./index.js";
-import type { TokenFacts } from "@mission/mcp-payments";
+import type { MissionBoundTokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE } from "@mission/mcp-payments";
 
 const MISSION = { id: "msn_eval", issuer: "https://as.test", authority_hash: "sha-256:evalhash" };
-const validToken = (over: Partial<TokenFacts> = {}): TokenFacts => ({
+// @spec authority-server#mission-join (#557 review point 5) — typed
+// MissionBoundTokenFacts specifically: every case here is Mission-bound (the
+// vendor test's axes are Mission state/bounds/parameters/delegation, never
+// credential-shape), so `mission` stays REQUIRED, never a hybrid optional.
+const validToken = (over: Partial<MissionBoundTokenFacts> = {}): MissionBoundTokenFacts => ({
   sub: "alice",
   clientId: "ap-agent",
   clientInstanceId: "inst-1",

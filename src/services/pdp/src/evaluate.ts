@@ -23,9 +23,11 @@ import {
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
+import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
 import {
   type AuthorityEntry,
   deriveContextualTuples,
+  joinViewId,
   MISSION_RESOURCE_ACCESS_TYPE,
   type MissionView,
   policyViewId,
@@ -133,6 +135,32 @@ export interface EvaluationRequest {
     amount?: { amount: string; currency: string };
     action_class?: string;
     action_approval?: ActionApproval;
+    /**
+     * @spec authority-server#mission-join (#557 review point 1) — present
+     * EXACTLY on the baseline-Join path: an ordinary credential carrying no
+     * `mission` claim, joined against a PEP-supplied propagated Mission
+     * reference. Its presence is what tells the PDP to run rules 3-6 (the
+     * subject/client/delegate join) itself, resolved here against the
+     * already-authenticated `subject`/`context.actor.client_id` this
+     * envelope already carries, rather than trusting a pre-narrowed
+     * `MissionView` a PEP helper resolved outside the PDP's view: "the spec
+     * assigns the subject/client/delegate join to the PDP... the PDP cannot
+     * verify the authenticated credential inputs or tell whether the join
+     * occurred" otherwise. Absent on every ordinary Mission-bound request;
+     * this whole step is then a complete no-op, byte-for-byte unchanged.
+     */
+    mission_join?: {
+      /**
+       * @spec authority-server#mission-join rule 5 — the deployment's own
+       * currently-recorded actor depth for `context.actor.client_id` under
+       * this Mission, a REQUEST fact the PEP resolves fresh and carries
+       * here (never looked up by the PDP from static configuration, and
+       * never read from a token's own `act` chain). Absent is unbounded
+       * depth: a `max_depth`-bearing delegate policy or entry denies
+       * closed, never assumes a shallow default.
+       */
+      delegate_depth?: number;
+    };
   };
 }
 
@@ -164,7 +192,19 @@ export type DenialReason =
    * every sub-cause of either step; the profile does not distinguish them at
    * the enforcement point.
    */
-  | "principal_mapping_failed";
+  | "principal_mapping_failed"
+  /**
+   * @spec authority-server#mission-join rule 6 (#557) — the baseline MAS
+   * Join's uniform denial: "A failure of the subject or client join MUST be
+   * denied with the `mission_mismatch` denial reason ... The PDP MUST NOT
+   * fall back to evaluating the action against the referenced Mission's
+   * authority when the join fails." Distinct from the bare string
+   * `"mission_mismatch"` used in two unrelated enums elsewhere in this tree
+   * (authorization-server/src/adapters/provider.ts's Protected Events
+   * rejection, and mcp-payments/src/server.ts's `"txn_mission_mismatch"`
+   * transaction-authorization refusal): neither is this `DenialReason`.
+   */
+  | "mission_mismatch";
 
 export interface Decision {
   decision: boolean;
@@ -228,6 +268,15 @@ export interface EvaluateOptions {
    * fails every cross-domain-profile request closed.
    */
   entitlementStalenessBoundSeconds?: number;
+  /**
+   * @spec authority-server#mission-join rule 4 (#557) — the deployment's
+   * static delegate ceiling: which client ids may join as a delegate, and
+   * each one's own maxDepth. Consulted only when the request carries
+   * `context.mission_join` (the baseline-Join path); absent there, no
+   * delegate is authorized (rule 4's "never a default", the same
+   * fail-closed-on-unconfigured idiom as `allowedFreshnessSources`).
+   */
+  delegatePolicy?: DelegatePolicy;
 }
 
 let decisionCounter = 0;
@@ -264,6 +313,12 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // here, ahead of `base`, so every earlier `deny()` (steps 1-3) closes over
   // the same binding without a temporal-dead-zone reference.
   let principalMapping: PrincipalMappingObservation | undefined;
+  // @spec authority-server#mission-join (#557 review point 1) — set once
+  // step 4b below resolves the baseline Join, so `join_view_id` (below) is
+  // present on the SAME decision's Decision Evidence/Refusal Record
+  // regardless of which later step denies. Declared here, ahead of `base`,
+  // for the same temporal-dead-zone reason `principalMapping` is.
+  let joinedAuthority: { disposition: "direct" | "delegate"; clientId: string; authoritySet: AuthorityEntry[] } | undefined;
   // @spec authzen#response-context: `evaluation_id` is the profile's own
   // REQUIRED correlation identifier (ARAP's `evaluation_id`), additive
   // alongside the pre-existing `decision_id` deployment metadata (still load-
@@ -274,6 +329,12 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     decision_id: decisionId,
     evaluation_id: decisionId,
     policy_view_id: pvid,
+    // @spec authority-server#mission-join (#557 review point 4) — a SEPARATE
+    // commitment for a baseline-Join decision, additive alongside
+    // policy_view_id (never replacing it): distinguishes a joined decision
+    // from a direct Mission-bound one, and one joined view (a given
+    // subject/client/delegate-narrowed authority set) from another.
+    ...(joinedAuthority ? { join_view_id: joinViewId(view, modelId, joinedAuthority) } : {}),
     ...(actionClass ? { action_class: actionClass, class_source: "deployment" } : {}),
     ...(principalMapping
       ? {
@@ -441,8 +502,38 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 
+  // 4b. Baseline MAS Join (@spec authority-server#mission-join rules 3-6,
+  // #557 review point 1): resolved HERE, in the PDP -- the party that can
+  // verify the credential inputs (the ALREADY-AUTHENTICATED subject and
+  // context.actor.client_id this envelope already carries) and can tell
+  // whether the join actually ran, unlike a PEP-side helper the PDP never
+  // observes. Present exactly on the baseline-Join path (an ordinary
+  // credential carrying no `mission` claim, `context.mission_join` set); a
+  // Mission-bound request never carries it, so this block is a complete
+  // no-op for the existing path -- byte-for-byte unchanged.
+  if (req.context.mission_join) {
+    const clientId = req.context.actor?.client_id;
+    if (typeof clientId !== "string" || !clientId) return deny("mission_mismatch");
+    const joined = resolveBaselineJoin({
+      view,
+      subject: { iss: req.subject.properties?.iss ?? "", sub: req.subject.id },
+      clientId,
+      ...(req.context.mission_join.delegate_depth !== undefined
+        ? { delegateDepth: req.context.mission_join.delegate_depth }
+        : {}),
+      ...(opts.delegatePolicy !== undefined ? { delegatePolicy: opts.delegatePolicy } : {}),
+    });
+    // Rule 6: uniform mission_mismatch, no fallback to the unjoined view --
+    // `joinedAuthority` stays undefined on failure, so step 5 below never
+    // sees `view.authority_set` for this request either.
+    if (!joined.ok) return deny("mission_mismatch");
+    joinedAuthority = { disposition: joined.disposition, clientId, authoritySet: joined.authoritySet };
+  }
+
   // 5. Authority entry match: the approved entry's resource is matched
-  //    against context.audience (NOT the AuthZEN resource member).
+  //    against context.audience (NOT the AuthZEN resource member). On the
+  //    baseline-Join path (4b above), matched against the JOINED authority
+  //    set, never the Mission's raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
   // type, the PDP MUST evaluate the action under that type's documented
   // runtime semantics and MUST refuse if it does not understand or cannot
@@ -453,7 +544,8 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // new entry type admitted, a deserialization change). It falls through
   // fail-closed by construction, never by an explicit blocklist entry
   // that could omit a case.
-  const entry: AuthorityEntry | undefined = view.authority_set.find(
+  const candidateAuthoritySet = joinedAuthority?.authoritySet ?? view.authority_set;
+  const entry: AuthorityEntry | undefined = candidateAuthoritySet.find(
     (e) =>
       e.type === MISSION_RESOURCE_ACCESS_TYPE &&
       e.resource === req.context.audience &&
@@ -472,7 +564,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     // RECOGNIZED-type entry matched above, so skip-not-shortcircuit is
     // unaffected: a mixed authority_set with a valid recognized entry
     // elsewhere for the same resource/actions still permits there.
-    const unrecognizedTypeMatch = view.authority_set.some(
+    const unrecognizedTypeMatch = candidateAuthoritySet.some(
       (e) =>
         e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
         e.resource === req.context.audience &&

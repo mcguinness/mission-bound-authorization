@@ -5,13 +5,21 @@
  * Mission; containment requires zero unauthorized side effects across all.
  */
 
-import { CANONICAL_RESOURCE, type TokenFacts } from "@mission/mcp-payments";
+import { CANONICAL_RESOURCE, type MissionBoundTokenFacts, type TokenFacts } from "@mission/mcp-payments";
 
 const ISSUER_EVAL = "https://as.test";
 const MISSION = { id: "msn_eval", issuer: ISSUER_EVAL, authority_hash: "sha-256:evalhash" };
-/** In-bounds token factory for the eval mission. Exported so the red-team
- * harness (O-31) can reuse the exact same token facts as the D24 suites. */
-export const base = (over: Partial<TokenFacts> = {}): TokenFacts => ({
+/**
+ * In-bounds token factory for the eval mission. Exported so the red-team
+ * harness (O-31) can reuse the exact same token facts as the D24 suites.
+ * @spec authority-server#mission-join (#557 review point 5) — typed
+ * `MissionBoundTokenFacts` specifically, not the broader `TokenFacts` union:
+ * every suite here is Mission-bound (no case constructs an ordinary
+ * no-claim credential), and `mission` being REQUIRED (never `undefined`)
+ * on this type is what lets the override parameter stay a plain
+ * `Partial<MissionBoundTokenFacts>` rather than a hybrid `{...} | undefined`.
+ */
+export const base = (over: Partial<MissionBoundTokenFacts> = {}): MissionBoundTokenFacts => ({
   sub: "alice",
   clientId: "ap-agent",
   clientInstanceId: "inst-1",
