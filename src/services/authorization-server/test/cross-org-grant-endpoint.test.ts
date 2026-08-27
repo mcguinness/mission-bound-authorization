@@ -209,11 +209,22 @@ beforeAll(async () => {
     mappingPolicy: {
       id: "xorg-map",
       version: "v1",
-      entries: [{ origin_iss: ORIGIN_SUBJECT.iss, origin_sub: ORIGIN_SUBJECT.sub, local_sub: LOCAL_SUB }],
+      entries: [
+        {
+          origin: ORIGIN_SUBJECT,
+          local_sub: LOCAL_SUB,
+          observed_at: "2020-01-01T00:00:00Z",
+          valid_until: "2099-01-01T00:00:00Z",
+        },
+      ],
     },
     localCeiling: FULL_CEILING,
     evidence,
     accessTokenTTL: 300,
+    // Always entitled, freshly observed: this file exercises the mapping
+    // and ceiling axes; cross-org-entitlement.test.ts exercises this one.
+    entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
+    entitlementStalenessBoundSeconds: 86_400,
   };
 
   as = await buildAuthorizationServer({ issuer: ISSUER, crossOrg: crossOrgOptions });
@@ -396,5 +407,174 @@ describe("error minimization on refusal (@spec cross-org-delegation#projection-e
     const bodies = await Promise.all([resA, resB, resC, resD].map((r) => r.json()));
     for (const r of [resA, resB, resC, resD]) expect(r.status).toBe(400);
     for (const b of bodies) expect(b).toEqual({ error: "invalid_grant", error_description: "chain verification failed" });
+  });
+});
+
+describe("origin-principal mapping hardening (@spec cross-domain#origin-principal-continuity, #539)", () => {
+  const DEFAULT_MAPPING = crossOrgOptionsDefaultMapping();
+
+  function crossOrgOptionsDefaultMapping() {
+    return {
+      id: "xorg-map",
+      version: "v1",
+      entries: [
+        { origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+      ],
+    };
+  }
+
+  it("refuses an ambiguous (duplicate) mapping entry for the same origin (invalid_grant)", async () => {
+    crossOrgOptions.mappingPolicy = {
+      id: "xorg-map",
+      version: "v1",
+      entries: [
+        { origin: ORIGIN_SUBJECT, local_sub: "dup-a", observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+        { origin: ORIGIN_SUBJECT, local_sub: "dup-b", observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+      ],
+    };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { error: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.mappingPolicy = DEFAULT_MAPPING;
+    }
+  });
+
+  it("refuses a disabled mapping entry (invalid_grant)", async () => {
+    crossOrgOptions.mappingPolicy = {
+      id: "xorg-map",
+      version: "v1",
+      entries: [
+        { origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, disabled: true, observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+      ],
+    };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.mappingPolicy = DEFAULT_MAPPING;
+    }
+  });
+
+  it("refuses a mapping stale beyond its own valid_until (invalid_grant)", async () => {
+    crossOrgOptions.mappingPolicy = {
+      id: "xorg-map",
+      version: "v1",
+      entries: [{ origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: "2020-01-01T00:00:00Z", valid_until: "2021-01-01T00:00:00Z" }],
+    };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.mappingPolicy = DEFAULT_MAPPING;
+    }
+  });
+
+  it("refuses a future-dated mapping observed_at (invalid_grant)", async () => {
+    crossOrgOptions.mappingPolicy = {
+      id: "xorg-map",
+      version: "v1",
+      entries: [{ origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: "2099-06-01T00:00:00Z", valid_until: "2099-07-01T00:00:00Z" }],
+    };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.mappingPolicy = DEFAULT_MAPPING;
+    }
+  });
+});
+
+describe("origin-principal entitlement (@spec cross-domain#dual-axis, #539)", () => {
+  // Captured inside each test (not at describe-collection time, before
+  // beforeAll has run and populated crossOrgOptions).
+
+  it("refuses when the entitlement resolver returns undefined (invalid_grant)", async () => {
+    const saved = crossOrgOptions.entitlement;
+    crossOrgOptions.entitlement = { resolve: async () => undefined };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.entitlement = saved;
+    }
+  });
+
+  it("refuses when entitled is false (invalid_grant)", async () => {
+    const saved = crossOrgOptions.entitlement;
+    crossOrgOptions.entitlement = { resolve: async () => ({ entitled: false, observed_at: new Date().toISOString() }) };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.entitlement = saved;
+    }
+  });
+
+  it("refuses when the entitlement observation is stale beyond entitlementStalenessBoundSeconds (invalid_grant)", async () => {
+    const savedEntitlement = crossOrgOptions.entitlement;
+    const savedBound = crossOrgOptions.entitlementStalenessBoundSeconds;
+    crossOrgOptions.entitlement = {
+      resolve: async () => ({ entitled: true, observed_at: new Date(Date.now() - 3_600_000).toISOString() }),
+    };
+    crossOrgOptions.entitlementStalenessBoundSeconds = 60;
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.entitlement = savedEntitlement;
+      crossOrgOptions.entitlementStalenessBoundSeconds = savedBound;
+    }
+  });
+
+  it("refuses when the entitlement resolver throws (invalid_grant)", async () => {
+    const saved = crossOrgOptions.entitlement;
+    crossOrgOptions.entitlement = {
+      resolve: async () => {
+        throw new Error("resolver unavailable");
+      },
+    };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("invalid_grant");
+    } finally {
+      crossOrgOptions.entitlement = saved;
+    }
+  });
+
+  it("clamps the minted token's exp to the entitlement observation's freshness horizon when tighter than the leaf/TTL bound", async () => {
+    const savedEntitlement = crossOrgOptions.entitlement;
+    const savedBound = crossOrgOptions.entitlementStalenessBoundSeconds;
+    const observedAt = new Date().toISOString();
+    crossOrgOptions.entitlement = { resolve: async () => ({ entitled: true, observed_at: observedAt }) };
+    crossOrgOptions.entitlementStalenessBoundSeconds = 20;
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { access_token: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      const { payload } = await jwtVerify(body.access_token, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+      expect(payload.exp).toBeLessThanOrEqual(Math.floor(Date.parse(observedAt) / 1000) + 20);
+    } finally {
+      crossOrgOptions.entitlement = savedEntitlement;
+      crossOrgOptions.entitlementStalenessBoundSeconds = savedBound;
+    }
   });
 });

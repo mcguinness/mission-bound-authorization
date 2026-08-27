@@ -57,6 +57,18 @@ const MISSION_EXP = "2027-01-01T00:00:00Z";
 const ACTOR_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER);
 
+// @spec cross-domain#origin-principal-mapping, #dual-axis (#539): every RAS
+// redemption in this file is a CONTINUATION ID-JAG (identity_continuation_handle
+// present), which carries its own already-resolved, per-audience deterministic
+// `sub` -- mapping/co-resolution never runs for it (see ras/src/index.ts). The
+// mapping table is still a required RasConfig field, so it stays empty
+// (unconsulted); entitlement DOES run on every redemption regardless of
+// continuation status, so this always-true/always-fresh resolver keeps that
+// check from blocking a test that isn't exercising it.
+const NO_MAPPING = { id: "unused", version: "v1", entries: [] };
+const ALWAYS_ENTITLED = { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) };
+const ENTITLEMENT_BOUND_S = 86_400;
+
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
 let as: BuiltAs;
@@ -350,6 +362,9 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
+      mapping: NO_MAPPING,
+      entitlement: ALWAYS_ENTITLED,
+      entitlementStalenessBoundSeconds: ENTITLEMENT_BOUND_S,
     });
 
     // Redeem the continuation ID-JAG (JWT-bearer grant), sender-constrained to
@@ -401,6 +416,9 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
+      mapping: NO_MAPPING,
+      entitlement: ALWAYS_ENTITLED,
+      entitlementStalenessBoundSeconds: ENTITLEMENT_BOUND_S,
     });
     const profiles = ras.metadata().authorization_grant_profiles_supported as string[];
     expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag");
@@ -614,6 +632,9 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
+      mapping: NO_MAPPING,
+      entitlement: ALWAYS_ENTITLED,
+      entitlementStalenessBoundSeconds: ENTITLEMENT_BOUND_S,
     });
     const { expires_in } = await ras.redeem(idJag, agentJkt);
     expect(expires_in).toBeGreaterThan(0);

@@ -8,11 +8,25 @@
  * from the token alone.
  */
 
+import {
+  type EntitlementResolver,
+  type LocalMappingPolicy,
+  type OriginPrincipal,
+  resolveCoResolvedLocalPrincipal,
+} from "@mission/core";
 import { openStore, redeemOnce, redemptionSchema, type Database } from "@mission/store";
 import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK } from "jose";
 
 export const ID_JAG_TYP = "oauth-id-jag+jwt";
 export const JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+
+/**
+ * @spec runtime#state-freshness — the same small future-skew tolerance the
+ * PDP's own dual-axis check applies (evaluate.ts,
+ * DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS): absorbs ordinary clock drift
+ * without meaningfully widening the entitlement freshness bound.
+ */
+const FRESHNESS_SKEW_TOLERANCE_MS = 5_000;
 
 export interface RasConfig {
   issuer: string;
@@ -38,6 +52,29 @@ export interface RasConfig {
    * is constructed is onboarded via {@link ResourceAuthorizationServer.registerClient}.
    */
   registeredClients?: Record<string, string>;
+  /**
+   * @spec cross-domain#origin-principal-mapping (#539) — the registered
+   * origin-to-local mapping table for a BASE ID-JAG (no
+   * `identity_continuation_handle`). Consulted for co-resolution: the
+   * grant's own `(iss, sub)` and its carried `mission.subject` MUST both
+   * resolve, via this table, to the SAME destination-local `sub`. A
+   * continuation ID-JAG carries its own already-resolved, per-audience
+   * deterministic `sub` (a distinct, separately specified mechanism,
+   * {{id-continuation-assertion}}) and is not looked up here.
+   */
+  mapping: LocalMappingPolicy;
+  /**
+   * @spec cross-domain#dual-axis (#539) — current entitlement of the
+   * destination-local principal, the profile's second axis. Runs on EVERY
+   * redemption (base and continuation grant alike), against whichever local
+   * `sub` that grant resolves to. Audience-wide, all-or-none: a positive
+   * result authorizes the complete `authorization_details` the grant
+   * already carries, unmodified; it does not narrow individual entries by
+   * action or resource (see `EntitlementResolver`'s own doc).
+   */
+  entitlement: EntitlementResolver;
+  /** Independent freshness bound for the entitlement observation, seconds. */
+  entitlementStalenessBoundSeconds: number;
   now?: () => Date;
 }
 
@@ -75,10 +112,26 @@ export class ResourceAuthorizationServer {
    * authenticates the redeeming client against this RAS's own registration
    * (S-12; {{cross-domain#validation-at-resource-as}}), refusing
    * `invalid_client` on an unrecognized presenter key: the grant's
-   * sender-constraint alone does NOT establish this. Mints a local token
-   * preserving mission.id/issuer/authority_hash and identifying the
-   * authenticated client as `client_id`, never the grant's own `client_id`,
-   * which names the originating agent.
+   * sender-constraint alone does NOT establish this.
+   *
+   * @spec cross-domain#origin-principal-mapping, #dual-axis (#539): for a
+   * BASE grant, co-resolves the grant's own `(iss, sub)` and its carried
+   * `mission.subject` to a single destination-local principal via the
+   * registered mapping table, then confirms that principal's current
+   * entitlement, before minting. Never mints `payload.sub` unverified. A
+   * continuation ID-JAG (`identity_continuation_handle` present, read only
+   * from the VERIFIED payload -- not request-controlled) carries its own
+   * already-resolved, per-audience deterministic `sub`
+   * ({{id-continuation-assertion}}), a distinct, separately specified
+   * identity-resolution mechanism a static mapping table cannot represent
+   * (its value is derived fresh per audience, not registered); mapping and
+   * co-resolution are skipped for it, but entitlement still runs against
+   * whatever local `sub` it presents, so no redemption path mints a local
+   * token without an entitlement check.
+   *
+   * Mints a local token preserving mission.id/issuer/authority_hash/subject
+   * and identifying the authenticated client as `client_id`, never the
+   * grant's own `client_id`, which names the originating agent.
    */
   async redeem(idJag: string, presenterJkt: string): Promise<{ access_token: string; expires_in: number }> {
     // Peek the issuer to select the trust anchor.
@@ -88,7 +141,15 @@ export class ResourceAuthorizationServer {
     } catch {
       throw new RasError("invalid_grant", "malformed grant");
     }
-    const issuer = unverified.iss as string;
+    // @spec cross-domain#origin-principal-mapping (#539): require a
+    // non-empty string iss before it is used as a trust-anchor lookup key
+    // or fed into the base grant's co-resolution identity below. A missing
+    // or malformed iss was previously fail-closed only incidentally (an
+    // unrecognized lookup key denies as "untrusted"); this is now explicit.
+    const issuer = unverified.iss;
+    if (typeof issuer !== "string" || !issuer) {
+      throw new RasError("invalid_grant", "grant missing or malformed iss");
+    }
     const anchor = this.cfg.trustedIssuers[issuer];
     if (!anchor) throw new RasError("invalid_grant", "untrusted grant issuer");
 
@@ -104,10 +165,47 @@ export class ResourceAuthorizationServer {
     }
     if (header.typ !== ID_JAG_TYP) throw new RasError("invalid_grant", "wrong grant typ");
 
-    const mission = payload.mission as { id: string; issuer: string; authority_hash: string } | undefined;
+    // @spec cross-domain#origin-principal-mapping: strictly parse the
+    // complete Mission claim -- `id`, `issuer`, `authority_hash`, and the
+    // closed {iss, sub} `subject` member every grant now carries
+    // (kernel/cross-domain.ts) -- before either the base or continuation
+    // path runs. A missing or malformed profile-required member is a
+    // refusal, never a silently dropped or coerced value.
+    const mission = payload.mission as
+      | { id?: unknown; issuer?: unknown; authority_hash?: unknown; subject?: OriginPrincipal }
+      | undefined;
     if (!mission) throw new RasError("invalid_grant", "grant missing mission claim");
+    if (typeof mission.id !== "string" || !mission.id) {
+      throw new RasError("invalid_grant", "grant mission claim missing or malformed id");
+    }
+    if (typeof mission.issuer !== "string" || !mission.issuer) {
+      throw new RasError("invalid_grant", "grant mission claim missing or malformed issuer");
+    }
     // @spec: the signer MUST be the Mission issuer named by mission.issuer.
     if (mission.issuer !== issuer) throw new RasError("invalid_grant", "grant iss != mission.issuer");
+    if (typeof mission.authority_hash !== "string" || !mission.authority_hash) {
+      throw new RasError("invalid_grant", "grant mission claim missing or malformed authority_hash");
+    }
+    const originSubject = mission.subject;
+    if (
+      !originSubject ||
+      typeof originSubject.iss !== "string" ||
+      !originSubject.iss ||
+      typeof originSubject.sub !== "string" ||
+      !originSubject.sub
+    ) {
+      throw new RasError("invalid_grant", "grant missing or malformed mission.subject");
+    }
+    // @spec cross-domain#origin-principal-mapping (#539): the grant's own
+    // `sub` MUST itself be a non-empty string before either the base or
+    // continuation path consumes it. `String(payload.sub)` on an absent
+    // value previously coerced to the literal string "undefined", which the
+    // continuation path would mint unverified and the base path would carry
+    // into co-resolution.
+    const grantSub = payload.sub;
+    if (typeof grantSub !== "string" || !grantSub) {
+      throw new RasError("invalid_grant", "grant missing or malformed sub");
+    }
 
     // Sender-constraint (cnf.jkt) verified against the presenting client:
     // proves the presenter holds the grant's OWN bound key. This is grant
@@ -130,18 +228,89 @@ export class ResourceAuthorizationServer {
       throw new RasError("invalid_client", "unrecognized redeeming client");
     }
 
-    // One-time use (jti). Replay -> invalid_grant.
+    const audience = this.cfg.localTokenAudience ?? "http://localhost:4406/mcp";
+    const now = this.now();
+    // @spec id-continuation-assertion: read only from the payload `jwtVerify`
+    // already authenticated against the trusted originating issuer -- never
+    // request-controlled, so this branch cannot be forced by a presenter.
+    const isContinuation = typeof payload.identity_continuation_handle === "string";
+
+    let localSub: string;
+    // The mapping's own validity bound additionally caps the minted token's
+    // lifetime for a base grant (below); a continuation grant has no mapping
+    // lookup, so no such bound applies.
+    let mappingValidUntilMs: number | undefined;
+    if (isContinuation) {
+      // The continuation profile's own already-resolved, per-audience
+      // deterministic subject: not looked up in the mapping table (see the
+      // method doc above).
+      localSub = grantSub;
+    } else {
+      // @spec cross-domain#origin-principal-mapping (#539): the grant's own
+      // (iss, sub) and mission.subject MUST co-resolve to the SAME
+      // destination-local principal. A missing, ambiguous, disabled,
+      // future-dated, or expired mapping on EITHER side, or a disagreement
+      // between the two, denies uniformly.
+      const grantIdentity: OriginPrincipal = { iss: issuer, sub: grantSub };
+      const resolved = resolveCoResolvedLocalPrincipal(this.cfg.mapping, grantIdentity, originSubject, audience, now);
+      if (!resolved) throw new RasError("invalid_grant", "origin principal mapping failed");
+      localSub = resolved.local_sub;
+      mappingValidUntilMs = Date.parse(resolved.valid_until);
+    }
+
+    // @spec cross-domain#dual-axis (#539): current entitlement of the
+    // destination-local principal, independent of Mission-state freshness
+    // and (for a base grant) independent of the mapping's own validity
+    // bound. Runs for EVERY redemption; a resolver exception is a failed
+    // result, not a distinct outcome or an unclassified transport failure.
+    let entitlementObservedMs: number | undefined;
+    try {
+      const entitlement = await this.cfg.entitlement.resolve({ local: { iss: this.cfg.issuer, sub: localSub }, audience });
+      const observedMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
+      const ageMs = now.getTime() - observedMs;
+      const current =
+        entitlement?.entitled === true &&
+        Number.isFinite(observedMs) &&
+        ageMs >= -FRESHNESS_SKEW_TOLERANCE_MS &&
+        ageMs <= this.cfg.entitlementStalenessBoundSeconds * 1000;
+      if (!current) throw new RasError("invalid_grant", "entitlement check failed");
+      entitlementObservedMs = observedMs;
+    } catch (e) {
+      if (e instanceof RasError) throw e;
+      throw new RasError("invalid_grant", "entitlement check failed");
+    }
+
+    // Compute the minted token's clamped expiry BEFORE consuming the
+    // grant's one-time use (below): exp never outlives the grant lease, the
+    // mapping's own validity bound (base grant), or the entitlement
+    // observation's freshness horizon.
+    const nowS = Math.floor(now.getTime() / 1000);
+    const ttl = this.cfg.localTokenTtlSeconds ?? 120;
+    const grantExp = payload.exp as number;
+    const entitlementHorizonS = Math.floor((entitlementObservedMs ?? nowS * 1000) / 1000) + this.cfg.entitlementStalenessBoundSeconds;
+    const bounds = [nowS + ttl, grantExp, entitlementHorizonS];
+    if (mappingValidUntilMs !== undefined) bounds.push(Math.floor(mappingValidUntilMs / 1000));
+    const exp = Math.min(...bounds);
+    // @spec cross-domain#dual-axis (#539): reject an expired clamp BEFORE
+    // consuming the one-time grant. Without this, a valid grant whose
+    // tightest bound (mapping validity or entitlement freshness horizon)
+    // already lies in the past would still burn its one-time jti, only to
+    // produce a token that is already expired on mint.
+    if (exp <= nowS) throw new RasError("invalid_grant", "clamped expiry already elapsed");
+
+    // One-time use (jti). Replay -> invalid_grant. Checked only after the
+    // dual-axis check and the expiry-clamp check both succeed, alongside
+    // the existing client-registration check above (@spec
+    // cross-domain#origin-principal-mapping: run mapping, entitlement, and
+    // the expiry clamp before consuming the grant's one-time use).
     const jti = payload.jti as string;
     if (!jti || !redeemOnce(this.db, "jag_redemptions", jti, "ras")) {
       throw new RasError("invalid_grant", "grant replay or missing jti");
     }
 
-    // Mint a short-lived local token preserving the mission anchors. Its iss
-    // is the RAS; mission.issuer remains the originating AS.
-    const nowS = Math.floor(this.now().getTime() / 1000);
-    const ttl = this.cfg.localTokenTtlSeconds ?? 120;
-    const grantExp = payload.exp as number;
-    const exp = Math.min(nowS + ttl, grantExp); // never outlive the grant lease
+    // Mint a short-lived local token preserving the mission anchors
+    // (including the unchanged origin `mission.subject`). Its iss is the
+    // RAS; mission.issuer remains the originating AS.
     const token = await new SignJWT({
       mission,
       authorization_details: payload.authorization_details,
@@ -154,9 +323,9 @@ export class ResourceAuthorizationServer {
       client_id: localClientId,
     })
       .setProtectedHeader({ alg: "ES256", kid: this.cfg.signKid, typ: "at+jwt" })
-      .setSubject(String(payload.sub))
+      .setSubject(localSub)
       .setIssuer(this.cfg.issuer)
-      .setAudience(this.cfg.localTokenAudience ?? "http://localhost:4406/mcp")
+      .setAudience(audience)
       .setIssuedAt(nowS)
       .setExpirationTime(exp)
       .sign(this.cfg.signKey);

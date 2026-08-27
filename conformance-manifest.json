@@ -31,8 +31,8 @@
     "content_sha256": "5a69341e68c6d6b9db684c94f00a2aeae15e053a0af208576b3973455ac16dfc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "d4eca352c06575a341fd975983f6858c38452dcc8e790c38452ecb232a647215"
+    "revision": "3db332592f65282752c70697a79ca2eee2e12f16",
+    "content_sha256": "52ff3c648a04cbc6a11f5753ba01e541555c02440070e883d75db844ee19c955"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
@@ -9668,7 +9668,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Partial (#539 stage A): the mcp-payments PEP envelope-construction path is covered -- populated only from verified TokenFacts, omitted entirely (never a synthesized empty object) when the profile is not claimed. Not claimed tested/closed: the controlling review disposition ties this row to origin-principal-mapping-required and requires both to stay open until the Cross-Org grant and ID-JAG RAS entry paths are repaired in the same wave (stage 2); both still drop mission.subject today."
+   "notes": "Partial (#539 stage A, updated stage 2): the mcp-payments PEP envelope-construction path is covered -- populated only from verified TokenFacts, omitted entirely (never a synthesized empty object) when the profile is not claimed. Still not claimed tested/closed: the controlling review disposition ties this row to origin-principal-mapping-required and requires both to stay open until the Cross-Org grant and ID-JAG RAS entry paths are repaired. Stage 2 repairs both: Cross-Org (cross-org-grant.ts) now uses the shared resolveLocalPrincipal reference resolver (rejects missing/ambiguous/disabled/future-dated/expired mappings) and consults current entitlement unconditionally (cross-domain.dual-axis.entitlement-consulted, tested); the ID-JAG RAS (ras/index.ts) co-resolves the grant's own (iss, sub) against mission.subject via resolveCoResolvedLocalPrincipal before minting (cross-domain.origin-principal.ras-co-resolution, partial) and also runs entitlement. Neither path drops mission.subject anymore. Closure is still withheld for one documented reason: a continuation ID-JAG (identity_continuation_handle present, a distinct already-resolved per-audience subject mechanism, id-continuation-assertion) is carved out of RAS mapping/co-resolution by design, so the origin-principal-mapping clause's unconditional MUST is not fully closed end-to-end; entitlement still runs on that path regardless."
   },
   {
    "id": "authzen.context-actor.provenance-not-in-act-chain",
@@ -16176,6 +16176,207 @@
     }
    ],
    "notes": "This RAS's client_id is minted only from a matched entry in its own jkt-keyed registration (RasConfig.registeredClients / registerClient()), never a config constant and never the grant's own client_id or the presenter key alone. The two-client mcp-saas test proves neither registered client's key nor identifier leaks onto the other's minted token."
+  },
+  {
+   "id": "cross-domain.origin-principal.ras-co-resolution",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "origin-principal-mapping",
+   "text": "On redemption of an ID-JAG-carried grant, the Resource AS MUST establish that the identity grant's subject and `mission.subject` resolve to the same destination-local principal, and MUST refuse with `invalid_grant` when they do not; neither value may select a different account than the other.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.origin-principal"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on redemption of a BASE ID-JAG, the RAS co-resolves the grant's own (iss, sub) and its carried mission.subject via the shared registered-mapping resolver, requiring both to resolve to the SAME destination-local sub, and refuses invalid_grant (never a blind copy of either raw value) on any mismatch or individual resolution failure; the resolved local sub, never the grant's raw sub, is minted as the local token's subject"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > co-resolves the grant's own (iss, sub) and mission.subject to one local principal, mints it as sub, and preserves mission.subject unchanged",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant when the grant's own identity and mission.subject resolve to DIFFERENT local principals",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant when mission.subject is missing",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant when mission.subject is malformed (missing sub)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#539 stage 2: fixes the confirmed blind-copy defect (ras/src/index.ts previously .setSubject(String(payload.sub)) with no mapping lookup at all). Partial, by design, not by gap: a continuation ID-JAG (identity_continuation_handle present, read only from the verified payload) carries its own already-resolved, per-audience deterministic sub (a distinct mechanism, id-continuation-assertion) that a static mapping table cannot represent, so co-resolution is intentionally skipped for it (see RAS continuation carve-out tests); entitlement (cross-domain.dual-axis.entitlement-consulted) still runs on that path so no redemption mints a token with zero checks. This is also why authzen.context-mission.origin-principal-only-from-verified-source stays partial rather than flipping to tested."
+  },
+  {
+   "id": "cross-domain.origin-principal.mapping-continuity-hardening",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "origin-principal-continuity",
+   "text": "If a mapping is missing, ambiguous, disabled, stale beyond the declared bound, or names a principal not permitted for the requested tenant or audience, the Resource AS MUST refuse issuance or the relying party MUST deny",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.origin-principal"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "both origin-principal-mapping entry points (the Cross-Org grant token-exchange adapter and the ID-JAG RAS) refuse issuance when the registered mapping for the authenticated origin principal is missing (zero matches), ambiguous (more than one match), disabled, stale beyond its own valid_until, or observed at a future timestamp; a first-match lookup that could not detect ambiguity is replaced by the shared resolveLocalPrincipal reference resolver at both entry points"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal mapping hardening (@spec cross-domain#origin-principal-continuity, #539) > refuses an ambiguous (duplicate) mapping entry for the same origin (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal mapping hardening (@spec cross-domain#origin-principal-continuity, #539) > refuses a disabled mapping entry (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal mapping hardening (@spec cross-domain#origin-principal-continuity, #539) > refuses a mapping stale beyond its own valid_until (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal mapping hardening (@spec cross-domain#origin-principal-continuity, #539) > refuses a future-dated mapping observed_at (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant on an ambiguous (duplicate) mapping entry for the same origin",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant on a disabled mapping entry",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant on a mapping stale beyond its own valid_until",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping) > denies invalid_grant on a future-dated mapping observed_at",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#539 stage 2. The quoted clause's tenant/audience-scope disjunct is NOT exercised: this codebase has no tenant dimension, and while LocalPrincipalMapping.audience exists and is consulted by resolveLocalPrincipal, no test here specifically proves an audience-scoped mismatch is refused (kept partial for that reason). Missing/ambiguous/disabled/stale/future-dated are each covered at both entry points (cross-org endpoint, cross-component; RAS, unit)."
+  },
+  {
+   "id": "cross-domain.dual-axis.entitlement-consulted",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "dual-axis",
+   "text": "the effective authority is the intersection of the verified delegated `authorization_details`, the current entitlement of the mapped origin principal, and current resource and deployment policy. All three are required",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.origin-principal"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The entitlement axis itself is profiled audience-wide and all-or-none: a positive result authorizes the complete already-intersected authorization_details set for that audience, unmodified; it does not narrow individual entries by action or resource, so this row does not exercise the quoted text's general per-entry three-bound intersection, only the audience-wide instance of it"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement (@spec cross-domain#dual-axis, #539) > refuses when the entitlement resolver returns undefined (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement (@spec cross-domain#dual-axis, #539) > refuses when entitled is false (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement (@spec cross-domain#dual-axis, #539) > refuses when the entitlement observation is stale beyond entitlementStalenessBoundSeconds (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement (@spec cross-domain#dual-axis, #539) > refuses when the entitlement resolver throws (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement (@spec cross-domain#dual-axis, #539) > clamps the minted token's exp to the entitlement observation's freshness horizon when tighter than the leaf/TTL bound",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement (@spec cross-domain#dual-axis) > denies invalid_grant when the entitlement resolver returns undefined",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement (@spec cross-domain#dual-axis) > denies invalid_grant when entitled is false",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement (@spec cross-domain#dual-axis) > denies invalid_grant when the entitlement observation is stale beyond entitlementStalenessBoundSeconds",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement (@spec cross-domain#dual-axis) > denies invalid_grant when the entitlement resolver throws",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS continuation carve-out (@spec id-continuation-assertion) > still denies invalid_grant for a continuation grant when entitlement fails",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. Kept partial (not flipped to tested) per review: a Boolean audience-level `entitled` result gates the complete delegated authorization_details set for the audience but cannot narrow individual entries by action or resource, so it is an audience-wide all-or-none instance of the quoted text's three-bound intersection, not the general per-entry one. Action/resource-scoped entitlement queries are NOT implemented (the shared EntitlementResolver contract is audience-scoped only, matching its existing PDP-side shape); extending it is left as a documented remainder rather than risking the already-tested PDP dual-axis rows."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

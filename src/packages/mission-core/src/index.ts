@@ -85,6 +85,13 @@ export {
   verifyLocalApprovedSet,
 } from "./local-approved-set-verification.js";
 export {
+  type LocalMappingPolicy,
+  type LocalPrincipalMapping,
+  type ResolvedLocalPrincipal,
+  resolveCoResolvedLocalPrincipal,
+  resolveLocalPrincipal,
+} from "./local-principal-mapping.js";
+export {
   MCP_REFERENCE_META_KEY,
   MISSION_REFERENCE_HEADER,
   type PropagatedMissionReference,

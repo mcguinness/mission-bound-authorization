@@ -74,6 +74,17 @@ export interface EntitlementObservation {
  * same as an established-but-negative result (`entitled: false`), since
  * both are "a failed ... result" at the entitlement step
  * (@spec authzen#pdp-request).
+ *
+ * This contract is an audience-wide, all-or-none entitlement model: a
+ * single Boolean gates the complete delegated `authorization_details` set
+ * for the mapped principal at that audience. It authorizes or refuses the
+ * whole set, and cannot itself narrow individual entries by action or
+ * resource -- that narrowing, where a deployment needs it, is the "current
+ * resource and deployment policy" arm of {{cross-domain#dual-axis}}'s
+ * three-bound intersection, applied downstream of entitlement rather than
+ * inside it. A deployment needing per-entry entitlement would return the
+ * locally entitled authority subset instead of a bare Boolean; this
+ * contract does not.
  */
 export interface EntitlementResolver {
   resolve(input: {
