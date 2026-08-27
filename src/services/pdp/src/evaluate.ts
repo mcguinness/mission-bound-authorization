@@ -677,21 +677,30 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   }
 
   // 7. Numeric constraint (overlay, O-6): per-payment cap.
-  if (mapping.needsAmount) {
-    const cap = entry.constraints?.max_amount;
+  // @spec runtime#input-parameters: keyed on the constraint's OWN presence
+  // (`entry.constraints?.max_amount`), never on whether the mapped action's
+  // input schema happens to carry an amount (`mapping.needsAmount`): a bound
+  // `max_amount` the PDP cannot supply the input for (no `context.amount`)
+  // or cannot evaluate (unparseable amount or cap, mismatched currency) MUST
+  // refuse, the same "cannot supply the declared inputs for" case the
+  // Parameters rule names, never fall through as unenforced. Absent a bound
+  // `max_amount`, `needsAmount` alone never synthesizes an amount
+  // requirement that isn't there.
+  const cap = entry.constraints?.max_amount;
+  if (cap) {
     const amt = req.context.amount;
-    if (cap && amt) {
-      // @spec mission#max-amount — exact decimal-value comparison at the
-      // enforcement point, never IEEE-754 float; a malformed amount on
-      // either side fails closed (denied), never silently permitted.
-      if (
-        amt.currency !== cap.currency ||
-        !isValidAmount(amt.amount) ||
-        !isValidAmount(cap.amount) ||
-        compareAmounts(amt.amount, cap.amount) > 0
-      ) {
-        return deny("constraint_exceeded");
-      }
+    // @spec mission#max-amount — exact decimal-value comparison at the
+    // enforcement point, never IEEE-754 float; an absent amount or a
+    // malformed amount on either side fails closed (denied), never
+    // silently permitted.
+    if (
+      !amt ||
+      amt.currency !== cap.currency ||
+      !isValidAmount(amt.amount) ||
+      !isValidAmount(cap.amount) ||
+      compareAmounts(amt.amount, cap.amount) > 0
+    ) {
+      return deny("constraint_exceeded");
     }
   }
 

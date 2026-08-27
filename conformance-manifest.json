@@ -6675,9 +6675,27 @@
      "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed cap in the Mission view is denied (fail closed), never treated as unbounded",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "a bound max_amount the PDP cannot supply an amount input for refuses, never permits open (@spec runtime#input-parameters) > a bound max_amount with no context.amount at all is denied, never permitted for lack of an input to check",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "a bound max_amount the PDP cannot supply an amount input for refuses, never permits open (@spec runtime#input-parameters) > a max_amount bound to an action the deployment's own mapping marks needsAmount: false is still enforced, not silently unenforceable",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a cap denominated in a different currency than the request refuses as incomparable, never converted",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Tested only for the numeric max_amount constraint (a malformed cap is denied fail-closed, never treated as unbounded); the general rule also covers non-numeric constraint types, a constraint whose declared inputs the PDP was not given, and a constraint the PDP cannot meter, none of which has a test asserting refusal."
+   "notes": "Tested for the numeric max_amount constraint: a malformed cap is denied fail-closed, never treated as unbounded; a bound max_amount the PDP cannot supply the input for (an absent context.amount, including on an action the deployment's own mapping marks needsAmount: false) is denied rather than permitted or ignored; and a cap denominated in a different currency than the request refuses as incomparable, never converted. The general rule also covers non-numeric constraint types and a constraint the PDP cannot meter, neither of which has a test asserting refusal."
   },
   {
    "id": "runtime.decision-inputs.actor-context-required-and-not-shortcut",

@@ -41,12 +41,26 @@ export interface EvalCaseDef {
   consequential: boolean;
 }
 
-/** The Mission's authority in the eval: read + execute for acme, cap 500. */
+/**
+ * The Mission's authority in the eval: read + execute for acme, cap 500 on
+ * execute only. Two entries, not one bundling both actions: the PDP keys
+ * `max_amount` enforcement on the constraint's presence on the matched
+ * entry, regardless of which action it is bound to (@spec
+ * runtime#input-parameters), so a single entry granting both the read and
+ * the money action would require `get_invoice` to also carry a valid amount
+ * under the cap, which is not what `leg-read`/`adv-*` exercise.
+ */
 export const EVAL_VIEW_AUTHORITY = [
   {
     type: "mission_resource_access" as const,
     resource: CANONICAL_RESOURCE,
-    actions: ["payments:invoice.read", "payments:payment.execute"],
+    actions: ["payments:invoice.read"],
+    constraints: { vendors: ["acme"] },
+  },
+  {
+    type: "mission_resource_access" as const,
+    resource: CANONICAL_RESOURCE,
+    actions: ["payments:payment.execute"],
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
   },
 ];
