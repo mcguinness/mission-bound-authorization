@@ -59,6 +59,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC9700:
@@ -212,7 +220,7 @@ Role: companion. Spec maturity: experimental. Maintenance: active.
 Implementation: 6 conformance rows in conformance-manifest.json (5 tested, 1 partial).
 Adopt when: Consumers need push notice of state changes instead of polling per Mission.
 Requires: Mission Status and Lifecycle for OAuth 2.0.
-Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
@@ -427,7 +435,7 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   with value true on any `mission.lifecycle-change` event whose commit
   narrows effective authority without changing `state`, whichever
   overlay narrowed it: an entry discharge
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) is the current case,
+  ({{I-D.draft-mcguinness-oauth-mission-discharge}}) is the current case,
   containment ({{I-D.draft-mcguinness-oauth-mission-containment}}) is
   another, and a future issuer-held narrowing overlay is expected to
   set it the same way; delivery of such an event is itself subject to
@@ -719,7 +727,7 @@ The gate binds exactly the events whose authority change is carried
 only by the new member: a Mission Issuer MUST NOT deliver a
 `mission.lifecycle-change` event whose effective-authority change is
 represented by `authority_changed` alone (a discharge commit,
-{{I-D.draft-mcguinness-oauth-mission-status}}) to a stream whose
+{{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose
 consumer has not declared `authority_changed` in
 `mission_capabilities_supported`. An event whose narrowing is also
 represented by `containment_version` follows the containment

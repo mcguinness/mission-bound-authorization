@@ -18,6 +18,7 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   Connectors,
+  createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
   EvidenceStore,
@@ -320,7 +321,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       };
       return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
     };
-    evidence = new EvidenceStore();
+    evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const card = { name: "payments" };
     const pep = new Pep({
       payments,

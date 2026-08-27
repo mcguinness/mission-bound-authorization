@@ -122,7 +122,16 @@ const evalAction = async (missionId: string, action: string) => {
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
       action: { name: action },
-      context: { audience: RESOURCE, mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } },
+      context: {
+        audience: RESOURCE,
+        mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
+        // The proposed() entries bind a max_amount across invoice.read and
+        // remittance.send alike, so the presence-based rule
+        // (@spec runtime#input-parameters) requires this input on every
+        // action they cover; this test is about authority vs. knowledge, not
+        // money, so any value within the 500.00 ceiling is fine.
+        amount: { amount: "100.00", currency: "USD" },
+      },
     },
     { view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction },
   );

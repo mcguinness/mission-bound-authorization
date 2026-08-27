@@ -181,7 +181,7 @@ export interface KernelOptions {
    */
   containmentPolicy?: ContainmentPolicy;
   /**
-   * @spec status#discharge-authority — the ISSUER-HELD discharge-authority
+   * @spec discharge#discharge-authority — the ISSUER-HELD discharge-authority
    * policy (the map from a `discharge_policy` selector, or a bare `event_type`,
    * to the principals that may assert it). OPTIONAL and FAIL CLOSED: absent, no
    * condition's selector resolves, so a `terminal_when` condition cannot enter a
@@ -189,7 +189,7 @@ export interface KernelOptions {
    */
   dischargeAuthority?: DischargeAuthorityPolicy;
   /**
-   * @spec status#discharge-idempotency ("Retention") — override the event-dedup
+   * @spec discharge#discharge-idempotency ("Retention") — override the event-dedup
    * retention window (seconds); defaults to the published retry horizon. A test
    * shortens it to prove that a repeated assertion after eviction is processed
    * fresh against the monotonic latch.
@@ -204,7 +204,7 @@ export interface KernelOptions {
    */
   allocateStatusIndex?: () => number;
   /**
-   * @spec status#status-list — the shared lifecycle-commit hook. Fired once per
+   * @spec status-list#status-list — the shared lifecycle-commit hook. Fired once per
    * committed transition from the four real commit funnels (`setState`,
    * `supersedeOnRedemption`, `insertRecord`, `contain`). The Status List
    * republisher subscribes today; Mission Signals subscribes next.
@@ -233,13 +233,13 @@ export class MissionKernel {
    */
   readonly missionBoundGrants: MissionBoundGrantStore;
   /**
-   * @spec status#discharge-idempotency — the durable event-dedup store, on THIS
+   * @spec discharge#discharge-idempotency — the durable event-dedup store, on THIS
    * kernel's database so an event row commits in the same transaction as the
-   * latch it records (@spec status#discharge-operation, "Atomicity").
+   * latch it records (@spec discharge#discharge-operation, "Atomicity").
    */
   readonly dischargeEvents: DischargeEventStore;
   /**
-   * @spec status#discharge-authority — the pinned mapping per condition,
+   * @spec discharge#discharge-authority — the pinned mapping per condition,
    * written in `insertRecord`'s transaction and the ONLY resolution discharge
    * target authorization reads (never the live policy).
    */
@@ -310,7 +310,7 @@ export class MissionKernel {
 
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
     const derived = deriveAuthoritySet(intent, this.opts.policy, proposal);
-    // @spec status#discharge-authority — resolve every `discharge_policy`
+    // @spec discharge#discharge-authority — resolve every `discharge_policy`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
     // already map); `insertRecord` re-checks as the single record funnel, which
@@ -432,7 +432,7 @@ export class MissionKernel {
   /** Insert a full record (shared by approve, expansion, template dispatch, and
    *  child creation): the single Mission-record creation funnel. */
   insertRecord(record: MissionRecord): void {
-    // @spec status#discharge-authority — the LAST point at which a
+    // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
     // AS resolves and validates every selector here, whatever built the set
     // (derivation, a child's requested subset, a template's double
@@ -495,7 +495,7 @@ export class MissionKernel {
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
         );
-      // @spec status#discharge-authority — bind the RESOLVED mapping
+      // @spec discharge#discharge-authority — bind the RESOLVED mapping
       // (identifier, version, and content) to this exact entry_digest +
       // condition_digest, in the SAME transaction as the record: discharge
       // target authorization reads this pin, never the live policy, so a
@@ -733,7 +733,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#status-list — opt a Mission into the Status List by assigning
+   * @spec status-list#status-list — opt a Mission into the Status List by assigning
    * it an index. @spec status#mission-status-anti-oracle: the index is random
    * (never sequential, never derivable from `id`), allocated into a list sized
    * well above the population and persisted UNIQUE; a collision retries.
@@ -772,7 +772,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#status-list — the participating set as packed entries, expiry
+   * @spec status-list#status-list — the participating set as packed entries, expiry
    * applied. Latent-bug fix: enumerating raw rows would publish VALID for a
    * Mission already past its `expires_at`; applyExpiry commits the `expired`
    * transition first (and fires the commit hook), so the list reflects true
@@ -789,7 +789,7 @@ export class MissionKernel {
     });
   }
 
-  /** @spec status#status-list — sign the current Status List Token. */
+  /** @spec status-list#status-list — sign the current Status List Token. */
   publishStatusList(): Promise<string> {
     return signStatusListToken({
       issuer: this.opts.issuer,
@@ -1064,14 +1064,14 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#discharge-operation — the ENTRY DISCHARGE funnel: commit that a
+   * @spec discharge#discharge-operation — the ENTRY DISCHARGE funnel: commit that a
    * `terminal_when` completion condition of one Mission-record entry has fired.
    * It changes NO Mission-level state (a deployment that also tracks all-entry
    * completion invokes `complete` separately) and produces one monotonic latch
    * on the entry's equivalence class, one version increment, one result record,
    * and one notification.
    *
-   * VALIDATION ORDER IS NORMATIVE (@spec status#discharge-anti-oracle): selector
+   * VALIDATION ORDER IS NORMATIVE (@spec discharge#discharge-anti-oracle): selector
    * existence (`mission_id`, `entry_digest`, `condition_digest` all resolve, the
    * entry carries `terminal_when`, `event_type` matches the named condition),
    * then condition membership (the condition is looked up INSIDE the named
@@ -1084,7 +1084,7 @@ export class MissionKernel {
    * The expiry clock runs FIRST (as `contain` does), so a Mission past its
    * `expires_at` reaches `terminal_noop` rather than latching.
    *
-   * @spec status#discharge-operation ("No `expected_version`") — there is no
+   * @spec discharge#discharge-operation ("No `expected_version`") — there is no
    * stale-version guard: a refusal would delay a safety-reducing operation. The
    * digest selectors and the idempotency rules are the guards instead.
    */
@@ -1118,7 +1118,7 @@ export class MissionKernel {
         "event_type does not match the condition condition_digest names",
       );
     }
-    // --- target authorization (@spec status#discharge-authority) ---
+    // --- target authorization (@spec discharge#discharge-authority) ---
     // Against the mapping PINNED when this condition entered the record
     // (identifier, version, and resolved content), never the live policy: an
     // edit to the policy after approval must not retroactively change who may
@@ -1141,7 +1141,7 @@ export class MissionKernel {
       condition_digest: input.condition_digest,
       event_id: input.event_id,
     };
-    // --- event-level dedup (@spec status#discharge-idempotency) ---
+    // --- event-level dedup (@spec discharge#discharge-idempotency) ---
     // Scoped by the five-part tuple and qualified by the assertion fingerprint.
     // Evaluated BEFORE the terminal check: an at-least-once sender's retry under
     // a fresh nonce must recover the ORIGINAL outcome and versions even after
@@ -1199,7 +1199,7 @@ export class MissionKernel {
         current_version: record.version,
       };
       // Recorded like `already_discharged` below (@spec
-      // status#discharge-idempotency): a fresh-nonce replay of THIS occurrence
+      // discharge#discharge-idempotency): a fresh-nonce replay of THIS occurrence
       // must recover this stored outcome and these versions, and the same
       // tuple re-asserted with a DIFFERENT fingerprint must be `conflict` —
       // neither holds if the terminal acknowledgement bypasses the event
@@ -1244,7 +1244,7 @@ export class MissionKernel {
           current_version: committed.version,
         };
         // In the SAME transaction as the latch and the version increment
-        // (@spec status#discharge-operation, "Atomicity").
+        // (@spec discharge#discharge-operation, "Atomicity").
         this.dischargeEvents.recordInCallerTx(eventKey, fingerprint, result, audit);
       },
     );
@@ -1252,7 +1252,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#discharge-operation ("Atomicity"), status#determining — commit
+   * @spec discharge#discharge-operation ("Atomicity"), discharge#determining — commit
    * one or more entry latches on ONE record as a single unit: the latch rows,
    * the version increment, and the durable propagation work (the lifecycle
    * commit the Status List republisher and Mission Signals ride) share one
@@ -1303,12 +1303,12 @@ export class MissionKernel {
       if (!committed) throw new Error(`unknown mission: ${record.id}`);
       accompany?.(committed);
       // Inside the unit deliberately: the signal enqueue commits with the latch
-      // (@spec status#discharge-operation, "Atomicity"). Nothing after the
+      // (@spec discharge#discharge-operation, "Atomicity"). Nothing after the
       // fan-out can fail the transaction, so the hook cannot fire on a rollback.
       this.emitCommit(committed, committed.state, undefined, authorityChanged);
       return committed;
     });
-    // @spec status#discharge-operation ("Atomicity") — entry-wise propagation to
+    // @spec discharge#discharge-operation ("Atomicity") — entry-wise propagation to
     // an already-justified Child Mission. Materialization is not claimed atomic
     // with the commit above; running it synchronously here closes the gap
     // entirely, so no child derivation can fall between the two.
@@ -1319,7 +1319,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#discharge-operation ("Atomicity"), child-delegation#child-state
+   * @spec discharge#discharge-operation ("Atomicity"), child-delegation#child-state
    * — propagate a committed discharge entry-wise to the parent's existing
    * children, so a Child Mission already justified by the discharged parent
    * entry cannot keep deriving it while both Missions stay `active`.
@@ -1329,7 +1329,7 @@ export class MissionKernel {
    * justified by the discharged parent entry when it shares the resource AND
    * carries the very condition that fired, identified by `condition_digest`. The
    * subset rule guarantees the child carries every parent condition unchanged
-   * (@spec status#subset-extension), so the condition is present exactly on the
+   * (@spec discharge#subset-extension), so the condition is present exactly on the
    * child entries the parent entry justified. A child's latch is keyed by the
    * CHILD's own `entry_digest`: the child entry is narrower, so it is a
    * different immutable entry with a different commitment.
@@ -1374,7 +1374,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#visibility, runtime#input-authority — the committed discharge
+   * @spec discharge#visibility, runtime#input-authority — the committed discharge
    * latches as entry commitments, for a consumer that materializes a policy view
    * from this AS (a PDP's `discharged` input). Empty when nothing is discharged.
    */
@@ -1386,7 +1386,7 @@ export class MissionKernel {
    * The Mission's EFFECTIVE Authority Set: the approved set minus the issuer-held
    * narrowing overlays, which are TWO (#569: this method is the single
    * composition point every derivation, projection, and Status surface draws on):
-   *  - DISCHARGE (@spec status#discharge, status#visibility): an entry whose
+   *  - DISCHARGE (@spec discharge#discharge, discharge#visibility): an entry whose
    *    `entry_digest` carries a committed latch is dropped outright. The digest
    *    is computed over the APPROVED entry, before any containment rewrite, both
    *    because `entry_digest` is defined over the immutable Mission-record entry
@@ -1622,7 +1622,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#status-list — the referenced-token status object (`idx`,
+   * @spec status-list#status-list — the referenced-token status object (`idx`,
    * `uri`) for a participating Mission; empty for a non-participant so the
    * member is absent.
    */
@@ -1644,7 +1644,7 @@ export class MissionKernel {
       nonce?: string;
       freshnessSeconds?: number;
       /**
-       * @spec status#discharge-result — the `discharge_result` object a
+       * @spec discharge#discharge-result — the `discharge_result` object a
        * `discharge` delivery's response carries as a SIBLING of `mission` in
        * this same envelope. Absent on every other request, so the Status
        * response shape is unchanged for them.
@@ -1735,7 +1735,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#status-list — fan the committed transition out to the
+   * @spec status-list#status-list — fan the committed transition out to the
    * lifecycle-commit subscriber (no-op when none is wired). `record` MUST be the
    * post-commit persisted row so `state`/`version` are authoritative.
    *
@@ -1936,7 +1936,7 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     ...(row.containment_json
       ? { containment: JSON.parse(row.containment_json as string) as MissionContainment }
       : {}),
-    // @spec status#discharge — absent means nothing was ever discharged;
+    // @spec discharge#discharge — absent means nothing was ever discharged;
     // written only by the discharge funnel (`latchDischarge`).
     ...(row.discharged_json
       ? { discharged: JSON.parse(row.discharged_json as string) as DischargedEntry[] }

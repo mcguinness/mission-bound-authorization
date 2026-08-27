@@ -101,9 +101,9 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-status:
-    title: "Mission Status and Lifecycle for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
     author:
       -
         ins: K. McGuinness
@@ -1173,9 +1173,8 @@ create no Mission ({{declined-events}}, {{revision-events}}) and so have
 no Mission audit horizon; a deployment MUST retain their evidence for a
 deployment-declared window.
 
-Entries discharged under the status
-profile's completion machinery
-({{I-D.draft-mcguinness-oauth-mission-status}}) disappear
+Entries discharged under the Entry Discharge companion's completion
+machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}}) disappear
 from status surfaces while `authority_hash` still commits them, so an
 auditor reconciling the recorded approval surface against
 later-enforced authority consults discharge state.

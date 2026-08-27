@@ -324,7 +324,7 @@ the bindings rather than a maturity one.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 18 conformance rows in conformance-manifest.json (4 tested, 1 partial, 13 todo).
+Implementation: 26 conformance rows in conformance-manifest.json (10 tested, 3 partial, 13 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).
@@ -1276,6 +1276,17 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    bound; it MUST NOT widen either of the other two, and a PEP MUST
    NOT treat a Mission permit as overriding what the credential or
    the resource would refuse.
+9. **Joined-view evidence commitment.** A decision reached over a
+   successful join MUST carry a joined-view commitment
+   (`join_view_id`) separate from `policy_view_id`, which alone does
+   not distinguish a joined decision from a direct one. `join_view_id`
+   MUST change whenever the joining client identifier, the join
+   disposition (the Mission's own `client_id` or an authorized
+   delegate), or the resulting effective Authority Set differs, so a
+   verifier can tell a joined decision's evidence from a direct
+   Mission-bound decision's, and one joined view from a
+   differently-joined one. This document does not fix the
+   commitment's construction.
 
 In the baseline mapping join the PDP compares the authenticated subject
 and client the PEP attests in the decision request, not the acting
@@ -1335,12 +1346,20 @@ the action under the Mission's Authority Set and permits:
     "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "join_view_id":
+      "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
     "action_class": "irreversible_action",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
   }
 }
 ~~~
+
+`join_view_id` accompanies `policy_view_id` because this decision
+rode the join ({{mission-join}} rule 9): the direct-client disposition
+and `client_id` it binds distinguish it from a differently-joined
+decision (a narrowed delegate view) and from a direct Mission-bound
+decision, which never carries `join_view_id` at all.
 
 The AuthZEN profile's denial-reason extensibility rule permits a
 companion profile to extend the denial-reason set by specification,
@@ -2626,12 +2645,17 @@ re-check.
     "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "join_view_id":
+      "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
     "action_class": "irreversible_action",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
   }
 }
 ~~~
+
+`join_view_id` marks this decision as reached over the Join
+({{mission-join}} rule 9), distinct from `policy_view_id`.
 
 # Acknowledgments
 {:numbered="false"}

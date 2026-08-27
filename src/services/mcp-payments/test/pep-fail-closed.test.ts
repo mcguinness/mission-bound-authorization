@@ -26,11 +26,14 @@ import { Fga, type MissionView } from "@mission/pdp";
 import * as pdp from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
+  createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   PaymentsStore,
   Pep,
   sourceDigestOf,
+  type DecisionEvidence,
+  type RefusalRecord,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -101,7 +104,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       client_id: "ap-agent",
     };
     const payments = seedPayments();
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const card = { name: "payments", tools: ["list_invoices"] };
     const pep = new Pep({
       payments,
@@ -143,8 +146,8 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     expect(invoices.map((i) => i.vendor_id)).toEqual(["acme"]);
     expect(invoices.some((i) => i.vendor_id === "globex")).toBe(false);
     // The bound read still produces ordinary Decision Evidence.
-    const dec = evidence.forMission(missionId).find((e) => e.kind === "decision");
-    expect(dec?.decision).toBe(true);
+    const dec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
+    expect(dec?.content.decision).toBe("permit");
   });
 
   it("no vendor_id, unconstrained entry: still returns every vendor's invoices (capability-preserving, not a forced narrowing)", async () => {
@@ -217,11 +220,11 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     });
     const res = await server.callReadTool("list_invoices", {}, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
-    const dec = evidence.forMission(missionId).find((e) => e.kind === "decision");
+    const dec = evidence.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision");
     // Before this fix, list_invoices never built `effective`, so no
     // parameter_digest ever entered the request or the retained record.
-    expect(dec?.parameter_digest).toBeDefined();
-    expect(dec?.parameter_digest).toMatch(/^sha-256:/);
+    expect(dec?.content.parameter_digest).toBeDefined();
+    expect(dec?.content.parameter_digest).toMatch(/^sha-256:/);
   });
 
   it("the omitted-vendor_id normal form distinguishes an entry's OWN allowlist from the unconstrained 'all' marker, even when both enumerate the same vendors and serve the identical result set", async () => {
@@ -249,7 +252,8 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     // explicit all-in-scope marker (source "all") are distinct normal forms
     // regardless of what they happen to enumerate.
     const digestOf = (store: typeof constrained.evidence) =>
-      store.forMission(missionId).find((e) => e.kind === "decision")?.parameter_digest;
+      store.forMission(missionId).find((e): e is DecisionEvidence => e.kind === "decision")?.content
+        .parameter_digest;
     const digestA = digestOf(constrained.evidence);
     const digestB = digestOf(unconstrained.evidence);
     expect(digestA).toBeDefined();
@@ -277,7 +281,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       client_id: "ap-agent",
     };
     const payments = seedPayments();
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const card = { name: "payments", tools: ["list_invoices"] };
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === current.issuer
@@ -352,7 +356,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
 
   function build(fga: import("@mission/pdp").Fga): { server: McpPaymentsServer } {
     const payments = seedPayments();
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const card = { name: "payments", tools: ["list_invoices"] };
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === view.issuer
@@ -419,7 +423,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
 
   function build(): { pep: Pep; evidence: EvidenceStore } {
     const payments = new PaymentsStore();
-    const evidence = new EvidenceStore();
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
     const pep = new Pep({
       payments,
       evidence,
@@ -475,9 +479,9 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
     expect(res.refusal_reason).toBe("unrecognized_condition");
-    const refusal = evidence.forMission(missionId).find((e) => e.kind === "refusal");
-    expect(refusal?.refusal_reason).toBe("unrecognized_condition");
-    expect(refusal?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    const refusal = evidence.forMission(missionId).find((e): e is RefusalRecord => e.kind === "refusal");
+    expect(refusal?.content.denial_reason).toBe("unrecognized_condition");
+    expect(refusal?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
   it("a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted: the must-understand rule is scoped to conditions, never the whole response context", async () => {
@@ -500,8 +504,8 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
     expect(res.refusal_reason).toBe("unfulfillable_obligation");
-    const refusal = evidence.forMission(missionId).find((e) => e.kind === "refusal");
-    expect(refusal?.refusal_reason).toBe("unfulfillable_obligation");
+    const refusal = evidence.forMission(missionId).find((e): e is RefusalRecord => e.kind === "refusal");
+    expect(refusal?.content.denial_reason).toBe("unfulfillable_obligation");
   });
 
   it("a DENY decision (no permit) is unaffected by the recognized-member enumeration", async () => {
