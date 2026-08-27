@@ -48,6 +48,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC9396:
@@ -115,14 +123,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-progressive:
-    title: "Mission Progressive Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 --- abstract
 
@@ -182,9 +182,10 @@ depends on no deferral substrate.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
+Implementation: 15 conformance rows in conformance-manifest.json (6 tested, 9 todo).
 Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
 Requires: Mission Substrate Requirements.
+Also requires, conditionally: Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling).
 <!-- family-status: END -->
 
 # Conventions and Definitions {#conventions-and-definitions}
@@ -652,6 +653,437 @@ recorded, it owns the narrowing history, through its `narrowed`
 entries and `predecessor_intent_hashes`. Where an AGR is recorded for
 the final approval, it owns the final approval-governance facts. This
 is a deliberate artifact separation, not an authority conflict.
+
+# Approval Context Commitment {#approval-context-commitment}
+
+This section defines an OPTIONAL profile: one commitment over a
+Mission's immutable creation facts, so an artifact that authenticates
+a reference to it can be checked against another authenticated
+artifact's reference to the same Mission without either re-deriving
+the other's fields. Adopting this profile is independent of whether
+a deployment records an Approval Governance Record for a given
+Mission.
+
+## Manifest {#approval-context-manifest}
+
+The **Approval Context Manifest** is a closed, enumerated v1 object
+built from Mission Record members
+({{I-D.draft-mcguinness-oauth-mission}}). Its members:
+
+| Member | Source | Presence |
+|---|---|---|
+| `issuer` | Mission Record `issuer` | always |
+| `id` | Mission Record `id` | always |
+| `intent_hash` | Mission Record `intent_hash` | always |
+| `proposal_hash` | Mission Record `proposal_hash` | iff the Mission Record carries it |
+| `authority_hash` | Mission Record `authority_hash` | always |
+| `ceiling_hash` | Progressive's `ceiling_hash` anchor ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
+| `subject` | Mission Record `subject` | always |
+| `approver` | Mission Record `approver` | always |
+| `client_id` | Mission Record `client_id` | always |
+| `created_at` | Mission Record `created_at` | always |
+| `expires_at` | Mission Record `expires_at` | always |
+| `approval_basis` | Mission Record `approval_basis`, verbatim | always |
+| `authority_source` | Mission Record `authority_source`, verbatim | always |
+| `policy_version` | Mission Record `policy_version` | always |
+| `approval_event_id` | Mission Record `approval_event_id` | always |
+| `submission_evidence_commitment` | {{approval-context-construction}} | iff the Mission Record carries `submission_evidence` |
+{: title="Approval Context Manifest v1 members"}
+
+The presence of every conditional member MUST be a deterministic
+function of the Mission Record alone, never of which companion
+profiles a deployment runs: two parties holding the same record
+compute the same manifest.
+
+`ceiling_hash` is the manifest's fourth anchor alongside `intent_hash`,
+`proposal_hash`, and `authority_hash`: the manifest MUST include
+`ceiling_hash` when the Mission Record carries one and MUST omit it
+when the Mission Record carries none. This member's construction and
+semantics are defined by the Progressive profile
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), a normative
+reference of this document for that reason; this section imports its
+`ceiling_hash` definition without redefining it, and adopting this
+Approval Context Commitment profile does not by itself require
+adopting Progressive ({{optional-status}}).
+
+The manifest excludes the Mission Record's one mutable member,
+`state`, and every value that is not itself a member of the
+immutable record: a running derivation count, and a containment or
+discharge state a companion profile tracks outside the record. This
+is not a separate exclusion rule; it follows from building the
+manifest from Mission Record members only.
+
+## Construction {#approval-context-construction}
+
+The manifest is an envelope anchor under the issuance profile's
+commitment mechanisms, which this document imports normatively
+({{I-D.draft-mcguinness-oauth-mission}}): `typ` is
+`mission-approval-context-v1`, `iss` is the Mission `issuer`, and
+`value` is the manifest object of {{approval-context-manifest}}. The
+result, `approval_context_commitment`, is one `sha-256:`-prefixed
+string.
+
+`submission_evidence_commitment` is a second envelope anchor under
+the same mechanism, present only when the Mission Record carries
+`submission_evidence`: `typ` is `mission-submission-evidence-v1`,
+`iss` is the Mission `issuer`, and `value` is the recorded
+`submission_evidence` array exactly as retained, preserving its
+canonical element order ({{I-D.draft-mcguinness-oauth-mission}}).
+
+## Computation and Versioning {#approval-context-computation}
+
+An issuer computes `approval_context_commitment` on demand from the
+Mission's immutable creation facts, fixed at the approval event
+({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
+Mission Record member for it. A deployment MAY cache the computed
+value; a cached value is derived state and MUST NOT be treated as
+authoritative where it disagrees with a fresh computation from the
+record.
+
+A verifier that recomputes `approval_context_commitment` from the
+Mission's immutable creation facts and obtains a value different from
+the one an artifact discloses MUST reject that artifact's reference
+as invalid. The recompute always uses this document's fixed `typ`,
+`mission-approval-context-v1`; a value some other party committed
+under a different `typ` recomputes to a different digest under this
+rule and is rejected the same way ({{approval-context-vectors}},
+vector 6).
+
+The member list of {{approval-context-manifest}} is closed for
+`mission-approval-context-v1`. Adding, removing, or redefining a
+member, or changing how `submission_evidence_commitment` is
+constructed, MUST use a new `typ`, never a silent reinterpretation of
+this one.
+
+## Limits {#approval-context-limits}
+
+Reusing the issuance profile's commitment mechanisms supplies
+canonicalization and algorithm identification and agility. It
+supplies nothing else:
+
+- No authenticity. The commitment is an unkeyed digest over Mission
+  Record fields held under the same trust as the record itself. An
+  issuer that can rewrite the record can recompute a matching
+  commitment; authentication comes entirely from the signature of
+  whichever artifact discloses the commitment, never from the digest
+  construction.
+- No approval-time existence. A matching commitment shows the
+  disclosed facts are internally consistent with the retained
+  record. It does not show the facts were true, or that an approval
+  occurred, at the time claimed.
+- No selective disclosure. The commitment is a flat digest over the
+  complete manifest object; proving anything about one member
+  requires disclosing the whole object.
+
+## Carriage {#approval-context-carriage}
+
+`approval_context_commitment` MAY appear as a signed member of an
+artifact that already authenticates a reference to the Mission, for
+example a Consent Evidence object
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), or under
+an introspection caller's member-scoped disclosure privilege, the
+same privilege that already gates `proposal_hash`
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+`approval_context_commitment` MUST NOT be carried on a Mission-bound
+access token's baseline `mission` claim
+({{I-D.draft-mcguinness-oauth-mission}}) or on a credential-bound
+Mission descriptor a companion profile mints for correlation, for
+example the Mission Authority Server's Join Assertion
+({{I-D.draft-mcguinness-mission-authority-server}}): each already
+fixes its own minimal member set, and this commitment is correlation
+and evidence metadata, never authority.
+
+## Test Vectors {#approval-context-vectors}
+
+These non-normative vectors let an implementation verify its manifest
+and commitment computation byte for byte, the same discipline as the
+issuance profile's own Integrity Anchor Test Vectors
+({{I-D.draft-mcguinness-oauth-mission}}). All use the issuer
+`https://as.example.com`. Every canonical-bytes block is the exact
+JCS {{RFC8785}} output, shown wrapped only for layout; remove the
+layout line breaks, adding no characters, to recover the single-line
+canonical form.
+
+Vector 2 below reuses, byte-exact, the always-present manifest
+members from the issuance profile's own canonical Worked Example
+Mission Record ({{I-D.draft-mcguinness-oauth-mission}}), including
+its `proposal_hash`, per that document's rule that an extending
+example must either reproduce the recorded objects byte-exactly or
+state its divergence. Vectors 1, 3, and 4 are hypothetical variants
+of that same Mission (same `id`, `intent_hash`, and `authority_hash`)
+that diverge in exactly one respect each, stated at each vector: this
+lets three different `approval_context_commitment` values legitimately
+exist for the one Mission `id` across the set, each correct for the
+variant it names, never for the others.
+
+The always-present members, reused unchanged across every vector:
+
+~~~ json
+{
+  "issuer": "https://as.example.com",
+  "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "intent_hash":
+    "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+  "authority_hash":
+    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+  "subject": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approver": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "client_id": "s6BhdRkqt3",
+  "created_at": "2026-10-15T14:32:11Z",
+  "expires_at": "2026-12-31T23:59:59Z",
+  "approval_basis": {
+    "type": "direct",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "activation": { "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z" },
+    "activation_actor": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "adjudication": { "kind": "human" },
+    "root_commitment":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "authority_source": { "type": "user_delegated" },
+  "policy_version": "deploy-policy:v17",
+  "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z"
+}
+~~~
+
+**Vector 1: base manifest.** Diverges from the canonical Mission by
+carrying no `proposal_hash`: this variant never recorded a
+`proposed_authority` distinct from its Authority Set. `typ` is
+`mission-approval-context-v1`; `value` is the object above with no
+conditional member added.
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-approval-context-v1",
+"value":{"approval_basis":{"activation":{"approval_event_id":"ape_8K
+2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
+om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
+onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
+mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
+cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
+7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
+lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
+-","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
+Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+:v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8mN
+1a0kV7tR"}}}
+~~~
+
+~~~ text
+approval_context_commitment = sha-256:iRCrkxJWsQL1ZlXYQg1FUy2OIBKFpF
+n99tYA-2qlC48
+~~~
+
+**Vector 2: conditional `proposal_hash`.** This is the canonical
+Mission unchanged: the always-present members above plus
+`"proposal_hash": "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo"`.
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-approval-context-v1",
+"value":{"approval_basis":{"activation":{"approval_event_id":"ape_8K
+2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
+om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
+onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
+mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
+cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
+7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
+lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
+-","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
+Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+:v17","proposal_hash":"sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNv
+SqMrYo","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8
+mN1a0kV7tR"}}}
+~~~
+
+~~~ text
+approval_context_commitment = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGy
+mVfrnMaIc8So0
+~~~
+
+**Vector 3: conditional `ceiling_hash`.** Diverges from the canonical
+Mission by adding a Progressive ceiling and carrying no
+`proposal_hash` (isolating the `ceiling_hash` case). `ceiling_hash`
+is derived first, per the Progressive profile's own construction
+({{I-D.draft-mcguinness-oauth-mission-progressive}}): `typ`
+`mission-authority-ceiling`, `value` a two-member object of
+`authority_ceiling` and `drawdown_policy`.
+
+~~~ json
+{
+  "authority_ceiling": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read", "invoices.write"] }
+  ],
+  "drawdown_policy": "https://as.example.com/policies/erp-drawdown-v1"
+}
+~~~
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-authority-ceiling","v
+alue":{"authority_ceiling":[{"actions":["invoices.read","invoices.wr
+ite"],"resource":"https://erp.example.com","type":"mission_resource_
+access"}],"drawdown_policy":"https://as.example.com/policies/erp-dra
+wdown-v1"}}
+~~~
+
+~~~ text
+ceiling_hash = sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q
+~~~
+
+The manifest is the always-present members above plus this
+`ceiling_hash`:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-approval-context-v1",
+"value":{"approval_basis":{"activation":{"approval_event_id":"ape_8K
+2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
+om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
+onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
+mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
+cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
+7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
+eiling_hash":"sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q","
+client_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires
+_at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc
+9-","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQq
+YY","issuer":"https://as.example.com","policy_version":"deploy-polic
+y:v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8m
+N1a0kV7tR"}}}
+~~~
+
+~~~ text
+approval_context_commitment = sha-256:aj_DeEf0vbk7jZnXOMEFiFVSmD0SQg
+5MEXIMUXSWLFs
+~~~
+
+**Vector 4: conditional `submission_evidence_commitment`.** Diverges
+from the canonical Mission by recording one verified Intent Submission
+Evidence entry and carrying no `proposal_hash` (isolating the
+`submission_evidence_commitment` case). `artifact_hash` is derived
+first, over the entry exactly as presented
+({{I-D.draft-mcguinness-oauth-mission}}): `typ`
+`mission-intent-evidence`.
+
+~~~ json
+{
+  "type": "mission-intent-admission-assertion",
+  "assertion": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FkbWlzc2lvbi5leGFtcGxlLmNvbSJ9.MEUCIQDx7vector"
+}
+~~~
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-intent-evidence","val
+ue":{"assertion":"eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FkbWlzc
+2lvbi5leGFtcGxlLmNvbSJ9.MEUCIQDx7vector","type":"mission-intent-admi
+ssion-assertion"}}
+~~~
+
+~~~ text
+artifact_hash = sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miFuC6-T7jXU2-R8
+~~~
+
+The recorded `submission_evidence` array carries this one element;
+`submission_evidence_commitment` is a second envelope anchor, `typ`
+`mission-submission-evidence-v1`, `value` the array exactly as
+retained:
+
+~~~ json
+[
+  { "type": "mission-intent-admission-assertion",
+    "artifact_hash":
+      "sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miFuC6-T7jXU2-R8",
+    "verified_at": "2026-10-15T14:31:50Z",
+    "facts": {
+      "admission_issuer": "https://admission.example.com",
+      "status": "active"
+    } }
+]
+~~~
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-submission-evidence-v
+1","value":[{"artifact_hash":"sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miF
+uC6-T7jXU2-R8","facts":{"admission_issuer":"https://admission.exampl
+e.com","status":"active"},"type":"mission-intent-admission-assertion
+","verified_at":"2026-10-15T14:31:50Z"}]}
+~~~
+
+~~~ text
+submission_evidence_commitment = sha-256:TwDmwzJgsm8Ik86YuybyctIaMPZ
+K-aKeU6a2BF0kTi0
+~~~
+
+The manifest is the always-present members above plus this
+`submission_evidence_commitment`:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-approval-context-v1",
+"value":{"approval_basis":{"activation":{"approval_event_id":"ape_8K
+2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
+om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
+onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
+mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
+cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
+7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
+lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
+-","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
+Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+:v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8mN
+1a0kV7tR"},"submission_evidence_commitment":"sha-256:TwDmwzJgsm8Ik86
+YuybyctIaMPZK-aKeU6a2BF0kTi0"}}
+~~~
+
+~~~ text
+approval_context_commitment = sha-256:Msha2eEDtfucgANzT5nmO90gtCEXFQ
+FdRfVUGmOwCZE
+~~~
+
+**Vector 5: mutated-member rejection.** Vector 2's manifest with one
+member changed, `approval_event_id` from `ape_8K2nP4qV9rL3tY6sB1z` to
+`ape_9K2nP4qV9rL3tY6sB1z`, illustrating what {{approval-context-computation}}
+requires a verifier to do when a recomputed digest disagrees with a
+disclosed one:
+
+~~~ text
+recomputed = sha-256:3ZcZC8vR2HiCkgZqop_fUBaAwmj6hLknF8ey9g44dD8
+disclosed  = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGymVfrnMaIc8So0
+~~~
+
+The two differ, so a verifier holding the mutated record and this
+disclosed vector-2 value MUST reject the reference.
+
+**Vector 6: wrong-`typ` rejection.** Vector 2's `value` object,
+unchanged, committed under `typ` `mission-approval-context-v2`
+instead of `mission-approval-context-v1`:
+
+~~~ text
+correct typ (v1) = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGymVfrnMaIc8S
+o0
+wrong typ (v2)   = sha-256:KSLVjgQRCWLHsswYmBJS2B_n0SPRAZjTvBnkIRqw-
+aw
+~~~
+
+The two differ. A verifier's recompute is always fixed to
+`mission-approval-context-v1`; presented with the wrong-`typ` value
+as if it were vector 2's `approval_context_commitment`, it recomputes
+vector 2's correct digest, finds a mismatch, and rejects under the
+same rule as vector 5.
 
 # Boundaries {#boundaries}
 

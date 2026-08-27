@@ -73,6 +73,10 @@
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
+   },
+   "draft-mcguinness-mission-approval-governance.md": {
+    "revision": "e566e1a5dc65d21b378560b4b381643c9009a7c8",
+    "content_sha256": "4f4482abf41e6454a59346089f0e5fbda3328f26a717eb1a5494b4d26bb14842"
    }
   }
  },
@@ -174,7 +178,8 @@
    "authzen.runtime-evidence",
    "authzen.obligations",
    "authzen.arap",
-   "authzen.batch"
+   "authzen.batch",
+   "approval-context.manifest"
   ]
  },
  "profiles": [
@@ -16036,6 +16041,381 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "verifying a mission-intent-admission instance against its Mission Record proves the Mission issuer's own attestation, never independent proof of the admission issuer's original Intent Admission Assertion, since no assertion bytes are carried in the payload"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.manifest.deterministic-presence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "The presence of every conditional member MUST be a deterministic function of the Mission Record alone, never of which companion profiles a deployment runs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Given the same Mission Record, computing the Approval Context Manifest twice (by any two parties, or by the same party at two different times) yields the same set of present conditional members (proposal_hash, ceiling_hash, submission_evidence_commitment), independent of which optional companion profiles either party's deployment runs."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.manifest.ceiling-hash-conditional",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "the manifest MUST include `ceiling_hash` when the Mission Record carries one and MUST omit it when the Mission Record carries none",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Approval Context Manifest carries ceiling_hash as its fourth anchor, alongside intent_hash, proposal_hash, and authority_hash, exactly when the Mission Record carries a Progressive ceiling_hash (I-D.draft-mcguinness-oauth-mission-progressive), and never otherwise."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > includes ceiling_hash iff the input carries one",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 3: conditional ceiling_hash",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.construction.envelope-anchor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-construction",
+   "text": "The manifest is an envelope anchor under the issuance profile's commitment mechanisms, which this document imports normatively",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment is computed as typ mission-approval-context-v1 under the issuance profile's Integrity Anchors/Commitment Mechanisms envelope (JCS canonicalization, SHA-256, sha-256: prefix, reject-unknown-prefix), never a bespoke construction."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 1: base manifest (no conditional members)",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.construction.submission-evidence-anchor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-construction",
+   "text": "`submission_evidence_commitment` is a second envelope anchor under the same mechanism, present only when the Mission Record carries `submission_evidence`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "submission_evidence_commitment is computed as typ mission-submission-evidence-v1 over the Mission Record's retained submission_evidence array exactly as recorded, and is present in the manifest iff the Mission Record carries submission_evidence."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.computation.recompute-on-demand",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "An issuer computes `approval_context_commitment` on demand from the Mission's immutable creation facts, fixed at the approval event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment is derived on demand from the Mission's immutable creation facts (fixed at the approval event) each time it is needed, not read from a stored field minted once at creation."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.no-record-member",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "This document adds no Mission Record member for it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.cache-is-derived-state",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "a cached value is derived state and MUST NOT be treated as authoritative where it disagrees with a fresh computation from the record",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Where a deployment caches approval_context_commitment for efficiency, a fresh recomputation from the retained Mission Record always governs over a stale or diverging cached value."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.verifier-mismatch-refusal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "A verifier that recomputes `approval_context_commitment` from the Mission's immutable creation facts and obtains a value different from the one an artifact discloses MUST reject that artifact's reference as invalid",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A verifier holding the Mission's immutable creation facts and an artifact's disclosed approval_context_commitment rejects the artifact's reference whenever its own recomputed digest differs from the disclosed value."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.versioning.new-typ-required",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "is closed for `mission-approval-context-v1`. Adding, removing, or redefining a member, or changing how `submission_evidence_commitment` is constructed, MUST use a new `typ`, never a silent reinterpretation of this one",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A change to the manifest's member set, a member's meaning, or the submission_evidence_commitment construction is published under a new typ value; mission-approval-context-v1 always denotes exactly the v1 member set this document defines."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.limits.mechanism-scope",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "Reusing the issuance profile's commitment mechanisms supplies canonicalization and algorithm identification and agility. It supplies nothing else",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Default Commitment Construction reused by this profile supplies only canonicalization (JCS, I-JSON) and algorithm identification/agility (the sha-256: prefix and reject-unknown-prefix rule); it supplies no authenticity, approval-time-existence, or selective-disclosure property."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-authenticity",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "The commitment is an unkeyed digest over Mission Record fields held under the same trust as the record itself. An issuer that can rewrite the record can recompute a matching commitment; authentication comes entirely from the signature of whichever artifact discloses the commitment, never from the digest construction",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A bare approval_context_commitment proves nothing an attacker who controls the Mission Record cannot reproduce; whatever authenticates a disclosed commitment is the signature of the artifact carrying it (a Consent Evidence object, an Approval Governance Record, or a future Mandate claim), never the digest itself."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-approval-time-existence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "A matching commitment shows the disclosed facts are internally consistent with the retained record. It does not show the facts were true, or that an approval occurred, at the time claimed",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A verifier that confirms a matching approval_context_commitment has confirmed internal consistency with the retained record only, never that the recorded approval genuinely occurred at the claimed instant."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-selective-disclosure",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "The commitment is a flat digest over the complete manifest object; proving anything about one member requires disclosing the whole object",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "There is no mechanism to prove one manifest member (for example, subject) without disclosing every other member of the same manifest."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.carriage.may-signed-artifact-or-introspection",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-carriage",
+   "text": "`approval_context_commitment` MAY appear as a signed member of an artifact that already authenticates a reference to the Mission",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A companion artifact that already authenticates a reference to the Mission (for example, a Consent Evidence object) may add approval_context_commitment as an OPTIONAL signed member, and an introspection response may disclose it to a caller holding the existing member-scoped disclosure privilege that already gates proposal_hash."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.carriage.must-not-token-or-descriptor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-carriage",
+   "text": "`approval_context_commitment` MUST NOT be carried on a Mission-bound access token's baseline `mission` claim",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment never appears on a Mission-bound access token's baseline mission claim, and never on another credential-bound Mission descriptor a companion profile mints for correlation (for example, the Mission Authority Server's Join Assertion): each such descriptor keeps to its own already-fixed minimal member set."
    },
    "level": "unit",
    "coverage": "todo",
