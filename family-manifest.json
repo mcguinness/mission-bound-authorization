@@ -207,10 +207,19 @@
    "pull_when": "Approval authority itself needs authenticated, policy-backed provenance.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-progressive"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
+   ],
+   "requires_when": [
+    {
+     "when": "the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling",
+     "requires": [
+      "draft-mcguinness-oauth-mission-progressive"
+     ]
+    }
    ],
    "references": [
     "draft-mcguinness-mission-audit",
@@ -1044,7 +1053,9 @@
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
@@ -1087,7 +1098,8 @@
    "summary": "A binding-neutral decision contract for enforcing a Mission-bound credential at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission.",
    "pull_when": "Actions need a point-of-use check, not just issuance-time gating.",
    "normative_references": [
-    "draft-mcguinness-mission-substrate"
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"

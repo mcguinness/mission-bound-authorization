@@ -25,6 +25,10 @@
    "title": "Runtime: extract the OAuth Runtime Adapter; AuthZEN base plus feature profiles",
    "slugs": ["draft-mcguinness-mission-runtime", "draft-mcguinness-mission-authzen", "draft-mcguinness-mission-runtime-oauth"]
   },
+  "666": {
+   "title": "Runtime: Status is a normative reference, not informative background reading",
+   "slugs": ["draft-mcguinness-mission-runtime", "draft-mcguinness-mission-runtime-oauth"]
+  },
   "708": {
    "title": "Substrate: remove the normative OAuth dependency (assessment placement, bridge tier, neutral vectors)",
    "slugs": ["draft-mcguinness-mission-substrate"]
@@ -83,7 +87,8 @@
    "requirement_inventory": { "attested": false, "audited_by": null },
    "decide_resolutions": [
     { "issue": 238, "status": "deferred_to_audit_wave", "commit": null, "note": "PR #724 (the coordinated restructuring this issue and #703 called for) merged 2026-08-25, extracting the OAuth-neutral runtime core and the new draft-mcguinness-mission-runtime-oauth adapter. #238 and #703 remain open on GitHub; the owner's ruling on #723 schedules a dedicated completeness-audit wave for the WG-package documents (including this one) immediately after #723 merges, before #704's package assembly. Not treated as resolved_in_tree pending that audit: my earlier call that a pre-existing 'Runtime Core' heading meant this was already settled was wrong once, and #724's own rebase comment still names an open implementation-test gap (no negative test for the channel-integrity/ESS-trust-mode MUST)." },
-    { "issue": 703, "status": "deferred_to_audit_wave", "commit": null, "note": "Same restructuring (PR #724, merged); same deferral to the ruled audit wave." }
+    { "issue": 703, "status": "deferred_to_audit_wave", "commit": null, "note": "Same restructuring (PR #724, merged); same deferral to the ruled audit wave." },
+    { "issue": 666, "status": "resolved_in_tree", "commit": "84eae40d168ac355723a872c1f3c0967d67d27c4", "note": "PR #729 restored Status from informative to normative front matter and added it to family-manifest.json's normative_references, undoing #724's regression: the Authority input imports Effective Authority Set and discharge from Status by name under a governing MUST." }
    ],
    "examples_waiver": null
   },
@@ -97,7 +102,9 @@
   "draft-mcguinness-mission-runtime-oauth": {
    "requirement_inventory": { "attested": false, "audited_by": null },
    "decide_resolutions": [
-    { "issue": 703, "status": "deferred_to_audit_wave", "commit": null, "note": "The new OAuth Runtime Adapter #703 called for; landed via PR #724 (merged 2026-08-25) but not yet independently audited. In the owner's ruled audit-wave scope (core, resource-access, substrate, status, runtime, runtime-oauth, runtime-evidence, authzen)." }
+    { "issue": 703, "status": "deferred_to_audit_wave", "commit": null, "note": "The new OAuth Runtime Adapter #703 called for; landed via PR #724 (merged 2026-08-25) but not yet independently audited. In the owner's ruled audit-wave scope (core, resource-access, substrate, status, runtime, runtime-oauth, runtime-evidence, authzen)." },
+    { "issue": 666, "status": "resolved_in_tree", "commit": "3240922845ba5b6bfece61cb8b9b625a8ca4d084", "note": "PR #729 promoted Status from informative to normative front matter and added it to family-manifest.json's normative_references: the state-sourcing catalog's freshness MUST is satisfiable through the Mission Status operation/Status List, whose operations and objects only Status defines, so the OPTIONAL mechanism's citation is normative under CONTRIBUTING's conditional-dependency bound." },
+    { "issue": 666, "status": "resolved_in_tree", "commit": "3753e5b4a644f879d4b00a4e86f6b81c26895cf8", "note": "On the owner's ruling, PR #729 also promoted Mission Lifecycle Signals from informative to normative front matter and added it to family-manifest.json's normative_references: Signals sits in the same state-sourcing disjunction as Status, cited in the State Sourcing table for delivery semantics (verified-stream latency, stream liveness, the pull floor) that only Signals defines, so the identical conditional-dependency bound applies. draft-mcguinness-mission-runtime carries no equivalent Signals dependency: its body never cites Signals through a {{}} cross-reference, only naming it in passing within sentences whose own citations point to this adapter's catalog or to Containment's Visibility section, so it is left informative there." }
    ],
    "examples_waiver": null
   },
