@@ -6,7 +6,9 @@
  * @mission/actor-chain, parameter_digest), obtains a PDP decision, and emits
  * Decision Evidence / Refusal Records. Core enforcement tier (M4); the
  * transaction-assurance tier (permits/leases) lands in M5. Does not present
- * `context.capability_source` (#657; see `sourceDigestOf` below).
+ * `context.capability_source` on the PDP request envelope (#657; see
+ * `sourceDigestOf` below); the retained Decision Evidence still carries it
+ * as a coordinated extension member (issue #649).
  */
 
 import { createHash, randomUUID } from "node:crypto";
@@ -49,6 +51,11 @@ import type { PendingOperation } from "./txn-store.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 export const TOOL_BASE = "mcp://payments.demo/tools";
+// @spec runtime-evidence#evidence-extensions (issue #649): still needed for
+// the retained Decision Evidence's `capability_source.source_uri` (below),
+// even though `context.capability_source` no longer presents it to the PDP
+// (#657/#730; see `sourceDigestOf`).
+const SERVER_CARD_URI = `${CANONICAL_RESOURCE.replace(/\/mcp$/, "")}/.well-known/mcp`;
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -336,12 +343,17 @@ export interface PepDeps {
   instanceEpoch: string;
   now?: () => Date;
   /**
-   * @deprecated Unused by this class; no code path reads it. Compatibility
-   * seam only, kept because ~15 existing callers still construct it. Removed
-   * once #657 PR B replaces it with the real per-action capability-binding
-   * resolver. See `sourceDigestOf` below.
+   * @deprecated The digest this seam carries is `sourceDigestOf`'s whole-
+   * server-card hash (#657), not a valid `source_digest` (JCS over one
+   * capability's extracted definition). No longer read for the PDP request
+   * envelope (`context.capability_source` was removed, #657/#730), but the
+   * retained Decision Evidence's `capability_source` coordinated extension
+   * member (@spec runtime-evidence#evidence-extensions, issue #649) still
+   * carries it, reusing exactly this value. Removed once #657 PR B replaces
+   * it with the real per-action capability-binding resolver. See
+   * `sourceDigestOf` below.
    */
-  sourceDigest?: string;
+  sourceDigest: string;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -1247,12 +1259,15 @@ export class Pep {
  * `source_digest` requires. Not a valid `catalog_digest` either, since
  * parsing and reserializing `serverCard` loses the exact retrieved octets
  * that member requires. Formerly attached to every enforced tool call as
- * `context.capability_source`; removed from the request envelope entirely
- * (`enforceInner` presents no such member, and no PDP here ever typed or
- * verified one) because presenting the wrong bytes read as coverage this
- * deployment did not have. Retained only because existing tests, the demo
- * stack, and the eval harness still construct `PepDeps.sourceDigest` with
- * it; both are dropped once #657 PR A/B land the real per-action binding.
+ * `context.capability_source`; removed from the PDP request envelope
+ * entirely (`enforceInner` presents no such member there, and no PDP here
+ * ever typed or verified one) because presenting the wrong bytes read as
+ * coverage this deployment did not have. Still feeds the retained Decision
+ * Evidence's own `capability_source` (issue #649: a non-authoritative,
+ * OPTIONAL coordinated extension member of the signed record, never
+ * something the PDP evaluated) alongside existing tests, the demo stack,
+ * and the eval harness, which still construct `PepDeps.sourceDigest` with
+ * it; all three drop it once #657 PR A/B land the real per-action binding.
  *
  * @deprecated Do not add new callers. Tracked for removal in #657 PR B.
  */
