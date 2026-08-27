@@ -67,8 +67,8 @@
     "content_sha256": "b3d451ce9c68b20d613679ba6616b1b194f0d7d991f383ba7d6fb81f1d3a5be3"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "0e6b41a5ca8addbdbf0f3119a007b535d5c02f83cd18bc69b2b043bab6a2460f"
+    "revision": "24df23f65b43e8d33704d1ac085d513ea11d0eb4",
+    "content_sha256": "b4e676024651ceebcca58b32fca3f2420aace171d16bed677e0d431c1064f514"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -15013,6 +15013,70 @@
     }
    ],
    "notes": "Split from the single #670 row per PR #683 review 1. Unlike its sibling rows, this claim is a restraint (an absence of action) fully decidable from the pure function alone, with no missing integration piece, so coverage is 'tested' rather than 'partial'."
+  },
+  {
+   "id": "orchestration.compensation-authority.compensates-evaluation-id-required",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "compensation-authority",
+   "text": "the compensating action's decision MUST carry the `evaluation_id` of the decision it reverses in `compensates_evaluation_id`",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the compensating action's decision carries the evaluation_id of the decision the compensation reverses in compensates_evaluation_id",
+    "local": "resolveCompensationAuthority (src/packages/orchestration/src/compensation.ts) returns compensates_evaluation_id bound to the caller-supplied reversedEvaluationId under both the resource_policy and separate_mission permit bases. Its own doc comment states the value is 'surfaced here so the caller can carry it onto both the decision and the Orchestration Evidence record': no test exercises an actual compensating decision-request artifact carrying the member end to end. Evidence-record carriage is verified separately (see compensates-evaluation-id-evidence-emission)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5: refuses terminated-Mission authority; no basis => human review; separate_mission permits",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Added for #654: the correlator was previously named compensates_decision_id, a runtime member that does not exist (Runtime and Runtime Evidence already define compensates_evaluation_id); renamed and given its own Orchestration Evidence member definition, distinct from linked_evidence, which previously folded the correlator in. Marked partial per the PR #731 review (P2): the listed test proves resolveCompensationAuthority returns the correlator under both permit bases, not that an actual compensating decision-request artifact carries it forward; integration coverage through the compensating decision path remains open. The evidence-emission facet, which is fully proven, is split out below."
+  },
+  {
+   "id": "orchestration.compensation-authority.compensates-evaluation-id-evidence-emission",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "orchestration-evidence",
+   "text": "REQUIRED when `orchestration_decision` is `compensate`. The `evaluation_id` of the decision this compensation reverses, carrying the runtime profile's compensation link ({{I-D.draft-mcguinness-mission-runtime}}) so the compensating action reconciles against the specific evaluation it offsets. Distinct from `linked_evidence`: this member names the evaluation being reversed, never an evidence record identifier.",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Orchestration Evidence record for a compensate decision carries compensates_evaluation_id, required independently of and never folded into linked_evidence",
+    "local": "buildOrchestrationEvidence (src/packages/orchestration/src/evidence.ts) requires compensates_evaluation_id whenever orchestration_decision is compensate and throws (fail closed) when it is absent; it is emitted as the record's own compensates_evaluation_id member and is never inserted into linked_evidence, which carries only caller-supplied evidence identifiers."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5b: compensate evidence for a high-risk class carries basis, binding, and a signed envelope",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5d: compensate evidence missing compensates_evaluation_id fails closed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Split from compensates-evaluation-id-required per the PR #731 review (P2): the evidence-emission facet of the compensation correlator (required when compensate, fail closed when absent, never folded into linked_evidence) is fully tested; the decision-request facet is tracked separately as partial on the sibling row above."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",

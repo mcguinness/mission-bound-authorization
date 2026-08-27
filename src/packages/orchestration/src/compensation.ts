@@ -8,14 +8,14 @@
  * Mission's authority. It proceeds only under `resource_policy` or a narrow
  * `active` `separate_mission`; otherwise the orchestrator MUST escalate to
  * human review. Under either basis the compensating decision carries the
- * `decision_id` it reverses in `compensates_decision_id`.
+ * `evaluation_id` it reverses in `compensates_evaluation_id`.
  */
 
 export type AuthorityBasis = "resource_policy" | "separate_mission";
 
 export interface CompensationRequest {
-  /** The `decision_id` of the committed step this compensation reverses. */
-  reversedDecisionId: string;
+  /** The `evaluation_id` of the committed step this compensation reverses. */
+  reversedEvaluationId: string;
   /** The proposed authority basis, if any. */
   basis?: AuthorityBasis;
   /** True if the caller attempts to reuse the terminated Mission's authority. */
@@ -35,12 +35,13 @@ export interface CompensationAuthorityResult {
   /** Present only when `decision` is `permit`. */
   authority_basis?: AuthorityBasis;
   /**
-   * The runtime-profile binding: the `decision_id` of the reversed step. Its
+   * The runtime-profile binding: the `evaluation_id` of the reversed step. Its
    * normative home is the compensating action's runtime decision
    * (§ compensation-authority); it is surfaced here so the caller can carry it
-   * onto both the decision and the Orchestration Evidence record.
+   * onto both the decision and the Orchestration Evidence record's
+   * `compensates_evaluation_id`, never into `linked_evidence`.
    */
-  compensates_decision_id?: string;
+  compensates_evaluation_id?: string;
   reason: string;
 }
 
@@ -49,7 +50,7 @@ export interface CompensationAuthorityResult {
  * Order matters: a terminated-Mission-authority attempt is refused first; a
  * `separate_mission` that is not `active` does not apply and drops to human
  * review; only a valid, scoped, active `separate_mission` or `resource_policy`
- * permits, binding to the reversed `decision_id`.
+ * permits, binding to the reversed `evaluation_id`.
  */
 export function resolveCompensationAuthority(
   req: CompensationRequest,
@@ -65,7 +66,7 @@ export function resolveCompensationAuthority(
     return {
       decision: "permit",
       authority_basis: "resource_policy",
-      compensates_decision_id: req.reversedDecisionId,
+      compensates_evaluation_id: req.reversedEvaluationId,
       reason: "resource_policy",
     };
   }
@@ -82,7 +83,7 @@ export function resolveCompensationAuthority(
     return {
       decision: "permit",
       authority_basis: "separate_mission",
-      compensates_decision_id: req.reversedDecisionId,
+      compensates_evaluation_id: req.reversedEvaluationId,
       reason: "separate_mission",
     };
   }
