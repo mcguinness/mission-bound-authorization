@@ -4107,6 +4107,48 @@
    "notes": "#557. Partial: bound 1's contract and fail-closed default, plus its intersection with bound 2, are tested. No deployment-side resolveOrdinaryAuthority evaluator (an OAuth-scope-to-authority model) is implemented here -- a documented remainder, not a silent gap (see the PR body). Kept partial per review: bound 3 (\"current Resource policy\") is exercised as the existing FGA/PDP call (deriveContextualTuples + fga.checkWithContext), but that check's contextual tuples are themselves DERIVED from the matched Mission authority entry's own constraints (its vendors/amount scope), the same relationship policy-view.ts's own doc records (\"authority + constraint -> ephemeral grant\") -- not the independent, Mission-authority-agnostic Resource-policy arm the quoted text's third bound describes. This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it."
   },
   {
+   "id": "mas.baseline-join.join-view-commitment",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "A decision reached over a successful join MUST carry a joined-view commitment (`join_view_id`) separate from `policy_view_id`, which alone does not distinguish a joined decision from a direct one. `join_view_id` MUST change whenever the joining client identifier, the join disposition (the Mission's own `client_id` or an authorized delegate), or the resulting effective Authority Set differs, so a verifier can tell a joined decision's evidence from a direct Mission-bound decision's, and one joined view from a differently-joined one.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "evaluate() (step 4b) stamps join_view_id (services/pdp/src/policy-view.ts's joinViewId) on the SAME base() context that always carries policy_view_id, additive and never a replacement, whenever the request resolved a baseline Join (joinedAuthority set); a decision reached with no context.mission_join, or over a join that itself failed (mission_mismatch, rule 6, no authoritySet ever exposed), never carries it. joinViewId's commitment is computed over the join disposition, the joining client_id, and the resolved (possibly delegate-narrowed) authoritySet, alongside the same (mission_id, mission_version, authority_hash, model_id) policyViewId already commits, so it changes whenever any of the three join-specific inputs differs",
+    "local": "join_view_id does not itself commit the acting subject: resolveBaselineJoin (mas-join.ts) requires byte-equality between the presented subject and the Mission's own view.subject as the join's own precondition (rule 3), so on any successful join the subject cannot differ from the Mission's own and adds nothing a separate commitment input would distinguish. The per-request recorded delegate depth is likewise not itself committed, only its filtering effect on the resolved authoritySet"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits and stamps join_view_id when context.mission_join is present and the subject/client match directly",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never carries join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, delegate narrowing (@spec authority-server#mission-join rule 5, #557 review point 1) > stamps a DIFFERENT join_view_id for the delegate's narrowed view than the direct client's full view",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#557 review point 4, ruled: promote distinguishability normative (rule 9), leave the digest construction unfixed (only one implementation exists; freezing it now would make a later correction a breaking change to evidence joins). The first two cited tests together prove the row's actual clause -- a SEPARATE-MEMBER claim, not a same-response value-inequality claim: join_view_id is truthy on a joined permit and undefined on a non-joined one, so presence/absence alone already separates joined evidence from direct evidence, which is exactly the defect the review identified (a joined decision's policy_view_id alone cannot be told apart from a direct decision's). No test asserts join_view_id !== policy_view_id within one response; that inequality follows structurally from joinViewId's commitment strictly extending policyViewId's inputs, not from a dedicated assertion, so it is not claimed as tested here. The third cited test proves the second sentence's input-sensitivity clause: a differently-joined view (a narrowed delegate vs. the direct client) yields a different join_view_id."
+  },
+  {
    "id": "txn-authorization.challenge.not-client-supplied",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "resource-challenge",
