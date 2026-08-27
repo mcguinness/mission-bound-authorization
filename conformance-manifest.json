@@ -15,12 +15,12 @@
     "content_sha256": "fc4062116a18e6a89a316a0309ebd3c58bebbcc2b9a9968bf547919c687f6714"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "e9ceef13cf8885e71e49613ea6968020a6104f46a7636fbd56a0bba6190587e3"
+    "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
+    "content_sha256": "691dcdd01e9b78ca4ddc782b57f097ac1fda9ba2cc4f77ce36a5a81636f3b293"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "6b16343b04fc5a9cf006037db31983bee8c99908066b7e7bca7055c1ac4fbc87"
+    "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
+    "content_sha256": "f64ca556e82c272cf61ad1f5967a837b9a4021fd28f3282ac70d41787d707698"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
@@ -35,20 +35,24 @@
     "content_sha256": "d4eca352c06575a341fd975983f6858c38452dcc8e790c38452ecb232a647215"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "c81f44df912afe207aa66e6ac0623de038348c31f527b856146acc80e2544863"
+    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
+    "content_sha256": "1722dd6c39d6e5fc39db0b5f0bf8797363cfe631ab7e342b4cf4f86a45d17a02"
+   },
+   "draft-mcguinness-oauth-mission-discharge.md": {
+    "revision": "172fb46606ec02b2942cac492b28c181c60bae2f",
+    "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "c3362e1bf99169497428f7db00a6332832e3bca1faa9b8976d88a3f6f187ee29"
+    "revision": "49fc10f054ae34b36db4b931801c2b7b9db746c8",
+    "content_sha256": "a8212952fbe9fd97ce345b648d596f041f081941b31e5e7ff96018477c4dc542"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "c46703c3740d19dcaa21aa1f348708da36729f6cac54626874b29ef3851763d9"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "aa8e62ece9b39ebf702115f8f4583bfb547d63512e778b3cf2a087b83acb1cc6"
+    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
+    "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
@@ -63,16 +67,20 @@
     "content_sha256": "d5b5241febce4112972747fd8f23fc096404d17bfa435cffa84ebc51c08e1b7d"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "b3d451ce9c68b20d613679ba6616b1b194f0d7d991f383ba7d6fb81f1d3a5be3"
+    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
+    "content_sha256": "cdddf812643f212137bc8b05a8d0fc59232b9901421227fa9667a6bd14a88016"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "0e6b41a5ca8addbdbf0f3119a007b535d5c02f83cd18bc69b2b043bab6a2460f"
+    "revision": "24df23f65b43e8d33704d1ac085d513ea11d0eb4",
+    "content_sha256": "b4e676024651ceebcca58b32fca3f2420aace171d16bed677e0d431c1064f514"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
+   },
+   "draft-mcguinness-mission-approval-governance.md": {
+    "revision": "e566e1a5dc65d21b378560b4b381643c9009a7c8",
+    "content_sha256": "4f4482abf41e6454a59346089f0e5fbda3328f26a717eb1a5494b4d26bb14842"
    }
   }
  },
@@ -175,7 +183,8 @@
    "authzen.runtime-evidence",
    "authzen.obligations",
    "authzen.arap",
-   "authzen.batch"
+   "authzen.batch",
+   "approval-context.manifest"
   ]
  },
  "profiles": [
@@ -2150,7 +2159,7 @@
   },
   {
    "id": "status.discharge.grant-distinct-from-lifecycle",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "Authorization for `discharge` requires a distinct `mission_discharge` scope or an equivalent deployment-defined grant.",
    "role": "AS",
@@ -2181,7 +2190,7 @@
   },
   {
    "id": "status.discharge.lifecycle-grant-not-implied",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "or being the Mission's Subject, Approver, or an administrator, MUST NOT by itself imply discharge authority",
    "role": "AS",
@@ -2212,7 +2221,7 @@
   },
   {
    "id": "status.discharge.anti-oracle-collapse",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
    "text": "An unknown `mission_id`, an unknown `entry_digest`, an unknown `condition_digest`, an entry with no `terminal_when`, an `event_type` that does not match the condition `condition_digest` names, and a caller not authorized for that target all collapse to the endpoint's existing `not_found` treatment",
    "role": "AS",
@@ -2243,7 +2252,7 @@
   },
   {
    "id": "status.discharge.selector-mismatch-refusal",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "a mismatch joins the `not_found` collapse, since distinguishing it would reveal information about a condition selected by digest",
    "role": "AS",
@@ -2274,7 +2283,7 @@
   },
   {
    "id": "status.discharge.duplicate-entry-equivalence",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "One `entry_digest` discharges every recorded entry resolving to that digest as a single equivalence-class transition, and therefore one version increment",
    "role": "AS",
@@ -2373,7 +2382,7 @@
   },
   {
    "id": "status.discharge.same-nonce-verbatim-replay",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "The stored signed response is returned verbatim, per the `nonce` rule above.",
    "role": "AS",
@@ -2404,7 +2413,7 @@
   },
   {
    "id": "status.discharge.event-replay",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and selectors, and the original `prior_version` and `current_version` the first commit produced.",
    "role": "AS",
@@ -2435,7 +2444,7 @@
   },
   {
    "id": "status.discharge.event-fingerprint-conflict",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "the same tuple with a different fingerprint is refused `conflict`",
    "role": "AS",
@@ -2466,7 +2475,7 @@
   },
   {
    "id": "status.discharge.event-cross-target-valid",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
    "text": "the same `event_id` asserted against another Mission, entry, or condition is a valid, independent assertion, since one real-world event legitimately fans out to more than one target.",
    "role": "AS",
@@ -2497,7 +2506,7 @@
   },
   {
    "id": "status.discharge.already-discharged-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "MUST NOT discharge the entry again or increment the version again",
    "role": "AS",
@@ -2534,7 +2543,7 @@
   },
   {
    "id": "status.discharge.terminal-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "A delivery reaching the endpoint after `completed`, `revoked`, `expired`, or another terminal state returns an authenticated `terminal_noop` acknowledgement",
    "role": "AS",
@@ -2571,7 +2580,7 @@
   },
   {
    "id": "status.discharge.suspended-applies",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "`discharge` applies while the Mission is `active` or `suspended`: a suspended Mission still narrows monotonically.",
    "role": "AS",
@@ -2608,7 +2617,7 @@
   },
   {
    "id": "status.discharge.signed-result-binding",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-result",
    "text": "one of `discharged` (this request committed the latch), `already_discharged` (a sibling condition, or the same condition under a different `event_id`, presented against an already-latched entry), or `terminal_noop` (the Mission was already in a terminal state).",
    "role": "AS",
@@ -2651,7 +2660,7 @@
   },
   {
    "id": "status.discharge.atomic-commit",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "The entry latch (or its equivalence-class latch), the version increment, the audit and result record, and the durable propagation work (an outbox entry or a signal enqueue) commit as one unit.",
    "role": "AS",
@@ -2682,7 +2691,7 @@
   },
   {
    "id": "status.discharge.child-propagation",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "the child-delegation profile's entry-wise propagation to an already-justified Child Mission",
    "role": "AS",
@@ -2714,7 +2723,7 @@
   },
   {
    "id": "status.discharge.policy-resolution-on-condition-entry",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
    "text": "The AS MUST resolve and validate the selector whenever a condition first enters an immutable Mission-record entry",
    "role": "AS",
@@ -2745,7 +2754,7 @@
   },
   {
    "id": "status.discharge.evidence-non-dereference-non-authorization",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
    "text": "The AS MUST NOT dereference `evidence_ref` in baseline processing and MUST NOT treat either member as authorization input.",
    "role": "AS",
@@ -2776,7 +2785,7 @@
   },
   {
    "id": "status.discharge.validation-order-before-terminal-noop",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
    "text": "The AS validates selector existence (`mission_id`, `entry_digest`, and `condition_digest` all resolve, the entry carries `terminal_when`, and `event_type` matches the named condition), then condition membership (the named condition belongs to the named entry), then target authorization",
    "role": "AS",
@@ -2809,7 +2818,7 @@
    "id": "status.effective-set.single-computation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
-   "text": "Every issuer-held narrowing mechanism a deployment runs, this profile's discharge or a companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
+   "text": "Every issuer-held narrowing mechanism a deployment runs, an adopted companion's discharge mechanism or another companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -2821,12 +2830,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issuer-held narrowing mechanism a deployment runs (this profile's discharge and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
+    "normative": "every issuer-held narrowing mechanism a deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example this profile's discharge and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -2922,7 +2931,7 @@
    "id": "signals.discharge.producer-gating-undeclared-stream",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "discharge-compatibility",
-   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-status}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -15389,6 +15398,70 @@
    "notes": "Split from the single #670 row per PR #683 review 1. Unlike its sibling rows, this claim is a restraint (an absence of action) fully decidable from the pure function alone, with no missing integration piece, so coverage is 'tested' rather than 'partial'."
   },
   {
+   "id": "orchestration.compensation-authority.compensates-evaluation-id-required",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "compensation-authority",
+   "text": "the compensating action's decision MUST carry the `evaluation_id` of the decision it reverses in `compensates_evaluation_id`",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the compensating action's decision carries the evaluation_id of the decision the compensation reverses in compensates_evaluation_id",
+    "local": "resolveCompensationAuthority (src/packages/orchestration/src/compensation.ts) returns compensates_evaluation_id bound to the caller-supplied reversedEvaluationId under both the resource_policy and separate_mission permit bases. Its own doc comment states the value is 'surfaced here so the caller can carry it onto both the decision and the Orchestration Evidence record': no test exercises an actual compensating decision-request artifact carrying the member end to end. Evidence-record carriage is verified separately (see compensates-evaluation-id-evidence-emission)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5: refuses terminated-Mission authority; no basis => human review; separate_mission permits",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Added for #654: the correlator was previously named compensates_decision_id, a runtime member that does not exist (Runtime and Runtime Evidence already define compensates_evaluation_id); renamed and given its own Orchestration Evidence member definition, distinct from linked_evidence, which previously folded the correlator in. Marked partial per the PR #731 review (P2): the listed test proves resolveCompensationAuthority returns the correlator under both permit bases, not that an actual compensating decision-request artifact carries it forward; integration coverage through the compensating decision path remains open. The evidence-emission facet, which is fully proven, is split out below."
+  },
+  {
+   "id": "orchestration.compensation-authority.compensates-evaluation-id-evidence-emission",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "orchestration-evidence",
+   "text": "REQUIRED when `orchestration_decision` is `compensate`. The `evaluation_id` of the decision this compensation reverses, carrying the runtime profile's compensation link ({{I-D.draft-mcguinness-mission-runtime}}) so the compensating action reconciles against the specific evaluation it offsets. Distinct from `linked_evidence`: this member names the evaluation being reversed, never an evidence record identifier.",
+   "role": "orchestrator",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Orchestration Evidence record for a compensate decision carries compensates_evaluation_id, required independently of and never folded into linked_evidence",
+    "local": "buildOrchestrationEvidence (src/packages/orchestration/src/evidence.ts) requires compensates_evaluation_id whenever orchestration_decision is compensate and throws (fail closed) when it is absent; it is emitted as the record's own compensates_evaluation_id member and is never inserted into linked_evidence, which carries only caller-supplied evidence identifiers."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5b: compensate evidence for a high-risk class carries basis, binding, and a signed envelope",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "compensation authority (@spec orchestration#compensation) > 5d: compensate evidence missing compensates_evaluation_id fails closed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Split from compensates-evaluation-id-required per the PR #731 review (P2): the evidence-emission facet of the compensation correlator (required when compensate, fail closed when absent, never folded into linked_evidence) is fully tested; the decision-request facet is tracked separately as partial on the sibling row above."
+  },
+  {
    "id": "template.dispatch.idempotent-retry-returns-committed",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
@@ -16346,6 +16419,381 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "verifying a mission-intent-admission instance against its Mission Record proves the Mission issuer's own attestation, never independent proof of the admission issuer's original Intent Admission Assertion, since no assertion bytes are carried in the payload"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.manifest.deterministic-presence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "The presence of every conditional member MUST be a deterministic function of the Mission Record alone, never of which companion profiles a deployment runs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Given the same Mission Record, computing the Approval Context Manifest twice (by any two parties, or by the same party at two different times) yields the same set of present conditional members (proposal_hash, ceiling_hash, submission_evidence_commitment), independent of which optional companion profiles either party's deployment runs."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.manifest.ceiling-hash-conditional",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "the manifest MUST include `ceiling_hash` when the Mission Record carries one and MUST omit it when the Mission Record carries none",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Approval Context Manifest carries ceiling_hash as its fourth anchor, alongside intent_hash, proposal_hash, and authority_hash, exactly when the Mission Record carries a Progressive ceiling_hash (I-D.draft-mcguinness-oauth-mission-progressive), and never otherwise."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > includes ceiling_hash iff the input carries one",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 3: conditional ceiling_hash",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.construction.envelope-anchor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-construction",
+   "text": "The manifest is an envelope anchor under the issuance profile's commitment mechanisms, which this document imports normatively",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment is computed as typ mission-approval-context-v1 under the issuance profile's Integrity Anchors/Commitment Mechanisms envelope (JCS canonicalization, SHA-256, sha-256: prefix, reject-unknown-prefix), never a bespoke construction."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 1: base manifest (no conditional members)",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.construction.submission-evidence-anchor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-construction",
+   "text": "`submission_evidence_commitment` is a second envelope anchor under the same mechanism, present only when the Mission Record carries `submission_evidence`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "submission_evidence_commitment is computed as typ mission-submission-evidence-v1 over the Mission Record's retained submission_evidence array exactly as recorded, and is present in the manifest iff the Mission Record carries submission_evidence."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.computation.recompute-on-demand",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "An issuer computes `approval_context_commitment` on demand from the Mission's immutable creation facts, fixed at the approval event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment is derived on demand from the Mission's immutable creation facts (fixed at the approval event) each time it is needed, not read from a stored field minted once at creation."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.no-record-member",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "This document adds no Mission Record member for it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.cache-is-derived-state",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "a cached value is derived state and MUST NOT be treated as authoritative where it disagrees with a fresh computation from the record",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Where a deployment caches approval_context_commitment for efficiency, a fresh recomputation from the retained Mission Record always governs over a stale or diverging cached value."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.computation.verifier-mismatch-refusal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "A verifier that recomputes `approval_context_commitment` from the Mission's immutable creation facts and obtains a value different from the one an artifact discloses MUST reject that artifact's reference as invalid",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A verifier holding the Mission's immutable creation facts and an artifact's disclosed approval_context_commitment rejects the artifact's reference whenever its own recomputed digest differs from the disclosed value."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.versioning.new-typ-required",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-computation",
+   "text": "is closed for `mission-approval-context-v1`. Adding, removing, or redefining a member, or changing how `submission_evidence_commitment` is constructed, MUST use a new `typ`, never a silent reinterpretation of this one",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A change to the manifest's member set, a member's meaning, or the submission_evidence_commitment construction is published under a new typ value; mission-approval-context-v1 always denotes exactly the v1 member set this document defines."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
+  },
+  {
+   "id": "approval-context.limits.mechanism-scope",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "Reusing the issuance profile's commitment mechanisms supplies canonicalization and algorithm identification and agility. It supplies nothing else",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Default Commitment Construction reused by this profile supplies only canonicalization (JCS, I-JSON) and algorithm identification/agility (the sha-256: prefix and reject-unknown-prefix rule); it supplies no authenticity, approval-time-existence, or selective-disclosure property."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-authenticity",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "The commitment is an unkeyed digest over Mission Record fields held under the same trust as the record itself. An issuer that can rewrite the record can recompute a matching commitment; authentication comes entirely from the signature of whichever artifact discloses the commitment, never from the digest construction",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A bare approval_context_commitment proves nothing an attacker who controls the Mission Record cannot reproduce; whatever authenticates a disclosed commitment is the signature of the artifact carrying it (a Consent Evidence object, an Approval Governance Record, or a future Mandate claim), never the digest itself."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-approval-time-existence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "A matching commitment shows the disclosed facts are internally consistent with the retained record. It does not show the facts were true, or that an approval occurred, at the time claimed",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A verifier that confirms a matching approval_context_commitment has confirmed internal consistency with the retained record only, never that the recorded approval genuinely occurred at the claimed instant."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.limits.no-selective-disclosure",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-limits",
+   "text": "The commitment is a flat digest over the complete manifest object; proving anything about one member requires disclosing the whole object",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "There is no mechanism to prove one manifest member (for example, subject) without disclosing every other member of the same manifest."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.carriage.may-signed-artifact-or-introspection",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-carriage",
+   "text": "`approval_context_commitment` MAY appear as a signed member of an artifact that already authenticates a reference to the Mission",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A companion artifact that already authenticates a reference to the Mission (for example, a Consent Evidence object) may add approval_context_commitment as an OPTIONAL signed member, and an introspection response may disclose it to a caller holding the existing member-scoped disclosure privilege that already gates proposal_hash."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "approval-context.carriage.must-not-token-or-descriptor",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-carriage",
+   "text": "`approval_context_commitment` MUST NOT be carried on a Mission-bound access token's baseline `mission` claim",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approval_context_commitment never appears on a Mission-bound access token's baseline mission claim, and never on another credential-bound Mission descriptor a companion profile mints for correlation (for example, the Mission Authority Server's Join Assertion): each such descriptor keeps to its own already-fixed minimal member set."
    },
    "level": "unit",
    "coverage": "todo",

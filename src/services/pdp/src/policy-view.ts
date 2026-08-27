@@ -83,7 +83,7 @@ export interface MissionView {
    */
   containment?: { version: number; contained: Array<{ resource: string; actions?: string[] }> };
   /**
-   * @spec status#visibility, status#runtime, runtime#input-authority — the
+   * @spec discharge#visibility, discharge#runtime, runtime#input-authority — the
    * DISCHARGE delta: the Authority Set entry commitments the Mission Issuer has
    * discharged (`terminal_when` fired, so the entry no longer derives). Carried
    * as a delta for the same reason containment is: it lets the PDP tell

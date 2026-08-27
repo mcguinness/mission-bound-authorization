@@ -1,5 +1,5 @@
 /**
- * @spec status#status-list — Mission Status List, the referenced-token profile
+ * @spec status-list#status-list — Mission Status List, the referenced-token profile
  * of {{I-D.draft-ietf-oauth-status-list}} (-21) as constrained by
  * draft-mcguinness-oauth-mission-status §status-list. A signed, compressed,
  * 2-bit-per-entry bit array: a Mission Issuer publishes reliance bits at opaque
@@ -70,7 +70,7 @@ export function statusListUri(issuer: string): string {
 }
 
 /**
- * @spec status#status-list Mapping: `active` -> VALID (0x00); `suspended` ->
+ * @spec status-list#status-list Mapping: `active` -> VALID (0x00); `suspended` ->
  * SUSPENDED (0x02); every terminal state -> INVALID (0x01). Reusing
  * TERMINAL_STATES means any future terminal state flows through unchanged. Any
  * unrecognized value fails safe to INVALID (non-active). 0x03 is never emitted.
@@ -118,7 +118,7 @@ export interface SignStatusListOptions {
 }
 
 /**
- * @spec status#status-list Sign a Status List Token. Header: typ
+ * @spec status-list#status-list Sign a Status List Token. Header: typ
  * statuslist+jwt, alg ES256, kid (the as-status kid). Payload: iss, sub (MUST
  * equal the list `uri`), iat, exp, ttl, and status_list { bits: 2, lst }, where
  * `lst` is the packed LSB-first 2-bit array, ZLIB-compressed and base64url.
@@ -145,7 +145,7 @@ export interface VerifyStatusListOptions {
 }
 
 /**
- * @spec status#status-list Consumer verification: verify the signature, require
+ * @spec status-list#status-list Consumer verification: verify the signature, require
  * the statuslist+jwt typ, check iat/exp (against `now` when supplied), and
  * require sub == uri when the expected uri is given. Returns the decoded payload.
  */
@@ -182,7 +182,7 @@ export function readStatusBit(token: StatusListPayload, idx: number): number {
 }
 
 /**
- * @spec status#status-list Consult one entry for reliance. VALID within the
+ * @spec status-list#status-list Consult one entry for reliance. VALID within the
  * token's `exp` reports "active"; anything else (INVALID, SUSPENDED, the
  * reserved 0x03, an unknown or out-of-range index) or an expired list reports
  * "non-active". Never fabricates a specific terminal state: which terminal
