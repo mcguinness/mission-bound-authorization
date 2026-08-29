@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Completion and Entry Discharge for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       The Mission Status and Lifecycle profile for OAuth 2.0 defines a
+Mission Lifecycle endpoint with Mission-level  revoke ,  suspend ,
+ resume , and  complete  operations, but has no notion of a single
+approved Authority Set entry being done independently of the Mission
+as a whole. This document defines that entry grain:  terminal_when ,
+an  OPTIONAL  Common Constraint on a  mission_resource_access  entry
+naming one or more completion conditions, and the authenticated
+ discharge  operation, registered as an extension on the Mission
+Lifecycle endpoint, that commits a condition's firing. Discharge is
+monotonic, entry-scoped, and safe against a compromised or
+prompt-injected agent: it can only retire authority sooner, never
+widen it. It is optional and builds on Mission-Bound Authorization
+for OAuth 2.0, its Mission Resource Access Profile, and the Mission
+Status and Lifecycle profile; a deployment that does not adopt it is
+unaffected. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="completion" name="keyword">
+<meta content="discharge" name="keyword">
+<meta content="lifecycle" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-discharge-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.5
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-discharge.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Discharge</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 2 March 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-discharge-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-29" class="published">29 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-03-02">2 March 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Completion and Entry Discharge for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The Mission Status and Lifecycle profile for OAuth 2.0 defines a
+Mission Lifecycle endpoint with Mission-level <code>revoke</code>, <code>suspend</code>,
+<code>resume</code>, and <code>complete</code> operations, but has no notion of a single
+approved Authority Set entry being done independently of the Mission
+as a whole. This document defines that entry grain: <code>terminal_when</code>,
+an <span class="bcp14">OPTIONAL</span> Common Constraint on a <code>mission_resource_access</code> entry
+naming one or more completion conditions, and the authenticated
+<code>discharge</code> operation, registered as an extension on the Mission
+Lifecycle endpoint, that commits a condition's firing. Discharge is
+monotonic, entry-scoped, and safe against a compromised or
+prompt-injected agent: it can only retire authority sooner, never
+widen it. It is optional and builds on Mission-Bound Authorization
+for OAuth 2.0, its Mission Resource Access Profile, and the Mission
+Status and Lifecycle profile; a deployment that does not adopt it is
+unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-discharge/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-discharge/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 2 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-profile" class="internal xref">Status: An Optional Profile</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-entry-discharge-operation" class="internal xref">Entry Discharge Operation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-discharge-authority" class="internal xref">Discharge Authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-discharge-anti-oracle" class="internal xref">Discharge Anti-Oracle</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-idempotency-nonce-and-event" class="internal xref">Idempotency: <code>nonce</code> and <code>event_id</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-discharge-result" class="internal xref">Discharge Result</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-completion-and-entr" class="internal xref">Mission Completion and Entry Discharge</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance Profile</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-entry-completion-conditions" class="internal xref">Entry Completion Conditions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-discharge-and-issuance-gati" class="internal xref">Discharge and Issuance Gating</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3.2.1">
+                    <p id="section-toc.1-1.5.2.3.2.1.1"><a href="#section-5.3.1" class="auto internal xref">5.3.1</a>.  <a href="#name-determining-discharge" class="internal xref">Determining Discharge</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3.2.2">
+                    <p id="section-toc.1-1.5.2.3.2.2.1"><a href="#section-5.3.2" class="auto internal xref">5.3.2</a>.  <a href="#name-discharge-visibility" class="internal xref">Discharge Visibility</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-subset-rule" class="internal xref">Subset Rule</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-forward-compatibility" class="internal xref">Forward Compatibility</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-derivation-guidance" class="internal xref">Derivation Guidance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-relationship-to-runtime-enf" class="internal xref">Relationship to Runtime Enforcement</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.8">
+                <p id="section-toc.1-1.5.2.8.1"><a href="#section-5.8" class="auto internal xref">5.8</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.9">
+                <p id="section-toc.1-1.5.2.9.1"><a href="#section-5.9" class="auto internal xref">5.9</a>.  <a href="#name-completion-conformance" class="internal xref">Completion Conformance</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-entry-discharge" class="internal xref">Entry Discharge</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-completion-condition-disclo" class="internal xref">Completion Condition Disclosure</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-common-constraints-registry" class="internal xref">Common Constraints Registry: terminal_when</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">This document is a satellite of the Mission Status and Lifecycle
+profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> ("the Status
+profile"), adding an entry-grain completion mechanism.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") gates
+issuance on Mission state but has no notion of an approved entry
+being <strong>done</strong>, and the Status profile's Mission Lifecycle endpoint
+operations (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) act on the
+whole Mission, not one Authority Set entry.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document supplies that enforceable counterpart. It registers
+<code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) on a
+<code>mission_resource_access</code> entry that carries one or more completion
+conditions, and it registers <code>discharge</code> (<a href="#discharge-operation" class="auto internal xref">Section 4</a>) as
+an extension <code>operation</code> value on the Status profile's Mission
+Lifecycle endpoint, authenticated and authorized independently of
+that endpoint's other operations, that commits a condition's firing.
+When a condition is met, the entry is <strong>discharged</strong>: the
+Authorization Server no longer derives a token carrying that entry
+(<a href="#discharge" class="auto internal xref">Section 5.3</a>), exactly as it refuses derivation for a non-<code>active</code>
+Mission. <a href="#completion" class="auto internal xref">Section 5</a> states the properties this mechanism requires
+and the threat analysis, including why a prompt-injected agent cannot
+use discharge to escalate, is given in <a href="#completion-security" class="auto internal xref">Section 6.1</a>.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document is optional and depends normatively on the issuance
+profile, its Mission Resource Access Profile, and the Status profile;
+it is not implementable alone. A deployment that ends an entry's
+authority only by Mission revocation or expiry is fully conformant to
+the issuance profile and is unaffected by this document. A deployment
+claims this capability only when it issues or consumes entries
+carrying <code>terminal_when</code>. The capability is newer and less exercised
+than baseline issuance and runtime enforcement, and is not required by
+any Mission Assurance Level; its details may change.<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="doc-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-profile">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
+      </h2>
+<p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: active.
+Implementation: 18 conformance rows in conformance-manifest.json (16 tested, 2 partial).
+Adopt when: One Authority Set entry's task finishes before the rest of the Mission, and its authority should retire itself rather than wait for a Mission-level revoke, expiry, or complete.
+Requires: Mission-Bound Authorization for OAuth 2.0; Mission Resource Access Profile for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.<a href="#section-2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-3">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This document uses the terms defined in the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, in particular Mission, Mission
+Issuer (the Mission <code>issuer</code>: in this document's OAuth binding the
+Authorization Server), Authority Set, and <code>mission_id</code>; the
+<code>mission_resource_access</code> authorization details type and Common
+Constraints defined in its Mission Resource Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>); and the
+Mission Lifecycle endpoint, Mission Status Response, Discharge, and
+Effective Authority Set terms of the Status profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">All JSON shown in this document is non-normative and illustrative;
+the member definitions in the surrounding text are authoritative.<a href="#section-3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-operation">
+<section id="section-4">
+      <h2 id="name-entry-discharge-operation">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-entry-discharge-operation" class="section-name selfRef">Entry Discharge Operation</a>
+      </h2>
+<p id="section-4-1"><code>discharge</code> commits that a <code>terminal_when</code> completion condition
+(<a href="#terminal-when" class="auto internal xref">Section 5.2</a>) has fired, discharging the named Mission-record
+entry (<a href="#discharge" class="auto internal xref">Section 5.3</a>). It is registered as an extension <code>operation</code>
+value on the Status profile's Mission Lifecycle endpoint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Beyond <code>mission_id</code>
+and <code>nonce</code>, it requires:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-2">
+        <dt id="section-4-2.1">
+<code>entry_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.2">
+          <p id="section-4-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The Authority Set entry commitment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the
+<code>mission_resource_access</code> entry to discharge, computed over the
+immutable Mission-record entry, never over a narrowed token
+projection.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.3">
+<code>condition_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.4">
+          <p id="section-4-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The digest identifying the single
+<code>terminal_when</code> condition that fired, defined beside that member
+(<a href="#terminal-when" class="auto internal xref">Section 5.2</a>).<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.5">
+<code>event_type</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.6">
+          <p id="section-4-2.6.1"><span class="bcp14">REQUIRED</span>. A string. Echoed from the fired condition and
+cross-checked against the condition <code>condition_digest</code> names: a
+mismatch joins the <code>not_found</code> collapse, since distinguishing it
+would reveal information about a condition selected by digest
+(<a href="#discharge-anti-oracle" class="auto internal xref">Section 4.2</a>). <code>event_type</code> is never a selector by
+itself.<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.7">
+<code>event_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.8">
+          <p id="section-4-2.8.1"><span class="bcp14">REQUIRED</span>. A string, <code>1*128( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
+            <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>. The identifier of the asserted external occurrence,
+used for evidence correlation and for the event-level deduplication
+of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3</a>. It is distinct from <code>nonce</code>, the HTTP
+retry key of the Status profile's Idempotency and Conflicts rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Idempotency and Conflicts").<a href="#section-4-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.9">
+<code>evidence_ref</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.10">
+          <p id="section-4-2.10.1"><span class="bcp14">OPTIONAL</span>. A URI, maximum 512 characters. A reference to evidence of
+the asserted occurrence.<a href="#section-4-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.11">
+<code>evidence_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.12">
+          <p id="section-4-2.12.1"><span class="bcp14">OPTIONAL</span>. A string, the family's prefixed digest form (<code>sha-256:</code>
+plus base64url, no-padding encoding), classified as a raw-octet
+digest (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Commitment
+Mechanisms"): computed over the exact octets of the referenced
+artifact as exchanged, with no canonicalization. <code>evidence_ref</code> and
+<code>evidence_digest</code> <span class="bcp14">MAY</span> both appear: when they do, <code>evidence_digest</code>
+            <span class="bcp14">MUST</span> commit the bytes <code>evidence_ref</code> names. Present alone,
+<code>evidence_digest</code> is independent audit metadata.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-3"><code>evidence_ref</code> and <code>evidence_digest</code> are bounded audit metadata about
+the asserted occurrence. The AS <span class="bcp14">MUST NOT</span> dereference <code>evidence_ref</code>
+in baseline processing and <span class="bcp14">MUST NOT</span> treat either member as
+authorization input.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-4">
+        <dt id="section-4-4.1">
+<code>observed_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.2">
+          <p id="section-4-4.2.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time: a caller assertion. The
+AS validates it for syntax and reasonable clock bounds only, never as
+trusted ordering or freshness, and records its own commit time as
+<code>received_at</code> in audit.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-5">Semantics:<a href="#section-4-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-6.1">
+          <p id="section-4-6.1.1"><strong>Entry-level OR latch.</strong> The entry's <code>terminal_when</code> discharges on
+any condition being met (<a href="#terminal-when" class="auto internal xref">Section 5.2</a>); the request names the
+condition that fired. The committed state is one monotonic latch on
+the entry, or on its selector equivalence class, one
+state-version increment, one audit record, and one notification. A
+later delivery presenting any valid condition against an
+already-discharged entry, a sibling condition, or the same
+condition under a different <code>event_id</code>, is acknowledged
+<code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST NOT</span> discharge
+the entry again or increment the version again; an exact event
+replay (the same tuple and the same fingerprint) is handled first by
+the dedup rule of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3</a>. The latch <span class="bcp14">MUST NOT</span>
+revert, and issuance gating for a discharged entry is unchanged
+(<a href="#discharge" class="auto internal xref">Section 5.3</a>).<a href="#section-4-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.2">
+          <p id="section-4-6.2.1"><strong>Duplicate entries.</strong> One <code>entry_digest</code> discharges every
+recorded entry resolving to that digest as a single
+equivalence-class transition, and therefore one version increment,
+under the Authority Set entry commitment's selector
+equivalence-class rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.3">
+          <p id="section-4-6.3.1"><strong>States.</strong> <code>discharge</code> applies while the Mission is <code>active</code> or
+<code>suspended</code>: a suspended Mission still narrows monotonically. A
+delivery reaching the endpoint after <code>completed</code>, <code>revoked</code>,
+<code>expired</code>, or another terminal state returns an authenticated
+<code>terminal_noop</code> acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST NOT</span>
+create a transition or a version increment. <code>discharge</code> never
+changes Mission-level state; a deployment that also tracks
+all-entry completion invokes the Status profile's <code>complete</code>
+operation separately
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The AS reaches
+this determination only after the selector and authorization
+validation of <a href="#discharge-anti-oracle" class="auto internal xref">Section 4.2</a>, so a terminal Mission is
+never a shortcut past those checks.<a href="#section-4-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.4">
+          <p id="section-4-6.4.1"><strong>No <code>expected_version</code>.</strong> A stale-version refusal would delay a
+safety-reducing operation; the digest selectors above and the
+idempotency rules of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3</a> are the guards
+instead.<a href="#section-4-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.5">
+          <p id="section-4-6.5.1"><strong>Atomicity.</strong> The entry latch (or its equivalence-class latch), the
+version increment, the audit and result record, and the durable
+propagation work (an outbox entry or a signal enqueue) commit as
+one unit. Where the deployment emits lifecycle events
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), the signal enqueue
+is part of that same unit. Downstream materialization from the
+durable propagation work, including the child-delegation profile's
+entry-wise propagation to an already-justified Child Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), is
+asynchronous and is not claimed atomic with this commit. Instead, a
+Child Mission's derivation <span class="bcp14">MUST</span> consult, or otherwise be gated by,
+the committed parent latch until that materialization completes, so
+no Child Mission can derive the discharged parent authority in the
+gap between the parent's commit and the child's materialized view.<a href="#section-4-6.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="discharge-authority">
+<section id="section-4.1">
+        <h3 id="name-discharge-authority">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-discharge-authority" class="section-name selfRef">Discharge Authority</a>
+        </h3>
+<p id="section-4.1-1">Authorization for <code>discharge</code> requires a distinct <code>mission_discharge</code>
+scope or an equivalent deployment-defined grant. Possession of the
+Status profile's <code>mission_lifecycle</code> scope
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Mission
+Lifecycle Endpoint"), or being the Mission's Subject, Approver, or an
+administrator, <span class="bcp14">MUST NOT</span> by itself imply discharge authority: a
+<code>terminal_when</code> condition is asserted by a resource or event
+authority, not by whoever may revoke, suspend, resume, or complete
+the Mission.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The baseline authority mapping is AS authorization policy keyed by
+<code>event_type</code>: the deployment publishes which authenticated principal (a
+client or workload identity, with its resource boundary where
+applicable) may assert each event type. Authentication uses the
+Status profile's mechanism set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Mission
+Status Operation", subsection "Authentication"), sender-constrained
+where the deployment's profile requires it, and <span class="bcp14">MUST</span> bind the
+asserting principal.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">A <code>terminal_when</code> condition <span class="bcp14">MAY</span> carry <code>discharge_policy</code> (<span class="bcp14">OPTIONAL</span>): a
+stable, opaque selector naming the AS-side authority mapping for that
+condition (<a href="#iana-terminal-when" class="auto internal xref">Section 8.1</a>). The AS <span class="bcp14">MUST</span> resolve and validate
+the selector whenever a condition first enters an immutable
+Mission-record entry: at Mission creation, and at every later point
+where a derived entry can carry a new condition (child creation,
+expansion, Token Exchange or other derivation, and any further profile
+that adds a condition), refusing the Intent or the derivation whose
+selector maps to nothing. The AS binds the resolved mapping's
+identifier and version to that exact <code>condition_digest</code> in
+issuer-held metadata.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">A requesting client <span class="bcp14">MUST NOT</span> select an
+arbitrary otherwise-valid policy merely because adding a condition is
+narrowing: an unchecked choice of mapping for a newly added condition
+could still force the premature discharge that <a href="#completion-security" class="auto internal xref">Section 6.1</a>
+warns against, a denial-of-service on the task and an early
+retirement of its own guardrail. The member is never a raw principal
+or workload structure, and the requesting client cannot select an
+unapproved fallback.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-anti-oracle">
+<section id="section-4.2">
+        <h3 id="name-discharge-anti-oracle">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-discharge-anti-oracle" class="section-name selfRef">Discharge Anti-Oracle</a>
+        </h3>
+<p id="section-4.2-1">An unknown <code>mission_id</code>, an unknown <code>entry_digest</code>, an unknown
+<code>condition_digest</code>, an entry with no <code>terminal_when</code>, an <code>event_type</code>
+that does not match the condition <code>condition_digest</code> names, and a
+caller not authorized for that target all collapse to the endpoint's
+existing <code>not_found</code> treatment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Error
+Responses"). Authentication failure remains <code>unauthorized</code> (401).
+Detailed refusal reasons live only in issuer audit records.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">The AS validates selector existence (<code>mission_id</code>, <code>entry_digest</code>, and
+<code>condition_digest</code> all resolve, the entry carries <code>terminal_when</code>, and
+<code>event_type</code> matches the named condition), then condition membership
+(the named condition belongs to the named entry), then target
+authorization (the discharge authority mapping of
+<a href="#discharge-authority" class="auto internal xref">Section 4.1</a>), before returning any <code>terminal_noop</code>
+acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 4.4</a>). This order keeps a terminal
+Mission from acting as a selector-existence oracle: every case the
+collapse above refuses is checked before a terminal Mission is ever
+distinguished from one whose selectors do not resolve.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-idempotency">
+<section id="section-4.3">
+        <h3 id="name-idempotency-nonce-and-event">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-idempotency-nonce-and-event" class="section-name selfRef">Idempotency: <code>nonce</code> and <code>event_id</code></a>
+        </h3>
+<p id="section-4.3-1"><code>discharge</code> keeps two identities apart. <code>nonce</code> stays the HTTP
+operation retry key under the Status profile's Idempotency and
+Conflicts rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Idempotency and Conflicts"): a retransmission with the same <code>nonce</code>
+and a byte-identical request returns the stored signed response
+verbatim. The same <code>nonce</code> with a different request is refused
+<code>invalid_request</code>, never answered with an unrelated original
+response.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2"><code>event_id</code> deduplicates the external occurrence, scoped by
+(authenticated discharge authority, <code>mission_id</code>, <code>entry_digest</code>,
+<code>condition_digest</code>, <code>event_id</code>). A response's <code>nonce</code> <span class="bcp14">MUST</span> equal the
+one just sent (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Response"), so a retry that supplies a fresh <code>nonce</code>, as an
+at-least-once sender legitimately does, cannot receive the original
+signed response verbatim. Two cases follow:<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.3-3.1">
+            <p id="section-4.3-3.1.1"><strong>Same <code>nonce</code>, same request.</strong> The stored signed response is
+returned verbatim, per the <code>nonce</code> rule above.<a href="#section-4.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-3.2">
+            <p id="section-4.3-3.2.1"><strong>New <code>nonce</code>, same event tuple and the same assertion
+fingerprint</strong> (defined below). The AS performs no state-changing
+work: no re-latch, no version increment. It issues a new signed
+envelope that echoes the new <code>nonce</code> and carries the stored
+operation result: the same <code>outcome</code> and selectors, and the
+original <code>prior_version</code> and <code>current_version</code> the first commit
+produced.<a href="#section-4.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.3-4"><strong>Event assertion fingerprint.</strong> A semantic assertion object, never
+raw form bytes: the JSON object with exactly the decoded members
+<code>operation</code> (the literal string <code>discharge</code>), <code>mission_id</code>,
+<code>entry_digest</code>, <code>condition_digest</code>, <code>event_type</code>, <code>event_id</code>, and,
+when present, <code>evidence_ref</code>, <code>evidence_digest</code>, and <code>observed_at</code>.
+The object is canonicalized under the issuance profile's
+canonicalization (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Canonicalization Rules") and digested as a canonical-object digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Commitment
+Mechanisms"), since protocol context already fixes what the object
+commits. <code>nonce</code>, client authentication material, the DPoP proof, and
+transport headers are outside the fingerprint: none of them enter the
+assertion object, and none of them affect its value.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">Over the (discharge authority, <code>mission_id</code>, <code>entry_digest</code>,
+<code>condition_digest</code>, <code>event_id</code>) tuple: the same tuple with the same
+fingerprint is the replay case above; the same tuple with a different
+fingerprint is refused <code>conflict</code>; the same <code>event_id</code> asserted
+against another Mission, entry, or condition is a valid, independent
+assertion, since one real-world event legitimately fans out to more
+than one target.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<p id="section-4.3-6">When both rules could apply, the <code>nonce</code> rule is evaluated first,
+since it governs the HTTP exchange; the <code>event_id</code> rule governs across
+distinct exchanges.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
+<p id="section-4.3-7"><strong>Retention.</strong> Event-dedup state <span class="bcp14">MUST</span> be retained at least as long as
+the deployment's published retry horizon and the replayable result's
+usable lifetime, and <span class="bcp14">MAY</span> be bounded by the Mission record's own
+retention. After eviction, a repeated assertion is processed fresh
+against the latch and yields <code>already_discharged</code> with no version
+increment, which is safe because the latch is monotonic.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-result">
+<section id="section-4.4">
+        <h3 id="name-discharge-result">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-discharge-result" class="section-name selfRef">Discharge Result</a>
+        </h3>
+<p id="section-4.4-1">On success, <code>discharge</code> returns the Status profile's existing signed
+Mission Status Response envelope
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Response"),
+carrying a <code>discharge_result</code> object as a sibling of <code>mission</code>:<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.4-2">
+          <dt id="section-4.4-2.1">
+<code>entry_digest</code>, <code>condition_digest</code>, <code>event_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.4-2.2">
+            <p id="section-4.4-2.2.1">the request's own selectors, echoed.<a href="#section-4.4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.4-2.3">
+<code>outcome</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.4-2.4">
+            <p id="section-4.4-2.4.1">one of <code>discharged</code> (this request committed the latch),
+<code>already_discharged</code> (a sibling condition, or the same condition
+under a different <code>event_id</code>, presented against an already-latched
+entry), or <code>terminal_noop</code> (the Mission was already in a terminal
+state). An exact event replay is handled first by the dedup rule
+(<a href="#discharge-idempotency" class="auto internal xref">Section 4.3</a>), never reaching this determination as a
+fresh <code>already_discharged</code>.<a href="#section-4.4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.4-2.5">
+<code>prior_version</code>, <code>current_version</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.4-2.6">
+            <p id="section-4.4-2.6.1">the Mission's state version immediately before and after the
+commit this result reports. For a request that itself commits, that
+commit is this request's own. For the new-<code>nonce</code> fresh-envelope
+case of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3</a>, which commits nothing, these are
+the versions the original commit produced, unchanged. They are equal
+for <code>already_discharged</code> and <code>terminal_noop</code>.<a href="#section-4.4-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.4-3">With the echoed <code>nonce</code>, this is the durable acknowledgement an
+at-least-once sender stops retrying against.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="completion">
+<section id="section-5">
+      <h2 id="name-mission-completion-and-entr">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-completion-and-entr" class="section-name selfRef">Mission Completion and Entry Discharge</a>
+      </h2>
+<p id="section-5-1">This section is <span class="bcp14">OPTIONAL</span>. A deployment that ends an entry's authority
+only by Mission revocation or expiry is fully conformant to the
+issuance profile and is unaffected by this section, which places no
+new requirement on the issuance profile or the Status profile: it
+defines one <span class="bcp14">OPTIONAL</span> entry member, one <span class="bcp14">OPTIONAL</span> Mission Lifecycle
+extension operation, and the rules for handling them. A deployment
+claims the completion capability only when it issues or consumes
+entries carrying <code>terminal_when</code>. The capability is newer and less
+exercised than baseline issuance and runtime enforcement, and is not
+required by any Mission Assurance Level; its entry-discharge details
+may change.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The issuance profile gates issuance on Mission state but has no
+notion of an approved entry being <strong>done</strong>. A Mission granted
+authority to release a record "for this enrollment" keeps deriving
+that authority after the enrollment closes, until a clock or a revoke
+stops it. The Intent's <code>success_criteria</code> describe when the task is
+complete, but the issuance profile keeps them inert: they are
+rendered and committed, and carry no machine effect
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">This section supplies the enforceable counterpart. It defines
+<code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) on a
+<code>mission_resource_access</code> entry that carries one or more completion
+conditions. When a condition is met, the entry is <strong>discharged</strong>: the
+Authorization Server no longer derives a token carrying that entry
+(<a href="#discharge" class="auto internal xref">Section 5.3</a>), exactly as it refuses derivation for a non-<code>active</code>
+Mission.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Three properties make this safe inside the Mission model and this
+section requires all three:<a href="#section-5-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-5.1">
+          <p id="section-5-5.1.1"><strong>Discharge is monotonic.</strong> It only removes an entry's authority; it
+can never widen the entry or the Mission.<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.2">
+          <p id="section-5-5.2.1"><strong>Discharge composes with the subset rule.</strong> A derived entry carries
+its parent's completion conditions unchanged and <span class="bcp14">MAY</span> add more, the same
+way constraints may be added or tightened but never dropped.<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.3">
+          <p id="section-5-5.3.1"><strong>Discharge fails closed on the constraint.</strong> A consumer that does
+not understand <code>terminal_when</code> refuses the entry rather than
+ignoring the condition.<a href="#section-5-5.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-6">The threat analysis of these properties, including why a
+prompt-injected agent cannot use discharge to escalate and the
+forced-premature-discharge residual, is given in
+<a href="#completion-security" class="auto internal xref">Section 6.1</a>.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">Discharge gates at the entry, not the Mission (<a href="#discharge" class="auto internal xref">Section 5.3</a>). It
+strengthens the kill switch: a task that finishes stops issuing its
+own authority without waiting for a clock or a revoke.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<div id="issuance-relationship">
+<section id="section-5.1">
+        <h3 id="name-relationship-to-the-issuanc">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the Issuance Profile</a>
+        </h3>
+<p id="section-5.1-1">The completion capability depends normatively on the issuance profile
+and on its Mission Resource Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), and is not
+implementable alone. It reuses, without restating, the issuance
+profile's Mission, Authority Set, subset rule, integrity anchors,
+lifecycle states, and issuance gating, and the inert <code>success_criteria</code>
+member of the Mission Intent; and the Mission Resource Access
+Profile's <code>mission_resource_access</code> entry and Common Constraints
+registry. It uses Mission, Mission Issuer, Authority Set, and
+derivation as the issuance profile defines them, and the
+<code>mission_resource_access</code> entry as the Mission Resource Access Profile
+defines it.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">It extends the Mission Resource Access Profile in one narrow, additive
+way: it registers <code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint on a
+<code>mission_resource_access</code> entry (<a href="#terminal-when" class="auto internal xref">Section 5.2</a>), whose subset rule
+that profile's existing subset comparison applies
+(<a href="#subset-extension" class="auto internal xref">Section 5.4</a>). It changes no Mission lifecycle state and no
+meaning of any existing member.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terminal-when">
+<section id="section-5.2">
+        <h3 id="name-entry-completion-conditions">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-entry-completion-conditions" class="section-name selfRef">Entry Completion Conditions</a>
+        </h3>
+<p id="section-5.2-1">This section defines <code>terminal_when</code>, a Common Constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) carried in
+the <code>constraints</code> object of a <code>mission_resource_access</code> entry. It is a
+specification-defined Common Constraint under the Mission Resource
+Access Profile's naming convention (<a href="#iana" class="auto internal xref">Section 8</a>).<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.2-2">
+          <dt id="section-5.2-2.1">
+<code>terminal_when</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.2-2.2">
+            <p id="section-5.2-2.2.1"><span class="bcp14">OPTIONAL</span>. An array of one or more completion conditions. When any
+condition is
+met, the entry is discharged (<a href="#discharge" class="auto internal xref">Section 5.3</a>). Each condition is an
+object with these members:<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.2-2.2.2">
+              <dt id="section-5.2-2.2.2.1">
+<code>event_type</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-5.2-2.2.2.2">
+                <p id="section-5.2-2.2.2.2.1"><span class="bcp14">REQUIRED</span>. A string identifying the completion event. Its semantics
+are deployment- or registry-defined and opaque to this document, as
+<code>purpose</code> is (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-2.2.2.2.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-5.2-2.2.2.3">
+<code>discharge_policy</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-5.2-2.2.2.4">
+                <p id="section-5.2-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string, <code>1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
+                  <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>, opaque. A stable selector naming the AS-side
+discharge-authority mapping for this condition
+(<a href="#discharge-authority" class="auto internal xref">Section 4.1</a>).<a href="#section-5.2-2.2.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+</dl>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.2-3">The <code>terminal_when</code> array is part of the entry's <code>constraints</code> and so of
+the Authority Set: it is committed by <code>authority_hash</code> and reproducible
+under derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Condition
+identity is byte equality of the condition object's canonical form
+under the issuance profile's canonicalization; an AS refuses a value
+carrying two identical conditions, and an intersection of two arrays
+deduplicates by that identity and sorts by the lexicographic order of
+the canonical bytes (<a href="#iana-terminal-when" class="auto internal xref">Section 8.1</a>), so the intersected entry
+is one reproducible array. Whether a
+condition has fired is evaluated state, not part of <code>authority_hash</code>;
+folding fired status into the anchor would make the committed authority
+time-varying.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.2-4"><code>condition_digest</code>, used to select a condition on the <code>discharge</code>
+operation (<a href="#discharge-operation" class="auto internal xref">Section 4</a>), is a canonical-object digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) over the exact canonical bytes
+of the single condition object, in the issuance profile's encoded
+form: the same canonical form the registration's no-duplicate rule
+above already fixes as condition identity (<a href="#iana-terminal-when" class="auto internal xref">Section 8.1</a>).<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+<p id="section-5.2-5"><code>terminal_when</code> is the enforceable counterpart of the inert
+<code>success_criteria</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
+remains inert: <code>success_criteria</code> describe completion for the Approver,
+<code>terminal_when</code> acts on it. It is distinct from a cumulative
+consumption bound, which meters volume;
+a <code>terminal_when</code> condition is a single external event.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge">
+<section id="section-5.3">
+        <h3 id="name-discharge-and-issuance-gati">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-discharge-and-issuance-gati" class="section-name selfRef">Discharge and Issuance Gating</a>
+        </h3>
+<p id="section-5.3-1">When a condition in an entry's <code>terminal_when</code> has been met, the entry is
+discharged. The Authorization Server <span class="bcp14">MUST NOT</span> derive a token carrying a
+discharged entry, at the token endpoint, on refresh, or on Token
+Exchange, exactly as issuance is refused for a non-<code>active</code> Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A derivation that would carry
+only discharged entries <span class="bcp14">MUST</span> fail. A derivation that carries a mix <span class="bcp14">MUST</span>
+omit the discharged entries.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">Discharge gates at the entry, not the Mission. The Mission remains
+<code>active</code> and continues to derive its other entries: a multi-resource
+Mission therefore completes partially, one entry at a time, as each
+entry's task finishes. The issuance profile's Mission states are
+unchanged; a deployment that also tracks Mission-level completion <span class="bcp14">MAY</span>
+transition a Mission whose entries are all discharged to the
+<code>completed</code> state the Status profile's Mission Lifecycle endpoint
+defines (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), but this
+section does not require it. Such a transition is performed through
+the Status profile's <code>complete</code> operation, as an issuer-initiated
+lifecycle operation, so the consolidated state machine's event sources
+remain authoritative
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Consolidated
+State Machine").<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">Discharge gates new derivations only. A token already issued for an entry
+remains valid until it expires, as with revocation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A deployment that needs prompt
+cutoff relies on short token lifetimes or on the runtime layer denying a
+discharged entry at the point of use (<a href="#runtime" class="auto internal xref">Section 5.7</a>).<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<div id="determining">
+<section id="section-5.3.1">
+          <h4 id="name-determining-discharge">
+<a href="#section-5.3.1" class="section-number selfRef">5.3.1. </a><a href="#name-determining-discharge" class="section-name selfRef">Determining Discharge</a>
+          </h4>
+<p id="section-5.3.1-1">A discharge is committed one of two ways: through the <code>discharge</code>
+operation (<a href="#discharge-operation" class="auto internal xref">Section 4</a>), or by deployment-internal
+adjudication the issuer trusts, recorded under the same audited basis
+as any other lifecycle commit. This document defines no interoperable
+event-source polling profile of its own: the <code>discharge</code> operation is
+the interoperable path. An event-driven deployment wires its event bus
+to the lifecycle call. A deployment that determines completion by
+other means, such as a private status query or a recorded
+administrative action, invokes the same commit internally once it has
+decided.<a href="#section-5.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.3.1-2">Once committed, a discharge is recorded as Authorization-Server-side
+state and <span class="bcp14">MUST NOT</span> revert: a later delivery presenting any valid
+condition against an already-discharged entry is acknowledged
+<code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 4.4</a>) and does not restore the
+entry's authority.<a href="#section-5.3.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.3.1-3">A committed discharge is a committed metadata-only change for the
+purposes of the state version
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Response"):
+the Mission's state version increments at the commit, so a
+materialized policy view that commits a state version
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is detectably obsolete
+after a discharge. Where Signals is deployed, the commit is carried by
+the generic <code>authority_changed</code> discriminator
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); where Signals is not
+deployed, the version movement is what makes the change observable.<a href="#section-5.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.3.1-4">Before the AS receives and commits a discharge, it continues issuing
+against the entry. The posture this implies is stated plainly in
+<a href="#completion-security" class="auto internal xref">Section 6.1</a>.<a href="#section-5.3.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="visibility">
+<section id="section-5.3.2">
+          <h4 id="name-discharge-visibility">
+<a href="#section-5.3.2" class="section-number selfRef">5.3.2. </a><a href="#name-discharge-visibility" class="section-name selfRef">Discharge Visibility</a>
+          </h4>
+<p id="section-5.3.2-1">A discharged entry is no longer derivable, so the surfaces that report a
+Mission's authority <span class="bcp14">MUST</span> reflect that. Where the Status profile's
+Mission Status operation and the token introspection projection are
+deployed, they <span class="bcp14">MUST</span> omit a discharged entry from the
+<code>authorization_details</code> they return
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Sections "Mission
+Status Operation" and "Token Introspection Mission Projection"). This
+is consistent with the audience filtering those surfaces already
+apply: a discharged entry, like an entry addressed to another
+audience, is not authority the caller may rely on.<a href="#section-5.3.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.3.2-2">Where Signals is deployed, a discharge commit rides the
+<code>mission.lifecycle-change</code> event's generic <code>authority_changed</code>
+discriminator <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>: an
+active-to-active event carrying it signals that the Mission's
+effective authority narrowed even though <code>state</code> did not change.<a href="#section-5.3.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="subset-extension">
+<section id="section-5.4">
+        <h3 id="name-subset-rule">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-subset-rule" class="section-name selfRef">Subset Rule</a>
+        </h3>
+<p id="section-5.4-1">Because <code>terminal_when</code> is a Common Constraint, the issuance profile's
+subset comparison (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) applies its
+defined subset rule with no new clause: for a key present in the
+reference entry's <code>constraints</code>, the same key <span class="bcp14">MUST</span> be present in the
+candidate entry and its value <span class="bcp14">MUST</span> be no broader under the key's
+defined rule.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">For <code>terminal_when</code>, a candidate value is no broader
+than a reference value when the candidate's condition array contains
+every condition of the reference, compared structurally after the
+canonicalization of the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the candidate <span class="bcp14">MAY</span> add further
+conditions.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+<p id="section-5.4-3">Conditions are compared structurally, not by event semantics. A child
+cannot drop or alter a parent's completion condition, only add more, so
+discharge composes monotonically: an added condition can only make an
+entry discharge sooner, which is a narrowing. Modifying a parent
+condition is forbidden because a verifier cannot decide whether the
+change discharges earlier or later from opaque <code>event_type</code> values.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="forward-compat">
+<section id="section-5.5">
+        <h3 id="name-forward-compatibility">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-forward-compatibility" class="section-name selfRef">Forward Compatibility</a>
+        </h3>
+<p id="section-5.5-1">Because <code>terminal_when</code> is a <code>constraints</code> member, a consumer that does
+not recognize it fails closed by the issuance profile's Resource Server
+enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on any
+<code>constraints</code> key it does not understand, or understands but cannot
+enforce, refusing the request rather than granting access while ignoring
+the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Discharge is
+load-bearing narrowing, so ignoring <code>terminal_when</code> would silently widen
+the grant. That enforcement rule is the honest basis of discharge's
+safety: an unrecognized <code>terminal_when</code> is refused, never dropped.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">An Authorization Server that does not implement this capability simply
+does not emit <code>terminal_when</code>, and is unaffected. The fail-closed rule
+binds a consumer that encounters the constraint without implementing
+it.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="derivation-guidance">
+<section id="section-5.6">
+        <h3 id="name-derivation-guidance">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-derivation-guidance" class="section-name selfRef">Derivation Guidance</a>
+        </h3>
+<p id="section-5.6-1">This guidance is non-normative. When the Authorization Server derives an
+entry from the Mission Intent, a reviewable rule governs what each
+element of the Intent becomes:<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.6-2.1">
+            <p id="section-5.6-2.1.1">an <code>action</code> if removing it would leave the task undefined;<a href="#section-5.6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.6-2.2">
+            <p id="section-5.6-2.2.1">an ordinary <code>constraints</code> member if removing it would merely make the
+task less restrictive; and<a href="#section-5.6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.6-2.3">
+            <p id="section-5.6-2.3.1">a <code>terminal_when</code> completion condition, itself a <code>constraints</code> member,
+if it defines when the task is satisfied, retiring the entry's
+authority rather than widening or restricting it.<a href="#section-5.6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.6-3">The third case is what this capability adds. A bound that holds
+throughout the task is an ordinary constraint; an event that ends the
+task is a <code>terminal_when</code> condition. For example, "only invoices under
+500 USD" is a <code>max_amount</code> constraint, while "until the Q3 close is
+finalized" is a completion condition.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="runtime">
+<section id="section-5.7">
+        <h3 id="name-relationship-to-runtime-enf">
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-relationship-to-runtime-enf" class="section-name selfRef">Relationship to Runtime Enforcement</a>
+        </h3>
+<p id="section-5.7-1">Discharge is an issuance-gating signal and is fully meaningful at the
+issuance profile alone. It is also a natural input to the runtime layer
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): a runtime Policy
+Enforcement Point that recognizes <code>terminal_when</code> <span class="bcp14">SHOULD</span> deny a
+discharged entry at the point of use, closing the window between
+discharge and token expiry the same way it denies a revoked Mission. A
+Policy Enforcement Point learns that an entry is discharged from the
+Status profile's Mission Status operation or the token introspection
+projection (<a href="#visibility" class="auto internal xref">Section 5.3.2</a>), the same way it learns a Mission is
+revoked. A runtime Policy Enforcement Point that does not recognize
+<code>terminal_when</code> fails closed for the entry per <a href="#forward-compat" class="auto internal xref">Section 5.5</a>.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+<p id="section-5.7-2">For that point-of-use denial this document defines the denial-reason
+identifier <code>authority_discharged</code>, a family-coordinated name under the
+AuthZEN binding's denial-reason extension rule
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), carried wherever the
+runtime layer's denial reasons travel: the decision response's
+<code>context.reason</code> and the runtime evidence companion's
+<code>denial_reason</code>. It means the entry was approved and its completion
+condition fired, so the Mission Issuer discharged it: distinct from a
+containment denial (trust withdrawn) and from an out-of-authority
+denial (never approved). A consumer treats an unrecognized value as a
+deny under the binding's own rule; no other semantics attach.<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example">
+<section id="section-5.8">
+        <h3 id="name-worked-example">
+<a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+        </h3>
+<p id="section-5.8-1">A Mission for <code>alice</code> reconciles Q3 payables. Its Authority Set has two
+entries: a read over the ledger, and a write to post journal entries,
+bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.8-2">
+<pre>
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" },
+      "terminal_when": [
+        { "event_type": "accounting-period-closed",
+          "discharge_policy": "close-management-2026-q3" } ] } }
+]
+</pre><a href="#section-5.8-2" class="pilcrow">¶</a>
+</div>
+<p id="section-5.8-3"><code>discharge_policy</code> names the AS-side authority mapping approved for
+this condition: the close-management system's workload identity, not
+<code>alice</code>'s agent, may assert <code>accounting-period-closed</code>
+(<a href="#discharge-authority" class="auto internal xref">Section 4.1</a>). The agent cannot drive its own discharge: it
+holds no <code>mission_discharge</code> authorization for that <code>event_type</code>.<a href="#section-5.8-3" class="pilcrow">¶</a></p>
+<p id="section-5.8-4">While the period is open, the Authorization Server derives both
+entries. When the finance team finalizes the Q3 close, the
+close-management system calls <code>discharge</code> on the Mission Lifecycle
+endpoint, naming the write entry's <code>entry_digest</code>, this condition's
+<code>condition_digest</code>, <code>event_type</code> <code>accounting-period-closed</code>, and an
+<code>event_id</code> for its own occurrence record. The Authorization Server
+authenticates the caller against the resolved <code>discharge_policy</code>
+mapping, commits the latch, and returns a signed <code>discharge_result</code> of
+outcome <code>discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 4.4</a>).<a href="#section-5.8-4" class="pilcrow">¶</a></p>
+<p id="section-5.8-5">From then on the
+Authorization Server refuses to derive the write entry: a refresh
+returns a token carrying only the read entry. The Mission stays
+<code>active</code>, so the agent can still read the ledger to finish its
+reconciliation report, but it can no longer post journal entries. No
+revoke and no clock was needed; the write authority retired itself
+when the task it was granted for completed.<a href="#section-5.8-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="completion-conformance">
+<section id="section-5.9">
+        <h3 id="name-completion-conformance">
+<a href="#section-5.9" class="section-number selfRef">5.9. </a><a href="#name-completion-conformance" class="section-name selfRef">Completion Conformance</a>
+        </h3>
+<p id="section-5.9-1">An Authorization Server claiming the completion capability <span class="bcp14">MUST</span>:<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.9-2.1">
+            <p id="section-5.9-2.1.1">treat an entry whose <code>terminal_when</code> has been discharged as
+discharged and refuse to derive it (<a href="#discharge" class="auto internal xref">Section 5.3</a>);<a href="#section-5.9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.9-2.2">
+            <p id="section-5.9-2.2.1">commit a discharge only through the <code>discharge</code> operation, meeting
+its authority, anti-oracle, idempotency, and atomicity requirements
+(<a href="#discharge-operation" class="auto internal xref">Section 4</a>), or through an equivalently audited
+deployment-internal adjudication (<a href="#determining" class="auto internal xref">Section 5.3.1</a>);<a href="#section-5.9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.9-2.3">
+            <p id="section-5.9-2.3.1">record a committed discharge as latched state that <span class="bcp14">MUST NOT</span> revert
+(<a href="#determining" class="auto internal xref">Section 5.3.1</a>);<a href="#section-5.9-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.9-2.4">
+            <p id="section-5.9-2.4.1">carry every parent completion condition into a derived entry when
+narrowing, permitting only added conditions (<a href="#subset-extension" class="auto internal xref">Section 5.4</a>);<a href="#section-5.9-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.9-2.5">
+            <p id="section-5.9-2.5.1">where it offers the Status profile's Mission Status operation or the
+token introspection projection, omit a discharged entry from the
+<code>authorization_details</code> it returns (<a href="#visibility" class="auto internal xref">Section 5.3.2</a>); and<a href="#section-5.9-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.9-2.6">
+            <p id="section-5.9-2.6.1">keep the <code>terminal_when</code> condition array committed by <code>authority_hash</code>
+and keep fired status out of it (<a href="#terminal-when" class="auto internal xref">Section 5.2</a>).<a href="#section-5.9-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.9-3">A consumer claiming the completion capability <span class="bcp14">MUST</span> fail closed for an
+entry carrying a <code>terminal_when</code> constraint it does not understand
+(<a href="#forward-compat" class="auto internal xref">Section 5.5</a>).<a href="#section-5.9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-6">
+      <h2 id="name-security-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-6-1">The security considerations of the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> apply in full. This
+section covers threats specific to this document's capability.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div id="completion-security">
+<section id="section-6.1">
+        <h3 id="name-entry-discharge">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-entry-discharge" class="section-name selfRef">Entry Discharge</a>
+        </h3>
+<p id="section-6.1-1">The completion capability (<a href="#completion" class="auto internal xref">Section 5</a>) adds the following:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1">Monotonic by construction. Discharge only removes an entry's authority,
+so it is not a path to escalation; a compromised or injected agent
+cannot use <code>terminal_when</code> to widen authority, and the worst it can do
+is retire its own authority sooner. That is not an escalation, but a
+forced premature discharge is a denial-of-service on the task
+(authority the task still needs is withdrawn) and, where discharge is
+relied on as a guardrail, retires that guardrail early. Discharge
+authority (<a href="#discharge-authority" class="auto internal xref">Section 4.1</a>) bounds who can force it.<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">Fail closed on unknown constraint. A consumer that does not understand
+the <code>terminal_when</code> constraint <span class="bcp14">MUST</span> refuse the entry
+(<a href="#forward-compat" class="auto internal xref">Section 5.5</a>); ignoring the constraint would let a discharged
+entry continue to be narrowed, projected, or enforced, defeating
+discharge.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.3">
+            <p id="section-6.1-2.3.1">Notification delivery is a temporary widening, not a fail-closed
+property. Before the AS receives and commits a discharge, it
+continues issuing against the entry: a lost or suppressed
+notification is a temporary widening relative to the real-world
+event, bounded by authenticated at-least-once delivery with retries
+to an idempotent acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 4.4</a>), monitoring
+and reconciliation, and the Mission's and its tokens' own lifetimes.
+This is not a fail-closed property: a deployment requiring
+cannot-determine-means-no-issuance runs a synchronous status or
+policy check outside this baseline.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">RS enforcement honesty. A stateless Resource Server cannot evaluate
+issuer-held discharge state from the token alone; it honors the
+issued token until expiry. Prompt cutoff on a discharged entry
+requires the Status profile's Mission Status operation or
+introspection projection, or runtime enforcement
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, <a href="#runtime" class="auto internal xref">Section 5.7</a>); an
+entry constraint the enforcing party does not understand still fails
+closed (<a href="#forward-compat" class="auto internal xref">Section 5.5</a>).<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.5">
+            <p id="section-6.1-2.5.1">Already-issued tokens. The window between discharge and the expiry
+of a token already issued is the same residual revocation carries,
+bounded the same way (<a href="#discharge" class="auto internal xref">Section 5.3</a>, <a href="#runtime" class="auto internal xref">Section 5.7</a>).<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-7">
+      <h2 id="name-privacy-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-7-1">The privacy considerations of the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> apply in full. This
+section covers privacy specific to this document's capability.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<div id="completion-privacy">
+<section id="section-7.1">
+        <h3 id="name-completion-condition-disclo">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-completion-condition-disclo" class="section-name selfRef">Completion Condition Disclosure</a>
+        </h3>
+<p id="section-7.1-1">A <code>terminal_when</code> condition can reveal task structure: <code>event_type</code> may
+name a business event, a case, or a record whose mere existence is
+sensitive, and it rides the token where the entry is carried. A
+deployment <span class="bcp14">SHOULD</span> treat it as it treats other authority detail, and
+<span class="bcp14">SHOULD</span> avoid event identifiers that disclose more than the consuming
+party needs. <code>discharge_policy</code> is an opaque selector and does not
+itself name a business event, but its resolution is deployment-defined
+and <span class="bcp14">MAY</span> correlate with a class of sensitive events; a deployment
+<span class="bcp14">SHOULD</span> weigh that when publishing its meaning. The <code>event_id</code>,
+<code>evidence_ref</code>, <code>evidence_digest</code>, and <code>observed_at</code> a <code>discharge</code>
+request carries (<a href="#discharge-operation" class="auto internal xref">Section 4</a>) do not ride the token; they
+land only in issuer audit records, which deployments <span class="bcp14">MUST</span> treat as
+Mission information-disclosure surfaces per the Status profile's
+audit-logging rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Status Audit
+Logging").<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana">
+<section id="section-8">
+      <h2 id="name-iana-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-8-1">This document requests IANA actions for a registration in the Mission
+Resource Access Profile's Mission Common Constraints registry. It
+establishes no registry of its own.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div id="iana-terminal-when">
+<section id="section-8.1">
+        <h3 id="name-common-constraints-registry">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-common-constraints-registry" class="section-name selfRef">Common Constraints Registry: terminal_when</a>
+        </h3>
+<p id="section-8.1-1">The completion capability (<a href="#completion" class="auto internal xref">Section 5</a>) registers one Common
+Constraint in the Mission Resource Access Profile's Mission Common
+Constraints registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), under that
+registry's Specification Required policy. This document supplies the
+registration's required fields:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1">Key Name: <code>terminal_when</code><a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1">Value Space: a JSON array of one or more completion-condition
+objects, each with a <span class="bcp14">REQUIRED</span> <code>event_type</code> (string) and an <span class="bcp14">OPTIONAL</span>
+              <code>discharge_policy</code> (string, an opaque selector); no two conditions
+in one array share a canonical form (<a href="#terminal-when" class="auto internal xref">Section 5.2</a>). This Value
+Space is a breaking change, while this experimental draft's
+registration is still open, to the one a prior revision registered:
+<code>event_source</code> and <code>max_staleness</code> are removed and <code>discharge_policy</code>
+is added.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1">Subset Rule: a candidate value is no broader than a reference value
+when the candidate's condition array contains every condition of the
+reference, compared structurally after the issuance profile's
+canonicalization; the candidate <span class="bcp14">MAY</span> add further conditions
+(<a href="#subset-extension" class="auto internal xref">Section 5.4</a>).<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.4">
+            <p id="section-8.1-2.4.1">Intersection Rule: the union of the two condition arrays, where
+condition identity is byte equality of each condition object's
+canonical form under the issuance profile's canonicalization
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): byte-identical conditions
+collapse to one, and the union is sorted by the lexicographic order
+of those canonical bytes, so two implementations produce the
+identical array and the identical <code>authority_hash</code>.<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.5">
+            <p id="section-8.1-2.5.1">Change Controller: IETF<a href="#section-8.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.6">
+            <p id="section-8.1-2.6.1">Reference: this document, <a href="#terminal-when" class="auto internal xref">Section 5.2</a><a href="#section-8.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-3"><code>terminal_when</code> is a <code>constraints</code> member of the <code>mission_resource_access</code>
+authorization details type defined by the Mission Resource Access
+Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).
+<code>event_type</code> values are deployment- or registry-defined and opaque to
+this document, as <code>purpose</code> is, so this document establishes no
+registry of event types.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conformance">
+<section id="section-9">
+      <h2 id="name-conformance">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-9-1">An implementation claiming this document's capability <span class="bcp14">MUST</span> meet the
+requirements of <a href="#completion-conformance" class="auto internal xref">Section 5.9</a>. An implementation that
+does not claim it is unaffected and remains conformant to the
+issuance profile, its Mission Resource Access Profile, and the Status
+profile.<a href="#section-9-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-10">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-10-1">The author thanks the implementers and reviewers of the Mission-Bound
+Authorization work for feedback that shaped this extension.<a href="#section-10-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-11.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5234">[RFC5234]</dt>
+        <dd>
+<span class="refAuthor">Crocker, D., Ed.</span> and <span class="refAuthor">P. Overell</span>, <span class="refTitle">"Augmented BNF for Syntax Specifications: ABNF"</span>, <span class="seriesInfo">STD 68</span>, <span class="seriesInfo">RFC 5234</span>, <span class="seriesInfo">DOI 10.17487/RFC5234</span>, <time datetime="2008-01" class="refDate">January 2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5234">https://www.rfc-editor.org/rfc/rfc5234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-11.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
