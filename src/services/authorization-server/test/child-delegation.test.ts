@@ -1,5 +1,5 @@
 import { authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -40,7 +40,10 @@ const CHILD_ACTORS = aiAgents(
 );
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 // The ledger ceiling entry carries NO delegation (used by the on-switch test).
-const LEDGER = DERIVATION_POLICY.ceiling[1].resource;
+// @spec mission#authorization-derivation (#743) — selected by name, not
+// index: the payments resource is now two ceiling entries (money-carrying
+// and read-only), so `ceiling[1]` no longer names the ledger resource.
+const LEDGER = TOPOLOGY.resources.saas;
 const now = () => new Date("2026-07-01T00:00:00Z");
 const PARENT_EXP = "2027-01-01T00:00:00Z";
 

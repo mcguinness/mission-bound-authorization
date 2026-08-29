@@ -481,8 +481,15 @@ describe("end-to-end issuance under the new carriage", () => {
       expect(entry.type).toBe("mission_resource_access");
       expect(entry.resource).toBe(RESOURCE);
       expect(entry.actions).not.toContain("payments:acquire.company");
-      expect(entry.constraints?.max_amount?.amount).toBe("500.00");
     }
+    // @spec mission#authorization-derivation (#743) — the payments ceiling is
+    // now two entries (money-bearing / read-only), so this one over-broad
+    // proposal derives two fragments. The over-asked cap (900) narrows to the
+    // ceiling's 500 on the fragment the ceiling actually bounds
+    // (remittance.send is in the money-bearing ceiling entry); selected by
+    // action, not a blanket loop over every fragment.
+    const payFragment = body.authorization_details.find((e) => e.actions.includes("payments:remittance.send"));
+    expect(payFragment?.constraints?.max_amount?.amount).toBe("500.00");
 
     // The mission claim never carries the proposal members, and (#702) is
     // exactly the baseline {id, issuer}.

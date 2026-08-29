@@ -186,10 +186,23 @@ async function poll(deferralCode: string): Promise<Response> {
   return tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode });
 }
 
-/** A genuine subset of the base Mission's single authority entry, narrowed by action. */
+/**
+ * A genuine subset of the base Mission's authority, narrowed by action. Each
+ * base authority_set entry contributes its own narrowed copy (selected by
+ * which requested actions it actually contains, @spec
+ * mission#authorization-derivation #743's split), not `authority_set[0]`
+ * alone: the payments ceiling is two entries (a money-carrying group and a
+ * read-only group) as of #743, so a requested action list spanning both
+ * groups derives two entries, each keeping its own group's constraints.
+ */
 function subset(actions: string[]): AuthorityEntry[] {
-  const base = (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set[0] as AuthorityEntry;
-  return [{ ...base, actions }];
+  const authoritySet = (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set;
+  const out: AuthorityEntry[] = [];
+  for (const base of authoritySet) {
+    const kept = actions.filter((a) => base.actions.includes(a));
+    if (kept.length > 0) out.push({ ...base, actions: kept });
+  }
+  return out;
 }
 
 beforeAll(async () => {

@@ -302,11 +302,24 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
 // loadPolicy silent-drop making every DERIVATION_POLICY assertion vacuous).
 // ---------------------------------------------------------------------------
 describe("demo ceiling wiring (@spec attenuation#delegation)", () => {
-  it("the payments (read-bearing) entry is delegable; the ledger write entry is not", () => {
-    expect(DERIVATION_POLICY.ceiling[0]?.delegation).toBeDefined();
-    expect(DERIVATION_POLICY.ceiling[0]?.delegation?.max_depth).toBe(2);
-    expect(DERIVATION_POLICY.ceiling[0]?.delegation?.children).toBeDefined();
-    expect(DERIVATION_POLICY.ceiling[1]?.delegation).toBeUndefined();
+  // @spec mission#authorization-derivation (#743) — selected by resource
+  // identity, not array index: the payments resource is now TWO ceiling
+  // entries (a money-carrying group and a read-only group, split so read
+  // actions stop inheriting a `max_amount` they can never satisfy), so
+  // `ceiling[0]`/`ceiling[1]` no longer name "the payments entry" and "the
+  // ledger entry" respectively.
+  it("both payments entries (money-bearing and read-only) are delegable; the ledger entry is not", () => {
+    const paymentsResource = DERIVATION_POLICY.ceiling[0].resource;
+    const paymentsEntries = DERIVATION_POLICY.ceiling.filter((e) => e.resource === paymentsResource);
+    // Guards against the split being silently re-collapsed back to one entry.
+    expect(paymentsEntries.length).toBe(2);
+    for (const entry of paymentsEntries) {
+      expect(entry.delegation).toBeDefined();
+      expect(entry.delegation?.max_depth).toBe(2);
+      expect(entry.delegation?.children).toBeDefined();
+    }
+    const ledgerEntry = DERIVATION_POLICY.ceiling.find((e) => e.resource !== paymentsResource);
+    expect(ledgerEntry?.delegation).toBeUndefined();
   });
 });
 

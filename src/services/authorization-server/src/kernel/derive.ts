@@ -130,12 +130,26 @@ export function deriveAuthoritySet(
       // full policy ceiling narrowed to the Intent's target_resources.
       policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
 
+  // @spec mission#authorization-derivation (#743) — a proposal element is
+  // intersected against EVERY ceiling entry sharing its resource, not just
+  // the first (`Array.prototype.find`, the prior shape): a single resource
+  // MAY be governed by more than one ceiling entry (e.g. a money-carrying
+  // group and a non-money group split along the actions each carries
+  // genuinely different constraints for), and each one contributes its own
+  // narrowed fragment. NOT de-duplicated: two byte-identical proposal
+  // entries (the discharge equivalence-class case, @spec
+  // discharge#terminal-when) must still derive two separate entries, exactly
+  // as the prior single-`find` shape did for each proposal element in turn.
+  // For any ceiling with exactly one entry per resource (every deployment
+  // before #743's split), this is a no-op: one matching entry is exactly
+  // what `find` already returned.
   const derived: AuthorityEntry[] = [];
   for (const proposal of proposals) {
-    const ceiling = policy.ceiling.find((c) => c.resource === proposal.resource);
-    if (!ceiling) continue;
-    const entry = intersect(proposal, ceiling);
-    if (entry) derived.push(entry);
+    const matchingCeilings = policy.ceiling.filter((c) => c.resource === proposal.resource);
+    for (const ceiling of matchingCeilings) {
+      const entry = intersect(proposal, ceiling);
+      if (entry) derived.push(entry);
+    }
   }
   if (derived.length === 0) {
     // @spec mission#error-mapping: a submitted RAR proposal that derives

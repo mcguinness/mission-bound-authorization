@@ -229,10 +229,18 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
     );
     const derived = deriveAuthoritySet(broad, DERIVATION_POLICY as never, proposal);
     expect(isSubsetSet(derived, DERIVATION_POLICY.ceiling as never)).toBe(true);
-    const entry = derived[0];
-    expect(entry?.actions).not.toContain("payments:vendor.delete");
-    expect(entry?.constraints?.max_amount?.amount).toBe("500.00");
-    expect(entry?.constraints?.vendors).toEqual(["acme"]);
+    // @spec mission#authorization-derivation (#743) — the payments ceiling is
+    // now two entries (money-bearing / read-only), so this single mixed
+    // proposal derives two fragments, one per matching ceiling entry;
+    // selected by action, not `derived[0]`.
+    for (const fragment of derived) {
+      expect(fragment.actions).not.toContain("payments:vendor.delete");
+    }
+    const readFragment = derived.find((e) => e.actions.includes("payments:invoice.read"));
+    expect(readFragment?.constraints?.vendors).toEqual(["acme"]);
+    const payFragment = derived.find((e) => e.actions.includes("payments:payment.execute"));
+    expect(payFragment?.constraints?.max_amount?.amount).toBe("500.00");
+    expect(payFragment?.constraints?.vendors).toEqual(["acme"]);
   });
 
   it("refuses an Intent yielding no authority with invalid_authorization_details", () => {

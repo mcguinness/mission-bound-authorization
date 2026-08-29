@@ -4,14 +4,24 @@
     {
       "type": "mission_resource_access",
       "resource": "http://localhost:4403/mcp",
-      "actions": [
-        "payments:invoice.list",
-        "payments:invoice.read",
-        "payments:vendor.read",
-        "payments:payment.schedule",
-        "payments:payment.execute",
-        "payments:remittance.send"
-      ],
+      "actions": ["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"],
+      "constraints": {
+        "vendors": ["acme"]
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }],
+        "children": {
+          "max_children": 5,
+          "max_child_depth": 2,
+          "allowed_child_actors": [{ "sub_profile": "ai_agent" }]
+        }
+      }
+    },
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4403/mcp",
+      "actions": ["payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
       "constraints": {
         "max_amount": { "amount": "500.00", "currency": "USD" },
         "vendors": ["acme"]

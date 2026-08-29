@@ -56,11 +56,26 @@ async function main(): Promise<void> {
       expires_at: "2027-01-01T00:00:00Z",
     },
   });
+  // @spec mission#authorization-derivation (#743) — two entries, split along
+  // the same money/non-money line the payments ceiling now encodes
+  // (config/policy.json): a single entry spanning both would carry
+  // `max_amount` onto the read actions too (the derivation kernel's ceiling-
+  // absent-inherits-proposal rule takes the proposal's own constraint
+  // unchanged when the matched ceiling entry declares none), and a bound
+  // `max_amount` with no supplied amount refuses (#733). `invoice.list`
+  // supplies none (`needsInvoice: false`, pep.ts), so it must derive with NO
+  // `max_amount` at all, not merely a large one.
   const authorizationDetails = JSON.stringify([
     {
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
-      actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
+      actions: ["payments:invoice.read", "payments:invoice.list"],
+      constraints: { vendors: ["acme", "globex"] },
+    },
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex"] },
     },
   ]);

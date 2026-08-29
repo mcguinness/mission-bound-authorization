@@ -141,9 +141,13 @@ describe("dispatchFromTemplate double intersection (@spec mission-template#dispa
     const t = mkTemplate({ ceiling: [ceilEntry(["payments:invoice.read"], "200.00")] });
     const intent = intentOf(["payments:invoice.read", "payments:payment.schedule"], { maxAmount: "500.00" });
     // Under policy alone the derivation would keep 500 and both actions.
+    // @spec mission#authorization-derivation (#743) — template mode against
+    // the real DERIVATION_POLICY now derives TWO fragments (the payments
+    // ceiling is a money-bearing entry and a read-only entry), so the
+    // payment.schedule fragment is selected by action, not `derived[0]`.
     const derived = kernel.derive(intent);
-    expect(amountOf({ authority_set: derived })).toBe("500.00");
-    expect(derived[0]?.actions).toContain("payments:payment.schedule");
+    const scheduleFragment = derived.find((e) => e.actions.includes("payments:payment.schedule"));
+    expect(scheduleFragment?.constraints?.max_amount?.amount).toBe("500.00");
     // The dispatched instance is clipped to the template: 200, invoice.read only.
     const { mission } = dispatch(t.id, { intent });
     expect(amountOf(mission)).toBe("200.00");
