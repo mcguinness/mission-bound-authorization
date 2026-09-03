@@ -130,22 +130,39 @@ export function deriveAuthoritySet(
       // full policy ceiling narrowed to the Intent's target_resources.
       policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
 
-  // @spec mission#authorization-derivation (#743) — a proposal element is
-  // intersected against EVERY ceiling entry sharing its resource, not just
-  // the first (`Array.prototype.find`, the prior shape): a single resource
-  // MAY be governed by more than one ceiling entry (e.g. a money-carrying
-  // group and a non-money group split along the actions each carries
-  // genuinely different constraints for), and each one contributes its own
-  // narrowed fragment. NOT de-duplicated: two byte-identical proposal
-  // entries (the discharge equivalence-class case, @spec
-  // discharge#terminal-when) must still derive two separate entries, exactly
-  // as the prior single-`find` shape did for each proposal element in turn.
-  // For any ceiling with exactly one entry per resource (every deployment
-  // before #743's split), this is a no-op: one matching entry is exactly
-  // what `find` already returned.
+  // @spec mission#authorization-derivation (#743, review #745 P2) — a
+  // SUBMITTED proposal element is intersected against EVERY ceiling entry
+  // sharing its resource, not just the first (`Array.prototype.find`, the
+  // prior shape): a single resource MAY be governed by more than one ceiling
+  // entry (e.g. a money-carrying group and a non-money group split along the
+  // actions each carries genuinely different constraints for), and one
+  // proposal element MAY legitimately span several of them, each
+  // contributing its own narrowed fragment. NOT de-duplicated: two
+  // byte-identical proposal entries (the discharge equivalence-class case,
+  // @spec discharge#terminal-when) must still derive two separate entries,
+  // exactly as the prior single-`find` shape did for each proposal element in
+  // turn. For any ceiling with exactly one entry per resource (every
+  // deployment before #743's split), this is a no-op: one matching entry is
+  // exactly what `find` already returned.
+  //
+  // In CONFIGURED-MAPPING mode (no submitted proposal) `proposal` here is
+  // already one of the ceiling entries selected by the `proposals` fallback
+  // above, not untrusted client input. Fanning it across every same-resource
+  // ceiling entry AGAIN would cross-multiply: two same-resource entries whose
+  // constraints partially overlap would derive not the two mapped entries but
+  // up to four, including synthetic cross-fragments neither entry ever
+  // proposed (review #745). That does not widen the semantic union (each
+  // cross-fragment is still a subset of both ceiling entries), but it changes
+  // the rendered/committed Authority Set and therefore `authority_hash`,
+  // which is load-bearing across this family. Configured-mapping instead
+  // validates/self-intersects each mapped candidate once: `[proposal]` is the
+  // sole "ceiling" it fans across, so `intersect(entry, entry)` reconstructs
+  // the entry unchanged rather than pairing it with its siblings.
   const derived: AuthorityEntry[] = [];
   for (const proposal of proposals) {
-    const matchingCeilings = policy.ceiling.filter((c) => c.resource === proposal.resource);
+    const matchingCeilings = hasProposal
+      ? policy.ceiling.filter((c) => c.resource === proposal.resource)
+      : [proposal];
     for (const ceiling of matchingCeilings) {
       const entry = intersect(proposal, ceiling);
       if (entry) derived.push(entry);
