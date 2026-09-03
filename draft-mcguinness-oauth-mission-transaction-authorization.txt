@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             27 August 2026
-Expires: 28 February 2027
+Intended status: Experimental                           3 September 2026
+Expires: 7 March 2027
 
 
         Mission Transaction Authorization Profile for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 February 2027.
+   This Internet-Draft will expire on 7 March 2027.
 
 Copyright Notice
 
@@ -1369,9 +1369,9 @@ Informative References
               Reece, M., "Cross-Organizational Delegation for Workload
               and Agent Identity: Problem Statement and Requirements",
               Work in Progress, Internet-Draft, draft-reece-wimse-cross-
-              org-delegation-01, 30 July 2026,
+              org-delegation-02, 31 August 2026,
               <https://datatracker.ietf.org/doc/html/draft-reece-wimse-
-              cross-org-delegation-01>.
+              cross-org-delegation-02>.
 
    [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
               Current Practices", BCP 225, RFC 8725,
