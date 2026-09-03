@@ -439,12 +439,22 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     });
   };
 
-  /** The Mission's derived set with remittance.send stripped (the expected effective projection). */
+  /**
+   * The Mission's derived set with remittance.send stripped (the expected
+   * effective projection). @spec mission#authorization-derivation (#743) —
+   * the payments ceiling is now two entries (money-bearing / read-only), so
+   * `fullAuthority`'s single mixed proposal derives two fragments; an entry
+   * left with zero actions after stripping is dropped, mirroring the real
+   * projection (`intersectForProjection` drops an empty-action fragment
+   * rather than carrying a dangling entry).
+   */
   const withoutRemittance = (missionId: string): unknown =>
-    (as.kernel.get(missionId)?.authority_set ?? []).map((e) => ({
-      ...e,
-      actions: e.actions.filter((a) => a !== "payments:remittance.send"),
-    }));
+    (as.kernel.get(missionId)?.authority_set ?? [])
+      .map((e) => ({
+        ...e,
+        actions: e.actions.filter((a) => a !== "payments:remittance.send"),
+      }))
+      .filter((e) => e.actions.length > 0);
 
   it("contain, then refresh the async-delegation family: the refreshed access token EXCLUDES the contained capability", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();

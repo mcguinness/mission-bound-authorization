@@ -39,7 +39,7 @@
  *  - Mission-bound refresh tokens introspect under the SAME composite rule.
  */
 import type { Server } from "node:http";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -52,8 +52,12 @@ import { buildAuthorizationServer, type AuthorityEntry, type BuiltAs } from "../
 const PORT = 14540;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
+// @spec mission#authorization-derivation (#743) — the payments resource is
+// now governed by two ceiling entries (a money-carrying group and a
+// read-only group), so `ceiling[1].resource` no longer names the saas/ledger
+// resource; both constants are selected by name rather than array index.
 const PAYMENTS = DERIVATION_POLICY.ceiling[0].resource;
-const SAAS = DERIVATION_POLICY.ceiling[1].resource;
+const SAAS = TOPOLOGY.resources.saas;
 
 // Registered introspection principals (config/introspection.json): rs-payments
 // is authorized for the payments audience and holds the provenance +
@@ -520,7 +524,12 @@ describe("audience-to-resource mapping (cleanup, issue #541): an OAuth aud need 
 describe("credential-authority projection: never the Mission's full authority (@spec mission#introspection — issue #541 P1-1)", () => {
   it("a narrowed credential discloses ONLY the authority IT carries, even though the Mission permits more", async () => {
     const record = as.kernel.get(flow5.missionId);
-    expect(record?.authority_set[0]?.actions).toEqual(
+    // @spec mission#authorization-derivation (#743) — the payments ceiling is
+    // now two entries (money-bearing / read-only), so PAYMENTS_PROPOSAL's
+    // single mixed entry derives two authority_set entries; checked across
+    // the whole set, not `authority_set[0]` alone.
+    const recordActions = (record?.authority_set ?? []).flatMap((e) => e.actions);
+    expect(recordActions).toEqual(
       expect.arrayContaining(["payments:invoice.read", "payments:remittance.send"]),
     );
     const narrowClaim: AuthorityEntry[] = [

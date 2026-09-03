@@ -229,10 +229,18 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
     );
     const derived = deriveAuthoritySet(broad, DERIVATION_POLICY as never, proposal);
     expect(isSubsetSet(derived, DERIVATION_POLICY.ceiling as never)).toBe(true);
-    const entry = derived[0];
-    expect(entry?.actions).not.toContain("payments:vendor.delete");
-    expect(entry?.constraints?.max_amount?.amount).toBe("500.00");
-    expect(entry?.constraints?.vendors).toEqual(["acme"]);
+    // @spec mission#authorization-derivation (#743) — the payments ceiling is
+    // now two entries (money-bearing / read-only), so this single mixed
+    // proposal derives two fragments, one per matching ceiling entry;
+    // selected by action, not `derived[0]`.
+    for (const fragment of derived) {
+      expect(fragment.actions).not.toContain("payments:vendor.delete");
+    }
+    const readFragment = derived.find((e) => e.actions.includes("payments:invoice.read"));
+    expect(readFragment?.constraints?.vendors).toEqual(["acme"]);
+    const payFragment = derived.find((e) => e.actions.includes("payments:payment.execute"));
+    expect(payFragment?.constraints?.max_amount?.amount).toBe("500.00");
+    expect(payFragment?.constraints?.vendors).toEqual(["acme"]);
   });
 
   it("refuses an Intent yielding no authority with invalid_authorization_details", () => {
@@ -265,6 +273,116 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
     } catch (e) {
       expect((e as IntentError).code).toBe("access_denied");
     }
+  });
+
+  // @spec mission#authorization-derivation (#743, review #745 P2) —
+  // configured-mapping mode (no submitted proposal) must not cross-multiply
+  // overlapping same-resource ceiling entries. Two entries sharing an action
+  // (`payments:invoice.list`) with partially-overlapping vendor sets: a naive
+  // fan-out (every mapped candidate x every same-resource ceiling entry — the
+  // shape submitted-proposal mode correctly uses, since a submitted proposal
+  // MAY legitimately span several ceiling partitions) would ALSO pair each
+  // candidate against its SIBLING here, since `intersect`'s action filter
+  // yields a non-empty `invoice.list`-only fragment for the cross-pairing.
+  // That produces FOUR entries — two real, two synthetic cross-fragments
+  // neither mapped ceiling entry ever specified — not the two the mapping
+  // actually selected. Configured-mapping self-intersects each mapped
+  // candidate once instead, so the mapped entries come back unchanged.
+  it("configured-mapping mode does not cross-multiply overlapping same-resource ceiling entries", () => {
+    const overlapping = {
+      policy_version: "t",
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read", "payments:invoice.list"],
+          constraints: { vendors: ["acme", "globex"] },
+        },
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.list", "payments:vendor.read"],
+          constraints: { vendors: ["globex", "initech"] },
+        },
+      ],
+    };
+    const mapped = validateMissionIntent(intent());
+    const derived = deriveAuthoritySet(mapped, overlapping as never, undefined);
+    expect(derived).toHaveLength(2);
+    const first = derived.find((e) => e.actions.includes("payments:invoice.read"));
+    const second = derived.find((e) => e.actions.includes("payments:vendor.read"));
+    expect(first?.actions).toEqual(["payments:invoice.read", "payments:invoice.list"]);
+    expect(first?.constraints?.vendors).toEqual(["acme", "globex"]);
+    expect(second?.actions).toEqual(["payments:invoice.list", "payments:vendor.read"]);
+    expect(second?.constraints?.vendors).toEqual(["globex", "initech"]);
+  });
+
+  // @spec mission#common-constraints, review #745 P2 — the self-intersect
+  // fallback (`[proposal]`) still runs a mapped candidate through `intersect`,
+  // which fails closed on a registered-but-unimplemented Common Constraint
+  // (@spec mission#authorization-derivation). A ceiling entry carrying one
+  // must still refuse in configured-mapping mode, not silently pass through
+  // now that it is paired against itself instead of its siblings.
+  it("configured-mapping mode still fails closed on a registered-but-unimplemented Common Constraint", () => {
+    const withUnimplemented = {
+      policy_version: "t",
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } },
+        },
+      ],
+    };
+    const mapped = validateMissionIntent(intent());
+    expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(IntentError);
+    expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(/time_window/);
+  });
+
+  // @spec mission#authorization-derivation (#743, review #745 P2) — the P2
+  // fix does not touch submitted-proposal mode: `hasProposal` gates it. Full
+  // fan-out across every same-resource ceiling entry, needed when one
+  // proposal legitimately spans several policy partitions, is already proven
+  // by "compromised shaper" above (one mixed proposal derives two fragments,
+  // one per matching ceiling entry) and by template.ts's double intersection
+  // (deriveAuthoritySet's own `derived` output replays as the PROPOSAL
+  // argument for the template-ceiling re-derivation, which is therefore
+  // always in submitted-proposal mode).
+  it("submitted-proposal mode still fans a single proposal across every matching ceiling entry (unaffected by the P2 fix)", () => {
+    const overlapping = {
+      policy_version: "t",
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { vendors: ["acme"] },
+        },
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:payment.execute"],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ],
+    };
+    const validated = validateMissionIntent(intent());
+    const proposal = validateAuthorityProposal(
+      JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read", "payments:payment.execute"],
+          constraints: { vendors: ["acme"] },
+        },
+      ]),
+      [RESOURCE],
+    );
+    const derived = deriveAuthoritySet(validated, overlapping as never, proposal);
+    expect(derived).toHaveLength(2);
+    expect(derived.some((e) => e.actions.includes("payments:invoice.read"))).toBe(true);
+    expect(derived.some((e) => e.actions.includes("payments:payment.execute"))).toBe(true);
   });
 });
 

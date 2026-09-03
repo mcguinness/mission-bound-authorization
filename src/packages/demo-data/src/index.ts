@@ -538,6 +538,43 @@ export const DERIVATION_POLICY: DerivationPolicy = {
   derivation_limit_ceiling: POLICY.derivation_limit_ceiling,
 };
 
+/**
+ * @spec mission#authorization-derivation (#743, review #745 finding 3) — the
+ * live agent loop's OWN authority proposal (demo/src/agent-run.ts), and the
+ * SINGLE SOURCE for it: `shipped-config.test.ts` imports this constant rather
+ * than a hand-copied duplicate, so the test establishes the invariant it
+ * claims (the shipped policy authorizes the proposal the shipped demo
+ * actually sends) instead of one that can silently drift from it.
+ *
+ * Two entries, split along the same money/non-money line the payments
+ * ceiling encodes (config/policy.json, `PAYMENTS_RELATIONS` in
+ * services/pdp/src/policy.ts): a single entry spanning both would carry
+ * `max_amount` onto the read actions too (the derivation kernel's
+ * ceiling-absent-inherits-proposal rule takes the proposal's own constraint
+ * unchanged when the matched ceiling entry declares none), and a bound
+ * `max_amount` with no supplied amount refuses (#733). `list_invoices`
+ * supplies none (`needsInvoice: false`, services/mcp-payments/src/pep.ts),
+ * so `invoice.list` must derive with NO `max_amount` at all, not merely a
+ * large one.
+ */
+export const DEMO_AGENT_PROPOSAL: CeilingEntry[] = [
+  {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: ["payments:invoice.read", "payments:invoice.list"],
+    constraints: { vendors: ["acme", "globex"] },
+  },
+  {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: ["payments:payment.execute"],
+    constraints: {
+      max_amount: { amount: "999999.00", currency: "USD" },
+      vendors: ["acme", "globex"],
+    },
+  },
+];
+
 export interface ContainmentRemoveEntry {
   resource: string;
   actions?: string[];
