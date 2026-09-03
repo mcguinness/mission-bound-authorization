@@ -15,34 +15,25 @@
  * re-derive the same defect from the untrusted-proposal side (the ceiling's
  * absent cap does not clamp a proposal's own; it inherits it unchanged, the
  * same rule that makes a ceiling's cap binding when a proposal omits one).
+ *
+ * @spec review #745 finding 3 — DEMO_PROPOSAL below is DEMO_AGENT_PROPOSAL
+ * (@mission/demo-data) run through validateAuthorityProposal, not a
+ * hand-copied duplicate of agent-run.ts's literal. agent-run.ts imports the
+ * SAME constant, so this test consumes the proposal the shipped demo
+ * actually sends: a later change to the demo's proposal shape changes this
+ * test's input too, instead of leaving a stale copy green.
  */
 
 import { describe, expect, it } from "vitest";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
 import { deriveAuthoritySet, validateAuthorityProposal, validateMissionIntent } from "../src/index.js";
 
 const ISS = "https://as.test";
 const MISSION_ID = "msn_shipped_config_test";
 
-/** The demo's own PAR proposal (agent-run.ts), verbatim. */
-const DEMO_PROPOSAL = validateAuthorityProposal(
-  JSON.stringify([
-    {
-      type: "mission_resource_access",
-      resource: CANONICAL_RESOURCE,
-      actions: ["payments:invoice.read", "payments:invoice.list"],
-      constraints: { vendors: ["acme", "globex"] },
-    },
-    {
-      type: "mission_resource_access",
-      resource: CANONICAL_RESOURCE,
-      actions: ["payments:payment.execute"],
-      constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex"] },
-    },
-  ]),
-  [CANONICAL_RESOURCE],
-);
+/** The demo's own PAR proposal (@mission/demo-data's DEMO_AGENT_PROPOSAL, agent-run.ts's single source), validated. */
+const DEMO_PROPOSAL = validateAuthorityProposal(JSON.stringify(DEMO_AGENT_PROPOSAL), [CANONICAL_RESOURCE]);
 
 function deriveDemoAuthoritySet() {
   const intent = validateMissionIntent(
