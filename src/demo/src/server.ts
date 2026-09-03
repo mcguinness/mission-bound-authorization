@@ -13,7 +13,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { txnTaskId } from "@mission/access-request";
@@ -91,6 +91,72 @@ interface AuthEntry {
   actions: string[];
   constraints?: { max_amount?: Amount; vendors?: string[] };
 }
+
+const amt = (m?: Amount) => (m ? `${m.amount} ${m.currency}` : "unbounded");
+
+/**
+ * @spec mission#authorization-derivation (#743, review #745 P1) — the
+ * `/agent/propose` preview's narrowing diff, extracted so it is unit-testable
+ * without the full composed stack (nothing here reads network/kernel state;
+ * `proposed` and `derived` are already-derived Authority Set entries).
+ *
+ * `derive()` returns one fragment PER matching ceiling entry, so a single
+ * mixed proposed entry (e.g. read + money actions together, the default UI
+ * proposal) can derive into more than one same-resource fragment. Selecting
+ * ONE derived entry by resource (the prior shape) silently picked a single
+ * fragment and reported everything it didn't grant as dropped, even when a
+ * second fragment actually granted it. This aggregates every derived
+ * fragment applicable to a proposed entry (same resource) and compares at
+ * ACTION grain: an action counts as granted if ANY applicable fragment
+ * carries it, and a tightened `max_amount` is reported per distinct granting
+ * cap among the fragments that actually cover one of the proposed actions.
+ *
+ * `vendors_dropped` unions granted vendors across every applicable fragment,
+ * which is exactly right for the shipped config (every payments ceiling
+ * entry shares the same vendor set). It is a display-only widening risk in
+ * the general case: a policy where two same-resource fragments grant
+ * DISJOINT vendor sets (fragment A: acme-only, fragment B: globex-only)
+ * would union-report neither as dropped even though no SINGLE fragment
+ * grants both — the preview would need to compare per-action-and-vendor,
+ * not per-resource, to close that. Flagged, not fixed here: the shipped
+ * config has no such policy, and no ceiling entry carries a vendor
+ * constraint the sibling entries don't share.
+ */
+export function proposalDiff(
+  proposed: readonly AuthEntry[],
+  derived: readonly AuthEntry[],
+): { resource: string; actions_dropped: string[]; vendors_dropped: string[]; constraints_tightened: { name: string; proposed: string; granted: string }[] }[] {
+  return proposed.map((p) => {
+    const applicable = derived.filter((d) => d.resource === p.resource);
+    const gActions = new Set(applicable.flatMap((d) => d.actions));
+    const gVendors = new Set(applicable.flatMap((d) => d.constraints?.vendors ?? []));
+    const pVendors = p.constraints?.vendors ?? [];
+    const pCap = p.constraints?.max_amount;
+    const tightened: { name: string; proposed: string; granted: string }[] = [];
+    const seenCaps = new Set<string>();
+    for (const fragment of applicable) {
+      // Only a fragment that actually carries one of this proposed entry's
+      // actions speaks to what THIS entry was tightened to; a fragment born
+      // of a disjoint action subset (e.g. the read-only ceiling entry, when
+      // p also proposed money actions) is irrelevant to p's own cap.
+      if (!fragment.actions.some((a) => p.actions.includes(a))) continue;
+      const gCap = fragment.constraints?.max_amount;
+      if (!gCap) continue;
+      if (pCap && pCap.amount === gCap.amount && pCap.currency === gCap.currency) continue;
+      const key = `${gCap.amount}|${gCap.currency}`;
+      if (seenCaps.has(key)) continue;
+      seenCaps.add(key);
+      tightened.push({ name: "max_amount", proposed: amt(pCap), granted: amt(gCap) });
+    }
+    return {
+      resource: p.resource,
+      actions_dropped: p.actions.filter((a) => !gActions.has(a)),
+      vendors_dropped: pVendors.filter((v) => !gVendors.has(v)),
+      constraints_tightened: tightened,
+    };
+  });
+}
+
 const PORT = Number(process.env.CONSOLE_BFF_PORT ?? TOPOLOGY.ports.console);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
 
@@ -494,25 +560,7 @@ async function main() {
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }
-    const amt = (m?: Amount) => (m ? `${m.amount} ${m.currency}` : "unbounded");
-    const diff = proposed.map((p) => {
-      const g = derived.find((d) => d.resource === p.resource);
-      const gActions = g?.actions ?? [];
-      const gVendors = g?.constraints?.vendors ?? [];
-      const pVendors = p.constraints?.vendors ?? [];
-      const gCap = g?.constraints?.max_amount;
-      const pCap = p.constraints?.max_amount;
-      const tightened =
-        gCap && (!pCap || pCap.amount !== gCap.amount || pCap.currency !== gCap.currency)
-          ? [{ name: "max_amount", proposed: amt(pCap), granted: amt(gCap) }]
-          : [];
-      return {
-        resource: p.resource,
-        actions_dropped: p.actions.filter((a) => !gActions.includes(a)),
-        vendors_dropped: pVendors.filter((v) => !gVendors.includes(v)),
-        constraints_tightened: tightened,
-      };
-    });
+    const diff = proposalDiff(proposed, derived);
     return c.json({ proposed, derived, diff });
   });
 
@@ -675,7 +723,13 @@ async function main() {
   });
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// @spec review #745 P1 — guarded so importing this module (e.g. the
+// proposalDiff regression test) does not itself boot a real server: only run
+// when this file is the process entrypoint (`tsx src/server.ts` /
+// `pnpm demo:serve`), never on a plain import.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
