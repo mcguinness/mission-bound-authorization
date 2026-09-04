@@ -584,12 +584,14 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     const mission = res.body.mission as Record<string, unknown>;
     // Core members ({id, issuer} baseline #702) + derivations_remaining
     // (requested_derivation_limit in force) + proposal_hash, authority_hash,
-    // approval_basis (all provenance privilege). NO authorization_details: it
-    // now lives at the top level only (@spec mission#541 P1-1). NO
-    // expires_at: introspection never carries it (@spec mission#introspection).
+    // approval_basis, authority_source (all provenance privilege). NO
+    // authorization_details: it now lives at the top level only (@spec
+    // mission#541 P1-1). NO expires_at: introspection never carries it (@spec
+    // mission#introspection).
     expect(Object.keys(mission).sort()).toEqual([
       "approval_basis",
       "authority_hash",
+      "authority_source",
       "derivations_remaining",
       "id",
       "issuer",

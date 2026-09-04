@@ -192,7 +192,14 @@ import {
   type StatusListPublisher,
 } from "../kernel/status-list.js";
 
-import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
+import { authoritySourceOf } from "../kernel/authority-source.js";
+import type {
+  AuthorityEntry,
+  AuthoritySource,
+  LifecycleOperation,
+  MissionIntent,
+  MissionRecord,
+} from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
@@ -1658,9 +1665,33 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
+      // @spec mission#approval-event (step 5) — the rendering MUST identify the
+      // authority source and, for `organizational`, the governed policy it
+      // draws on. Resolved from the deployment's trusted catalog at render
+      // time; a catalog change before the decision re-enters `kernel.approve`
+      // with the changed inputs, which re-establishes the source and refuses
+      // rather than committing what was never rendered.
+      let authoritySource: AuthoritySource;
+      try {
+        authoritySource = authoritySourceOf(kernel.authoritySourceEntry(String(params.client_id)));
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
-      ctx.body = renderApprovalPage(interactionMatch[1] as string, intent, authority, proposal, provenance);
+      ctx.body = renderApprovalPage(
+        interactionMatch[1] as string,
+        intent,
+        authority,
+        proposal,
+        provenance,
+        authoritySource,
+      );
       return;
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
@@ -2383,7 +2414,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       const body = await readJsonBody(ctx.req);
       try {
-        const template = createTemplate(opts.templateStore, body as unknown as CreateTemplateInput);
+        // @spec mission#authority-sources — the template's source is
+        // established from the deployment's trusted catalog, keyed on the
+        // recipients; a source member on the request body is ignored, exactly
+        // as `authority_source` is never taken from client assertion.
+        const template = createTemplate(
+          opts.templateStore,
+          body as unknown as CreateTemplateInput,
+          kernel.authoritySourceOptions(),
+        );
         ctx.status = 201;
         ctx.body = {
           template_id: template.id,
@@ -2919,7 +2958,15 @@ async function decide(
     return;
   }
 
-  const record = opts.kernel.approve({
+  // @spec mission#approval-event (step 3), mission#error-mapping — the five
+  // authority-source gates run inside `approve()`, before any anchor is
+  // computed and before the record is created. Every refusal is an
+  // authorization-decision outcome, so it completes through the pending
+  // front-channel authorization request as `access_denied`, exactly like the
+  // "approver declined" and derivation-refusal branches above.
+  let record: MissionRecord;
+  try {
+    record = opts.kernel.approve({
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
     // @spec mission#intent-submission-evidence — the verified facts land on
@@ -2930,7 +2977,17 @@ async function decide(
     approver: { iss: opts.issuer, sub: approver },
     clientId: String(params.client_id),
     approvalEventId: `apev_${details.uid}`,
-  });
+    });
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await provider.interactionFinished(ctx.req, ctx.res, {
+        error: e.code,
+        error_description: e.message,
+      });
+      return;
+    }
+    throw e;
+  }
 
   const grant = new provider.Grant({ accountId: subject, clientId: String(params.client_id) });
   // Grant exactly the requested scopes (openid enables an id_token when asked).
@@ -2958,6 +3015,7 @@ function renderApprovalPage(
   authority: unknown,
   proposal?: unknown,
   provenance?: unknown[],
+  authoritySource?: AuthoritySource,
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -2971,9 +3029,31 @@ function renderApprovalPage(
   const provenanceSection = provenance?.length
     ? `<h2>Verified intent provenance</h2><pre>${escapeHtml(JSON.stringify(provenance, null, 2))}</pre>`
     : "";
+  // @spec mission#approval-event (step 5), mission#authority-sources — the
+  // rendering identifies WHOSE authority the approval draws on, and for
+  // `organizational` the governed policy it draws on. The policy `digest` is
+  // record detail, not consent context, so the page names `id` and `version`.
+  const sourceSection = authoritySource
+    ? `<h2>Authority source (whose authority this draws on)</h2><pre>${escapeHtml(
+        JSON.stringify(
+          authoritySource.policy
+            ? {
+                type: authoritySource.type,
+                policy: {
+                  id: authoritySource.policy.id,
+                  version: authoritySource.policy.version,
+                },
+              }
+            : { type: authoritySource.type },
+          null,
+          2,
+        ),
+      )}</pre>`
+    : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
 <h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>

@@ -372,6 +372,24 @@ export class MissionKernel {
   }
 
   /**
+   * @spec mission#authority-sources — the trusted catalog and the deployment
+   * ceiling, for the one surface that establishes a source OUTSIDE a Mission
+   * Record: template consent ({@link createTemplate}). Exposed rather than
+   * duplicated as an adapter option so a deployment has exactly one catalog.
+   */
+  authoritySourceOptions(): {
+    authoritySourceCatalog?: AuthoritySourceCatalog;
+    deploymentCeiling: AuthorityEntry[];
+  } {
+    return {
+      ...(this.opts.authoritySourceCatalog
+        ? { authoritySourceCatalog: this.opts.authoritySourceCatalog }
+        : {}),
+      deploymentCeiling: this.opts.policy.ceiling as AuthorityEntry[],
+    };
+  }
+
+  /**
    * @spec mission#approval-event (step 3), mission#authority-sources — GATE 1:
    * resolve the trusted authority-source declaration for an Agent. The catalog
    * is deployment configuration; nothing a client sends reaches it.

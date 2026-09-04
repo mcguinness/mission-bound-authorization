@@ -1,0 +1,25 @@
+[
+  {
+    "id": "acme-accounts-payable-controls",
+    "version": "2026-09-01",
+    "authority": "https://acme.example/governance",
+    "ceiling": [
+      {
+        "type": "mission_resource_access",
+        "resource": "http://localhost:4403/mcp",
+        "actions": ["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"],
+        "constraints": {
+          "vendors": ["acme"]
+        }
+      },
+      {
+        "type": "mission_resource_access",
+        "resource": "http://localhost:4406/mcp",
+        "actions": ["ledger:vendor.read"],
+        "constraints": {
+          "vendors": ["acme"]
+        }
+      }
+    ]
+  }
+]

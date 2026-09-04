@@ -9,6 +9,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { computeAnchor, GOVERNED_POLICY_TYP } from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
 
 /** Fail-fast config error naming the offending file (cf. IntentError style). */
@@ -858,6 +859,207 @@ function loadClients(): [ClientSeed, ...ClientSeed[]] {
 }
 
 const CLIENTS = loadClients();
+
+/**
+ * @spec mission#authority-sources, mission#mission-record — one GOVERNED
+ * ORGANIZATIONAL POLICY: the authenticated governance state an `organizational`
+ * authority source draws on. `ceiling` is the policy's own authority (what an
+ * organizational Mission's derived Authority Set MUST lie within), and
+ * `authority` names the governance authority the commitment is domain-separated
+ * by.
+ */
+export interface GovernedPolicy {
+  id: string;
+  version: string;
+  authority: string;
+  ceiling: CeilingEntry[];
+  /**
+   * The commitment over this policy document, COMPUTED AT LOAD with the family
+   * anchor idiom. It is never read from the wire: an `organizational` Mission
+   * commits this value, and a later edit to the policy changes the digest, so
+   * drift refuses at the next approval or drawdown.
+   */
+  digest: string;
+}
+
+function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEntry[] {
+  return asArray(file, raw, ctx).map((item, i) => {
+    const e = asObject(file, item, `${ctx}[${i}]`);
+    const entry: CeilingEntry = {
+      type: reqString(file, e, "type", `${ctx}[${i}]`),
+      resource: reqString(file, e, "resource", `${ctx}[${i}]`),
+      actions: reqStringArray(file, e, "actions", `${ctx}[${i}]`),
+    };
+    if (e.constraints !== undefined) {
+      entry.constraints = asObject(
+        file,
+        e.constraints,
+        `${ctx}[${i}].constraints`,
+      ) as CeilingConstraints;
+    }
+    if (e.delegation !== undefined) {
+      entry.delegation = asObject(file, e.delegation, `${ctx}[${i}].delegation`) as NonNullable<
+        CeilingEntry["delegation"]
+      >;
+    }
+    return entry;
+  });
+}
+
+function loadGovernedPolicies(): GovernedPolicy[] {
+  const file = "governed-policy.json";
+  const seen = new Set<string>();
+  return asArray(file, readJson(file), "governed-policy").map((raw, i) => {
+    const ctx = `governed-policy[${i}]`;
+    const p = asObject(file, raw, ctx);
+    const id = reqString(file, p, "id", ctx);
+    const version = reqString(file, p, "version", ctx);
+    const authority = reqString(file, p, "authority", ctx);
+    const ceiling = loadCeilingEntries(file, p.ceiling, `${ctx}.ceiling`);
+    if (ceiling.length === 0) throw new ConfigError(file, `${ctx}.ceiling must be non-empty`);
+    const key = `${id}:${version}`;
+    if (seen.has(key)) throw new ConfigError(file, `${ctx}: duplicate policy '${key}'`);
+    seen.add(key);
+    return {
+      id,
+      version,
+      authority,
+      ceiling,
+      // The family anchor idiom, domain-separated by the GOVERNANCE AUTHORITY
+      // rather than by the AS issuer: the same governed policy has the same
+      // commitment whichever AS instance loads it.
+      digest: computeAnchor(GOVERNED_POLICY_TYP, authority, {
+        id,
+        version,
+        ceiling,
+      } as unknown as JsonValue),
+    };
+  });
+}
+
+/** The validated governed organizational policies (@see loadGovernedPolicies). */
+export const GOVERNED_POLICIES: GovernedPolicy[] = loadGovernedPolicies();
+
+/**
+ * @spec mission#authority-sources, mission#approval-event — one trusted
+ * authority-source declaration. The AS establishes a Mission's REQUIRED
+ * `authority_source` from THIS and from nothing a client sends.
+ */
+export interface AuthoritySourceSeed {
+  id: string;
+  type: "user_delegated" | "service_owned" | "organizational";
+  clients: string[];
+  activators: string[];
+  ceiling: CeilingEntry[];
+  principals?: string[];
+  policy?: { id: string; version: string; digest: string };
+}
+
+export interface AuthoritySourceCatalogSeed {
+  entries: AuthoritySourceSeed[];
+  humanPrincipals: string[];
+}
+
+const AUTHORITY_SOURCE_TYPES = ["user_delegated", "service_owned", "organizational"];
+
+/**
+ * Load + validate config/authority-sources.json. FAIL CLOSED on the
+ * discriminator (@spec mission#lifecycle forward compatibility): an
+ * unrecognized `type` is refused at load, never widened. `ceiling` accepts the
+ * literal string "deployment" to mean the deployment's own derivation ceiling
+ * (the user-delegated case, where the source's authority is the deployment's);
+ * an `organizational` source takes its ceiling from the governed policy it
+ * references, never from a second copy here.
+ */
+function loadAuthoritySources(): AuthoritySourceCatalogSeed {
+  const file = "authority-sources.json";
+  const root = asObject(file, readJson(file), "authority-sources");
+  const humanPrincipals = reqStringArray(file, root, "human_principals", "authority-sources");
+  const entries = asArray(file, root.sources, "authority-sources.sources").map((raw, i) => {
+    const ctx = `authority-sources.sources[${i}]`;
+    const e = asObject(file, raw, ctx);
+    const id = reqString(file, e, "id", ctx);
+    const type = reqString(file, e, "type", ctx);
+    if (!AUTHORITY_SOURCE_TYPES.includes(type)) {
+      throw new ConfigError(file, `${ctx}.type '${type}' is not a recognized authority source`);
+    }
+    const clients = reqStringArray(file, e, "clients", ctx);
+    const activators = reqStringArray(file, e, "activators", ctx);
+    const principals =
+      e.principals === undefined ? undefined : reqStringArray(file, e, "principals", ctx);
+    if (type !== "user_delegated" && (!principals || principals.length === 0)) {
+      throw new ConfigError(
+        file,
+        `${ctx}.principals is required for ${type}: the principals this deployment recognizes as resource owners in their own right`,
+      );
+    }
+    if (type === "organizational") {
+      if (e.ceiling !== undefined) {
+        throw new ConfigError(file, `${ctx}.ceiling is the governed policy's, not a second copy`);
+      }
+      const ref = asObject(file, e.policy, `${ctx}.policy`);
+      const policyId = reqString(file, ref, "id", `${ctx}.policy`);
+      const policyVersion = reqString(file, ref, "version", `${ctx}.policy`);
+      const governed = GOVERNED_POLICIES.find(
+        (g) => g.id === policyId && g.version === policyVersion,
+      );
+      if (!governed) {
+        throw new ConfigError(
+          file,
+          `${ctx}.policy '${policyId}' version '${policyVersion}' resolves to no governed policy`,
+        );
+      }
+      return {
+        id,
+        type,
+        clients,
+        activators,
+        ceiling: governed.ceiling,
+        principals: principals as string[],
+        policy: { id: governed.id, version: governed.version, digest: governed.digest },
+      } as AuthoritySourceSeed;
+    }
+    if (e.policy !== undefined) {
+      throw new ConfigError(file, `${ctx}.policy is absent outside organizational`);
+    }
+    const ceiling =
+      e.ceiling === "deployment"
+        ? POLICY.ceiling
+        : loadCeilingEntries(file, e.ceiling, `${ctx}.ceiling`);
+    if (ceiling.length === 0) throw new ConfigError(file, `${ctx}.ceiling must be non-empty`);
+    return {
+      id,
+      type,
+      clients,
+      activators,
+      ceiling,
+      ...(principals ? { principals } : {}),
+    } as AuthoritySourceSeed;
+  });
+  if (entries.length === 0) {
+    throw new ConfigError(file, "authority-sources.sources must be non-empty");
+  }
+  return { entries, humanPrincipals };
+}
+
+/**
+ * @spec mission#authority-sources — the deployment's trusted authority-source
+ * catalog. The payments ceiling resource tracks CANONICAL_RESOURCE exactly as
+ * DERIVATION_POLICY's does, so a source ceiling and the derivation ceiling
+ * compare on the same resource identifier.
+ */
+export const AUTHORITY_SOURCES: AuthoritySourceCatalogSeed = (() => {
+  const loaded = loadAuthoritySources();
+  return {
+    humanPrincipals: loaded.humanPrincipals,
+    entries: loaded.entries.map((entry) => ({
+      ...entry,
+      ceiling: entry.ceiling.map((c) =>
+        c.resource === DEFAULT_PAYMENTS_RESOURCE ? { ...c, resource: CANONICAL_RESOURCE } : c,
+      ),
+    })),
+  };
+})();
 
 /**
  * @spec mission#caller-authorization-and-minimization — one registered RFC 7662
