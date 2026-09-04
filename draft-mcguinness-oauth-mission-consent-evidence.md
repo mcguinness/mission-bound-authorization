@@ -768,8 +768,8 @@ A Consent Evidence object has these members:
 
   - When `decision` is `approved`, it contains `id`, `issuer`,
     `intent_hash`, `authority_hash`, `proposal_hash` when the Mission
-    records an authority proposal, when this profile records
-    it on the Mission, `consent_rendering_hash`, and, where the
+    records an authority proposal, `consent_rendering_hash` when this
+    profile records it on the Mission, and, where the
     deployment computes it, `approval_context_commitment`
     ({{I-D.draft-mcguinness-mission-approval-governance}}): OPTIONAL,
     a string, the commitment over the created Mission's immutable
