@@ -27,8 +27,8 @@ import {
 } from "../src/index.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
-// test module. `signing`/`resolver` wire the PEP's store; `decisionEvidence`
-// is the PDP's own emission path, which the PEP forwards and never invokes.
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
 
 const REAL_ISSUER = "https://real-issuer.test";
@@ -77,7 +77,7 @@ function build(): { pep: Pep; server: McpPaymentsServer } {
   const payments = new PaymentsStore();
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const pep = new Pep({
-    decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     // Never reached: neither reverifyList nor toolsList calls into FGA.

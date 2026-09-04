@@ -18,6 +18,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createDecisionEvidenceEmitter,
+  createEphemeralDecisionPoint,
   createPdpHttpServer,
   evaluateRemote,
   type EvaluationRequest,
@@ -65,6 +66,20 @@ const view = (): MissionView => ({
   client_id: "ap-agent",
 });
 
+/**
+ * One decision point (the PDP side: it decides, and it emits) paired with the
+ * enforcement-side key bundle that verifies what it emits (#741, PR #753
+ * review). `pdp.emitter` stands in for a PDP that already decided, where a
+ * case needs the record itself rather than a decision; nothing the PEP below
+ * receives exposes it.
+ */
+function decisionPointAndKeys(options: { emitterId?: string; audience?: string } = {}) {
+  const emitterId = options.emitterId ?? CANONICAL_RESOURCE;
+  const audience = options.audience ?? CANONICAL_RESOURCE;
+  const pdp = createEphemeralDecisionPoint({ emitterId, audience });
+  return { pdp, keys: createEphemeralEvidenceKeys({ emitterId, audience, decisionPoint: pdp }) };
+}
+
 function seededPayments(): PaymentsStore {
   const payments = new PaymentsStore();
   payments.seed(
@@ -74,8 +89,8 @@ function seededPayments(): PaymentsStore {
   return payments;
 }
 
-/** One PEP/server pair; `keys` supplies the store's resolver and (optionally) the PDP emitter. */
-function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withEmitter: boolean) {
+/** One PEP/server pair; `keys` supplies the store's resolver and (optionally) the decision function. */
+function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withDecisionPoint: boolean) {
   const payments = seededPayments();
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const missionView = view();
@@ -86,7 +101,7 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withE
   const pep = new Pep({
     payments,
     evidence,
-    ...(withEmitter ? { decisionEvidence: keys.decisionEvidence } : {}),
+    ...(withDecisionPoint ? { decide: keys.decide } : {}),
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView,
@@ -154,10 +169,13 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
   });
 
   it("refuses a record for an audience the emitter's key is not published for", async () => {
-    const keys = createEphemeralEvidenceKeys({ audience: "https://other-scope.example.com" });
+    const foreign = createEphemeralDecisionPoint({
+      emitterId: CANONICAL_RESOURCE,
+      audience: "https://other-scope.example.com",
+    });
     // The store's resolver is this deployment's, bound to its own audience.
     const deploymentKeys = createEphemeralEvidenceKeys();
-    const record = await keys.decisionEvidence.emit({
+    const record = await foreign.emitter.emit({
       mission: { id: "msn_ret", issuer: ISSUER, policy_view_id: "pv_1" },
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
@@ -175,8 +193,8 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
   });
 
   it("refuses when no verification keys are configured at all, rather than retaining an unverified record", async () => {
-    const keys = createEphemeralEvidenceKeys();
-    const record = await keys.decisionEvidence.emit({
+    const { pdp, keys } = decisionPointAndKeys();
+    const record = await pdp.emitter.emit({
       mission: { id: "msn_ret", issuer: ISSUER, policy_view_id: "pv_1" },
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
@@ -194,8 +212,8 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
   });
 
   it("retains the verified record VERBATIM: the retained bytes are the object the PDP signed", async () => {
-    const keys = createEphemeralEvidenceKeys();
-    const record = await keys.decisionEvidence.emit({
+    const { pdp, keys } = decisionPointAndKeys();
+    const record = await pdp.emitter.emit({
       mission: { id: "msn_ret", issuer: ISSUER, policy_view_id: "pv_1" },
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
@@ -246,7 +264,7 @@ describe("the record survives the remote decision channel byte-identically (@spe
   it("a record signed at an out-of-process PDP verifies and is retained at the PEP that received it over the MAC'd hop", async () => {
     const PEP_ID = "mcp-payments-pep";
     const SECRET = "test-shared-secret-do-not-reuse";
-    const keys = createEphemeralEvidenceKeys();
+    const { pdp, keys } = decisionPointAndKeys();
     const missionView = view();
     handle = await createPdpHttpServer({
       peps: new Map([[PEP_ID, { secret: SECRET, scopes: [CANONICAL_RESOURCE] }]]),
@@ -257,10 +275,11 @@ describe("the record survives the remote decision channel byte-identically (@spe
         now: () => NOW,
         stalenessBoundSeconds,
         relationForAction,
-        // The emitter lives on the PDP side of the network hop: the PEP below
-        // never holds it, and could not sign a record if it wanted to.
-        evidence: keys.decisionEvidence,
       }),
+      // The emitter is bound HERE, in the PDP server's own construction, on
+      // the PDP side of the network hop: it is reachable from no options
+      // object, and the PEP below could not sign a record if it wanted to.
+      evidence: pdp.emitter,
       replayWindowSeconds: 30,
     });
 

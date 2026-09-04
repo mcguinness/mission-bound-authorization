@@ -20,12 +20,11 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
-import { deriveJoinDelegation, Fga, type MissionView, relationForAction } from "@mission/pdp";
+import { createDecisionPoint, deriveJoinDelegation, Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
   buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
-  createDecisionEvidenceEmitter,
   createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
@@ -397,23 +396,25 @@ export async function composeStack(opts: {
   // carry rather than a placeholder.
   const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
   const decisionEvidenceKeys = await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
-  const decisionEvidence = createDecisionEvidenceEmitter({
-    signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
-    emitterId: CANONICAL_RESOURCE,
-    audience: CANONICAL_RESOURCE,
+  // The decision point owns the emission path (#741, PR #753 review): the
+  // emitter is constructed inside `createDecisionPoint` and closed over by
+  // `decide`. This wiring, and the PEP it wires, hold the decision function
+  // and the published verification material, and nothing that can emit.
+  const decisionPoint = createDecisionPoint({
+    evidence: {
+      signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
+      verificationKey: decisionEvidenceKeys.publicKey,
+      emitterId: CANONICAL_RESOURCE,
+      audience: CANONICAL_RESOURCE,
+    },
   });
   const evidenceKeys = createEphemeralEvidenceKeys();
   const evidence = new EvidenceStore(
     evidenceKeys.signing,
     buildEvidenceKeyResolver([
       ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
-      {
-        kid: decisionEvidenceKey.kid,
-        publicKey: decisionEvidenceKeys.publicKey,
-        role: "pdp",
-        emitterId: CANONICAL_RESOURCE,
-        audience: CANONICAL_RESOURCE,
-      },
+      // Exactly what the decision point publishes for the records it emits.
+      { ...decisionPoint.evidenceVerification, role: "pdp" },
     ]),
   );
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
@@ -484,7 +485,7 @@ export async function composeStack(opts: {
   const pep = new Pep({
     payments,
     evidence,
-    decisionEvidence,
+    decide: decisionPoint.decide,
     fga,
     modelId,
     loadView,

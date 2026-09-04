@@ -29,8 +29,8 @@ import {
 } from "../src/index.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
-// test module. `signing`/`resolver` wire the PEP's store; `decisionEvidence`
-// is the PDP's own emission path, which the PEP forwards and never invokes.
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
@@ -162,7 +162,7 @@ function build(
   const card = { name: "payments" };
   const gated = Boolean(opts.jit || opts.challengeSigner || opts.gateRemittance);
   const pep = new Pep({
-    decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,

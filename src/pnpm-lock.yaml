@@ -312,6 +312,10 @@ importers:
       jose:
         specifier: ^6.1.3
         version: 6.2.3
+    devDependencies:
+      '@mission/pdp':
+        specifier: workspace:*
+        version: link:../pdp
 
   services/mcp-payments:
     dependencies:

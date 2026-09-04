@@ -2,13 +2,16 @@
  * @spec draft-mcguinness-mission-runtime-evidence.md#decision-evidence-integrity
  * (issue #649, #741): a fresh, per-process ES256 signing identity for every
  * runtime-evidence emitter this deployment operates: the PEP's own roles
- * (`pep`, `executor`, `receipt_issuer`) and the PDP's Decision Evidence
- * emitter, for a demo, eval, or test process with no persistent, published
- * key infrastructure of its own.
+ * (`pep`, `executor`, `receipt_issuer`), for a demo, eval, or test process
+ * with no persistent, published key infrastructure of its own, plus the
+ * enforcement-side halves of the PDP boundary.
  *
- * The `pdp` key is deliberately NOT part of {@link EphemeralEvidenceKeys.signing}
- * (#741): it backs {@link EphemeralEvidenceKeys.decisionEvidence}, the PDP's
- * own emission path, and never reaches the PEP's `EvidenceStore`.
+ * No `pdp` signing key is generated, held, or returned here (#741, PR #753
+ * review). The PDP's key and its emission path belong to the decision point
+ * (`@mission/pdp`'s `createEphemeralDecisionPoint`); this bundle carries only
+ * what an enforcement component may hold: {@link EphemeralEvidenceKeys.decide}
+ * to ask for a decision, and the PDP's PUBLIC verification key in
+ * {@link EphemeralEvidenceKeys.verification} to verify what comes back.
  *
  * NOT a substitute for real key management: a production deployment
  * publishes a durable JWKS per role and supplies its own
@@ -20,7 +23,12 @@
  */
 
 import { generateKeyPairSync } from "node:crypto";
-import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter, type EvidenceKeyResolver } from "@mission/pdp";
+import {
+  createEphemeralDecisionPoint,
+  type DecisionEvidenceVerification,
+  type DecisionFn,
+  type EvidenceKeyResolver,
+} from "@mission/pdp";
 import {
   buildEvidenceKeyResolver,
   type EvidenceSigningConfig,
@@ -39,11 +47,11 @@ export interface EphemeralEvidenceKeys {
   /** The resolver over {@link verification}: `new EvidenceStore(signing, resolver)`. */
   resolver: EvidenceKeyResolver;
   /**
-   * The PDP's Decision Evidence emission path (#741): pass to
-   * `PepDeps.decisionEvidence`, which forwards it to `EvaluateOptions.evidence`.
-   * Holds the only `pdp`-role signing key in this bundle.
+   * The PDP decision entry point (#741, PR #753 review): pass to
+   * `PepDeps.decide`. The emission path behind it is closed over inside the
+   * decision point, so this member exposes no way to emit.
    */
-  decisionEvidence: DecisionEvidenceEmitter;
+  decide: DecisionFn;
 }
 
 export interface CreateEphemeralEvidenceKeysOptions {
@@ -66,15 +74,24 @@ export interface CreateEphemeralEvidenceKeysOptions {
    * resource: the audience its decision requests actually carry.
    */
   audience?: string;
+  /**
+   * The PDP this bundle's `decide` and `pdp` verification key come from. A
+   * test standing in for a decision point that already decided constructs one
+   * itself (`createEphemeralDecisionPoint`), keeps its PDP-side emitter, and
+   * passes it here so this bundle's resolver verifies exactly what it emits.
+   * Absent, a decision point is constructed here and its emission path is
+   * unreachable from anywhere.
+   */
+  decisionPoint?: { decide: DecisionFn; evidenceVerification: DecisionEvidenceVerification };
 }
 
 /**
  * Generate one ES256 keypair per role. Each role gets its OWN keypair and
  * `kid`, so a verifier's key-to-role binding ({{decision-evidence-integrity}})
  * is genuinely exercised rather than trivially satisfied by one key reused
- * everywhere. The `pdp` keypair backs the returned Decision Evidence
- * emitter and appears in `verification` (so the PEP can verify what the PDP
- * emitted) but never in `signing`.
+ * everywhere. The decision point's PUBLIC key appears in `verification` (so
+ * the PEP can verify what the PDP emitted) and its private half appears
+ * nowhere in this bundle.
  */
 export function createEphemeralEvidenceKeys(
   options: CreateEphemeralEvidenceKeysOptions = {},
@@ -92,17 +109,13 @@ export function createEphemeralEvidenceKeys(
         : { kid, publicKey, role, emitterId, audience },
     );
   }
-  const pdpKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
-  const pdpKid = "ephemeral-pdp";
-  verification.push({ kid: pdpKid, publicKey: pdpKeys.publicKey, role: "pdp", emitterId, audience });
+  const point: { decide: DecisionFn; evidenceVerification: DecisionEvidenceVerification } =
+    options.decisionPoint ?? createEphemeralDecisionPoint({ emitterId, audience });
+  verification.push({ ...point.evidenceVerification, role: "pdp" });
   return {
     signing,
     verification,
     resolver: buildEvidenceKeyResolver(verification),
-    decisionEvidence: createDecisionEvidenceEmitter({
-      signer: { kid: pdpKid, key: pdpKeys.privateKey },
-      emitterId,
-      audience,
-    }),
+    decide: point.decide,
   };
 }

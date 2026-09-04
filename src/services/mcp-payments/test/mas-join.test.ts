@@ -28,8 +28,8 @@ import {
 } from "../src/index.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
-// test module. `signing`/`resolver` wire the PEP's store; `decisionEvidence`
-// is the PDP's own emission path, which the PEP forwards and never invokes.
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
 
 const ISSUER = "https://as.test";
@@ -69,7 +69,7 @@ const FULL_AUTHORITY: () => AuthorityEntry[] | undefined = () => [
 
 function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = view): Pep {
   return new Pep({
-    decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
+    decide: EVIDENCE_KEYS.decide,
     payments: new PaymentsStore(),
     // @spec runtime-evidence#decision-evidence-integrity (issue #649):
     // EvidenceStore fails closed without a signer configured for the

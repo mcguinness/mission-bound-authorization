@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "devDependencies": {
+    "@mission/pdp": "workspace:*"
+  },
   "dependencies": {
     "@mission/access-request": "workspace:*",
     "@mission/authorization-server": "workspace:*",

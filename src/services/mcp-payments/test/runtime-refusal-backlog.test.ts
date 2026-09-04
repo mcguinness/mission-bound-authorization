@@ -36,8 +36,8 @@ import {
 } from "../src/index.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
-// test module. `signing`/`resolver` wire the PEP's store; `decisionEvidence`
-// is the PDP's own emission path, which the PEP forwards and never invokes.
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
 
 const ISSUER = "https://as.test";
@@ -93,7 +93,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
       ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({
-    decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,
@@ -259,7 +259,7 @@ describe("a PDP deny is terminal for the attempted action: no execution, and no 
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     let current: MissionView = view(["payments:invoice.read"]);
     const pep = new Pep({
-      decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       fga: alwaysAllowFga,
@@ -310,7 +310,7 @@ describe("the PEP establishes token validity before using any of its claims as d
     const payments = new PaymentsStore();
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
-      decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       fga: poisonFga,

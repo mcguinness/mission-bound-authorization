@@ -82,17 +82,12 @@ export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export type { ExecutionEvidence } from "./evidence.js";
 export { createEphemeralEvidenceKeys, type EphemeralEvidenceKeys } from "./ephemeral-signer.js";
 /**
- * @spec runtime-evidence#decision-evidence-object (#741): the PDP's own
- * Decision Evidence emission path, re-exported here because a deployment
- * wires it alongside this PEP (`PepDeps.decisionEvidence`) and this PEP's
- * store is what verifies and retains what it emits.
+ * @spec runtime-evidence#decision-evidence-object (#741, PR #753 review): the
+ * PDP's Decision Evidence emission path is deliberately NOT re-exported here.
+ * It is `@mission/pdp`'s, bound inside the decision point's own construction;
+ * this enforcement package exposes the record type, the verification key
+ * resolver, and the store that verifies and retains what the PDP emitted.
  */
-export {
-  createDecisionEvidenceEmitter,
-  type DecisionEvidenceEmissionInput,
-  type DecisionEvidenceEmitter,
-  type DecisionEvidenceEmitterConfig,
-} from "@mission/pdp";
 export {
   buildAndSignMissionReceipt,
   verifyMissionReceipt,

@@ -15,7 +15,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { MissionKernel, validateMissionIntent } from "@mission/authorization-server";
 import type { ContainmentEvidence } from "@mission/authorization-server";
 import type { DecisionEvidenceObject, EvidenceEnvelope, Evidence, ExecutionEvidenceObject, RefusalRecordObject } from "@mission/mcp-payments";
-import { buildEvidenceKeyResolver, createDecisionEvidenceEmitter, EvidenceStore } from "@mission/mcp-payments";
+import { createDecisionEvidenceEmitter } from "@mission/pdp";
+import { buildEvidenceKeyResolver, EvidenceStore } from "@mission/mcp-payments";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { activityByTrace, AuthzError, buildActivityLog, ConsoleBff } from "../src/index.js";
 

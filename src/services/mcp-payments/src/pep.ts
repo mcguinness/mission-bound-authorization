@@ -24,8 +24,9 @@ import {
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
-  type DecisionEvidenceEmitter,
   type DecisionEvidenceObject,
+  type DecisionFn,
+  type DecisionOptions,
   type DelegatePolicy,
   type Decision,
   type EntitlementResolver,
@@ -430,15 +431,19 @@ export interface PepDeps {
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
    * @spec runtime-evidence#decision-evidence-object,
-   * runtime#agent-isolated-evidence-emission (#741) — the PDP's Decision
-   * Evidence emission path, constructed once at wiring and forwarded to
-   * `EvaluateOptions.evidence` unchanged, exactly as `requestable` forwards
-   * the PDP's denial-binding signer. This PEP never invokes it: it verifies
-   * and retains what comes back on the decision context. Absent, the PDP
-   * emits no Decision Evidence and this PEP refuses to release a permitted
-   * action rather than executing an unevidenced decision.
+   * runtime#agent-isolated-evidence-emission (#741, PR #753 review) — the PDP
+   * decision entry point this PEP submits to: a decision function (co-resident
+   * `createDecisionPoint().decide`, or a client over the remote decision
+   * channel), NEVER an emission path. The PDP's Decision Evidence emitter is
+   * bound inside that construction and closed over there, so this enforcement
+   * component can ask for a decision and verify what comes back, and holds no
+   * capability to have a record signed under the decision point's identity.
+   *
+   * Absent, the co-resident `evaluate` runs with no emission path configured:
+   * the decision carries no Decision Evidence and this PEP refuses to release
+   * a permitted action rather than executing an unevidenced decision.
    */
-  decisionEvidence?: DecisionEvidenceEmitter;
+  decide?: DecisionFn;
   /**
    * @spec txn-authorization#resource-challenge — this resource's txn-challenge
    * signing key (the key published at its `txn_challenge_jwks_uri`). When
@@ -923,7 +928,12 @@ export class Pep {
       } as EvaluationRequest["context"],
     };
 
-    const decision = await evaluate(req, {
+    // @spec runtime-evidence#decision-evidence-object (#741, PR #753 review):
+    // typed as `DecisionOptions`, so this file cannot name an emission path at
+    // all. The decision point applies its own; absent one, the co-resident
+    // `evaluate` runs unevidenced and the retention check below refuses the
+    // permit.
+    const decisionOptions: DecisionOptions = {
       view,
       fga: this.deps.fga,
       modelId: this.deps.modelId,
@@ -933,9 +943,6 @@ export class Pep {
       ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
-      // @spec runtime-evidence#decision-evidence-object (#741): the PDP
-      // signs the record it emits; this PEP holds no key that could.
-      ...(this.deps.decisionEvidence ? { evidence: this.deps.decisionEvidence } : {}),
       ...(this.deps.allowedFreshnessSources ? { allowedFreshnessSources: this.deps.allowedFreshnessSources } : {}),
       ...(this.deps.principalMapping ? { principalMapping: this.deps.principalMapping } : {}),
       ...(this.deps.entitlement ? { entitlement: this.deps.entitlement } : {}),
@@ -946,7 +953,8 @@ export class Pep {
       // forwarded to the PDP unchanged; consulted only when this request
       // carries `context.mission_join` above.
       ...(this.deps.masJoin?.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
-    });
+    };
+    const decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
 

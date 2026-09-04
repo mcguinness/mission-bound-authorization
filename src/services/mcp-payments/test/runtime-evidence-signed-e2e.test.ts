@@ -91,7 +91,7 @@ function buildServer(missionView: MissionView, fga: Fga) {
   const pep = new Pep({
     payments,
     evidence,
-    decisionEvidence: keys.decisionEvidence,
+    decide: keys.decide,
     fga,
     modelId: "unit-test-model",
     loadView,
@@ -129,7 +129,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
     const pep = new Pep({
       payments,
       evidence,
-      decisionEvidence: keys.decisionEvidence,
+      decide: keys.decide,
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       loadView,
@@ -184,7 +184,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
     const pep = new Pep({
       payments,
       evidence,
-      decisionEvidence: keys.decisionEvidence,
+      decide: keys.decide,
       fga: poisonFga,
       modelId: "unit-test-model",
       loadView,
@@ -256,7 +256,7 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
     const pep = new Pep({
       payments,
       evidence,
-      decisionEvidence: keys.decisionEvidence,
+      decide: keys.decide,
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       loadView,
