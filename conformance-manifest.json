@@ -786,6 +786,29 @@
    ]
   },
   {
+   "id": "core.approval-event.approver-establishment-not-from-client-input",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The AS MUST NOT take the Approver's identity or achieved authentication context from unauthenticated client input",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Approver's identity and achieved authentication context come from the authenticated surface that resolved the approval; a client-supplied approver, acr, or auth_time establishes neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "todo, not blocked: the headless decide path still takes `approver`, `approver_acr`, and `approver_auth_time` from the request body. Coverage lands with #759, which sources them from the authenticated interaction session and removes the caller-controlled path."
+  },
+  {
    "id": "core.approval-event.authority-source-trusted-establishment",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",

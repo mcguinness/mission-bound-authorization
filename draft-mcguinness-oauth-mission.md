@@ -1751,6 +1751,9 @@ At the approval event the AS MUST, in order:
 
 1. Authenticate the Approver, subject to the approval-authentication
    floor and any client-requested strength ({{approval-authentication}}).
+   The AS MUST NOT take the Approver's identity or achieved
+   authentication context from unauthenticated client input; the
+   authenticated surface that resolved the approval establishes both.
 2. Establish the Subject: the principal the task is for, recorded as
    the Mission's `subject` and mapped to the `sub` of every derived
    token ({{mission-bound-tokens}}).
