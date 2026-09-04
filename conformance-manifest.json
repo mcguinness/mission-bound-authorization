@@ -6880,9 +6880,16 @@
     "normative": "an evidence-signing key's signature is never treated as authorizing an action or widening the Authority Set"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "An evidence-signing key exists per emitter role (#649), and the PDP signs the Decision Evidence it emits (#741), so this MUST NOT now has a code path to falsify. It is not falsified: no decision path reads a signature as authority. The record the PDP returns on the response context is retained evidence only, and the PEP acts on the decision itself; but nothing yet ASSERTS that, so this row stays todo rather than claiming a negative it does not observe."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > a genuinely signed Decision Evidence claiming permit does not flip an otherwise-DENY decision to executed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 wave 3: a genuinely signed permit record passes scoped verification and is retained, while the live DENY refuses with zero executor dispatches."
   },
   {
    "id": "runtime.evidence-emission.isolated-construction-condition",
@@ -11724,8 +11731,16 @@
     "normative": "signed Decision Evidence is never accepted as authorization to act; it is retrospective evidence, not a live executable credential"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > a genuinely signed Decision Evidence claiming permit does not flip an otherwise-DENY decision to executed",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#594 wave 3: a genuinely signed permit record passes scoped verification and is retained, while the live DENY refuses with zero executor dispatches."
   },
   {
    "id": "authzen.permit-binding-split.cache-key-requirement",
@@ -14336,8 +14351,16 @@
     "normative": "evidence_id conforms to the ABNF and carries at least 128 bits of entropy"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 wave 3: full ABNF and canonical decoded random-segment length. Entropy is grounded in newRecordId's node:crypto randomBytes(20), not sampled uniqueness."
   },
   {
    "id": "evidence.decision.mission-reference-sub-members",
@@ -17522,7 +17545,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. #744 adds the action- and resource-scoped grain: an OPTIONAL, additive `authority` member on EntitlementObservation carrying the mapped principal's currently entitled (resource, actions) set. Absent, every deployment and every pre-existing row behaves exactly as before (regression-guarded at each consumer). Present, mission-core's shared narrowToEntitledAuthority intersects it with the delegated set per action on exact resource matching (no wildcard or prefix form), and all three consumers carry the surviving subset forward: the Cross-Org adapter mints it and records it as output_authority (no evidence schema change), the RAS mints it on base and continuation grants alike, and the PDP folds the (audience, action) check into entitlementCurrent. Only an empty intersection refuses, with the same non-oracular errors as before (invalid_grant at the RAS and Cross-Org, principal_mapping_failed at the PDP); no new denial reason. Kept partial for one narrower remaining reason: the RAS mints from the grant with no local-ceiling or deployment-policy intersection at all, so the quoted clause's third bound is demonstrated at the Cross-Org adapter (localCeiling) and the PDP (policy view and FGA) but not at that entry point. The audience-wide caveat that previously held this row partial no longer applies."
+   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. #744 adds the action- and resource-scoped grain: an OPTIONAL, additive `authority` member on EntitlementObservation carrying the mapped principal's currently entitled (resource, actions) set. Absent, every deployment and every pre-existing row behaves exactly as before (regression-guarded at each consumer). Present, mission-core's shared narrowToEntitledAuthority intersects it with the delegated set per action on exact resource matching (no wildcard or prefix form), and all three consumers carry the surviving subset forward: the Cross-Org adapter mints it and records it as output_authority (no evidence schema change), the RAS mints it on base and continuation grants alike, and the PDP folds the (audience, action) check into entitlementCurrent. Only an empty intersection refuses, with the same non-oracular errors as before (invalid_grant at the RAS and Cross-Org, principal_mapping_failed at the PDP); no new denial reason. Kept partial for one narrower remaining reason: the RAS mints from the grant with no local-ceiling or deployment-policy intersection at all, so the quoted clause's third bound is demonstrated at the Cross-Org adapter (localCeiling) and the PDP (policy view and FGA) but not at that entry point. The audience-wide caveat that previously held this row partial no longer applies. The remaining RAS local-ceiling/deployment-policy intersection is tracked by #762, not #657 PR B."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
@@ -18446,16 +18469,22 @@
     "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
      "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699) > adds no Mission record member: a committed record carries no approval_context_commitment",
      "level": "unit",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
+     "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699) > survives persistence and re-hydration: a fetched, re-hydrated record still carries no approval_context_commitment",
+     "level": "unit",
+     "surface": "commitment"
     }
    ],
-   "notes": "#699 asserts the AS kernel's committed MissionRecord, and the ungated issuer introspection view over it, carry no approval_context_commitment. That record type does not yet implement every core Mission Record member (authority_source is absent), so absence there is weaker than the row's own observation about the Mission Record, and coverage stays partial until the record type is complete."
+   "notes": "#594 wave 3: absence asserted on the created record, SQL-rehydrated kernel.get record, and ungated introspection projection. authority_source presence is supporting completeness coverage, not the absence assertion."
   },
   {
    "id": "approval-context.computation.cache-is-derived-state",

@@ -55,6 +55,15 @@ beforeAll(async () => {
 });
 
 describe("Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699)", () => {
+  it("survives persistence and re-hydration: a fetched, re-hydrated record still carries no approval_context_commitment", () => {
+    const hydrated = kernel.get(record.id);
+    expect(hydrated).toBeDefined();
+    expect(hydrated).not.toHaveProperty(MEMBER);
+    expect(Object.keys(hydrated!)).not.toContain(MEMBER);
+    // Supporting completeness coverage, not the proof of member absence.
+    expect(hydrated?.authority_source).toBeDefined();
+  });
+
   it("adds no Mission record member: a committed record carries no approval_context_commitment", () => {
     expect(record).not.toHaveProperty(MEMBER);
     expect(Object.keys(record)).not.toContain(MEMBER);

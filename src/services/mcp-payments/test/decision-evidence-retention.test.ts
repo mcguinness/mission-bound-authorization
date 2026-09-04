@@ -15,7 +15,7 @@
  * skips.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createDecisionEvidenceEmitter,
   createEphemeralDecisionPoint,
@@ -233,6 +233,28 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
 });
 
 describe("a permit the PDP did not evidence is refused, never executed (#741)", () => {
+  it("a genuinely signed Decision Evidence claiming permit does not flip an otherwise-DENY decision to executed", async () => {
+    const keys = createEphemeralEvidenceKeys();
+    const decide = keys.decide;
+    keys.decide = async (request, options) => {
+      const permitted = await decide(request, options);
+      expect(permitted.decision).toBe(true);
+      // Keep the genuine, correctly scoped signed permit evidence. Only the
+      // live decision denies, so failed signature verification cannot prove
+      // this invariant by accident.
+      return { ...permitted, decision: false, context: { ...permitted.context, denial_reason: "out_of_authority" } };
+    };
+    const { server, evidence } = buildServer(keys, true);
+    const execute = vi.spyOn(server as unknown as { execute(tool: string, args: Record<string, unknown>): unknown }, "execute");
+    const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
+    expect(res).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+    const retained = evidence.all().find((e): e is DecisionEvidence => e.kind === "decision");
+    expect(retained?.content.decision).toBe("permit");
+    expect(retained?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pdp" });
+    expect(execute).not.toHaveBeenCalled();
+    expect(res.result).toBeUndefined();
+  });
+
   it("refuses the action when the decision carries no Decision Evidence", async () => {
     const keys = createEphemeralEvidenceKeys();
     const { server, evidence } = buildServer(keys, false);
