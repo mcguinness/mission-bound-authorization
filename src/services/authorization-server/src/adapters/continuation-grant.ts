@@ -1514,9 +1514,10 @@ export async function handleChildCreationExchange(
     issued_token_type: JWT_TOKEN_TYPE,
     token_type: "N_A",
     mission_id: child.id,
-    // @spec mission#grant-binding — the child's COMMITTED effective expiry,
-    // verbatim from the record (the recovery body returns the same stored
-    // value, since recovery is delivery and never re-creation).
+    // @spec child-delegation#grant-type, mission#grant-binding — REQUIRED on
+    // this response shape: the child's COMMITTED effective expiry, verbatim
+    // from the record (the recovery body returns the same stored value, since
+    // recovery is delivery and never re-creation).
     mission_expires_at: child.expires_at,
     parent: child.parent,
   };
@@ -1608,9 +1609,10 @@ async function recoverChildCreation(
     issued_token_type: JWT_TOKEN_TYPE,
     token_type: "N_A",
     mission_id: child.id,
-    // @spec mission#grant-binding — the child's COMMITTED effective expiry,
-    // verbatim from the record (the recovery body returns the same stored
-    // value, since recovery is delivery and never re-creation).
+    // @spec child-delegation#grant-type, mission#grant-binding — REQUIRED on
+    // this response shape: the child's COMMITTED effective expiry, verbatim
+    // from the record (the recovery body returns the same stored value, since
+    // recovery is delivery and never re-creation).
     mission_expires_at: child.expires_at,
     parent: child.parent,
   };

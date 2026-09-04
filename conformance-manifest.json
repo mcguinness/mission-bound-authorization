@@ -835,9 +835,34 @@
     "normative": "a mission_intent whose expires_at is malformed or already past fails invalid_request at submission acceptance; the AS never rewrites the requested value"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite; row replaces the pre-#525 invalid_authorization_details behavior."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses an already-past requested expires_at at submission acceptance (invalid_request)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses an unparseable requested expires_at at submission acceptance (invalid_request)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > intake refuses an already-past requested expires_at with invalid_request",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > the Submission envelope carries the same already-past refusal",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Both refusal arms (unparseable and already-past) are invalid_request at submission acceptance, judged against the kernel clock. The requested value is never rewritten forward. Row replaces the pre-#525 invalid_authorization_details behavior."
   },
   {
    "id": "core.record.effective-not-later-than-requested",
@@ -866,9 +891,15 @@
      "name": "mission record expiry ceiling (@spec mission#mission-record) > commits an effective expires_at never later than the Intent's requested ceiling",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is later than intent.expires_at",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "The AS currently copies intent.expires_at verbatim into the record (no independent AS-policy shortening path exists yet); the test asserts the MUST NOT ceiling as an ordering relation (<=) rather than equality, so it stays valid if shortening is added."
+   "notes": "The record no longer copies intent.expires_at verbatim: resolveEffectiveExpiry establishes the effective value and insertRecord independently refuses any record later than the requested ceiling, so the MUST NOT holds at the single creation funnel whatever built the record."
   },
   {
    "id": "core.record.applicable-shortening",
@@ -890,9 +921,34 @@
     "normative": "an applicable policy or profile ceiling shortens the effective expiry below the requested ceiling without touching Authority Set derivation"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > a deployment ceiling shorter than the request narrows the committed expires_at",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > a request narrower than the deployment ceiling keeps the requested value verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "expansion: successor expiry (@spec expansion#successor-expiry) > is bounded by the predecessor's expires_at absent a recorded extension",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > token exchange (subject_token = parent access token) creates a Child Mission and returns a child-bound grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "One resolveEffectiveExpiry hook takes the earliest applicable bound from a single supplied creation instant: the deployment's own max_mission_lifetime_s (policy.json, validated in the typed loader), a template's expiry and per-instance lifetime, a parent's expiry, the recorded approval expiry, and an expansion predecessor's expiry. The Authority Set is untouched by any of it. The reference deployment ships no lifetime ceiling of its own, so the narrowing arm is proven with an injected ceiling."
   },
   {
    "id": "core.creation.atomic-expiry-check",
@@ -914,9 +970,22 @@
     "normative": "a requested ceiling that passes while approval is pending completes as no Mission; deferred and relocated flows inherit the check at their own creation commit"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite; per-flow completion errors are each profile's."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > @spec mission#approval-event: a ceiling that passes while the approval pends creates NO Mission (access_denied)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is not later than created_at",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics."
   },
   {
    "id": "core.response.mission-expires-at-on-creation",
@@ -938,9 +1007,34 @@
     "normative": "every Mission-creating success response carries mission_expires_at with the committed effective value"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite; the member is the common Mission-creation response member, additionally registered for OAuth token responses."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > token exchange (subject_token = parent access token) creates a Child Mission and returns a child-bound grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "All four Mission-creating success bodies carry it: the direct-creation authorization_code token response, the template-dispatch grant, the child-creation exchange, and the expansion completion. Each stamps the committed record value verbatim, never a value recomputed while rendering. The member is additionally registered for OAuth token responses."
   },
   {
    "id": "core.response.replay-returns-committed-value",
@@ -962,9 +1056,28 @@
     "normative": "an idempotent creation replay returns mission_expires_at equal to the committed record value, never a recomputed one"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "child-creation idempotency (@spec child-delegation#creation-request-id) > lost-response retry returns the SAME child: mission id equal, fan-out counted ONCE, one activating lifecycle commit (no second Child Evidence)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "expansion idempotency (@spec expansion#creation-request-id) > pending retry returns the SAME deferral_code; after completion, the superseded-predecessor retry recovers the SAME successor (lookup-order rule)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Deduplicated under creation_request_id (child creation, expansion) and under dispatch_event_id (template dispatch): the recovered body reads the stored record rather than recomputing an expiry from the replay's own, later clock."
   },
   {
    "id": "core.derivation.configured-mapping-lookup",
