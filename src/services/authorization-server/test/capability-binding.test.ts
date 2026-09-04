@@ -5,7 +5,7 @@
  * treats them. Presentation and decision-time comparison are separate changes.
  */
 
-import { authorityHash, type CapabilitySourceBinding, capabilitySourceDigest, catalogDigest, extractMcpToolDefinition } from "@mission/core";
+import { authorityHash, type CapabilitySourceBinding, capabilitySourceDigest, capabilitySourceIdentity, catalogDigest, extractMcpToolDefinition } from "@mission/core";
 import { CATALOG_SERVICES, DERIVATION_POLICY, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { TOOLS } from "@mission/mcp-payments";
 import { generateKeyPair } from "jose";
@@ -14,19 +14,32 @@ import {
   attachCapabilitySources,
   type AuthorityEntry,
   type CapabilitySourceResolution,
+  createChildMission,
+  createExpansion,
+  createTemplate,
+  dispatchFromTemplate,
   IntentError,
   isSubsetEntry,
   isSubsetSet,
   MissionKernel,
+  type MissionRecord,
   projectThroughEffective,
+  TemplateStore,
   validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const READ_ACTION = "payments:invoice.read";
 const WRITE_ACTION = "payments:payment.schedule";
+
+// A first-party action of the SAME ceiling entry as READ_ACTION, so a derived
+// set can retain the entry while dropping the catalog-sourced action.
+const VENDOR_ACTION = "payments:vendor.read";
+const CHILD_ACTOR = "subagent-capability";
+const EXP = "2027-01-01T00:00:00Z";
 
 const CATALOG = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments")!;
 
@@ -52,6 +65,8 @@ beforeAll(async () => {
     policy: DERIVATION_POLICY as never,
     statusKey: privateKey,
     statusKid: "as-status",
+    // The child-creation suite below delegates to this AS-asserted `ai_agent`.
+    actorProfiles: aiAgents(CHILD_ACTOR),
   });
 });
 
@@ -340,5 +355,223 @@ describe("trusted catalog configuration", () => {
     // The whole-catalog digest is over the retrieved bytes, so it differs from
     // any per-capability digest taken from within them.
     expect(catalogDigest(CATALOG.text)).not.toBe(capabilitySourceDigest(definition));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The DERIVED paths. `Kernel.approve` is where a binding first enters; child
+// creation, template dispatch, and expansion create a Mission from an EXISTING
+// one and never resolve, so each inherits the grantor's recorded bindings.
+// ---------------------------------------------------------------------------
+
+/** Two bindings for ONE catalog-sourced action, so "every binding" is testable. */
+const TWO_TOOLS: CapabilitySourceResolution[] = [
+  resolution(READ_ACTION, "get_invoice"),
+  {
+    resource: RESOURCE,
+    action: READ_ACTION,
+    binding: {
+      ...bindingFor(READ_ACTION, "get_invoice"),
+      tool_id: "mcp://payments.test/tools/get_invoice_v2",
+    },
+  },
+];
+
+/** A proposal on the payments resource, restating the ceiling's vendors. */
+const proposalOf = (actions: string[]): AuthorityEntry[] => [
+  {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions,
+    constraints: { vendors: ["acme"] },
+  },
+];
+
+const intentOf = (goal: string) =>
+  validateMissionIntent(
+    JSON.stringify({ goal, target_resources: [RESOURCE], expires_at: EXP }),
+  );
+
+/** The canonical bytes of an entry's recorded bindings: byte-identity, not shape. */
+const identitiesOf = (entry: AuthorityEntry) =>
+  entry.capability_sources?.map(capabilitySourceIdentity);
+
+const hashCovers = (record: MissionRecord) =>
+  record.authority_hash === authorityHash(record.issuer, record.authority_set as never);
+
+describe("child creation inherits the parent's recorded bindings", () => {
+  let parent: MissionRecord;
+  let parentEntry: AuthorityEntry;
+  beforeAll(() => {
+    parent = approve(TWO_TOOLS);
+    parentEntry = entryFor(parent, READ_ACTION);
+  });
+
+  const createChild = (actions: string[], seqTag: string) =>
+    createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intentOf(`Extract Acme invoices ${seqTag}`),
+      proposedAuthority: proposalOf(actions),
+      childActor: { sub: CHILD_ACTOR, sub_profile: "ai_agent" },
+    });
+
+  it("carries every parent binding byte-identically onto a retained action", () => {
+    const { child } = createChild([READ_ACTION], "retain");
+    const childEntry = entryFor(child, READ_ACTION);
+    expect(parentEntry.capability_sources).toHaveLength(2);
+    expect(childEntry.capability_sources).toEqual(parentEntry.capability_sources);
+    expect(identitiesOf(childEntry)).toEqual(identitiesOf(parentEntry));
+  });
+
+  it("keeps the child a subset of the parent, which a dropped binding would refuse", () => {
+    const { child } = createChild([READ_ACTION], "subset");
+    expect(isSubsetSet(child.authority_set, parent.authority_set)).toBe(true);
+    // The counterfactual the review named: the same child WITHOUT the inherited
+    // bindings is correctly undelegable.
+    const unbound = child.authority_set.map(({ capability_sources: _drop, ...rest }) => rest);
+    expect(isSubsetSet(unbound, parent.authority_set)).toBe(false);
+  });
+
+  it("drops the bindings of an action the child does not retain", () => {
+    const { child } = createChild([VENDOR_ACTION], "drop");
+    const childEntry = entryFor(child, VENDOR_ACTION);
+    expect(childEntry.actions).toEqual([VENDOR_ACTION]);
+    expect("capability_sources" in childEntry).toBe(false);
+    expect(isSubsetSet(child.authority_set, parent.authority_set)).toBe(true);
+  });
+
+  it("commits the inherited bindings under the child authority_hash", () => {
+    const { child } = createChild([READ_ACTION], "hash");
+    expect(hashCovers(child)).toBe(true);
+    const { child: bare } = createChild([VENDOR_ACTION], "hash-bare");
+    expect(child.authority_hash).not.toBe(bare.authority_hash);
+  });
+});
+
+describe("template dispatch inherits the ceiling's recorded bindings", () => {
+  const CEILING: AuthorityEntry[] = [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: [READ_ACTION, VENDOR_ACTION],
+      constraints: { vendors: ["acme"] },
+      capability_sources: TWO_TOOLS.map((r) => r.binding as CapabilitySourceBinding),
+    },
+  ];
+
+  let store: TemplateStore;
+  let templateId: string;
+  let seq = 0;
+  beforeAll(() => {
+    store = new TemplateStore();
+    templateId = createTemplate(store, {
+      template_version: "tmpl-cap-1",
+      issuer: ISS,
+      approver: { iss: ISS, sub: "bob" },
+      ceiling: CEILING,
+      dispatch_policy: "capability-binding-test",
+      dispatchers: ["orchestrator"],
+      recipients: ["worker"],
+      per_instance_lifetime_s: 3600,
+      max_active: 10,
+      rate_per_min: 20,
+      approval_event_id: "tmpl-cap-consent",
+      expires_at: EXP,
+    }).id;
+  });
+
+  const dispatch = (actions: string[]) =>
+    dispatchFromTemplate(kernel, store, {
+      templateId,
+      dispatchEventId: `dsp-cap-${(seq += 1)}`,
+      dispatcher: "orchestrator",
+      recipient: "worker",
+      intent: intentOf("reconcile Acme"),
+      proposedAuthority: proposalOf(actions),
+      subject: { iss: ISS, sub: "alice" },
+      policyVersion: DERIVATION_POLICY.policy_version,
+    });
+
+  it("carries every ceiling binding byte-identically onto a retained action", () => {
+    const instance = dispatch([READ_ACTION]).mission;
+    const entry = entryFor(instance, READ_ACTION);
+    expect(entry.capability_sources).toEqual(CEILING[0]?.capability_sources);
+    expect(identitiesOf(entry)).toEqual(identitiesOf(CEILING[0] as AuthorityEntry));
+    // The double intersection still holds against BOTH ceilings.
+    expect(isSubsetSet(instance.authority_set, CEILING)).toBe(true);
+  });
+
+  it("drops the bindings of an action the instance does not retain", () => {
+    const instance = dispatch([VENDOR_ACTION]).mission;
+    const entry = entryFor(instance, VENDOR_ACTION);
+    expect("capability_sources" in entry).toBe(false);
+    expect(isSubsetSet(instance.authority_set, CEILING)).toBe(true);
+  });
+
+  it("commits the inherited bindings under the instance authority_hash", () => {
+    const bound = dispatch([READ_ACTION]).mission;
+    const bare = dispatch([VENDOR_ACTION]).mission;
+    expect(hashCovers(bound)).toBe(true);
+    expect(bound.authority_hash).not.toBe(bare.authority_hash);
+  });
+});
+
+describe("expansion inherits the predecessor's recorded bindings", () => {
+  let seq = 0;
+  const expand = (predecessorId: string, actions: string[]) =>
+    createExpansion(kernel, {
+      predecessorId,
+      intent: intentOf("Pay Acme invoices (widened)"),
+      proposedAuthority: proposalOf(actions),
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `apev-succ-cap-${(seq += 1)}`,
+      approvedUntil: EXP,
+    });
+
+  it("carries every predecessor binding byte-identically onto a retained action", () => {
+    const predecessor = approve(TWO_TOOLS);
+    const { successor } = expand(predecessor.id, [READ_ACTION]);
+    const entry = entryFor(successor, READ_ACTION);
+    expect(entry.capability_sources).toEqual(
+      entryFor(predecessor, READ_ACTION).capability_sources,
+    );
+    expect(identitiesOf(entry)).toEqual(identitiesOf(entryFor(predecessor, READ_ACTION)));
+    // Expansion has no subset gate of its own, so the property is asserted here.
+    expect(isSubsetSet(successor.authority_set, predecessor.authority_set)).toBe(true);
+  });
+
+  it("drops the bindings of an action the successor does not retain", () => {
+    const predecessor = approve(TWO_TOOLS);
+    const { successor } = expand(predecessor.id, [VENDOR_ACTION]);
+    expect("capability_sources" in entryFor(successor, VENDOR_ACTION)).toBe(false);
+    expect(isSubsetSet(successor.authority_set, predecessor.authority_set)).toBe(true);
+  });
+
+  it("restores a contained action with the binding the predecessor recorded", () => {
+    const predecessor = approve(TWO_TOOLS);
+    kernel.contain(predecessor.id, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: `taint-cap-${(seq += 1)}`,
+      },
+      remove: [{ resource: RESOURCE, actions: [READ_ACTION] }],
+    });
+    // The grantor is the predecessor's APPROVED set: containment does not
+    // propagate to a successor, and the restored action keeps its binding
+    // rather than being emitted unbound.
+    const { successor } = expand(predecessor.id, [READ_ACTION]);
+    expect(entryFor(successor, READ_ACTION).capability_sources).toEqual(
+      entryFor(predecessor, READ_ACTION).capability_sources,
+    );
+  });
+
+  it("commits the inherited bindings under the successor authority_hash", () => {
+    const predecessor = approve(TWO_TOOLS);
+    const bound = expand(predecessor.id, [READ_ACTION]).successor;
+    const bare = expand(predecessor.id, [VENDOR_ACTION]).successor;
+    expect(hashCovers(bound)).toBe(true);
+    expect(bound.authority_hash).not.toBe(bare.authority_hash);
   });
 });
