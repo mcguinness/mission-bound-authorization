@@ -407,12 +407,19 @@ follows:
 
 The same composition extends to the proposed agent profile of
 Transaction Tokens
-({{I-D.draft-araut-oauth-transaction-tokens-for-agents}}), whose
-`agentic_ctx` member carries roles, intent, and constraints along
-the call chain. The `mission` claim object is the natural anchor to
-carry there, inert as evidence exactly as in the chaining profile
-above, so call-chain intent context stays joined to the committed
-record instead of growing an unanchored twin of it.
+({{I-D.draft-araut-oauth-transaction-tokens-for-agents}}). Its
+`agentic_ctx` claim's normative fields, as of -02, are
+`current_actor`, `originator`, and `chain_metadata`: hop-to-hop
+agent-chain context, who is acting now, who started the chain, and
+how many agent transitions occurred. A Mission reference is a
+different axis, the governing transaction or authority context the
+chain executes under, and it does not change hop to hop the way
+those fields do. Where that context travels within a Transaction
+Token (a top-level claim, the base transaction context, or an
+`agentic_ctx` extension) is for that draft's authors to settle and
+is not decided here. Mission context does not itself confer
+authority: a consumer applies this profile's validation before using
+it for authorization.
 
 # Relationship to Mission Continuation {#mission-continuation}
 
