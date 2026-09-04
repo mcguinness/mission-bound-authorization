@@ -1,3 +1,5 @@
+export type { AuthorityEntry, DelegateMatcher, ChildFanoutControls, TerminalWhenCondition } from "./authority-entry.js";
+export { isSubsetEntry, isSubsetSet, conditionsNoBroader, conditionCanonicalBytes } from "./authority-subset.js";
 export {
   AUTHORITY_ENTRY_TYP,
   AUTHORITY_SET_TYP,
