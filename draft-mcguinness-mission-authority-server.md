@@ -324,7 +324,7 @@ the bindings rather than a maturity one.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 26 conformance rows in conformance-manifest.json (10 tested, 3 partial, 13 todo).
+Implementation: 26 conformance rows in conformance-manifest.json (13 tested, 13 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).

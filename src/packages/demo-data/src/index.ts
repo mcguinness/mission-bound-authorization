@@ -763,6 +763,84 @@ export const CONTAINMENT_POLICY: ContainmentPolicy = {
 };
 
 /**
+ * @spec authority-server#mission-join (#557) — one deployment's MAS Join
+ * policy: which resources this deployment governs through the Join, which
+ * clients may join as a delegate and how deep, and what an ordinary
+ * credential's OAuth scope carries as authority. Policy only: Mission ids are
+ * minted per run, so nothing here names a Mission. The delegation edges rule 5
+ * evaluates depth against are deployment STATE (`ActorRecords`,
+ * `services/mcp-payments/src/actor-records.ts`), appended at runtime, never
+ * config.
+ */
+export interface MasJoinPolicy {
+  /**
+   * Resource identifiers this deployment routes through a MAS-governed
+   * gateway. A resource absent from this list starts no joined route at all,
+   * so the Join is opt-in per resource rather than per process.
+   */
+  governed_resources: string[];
+  /**
+   * @spec authority-server#mission-join rule 4 — the ENUMERATED delegate
+   * ceiling: client id to that delegate's static maximum depth. Rule 4 admits
+   * a delegate only from an explicit policy, so an absent client id is a
+   * denied join, never a default admission.
+   */
+  delegates: Record<string, { max_depth: number }>;
+  /**
+   * @spec authority-server#mission-join rule 8 (bound 1) — what an ordinary
+   * credential's own OAuth scope carries: scope value to the actions it
+   * authorizes. This models the token AS ISSUED, so the gateway evaluates
+   * bound 1 from the credential rather than from client policy.
+   */
+  scope_actions: Record<string, string[]>;
+}
+
+function loadMasJoin(): MasJoinPolicy {
+  const file = "mas-join.json";
+  const root = asObject(file, readJson(file), "mas_join");
+  const delegatesRaw = asObject(file, root.delegates, "mas_join.delegates");
+  const delegates: Record<string, { max_depth: number }> = {};
+  for (const [clientId, raw] of Object.entries(delegatesRaw)) {
+    const ctx = `mas_join.delegates.${clientId}`;
+    const entry = asObject(file, raw, ctx);
+    const maxDepth = reqNumber(file, entry, "max_depth", ctx);
+    if (!Number.isInteger(maxDepth) || maxDepth < 0) {
+      throw new ConfigError(file, `${ctx}.max_depth must be a non-negative integer`);
+    }
+    delegates[clientId] = { max_depth: maxDepth };
+  }
+  const scopeActionsRaw = asObject(file, root.scope_actions, "mas_join.scope_actions");
+  const scope_actions: Record<string, string[]> = {};
+  for (const scope of Object.keys(scopeActionsRaw)) {
+    const actions = reqStringArray(file, scopeActionsRaw, scope, "mas_join.scope_actions");
+    if (actions.length === 0) {
+      throw new ConfigError(file, `mas_join.scope_actions.${scope} must be non-empty`);
+    }
+    scope_actions[scope] = actions;
+  }
+  return {
+    governed_resources: reqStringArray(file, root, "governed_resources", "mas_join"),
+    delegates,
+    scope_actions,
+  };
+}
+
+const MAS_JOIN_RAW = loadMasJoin();
+
+/**
+ * @spec authority-server#mission-join (#557) — the validated MAS Join policy.
+ * `governed_resources` resolves the payments entry to the (possibly
+ * env-overridden) CANONICAL_RESOURCE, like CONTAINMENT_POLICY and
+ * CATALOG_SERVICES, so the governed route tracks MCP_PAYMENTS_RESOURCE.
+ */
+export const MAS_JOIN: MasJoinPolicy = {
+  ...MAS_JOIN_RAW,
+  governed_resources: MAS_JOIN_RAW.governed_resources.map((r) =>
+    r === DEFAULT_PAYMENTS_RESOURCE ? CANONICAL_RESOURCE : r,
+  ),
+};
+
+/**
  * @spec containment#protected-events, status signed event-source profile — a
  * trusted protected-event source, as seeded in config. `source` is the source
  * IDENTITY a report's payload claims; `event_types` is the set of protected-event

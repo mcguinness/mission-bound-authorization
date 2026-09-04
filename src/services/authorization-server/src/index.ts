@@ -563,6 +563,16 @@ export async function buildAuthorizationServer(opts: {
   /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
   stateRecoveryRetryAfter?: number;
   /**
+   * @spec authority-server#mission-join (#557) — DEV ONLY: serve
+   * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
+   * token (a `scope`, the payments audience, no `mission` claim) on a
+   * registered service token's authority. The MAS Join acts under exactly
+   * that credential class and nothing else here issues one, so the demo
+   * stack turns it on to have a credential to present. Absent (the default):
+   * no such route exists.
+   */
+  devOrdinaryIssuance?: boolean;
+  /**
    * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
    * `mission_lifecycle` and `mission_discharge`). A test registers a
@@ -816,6 +826,19 @@ export async function buildAuthorizationServer(opts: {
     childGrantKey: tokenPrivateKey,
     childGrantKid: asToken.kid,
     childGrantAlg: asToken.alg,
+    // @spec authority-server#mission-join (#557) — the dev-only ordinary
+    // issuance route, signed with this AS's own token key so the resource
+    // verifies it on the jwks_uri exactly as it verifies a Mission-bound one.
+    ...(opts.devOrdinaryIssuance
+      ? {
+          devOrdinaryIssuance: {
+            key: tokenPrivateKey,
+            kid: asToken.kid,
+            alg: asToken.alg,
+            audience: CANONICAL_RESOURCE,
+          },
+        }
+      : {}),
     // @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
     // grant. The continuation ID-JAG is an identity grant, so it is signed with
     // its OWN dedicated ES256 as-continuation key (D39 per-purpose). That key is

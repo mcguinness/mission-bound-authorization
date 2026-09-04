@@ -20,6 +20,7 @@ import {
   decodeJwt,
   decodeProtectedHeader,
   jwtVerify,
+  SignJWT,
   type CryptoKey,
   type JWK,
 } from "jose";
@@ -343,6 +344,18 @@ export interface AdapterOptions {
   childGrantKey?: CryptoKey;
   childGrantKid?: string;
   childGrantAlg?: string;
+  /**
+   * @spec authority-server#mission-join (#557) — DEV ONLY. When set, this AS
+   * serves `POST /dev/ordinary-token`, minting an ORDINARY DPoP-bound access
+   * token: a `scope`, the configured audience, and NO `mission` claim. The
+   * MAS Join's premise is an UNCHANGED authorization server issuing ordinary
+   * tokens, and no other path in this deployment mints one, so a MAS-governed
+   * route would have no credential to be presented with. This is not an OAuth
+   * grant: it mints on a registered service token's authority, with no client
+   * authentication, no user interaction, and no Mission. Unset (the default,
+   * and any deployment that is not the demo): the route does not exist.
+   */
+  devOrdinaryIssuance?: { key: CryptoKey; kid: string; alg: string; audience: string };
   /**
    * @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
    * grant wiring. All are composed in src/index.ts; when any is unset the grant
@@ -2431,6 +2444,50 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       ctx.status = 400;
       ctx.body = { error: "unsupported_operation", error_description: "only revoke is supported; expiry is time-based via expires_at" };
+      return;
+    }
+
+    // --- Ordinary (non-Mission) token issuance, DEV ONLY ---
+    // @spec authority-server#mission-join (#557) — the credential a MAS Join
+    // acts under: an ordinary DPoP-bound OAuth access token with a `scope`
+    // and NO `mission` claim. The Join's whole premise is that this AS is
+    // unchanged, so the token is deliberately plain; every Mission control
+    // lives on the resource side, where the reference is joined.
+    if (ctx.path === "/dev/ordinary-token" && ctx.method === "POST") {
+      if (!requireServiceToken(ctx)) return;
+      const dev = opts.devOrdinaryIssuance;
+      if (!dev) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const body = await readJsonBody(ctx.req);
+      const str = (k: string): string | undefined =>
+        typeof body[k] === "string" && (body[k] as string).length > 0 ? (body[k] as string) : undefined;
+      const sub = str("sub");
+      const clientId = str("client_id");
+      const scope = str("scope");
+      const jkt = str("jkt");
+      if (!sub || !clientId || !scope || !jkt) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "invalid_request",
+          error_description: "sub, client_id, scope and jkt are all required",
+        };
+        return;
+      }
+      const ttl = opts.accessTokenTTL ?? 300;
+      const accessToken = await new SignJWT({ client_id: clientId, scope, cnf: { jkt } })
+        .setProtectedHeader({ alg: dev.alg, kid: dev.kid })
+        .setIssuer(opts.issuer)
+        .setAudience(dev.audience)
+        .setSubject(sub)
+        .setIssuedAt()
+        .setExpirationTime(`${ttl}s`)
+        .sign(dev.key);
+      ctx.status = 200;
+      ctx.set("content-type", "application/json");
+      ctx.body = { access_token: accessToken, token_type: "DPoP", expires_in: ttl, scope };
       return;
     }
 
