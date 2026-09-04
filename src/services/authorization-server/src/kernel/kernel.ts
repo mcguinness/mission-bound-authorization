@@ -21,6 +21,7 @@ import {
 } from "./containment.js";
 import {
   assertApproverMayActivate,
+  assertPolicyDigestMatches,
   assertSubjectDiscipline,
   assertWithinSourceCeiling,
   type AuthoritySourceCatalog,
@@ -29,6 +30,7 @@ import {
   parseAuthoritySource,
   resolveDeclaredSource,
   resolveSourceForClient,
+  validateAuthoritySourceCatalog,
 } from "./authority-source.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet, resolveDerivationLimit } from "./derive.js";
@@ -277,6 +279,12 @@ export class MissionKernel {
   private readonly allocateStatusIndex: () => number;
 
   constructor(private readonly opts: KernelOptions) {
+    // @spec mission#authority-sources — the catalog's own invariants are
+    // enforced HERE, not only over the shipped file: two declarations sharing a
+    // source identity would make a drawdown's re-resolution ambiguous, and one
+    // client declared twice would make establishment ambiguous. Both refuse
+    // construction rather than letting a lookup silently pick a winner.
+    if (opts.authoritySourceCatalog) validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
     this.db = openStore(SCHEMA);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
@@ -450,6 +458,7 @@ export class MissionKernel {
     const source = authoritySourceOf(entry);
     assertApproverMayActivate(entry, input.approver);
     assertSubjectDiscipline(this.opts.authoritySourceCatalog, entry, input.subject);
+    assertPolicyDigestMatches(entry, source);
     return source;
   }
 

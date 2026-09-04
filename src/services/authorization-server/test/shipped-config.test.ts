@@ -31,6 +31,7 @@ import {
   DEMO_AGENT_PROPOSAL,
   DERIVATION_POLICY,
   GOVERNED_POLICIES,
+  TOPOLOGY,
 } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
 import {
@@ -169,9 +170,14 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
         g.id === organizational?.policy?.id && g.version === organizational?.policy?.version,
     );
     expect(governed).toBeDefined();
-    // The ceiling is the governed policy's own, never a second copy, and the
-    // digest is computed at load, never read from the wire.
-    expect(organizational?.ceiling).toEqual(governed?.ceiling);
+    // The ceiling is the governed policy's own, never a second copy (compared
+    // through the same CANONICAL_RESOURCE remap the catalog applies, so this
+    // holds under MCP_PAYMENTS_RESOURCE too), and the digest is computed at
+    // load, never read from the wire.
+    const remapped = governed?.ceiling.map((c) =>
+      c.resource === TOPOLOGY.resources.payments ? { ...c, resource: CANONICAL_RESOURCE } : c,
+    );
+    expect(organizational?.ceiling).toEqual(remapped);
     expect(organizational?.policy?.digest).toBe(governed?.digest);
     expect(organizational?.policy?.digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
   });

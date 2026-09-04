@@ -301,6 +301,22 @@ describe("authority source discriminator (@spec mission#mission-record, mission#
     ).toThrow(/unrecognized type/);
   });
 
+  it("refuses kernel construction on a catalog whose invariants do not hold", () => {
+    // The uniqueness rule is what makes a drawdown's re-resolution
+    // unambiguous, so it is enforced in production (the kernel constructor),
+    // not only over the shipped file.
+    const duplicateIdentity = catalog();
+    (duplicateIdentity.entries as { type: string }[])[1].type = "user_delegated";
+    expect(() => makeKernel({ authoritySourceCatalog: duplicateIdentity as never })).toThrow(
+      /duplicate source identity/,
+    );
+    const duplicateClient = catalog();
+    (duplicateClient.entries as { clients: string[] }[])[1].clients = ["ap-agent"];
+    expect(() => makeKernel({ authoritySourceCatalog: duplicateClient as never })).toThrow(
+      /declared twice/,
+    );
+  });
+
   it("refuses a catalog that declares one client or one source identity twice", () => {
     const duplicateClient = catalog();
     (duplicateClient.entries as { clients: string[] }[])[1].clients = ["ap-agent"];
