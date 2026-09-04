@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>AAuth Mission Management</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       AAuth defines an immutable mission blob, identifies it by the native
+ {approver, s256}  mission reference, and gives a mission two states:
+ active  and  terminated .  It leaves revocation, delegation-tree
+queries, and administrative interfaces to a companion specification.
+This document defines that companion. 
+       An authenticated caller can read status, permanently terminate an
+authorized mission, and inspect the AAuth agent and token delegation
+tree recorded for it.  An immutable expiry, AAuth's  expires_at ,
+ends a mission automatically.  Termination
+reasons are audit facts and never protocol states.  The operations extend the existing AAuth  mission_endpoint ,
+use AAuth HTTP Message Signatures for agent calls, preserve the privacy
+of the mission blob, and record their results in the mission log. 
+       Termination immediately closes Person Server decision and issuance
+paths, but it cannot by itself retract every credential already accepted
+by every resource.  This document therefore specifies best-effort
+revocation by AAuth token identity  (iss, jti)  and requires deployments
+to report and bound the residual window honestly. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="aauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="management" name="keyword">
+<meta content="lifecycle" name="keyword">
+<meta content="revocation" name="keyword">
+<meta content="draft-mcguinness-mission-aauth-management-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.7
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.3
+-->
+<link href="draft-mcguinness-mission-aauth-management.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">AAuth Mission Management</td>
+<td class="right">September 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 8 March 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-aauth-management-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-09-04" class="published">4 September 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-03-08">8 March 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">AAuth Mission Management</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">AAuth defines an immutable mission blob, identifies it by the native
+<code>{approver, s256}</code> mission reference, and gives a mission two states:
+<code>active</code> and <code>terminated</code>.  It leaves revocation, delegation-tree
+queries, and administrative interfaces to a companion specification.
+This document defines that companion.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">An authenticated caller can read status, permanently terminate an
+authorized mission, and inspect the AAuth agent and token delegation
+tree recorded for it.  An immutable expiry, AAuth's <code>expires_at</code>,
+ends a mission automatically.  Termination
+reasons are audit facts and never protocol states.  The operations extend the existing AAuth <code>mission_endpoint</code>,
+use AAuth HTTP Message Signatures for agent calls, preserve the privacy
+of the mission blob, and record their results in the mission log.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+<p id="section-abstract-3">Termination immediately closes Person Server decision and issuance
+paths, but it cannot by itself retract every credential already accepted
+by every resource.  This document therefore specifies best-effort
+revocation by AAuth token identity <code>(iss, jti)</code> and requires deployments
+to report and bound the residual window honestly.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth-management/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth-management/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 8 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-native-mission-management-m" class="internal xref">Native Mission Management Model</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-mission-identity" class="internal xref">Mission Identity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-state-and-termination-reaso" class="internal xref">State and Termination Reasons</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-optional-expiry" class="internal xref">Optional Expiry</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-endpoint-and-discovery" class="internal xref">Endpoint and Discovery</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-extending-the-mission-endpo" class="internal xref">Extending the Mission Endpoint</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-metadata" class="internal xref">Metadata</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-authentication-and-authoriz" class="internal xref">Authentication and Authorization</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-owning-agent" class="internal xref">Owning Agent</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-person" class="internal xref">Person</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-administrator-and-managemen" class="internal xref">Administrator and Management Service</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-status-operation" class="internal xref">Status Operation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-terminate-operation" class="internal xref">Terminate Operation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-request" class="internal xref">Request</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-atomic-transition" class="internal xref">Atomic Transition</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-idempotency-and-concurrency" class="internal xref">Idempotency and Concurrency</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-delegation-tree-operation" class="internal xref">Delegation-Tree Operation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-error-responses-and-anti-or" class="internal xref">Error Responses and Anti-Oracle Behavior</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-mission-log-and-retention" class="internal xref">Mission Log and Retention</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-consequences-for-tokens-and" class="internal xref">Consequences for Tokens and Requests</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-local-gating" class="internal xref">Local Gating</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-tracking-auth-tokens" class="internal xref">Tracking Auth Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-revocation-attempts" class="internal xref">Revocation Attempts</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-honest-residual-bounds" class="internal xref">Honest Residual Bounds</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-reference-substitution-and-" class="internal xref">Reference Substitution and Cross-PS Confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-request-replay" class="internal xref">Request Replay</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-compromised-agents" class="internal xref">Compromised Agents</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-administrative-blast-radius" class="internal xref">Administrative Blast Radius</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-races-and-failures" class="internal xref">Races and Failures</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-log-integrity" class="internal xref">Log Integrity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
+                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-delegation-tree-limits" class="internal xref">Delegation-Tree Limits</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.8">
+                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The AAuth Protocol <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> makes agent
+governance orthogonal to its five resource-access modes.  An agent and
+its Person Server (PS) hold the exact bytes of an approved mission blob.
+The SHA-256 digest of those bytes, paired with the approving PS URL,
+forms the native Mission Reference.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Resources and Access Servers see that reference, not the mission
+body.  The PS retains the context and ordered mission log needed to
+make governance decisions.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">AAuth also deliberately gives a mission only two states.  An <code>active</code>
+mission can be used; a <code>terminated</code> mission has ended permanently.
+There is no pause or resume operation.  The base protocol defines
+completion through the interaction endpoint and defers other
+transitions, administrative access, and delegation-tree queries.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document supplies those management functions without replacing
+AAuth's mission model with an OAuth authorization object.  In
+particular, it introduces no <code>mission_id</code>, Authority Set, scope-subset
+rule, status signal, or additional lifecycle state.  Every operation is
+keyed by the exact native <code>{approver, s256}</code> pair.  Authorization to a
+remote resource remains a decision of that resource, its Access Server,
+and, where involved, the PS; this endpoint manages the contextual
+governance envelope held by the PS.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">The family architecture situates this surface among the lifecycle
+companions (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), and the
+family security model's analysis applies to it
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This specification extends the existing <code>mission_endpoint</code> with an
+<code>operation</code> member, unambiguous against base requests, which carry
+none at that URL.  The base protocol splits the surfaces:
+<code>mission_endpoint</code> is the owning agent's, and parties other than the
+owning agent read and manage missions at the
+<code>mission_control_endpoint</code>, whose operations AAuth charters to a
+companion specification with exactly this document's scope.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">A future revision relocates these operations to that endpoint and
+adopts the base protocol's per-mission URL and <code>action</code> discriminator
+conventions.  The operation semantics defined here are
+endpoint-independent, and the approving PS remains the only server
+that can interpret the reference and change its state.<a href="#section-1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions">
+<section id="section-2">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document uses Person, Agent, Agent Provider (AP), Person Server
+(PS), Access Server (AS), Resource, Agent Token, Resource Token, Auth
+Token, Mission, Mission Reference, mission blob, and mission log as
+defined by <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">The following additional terms are used:<a href="#section-2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-4">
+        <dt id="section-2-4.1">Management Principal:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.2">
+          <p id="section-2-4.2.1">An authenticated person, administrator, or service acting under an
+administrative policy of the PS.  An Agent is not a Management
+Principal merely because it possesses its Agent Token.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.3">Owning Agent:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.4">
+          <p id="section-2-4.4.1">The Agent whose identifier is the <code>agent</code> member of the approved
+mission blob.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.5">Termination Reason:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.6">
+          <p id="section-2-4.6.1">An audit fact explaining why an <code>active</code> mission became <code>terminated</code>.
+It does not add a state or permit reactivation.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.7">Tracked Auth Token:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.8">
+          <p id="section-2-4.8.1">An Auth Token that the PS issued or provided under a Mission Reference
+and for which it retained at least <code>iss</code>, <code>jti</code>, <code>aud</code>, and <code>exp</code>.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.9">Residual Window:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.10">
+          <p id="section-2-4.10.1">The interval after termination during which already-issued authority
+might still be accepted because revocation has not reached a Resource
+or because an independently issued or opaque credential is outside
+the PS's control.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="model">
+<section id="section-3">
+      <h2 id="name-native-mission-management-m">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-native-mission-management-m" class="section-name selfRef">Native Mission Management Model</a>
+      </h2>
+<div id="mission-identity">
+<section id="section-3.1">
+        <h3 id="name-mission-identity">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-mission-identity" class="section-name selfRef">Mission Identity</a>
+        </h3>
+<p id="section-3.1-1">The Mission Reference <code>{approver, s256}</code> remains the management key
+for every mission this specification governs.  On the wire, a request
+identifies its target with the flat <code>mission_s256</code> member, matching
+the base protocol's own parameter convention at PS endpoints:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.1-2">
+<pre>
+{
+  "operation": "status",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+}
+</pre><a href="#section-3.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-3.1-3">The syntax, comparison, and digest rules are those of the AAuth Mission
+Reference.  <code>approver</code> is not a request member: it is fixed to the
+identity of the PS endpoint that receives the request.  A PS <span class="bcp14">MUST</span>
+resolve <code>mission_s256</code> only among the missions it itself approved,
+<span class="bcp14">MUST NOT</span> forward a management operation to another approver, and <span class="bcp14">MUST NOT</span> accept an alias for either half of the reference.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.1-4">The pair is the sole protocol key.  Implementations <span class="bcp14">MAY</span> use internal
+database keys, but those keys <span class="bcp14">MUST NOT</span> appear in this protocol.  The PS
+<span class="bcp14">MUST NOT</span> require the caller to send the mission blob, and a status or
+tree response <span class="bcp14">MUST NOT</span> return it.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.1-5">The Mission Reference is integrity-protected but is not a secret.
+Possession of it conveys no management authority.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="state">
+<section id="section-3.2">
+        <h3 id="name-state-and-termination-reaso">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-state-and-termination-reaso" class="section-name selfRef">State and Termination Reasons</a>
+        </h3>
+<p id="section-3.2-1">The only protocol states are:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-2.1">
+            <p id="section-3.2-2.1.1"><code>active</code>: the mission is in progress; and<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.2">
+            <p id="section-3.2-2.2.1"><code>terminated</code>: the mission has permanently ended.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-3">Only <code>active</code> permits the PS to process a token, permission, audit, or
+interaction request under the mission.  Once the PS commits
+<code>terminated</code>, it <span class="bcp14">MUST NOT</span> return the mission to <code>active</code>.  A caller that
+needs to continue the work creates and obtains approval for a new
+mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">This specification defines these termination reasons:<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Reason</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The Person accepted completion of the work.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The Person, Owning Agent, or an authorized administrator withdrew the mission.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The mission reached its approved <code>expires_at</code> time.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>superseded</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The Person or an authorized administrator replaced the mission with another approved mission.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>administrative</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">An authorized administrator ended the mission under local policy.</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-3.2-6">A Termination Reason is stored beside lifecycle data, outside the
+immutable mission blob.  It <span class="bcp14">MUST NOT</span> be exposed as <code>mission_status</code>,
+mapped to a new state, or used to permit a later transition.  A PS <span class="bcp14">MAY</span>
+support extension reasons.  A recipient that does not recognize a
+reason <span class="bcp14">MUST</span> retain the <code>terminated</code> state and treat the reason as an
+opaque audit value.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="expiry">
+<section id="section-3.3">
+        <h3 id="name-optional-expiry">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-optional-expiry" class="section-name selfRef">Optional Expiry</a>
+        </h3>
+<p id="section-3.3-1">Mission expiry is defined by AAuth
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>: an <span class="bcp14">OPTIONAL</span> <code>expires_at</code>
+member of the approved mission blob, covered by <code>s256</code>, immutable in
+place, and enforced by the PS on every decision path.  This profile
+does not redefine that mechanism.  AAuth Mission Expiry
+<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span> remains an informative
+profile of the same native member for deployments that cite it.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">This profile adds the observable consequences.  The transition AAuth
+requires at or after <code>expires_at</code> is committed with termination reason
+<code>expired</code> and attributed to the PS scheduler (<a href="#logging" class="auto internal xref">Section 10</a>), surfaced
+through AAuth's <code>mission_terminated</code> error and <code>mission_status</code> rather
+than a separate status value.  The status operation exposes the
+approved expiry (<a href="#status" class="auto internal xref">Section 6</a>).  An explicit terminate that races
+automatic expiry resolves as <a href="#idempotency" class="auto internal xref">Section 7.3</a> specifies: the first
+committed transition wins, and the losing operation observes an
+idempotent outcome.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="endpoint">
+<section id="section-4">
+      <h2 id="name-endpoint-and-discovery">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-endpoint-and-discovery" class="section-name selfRef">Endpoint and Discovery</a>
+      </h2>
+<div id="extending-the-mission-endpoint">
+<section id="section-4.1">
+        <h3 id="name-extending-the-mission-endpo">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-extending-the-mission-endpo" class="section-name selfRef">Extending the Mission Endpoint</a>
+        </h3>
+<p id="section-4.1-1">All operations below use an HTTP <code>POST</code> <span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span> with a JSON body
+<span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> to the <code>mission_endpoint</code> in the PS metadata.  Management
+requests have this common shape:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.1-2">
+<pre>
+{
+  "operation": "status",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+}
+</pre><a href="#section-4.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-4.1-3">The request <span class="bcp14">MUST</span> use <code>Content-Type: application/json</code>.  The PS <span class="bcp14">MUST</span>
+reject duplicate JSON member names.  Unknown members <span class="bcp14">MUST</span> be ignored
+unless they prevent safe processing.  Unknown operations fail with
+<code>unsupported_operation</code>.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">An Agent request <span class="bcp14">MUST</span> be signed using the AAuth HTTP Message Signatures
+profile <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> and <span class="bcp14">MUST</span> present its Agent Token in <code>Signature-Key</code>.  The
+covered components and content integrity requirements are those of the
+base AAuth profile.  A management request is never authorized from the
+Mission Reference alone.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The base protocol defines its own discrimination (a <span class="bcp14">REQUIRED</span> <code>action</code>
+member at per-mission URLs) and assigns operations for parties other
+than the owning agent to the <code>mission_control_endpoint</code> control
+plane.  This profile aligns by relocation in a future revision, as
+the Introduction describes.
+Until then, a native request at the bare <code>mission_endpoint</code> carries no
+<code>operation</code> member, so the discrimination here remains unambiguous,
+and a caller <span class="bcp14">SHOULD</span> confirm that an operation appears in
+<code>mission_management_operations_supported</code> (<a href="#metadata" class="auto internal xref">Section 4.2</a>) before
+sending it.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata">
+<section id="section-4.2">
+        <h3 id="name-metadata">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-metadata" class="section-name selfRef">Metadata</a>
+        </h3>
+<p id="section-4.2-1">A PS supporting this specification adds the following member to its
+<code>/.well-known/aauth-person.json</code> metadata:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.2-2">
+<pre>
+{
+  "issuer": "https://ps.example",
+  "mission_endpoint": "https://ps.example/mission",
+  "mission_management_operations_supported": [
+    "status", "terminate", "delegation_tree"
+  ]
+}
+</pre><a href="#section-4.2-2" class="pilcrow">¶</a>
+</div>
+<p id="section-4.2-3"><code>mission_management_operations_supported</code> is an array of case-sensitive
+operation strings.  The array <span class="bcp14">MUST</span> contain <code>status</code> and <code>terminate</code> for
+conformance to this specification.  It contains <code>delegation_tree</code> when
+the PS implements <a href="#delegation-tree" class="auto internal xref">Section 8</a>.  Unknown values <span class="bcp14">MUST</span> be ignored.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">The base protocol defines <code>mission_control_endpoint</code> as the PS's
+mission control plane for parties other than the owning agent and
+leaves its operations to a companion specification.  Pending the
+relocation described in the Introduction, this profile advertises its
+operations at the existing <code>mission_endpoint</code>; a PS <span class="bcp14">MAY</span> additionally
+use <code>mission_control_endpoint</code> for a deployment's human-facing
+administrative interface, as the base protocol permits.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="authorization">
+<section id="section-5">
+      <h2 id="name-authentication-and-authoriz">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-authentication-and-authoriz" class="section-name selfRef">Authentication and Authorization</a>
+      </h2>
+<p id="section-5-1">The PS <span class="bcp14">MUST</span> authenticate every caller before disclosing status or tree
+data or changing state.  It <span class="bcp14">MUST</span> authorize the operation against the
+target mission after authentication and before existence is disclosed.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="owning-agent">
+<section id="section-5.1">
+        <h3 id="name-owning-agent">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-owning-agent" class="section-name selfRef">Owning Agent</a>
+        </h3>
+<p id="section-5.1-1">The Owning Agent is authenticated exactly as at other AAuth PS
+endpoints.  The <code>sub</code> of the verified Agent Token <span class="bcp14">MUST</span> exactly match the
+<code>agent</code> member of the mission blob, and the request signature <span class="bcp14">MUST</span>
+verify with the token-bound key.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">The Owning Agent <span class="bcp14">MAY</span>:<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-3.1">
+            <p id="section-5.1-3.1.1">read status for its mission;<a href="#section-5.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-3.2">
+            <p id="section-5.1-3.2.1">request its delegation tree if the PS exposes that operation to
+agents; and<a href="#section-5.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-3.3">
+            <p id="section-5.1-3.3.1">terminate its mission with reason <code>revoked</code>.<a href="#section-5.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.1-4">An Agent does not directly assert <code>completed</code>.  It uses AAuth's
+<code>completion</code> interaction, after which the Person's acceptance causes the
+PS to terminate with reason <code>completed</code>.  A sub-agent <span class="bcp14">MUST NOT</span> call this
+endpoint: AAuth requires its parent to mediate PS operations.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="person">
+<section id="section-5.2">
+        <h3 id="name-person">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-person" class="section-name selfRef">Person</a>
+        </h3>
+<p id="section-5.2-1">The PS authenticates the Person using its normal person-facing channel.
+This specification does not replace the PS's account authentication or
+session protocol.  The PS <span class="bcp14">MUST</span> bind that authenticated Person to the
+person represented by the mission and <span class="bcp14">MUST</span> prevent tenant or account
+selection from being supplied solely by the request body.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">The Person <span class="bcp14">MAY</span> read status and delegation data, and <span class="bcp14">MAY</span> terminate with
+reason <code>completed</code>, <code>revoked</code>, or <code>superseded</code>.  For <code>superseded</code>,
+<code>replacement_s256</code> is <span class="bcp14">REQUIRED</span>, and the PS <span class="bcp14">SHOULD</span> verify that the
+same Person authorized both missions before recording the relationship.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="administrator-and-management-service">
+<section id="section-5.3">
+        <h3 id="name-administrator-and-managemen">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-administrator-and-managemen" class="section-name selfRef">Administrator and Management Service</a>
+        </h3>
+<p id="section-5.3-1">The PS <span class="bcp14">MAY</span> authorize an administrator or management service.  Such a
+principal <span class="bcp14">MUST</span> be authenticated using a phishing-resistant,
+sender-constrained mechanism appropriate to the deployment.  A remote
+machine caller using AAuth HTTP Message Signatures <span class="bcp14">MUST</span> present a token
+or key reference the PS recognizes as a management identity; an Agent
+Token alone <span class="bcp14">MUST NOT</span> confer administrative privilege.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">Administrative authorization <span class="bcp14">MUST</span> be least-privilege and scoped at
+least by tenant or person population and operation.  Access to
+delegation data <span class="bcp14">SHOULD</span> be a separate privilege from termination.
+Administrative reason <code>administrative</code> <span class="bcp14">MUST</span> be limited to this role.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">The PS <span class="bcp14">MUST</span> record the authenticated principal, effective role, policy
+decision, and declared operational purpose for every successful
+administrative request.  It <span class="bcp14">SHOULD</span> require step-up authentication or
+dual control for high-blast-radius automation.  This profile does not
+define fleet enumeration or bulk termination.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="status">
+<section id="section-6">
+      <h2 id="name-status-operation">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-status-operation" class="section-name selfRef">Status Operation</a>
+      </h2>
+<p id="section-6-1">A caller reads one mission by sending <code>operation</code> equal to <code>status</code>.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-6-2">
+<pre>
+POST /mission HTTP/1.1
+Host: ps.example
+Content-Type: application/json
+Signature-Input: sig=("@method" "@authority" "@path" \
+    "content-type" "content-digest" "signature-key");created=1775581200
+Signature: sig=:...signature bytes...:
+Signature-Key: sig=jwt;jwt="eyJhbGc..."
+Content-Digest: sha-256=:...:
+
+{
+  "operation": "status",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+}
+</pre><a href="#section-6-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6-3">After authenticating and authorizing the caller, the PS returns:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6-4">
+<pre>
+{
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "mission_status": "terminated",
+  "approved_at": "2026-04-07T14:30:00Z",
+  "expires_at": "2026-04-14T14:30:00Z",
+  "terminated_at": "2026-04-10T09:12:43Z",
+  "termination_reason": "revoked",
+  "observed_at": "2026-04-10T09:15:02Z",
+  "fresh_until": "2026-04-10T09:15:32Z"
+}
+</pre><a href="#section-6-4" class="pilcrow">¶</a>
+</div>
+<p id="section-6-5"><code>observed_at</code> and <code>fresh_until</code> are <span class="bcp14">REQUIRED</span> RFC 3339 <code>date-time</code>
+values <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>: the instant the PS evaluated the mission's state,
+and the latest instant a consumer may rely on this response.  The
+interval between them is deployment policy and <span class="bcp14">MAY</span> follow a published
+maximum staleness.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6"><code>mission_s256</code>, <code>mission_status</code>, and <code>approved_at</code> are <span class="bcp14">REQUIRED</span>.  The
+<code>mission_status</code> member reuses the name and values the base protocol
+carries in its <code>mission_terminated</code> error body.  <code>expires_at</code> is
+present only if it is in the mission blob
+(<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  <code>terminated_at</code> is an
+RFC 3339 <code>date-time</code> <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>; it and <code>termination_reason</code> are
+<span class="bcp14">REQUIRED</span> when <code>mission_status</code> is <code>terminated</code> and <span class="bcp14">MUST</span> be absent
+while it is <code>active</code>.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">The response reports state as of <code>observed_at</code> and is reliable until
+<code>fresh_until</code>; it is not a promise that the state will remain active.
+A consumer <span class="bcp14">MUST NOT</span> rely on a response after its <code>fresh_until</code>, and a
+failed, invalid, unrecognized, or stale response establishes nothing:
+the consumer <span class="bcp14">MUST</span> fail closed and <span class="bcp14">MUST NOT</span> treat the mission as
+<code>active</code> on its basis.  An Agent <span class="bcp14">MUST</span>
+stop initiating work when it receives <code>terminated</code>.  Polling is a
+freshness mechanism, not the safety floor: every PS endpoint still
+enforces mission state itself.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8">Role: companion. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
+Implementation: not yet in the conformance ledger (conformance-manifest.json).
+Adopt when: Alongside the AAuth binding: status, termination, delegation-tree queries.
+Requires: nothing beyond its listed references.<a href="#section-6-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terminate">
+<section id="section-7">
+      <h2 id="name-terminate-operation">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-terminate-operation" class="section-name selfRef">Terminate Operation</a>
+      </h2>
+<div id="request">
+<section id="section-7.1">
+        <h3 id="name-request">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-request" class="section-name selfRef">Request</a>
+        </h3>
+<p id="section-7.1-1">Termination uses <code>operation</code> equal to <code>terminate</code>.  It requires a
+<code>request_id</code> carrying at least 128 bits of unpredictable or
+collision-resistant entropy encoded as a string.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.1-2">
+<pre>
+{
+  "operation": "terminate",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "reason": "revoked",
+  "request_id": "t-4f52f8d70a514703b54ca0c677f82d67",
+  "purpose": "User withdrew authorization"
+}
+</pre><a href="#section-7.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-7.1-3"><code>reason</code> and <code>request_id</code> are <span class="bcp14">REQUIRED</span>.  <code>purpose</code> is <span class="bcp14">OPTIONAL</span> for an
+Owning Agent or Person and <span class="bcp14">REQUIRED</span> for an administrator.  <code>purpose</code> is
+an audit string, not executable policy, and <span class="bcp14">MUST</span> be rendered as
+untrusted text.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">For <code>superseded</code>, the request <span class="bcp14">MUST</span> include the replacement:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.1-5">
+<pre>
+"replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
+</pre><a href="#section-7.1-5" class="pilcrow">¶</a>
+</div>
+<p id="section-7.1-6">The replacement is related evidence, not an alternate key for the
+target operation.  It <span class="bcp14">MUST</span> identify an already approved mission that
+the caller is authorized to reference; it is validated before, and
+committed in, the atomic transition.  A <code>superseded</code> request without
+<code>replacement_s256</code> fails with <code>invalid_request</code> as a missing member.
+Replacement validation is subject to <a href="#errors" class="auto internal xref">Section 9</a>: a replacement that
+is unresolvable, unapproved, or outside the caller's authorization
+fails uniformly with <code>invalid_request</code>, and the failure <span class="bcp14">MUST NOT</span>
+disclose which condition held or anything else about the referenced
+mission.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="atomic-transition">
+<section id="section-7.2">
+        <h3 id="name-atomic-transition">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-atomic-transition" class="section-name selfRef">Atomic Transition</a>
+        </h3>
+<p id="section-7.2-1">The PS performs these actions in order:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7.2-2">
+<li id="section-7.2-2.1">
+            <p id="section-7.2-2.1.1">authenticate and authorize the caller;<a href="#section-7.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1">apply expiry and read the current state under a transaction or
+equivalent serialization mechanism;<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.3">
+            <p id="section-7.2-2.3.1">if active, atomically commit <code>terminated</code>, <code>terminated_at</code>, the
+reason, actor, <code>request_id</code>, and, for <code>superseded</code>, the validated
+<code>replacement_s256</code> to the mission log;<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.4">
+            <p id="section-7.2-2.4.1">make that state visible to every local PS decision and issuance path;<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.5">
+            <p id="section-7.2-2.5.1">initiate revocation of outstanding Auth Tokens as described in
+<a href="#token-consequences" class="auto internal xref">Section 11</a>, without waiting for all attempts to finish;
+and<a href="#section-7.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.6">
+            <p id="section-7.2-2.6.1">return the committed result and the revocation summary current at
+response time.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-7.2-3">Step 3 is the authority-closing commit.  External revocation <span class="bcp14">MUST NOT</span> be
+allowed to delay or roll it back.  The PS <span class="bcp14">MAY</span> wait for a short, bounded
+set of immediate revocation results before responding, and revocation
+attempts <span class="bcp14">MAY</span> continue asynchronously.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The PS returns <code>200 OK</code> with the status representation and a revocation
+summary:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.2-5">
+<pre>
+{
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "mission_status": "terminated",
+  "terminated_at": "2026-04-10T09:12:43Z",
+  "termination_reason": "revoked",
+  "token_residual": {
+    "tracked": 4,
+    "revocation_attempted": 4,
+    "revocation_confirmed": 3,
+    "residual_until": "2026-04-10T10:02:00Z",
+    "complete": false
+  }
+}
+</pre><a href="#section-7.2-5" class="pilcrow">¶</a>
+</div>
+<p id="section-7.2-6">The counters disclose only tokens the caller is authorized to know
+about.  <code>complete</code> is true only when every Tracked Auth Token is either
+confirmed revoked or expired and the PS knows of no untracked access
+mode for the mission.  <code>residual_until</code> is the latest <code>exp</code> among
+unconfirmed Tracked Auth Tokens.  It <span class="bcp14">MUST</span> be omitted when no residual is
+known and <span class="bcp14">MUST NOT</span> be presented as a complete bound if untracked or
+opaque credentials may exist.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="idempotency">
+<section id="section-7.3">
+        <h3 id="name-idempotency-and-concurrency">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-idempotency-and-concurrency" class="section-name selfRef">Idempotency and Concurrency</a>
+        </h3>
+<p id="section-7.3-1">The PS <span class="bcp14">MUST</span> retain the result associated with <code>(authenticated caller,
+request_id)</code> for at least 24 hours and <span class="bcp14">SHOULD</span> retain it for the mission
+log's lifetime.  Repeating an identical request returns the original
+result without a second lifecycle event.  Reusing a <code>request_id</code> with
+different request content fails with <code>idempotency_conflict</code>.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">Termination is also semantically idempotent across request identifiers.
+If the mission is already terminated, an authorized caller receives its
+existing terminal status.  The first committed reason and timestamp
+remain authoritative; a later request <span class="bcp14">MUST NOT</span> overwrite them.  A PS
+<span class="bcp14">MAY</span> append an audit entry noting the later authorized request.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+<p id="section-7.3-3">Concurrent requests are serialized.  At most one request records the
+active-to-terminated transition.  Completion, expiry, and administrative
+termination obey the same rule.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="delegation-tree">
+<section id="section-8">
+      <h2 id="name-delegation-tree-operation">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-delegation-tree-operation" class="section-name selfRef">Delegation-Tree Operation</a>
+      </h2>
+<p id="section-8-1">AAuth does not create child Mission objects for sub-agents or chained
+calls.  It records agent relationships in <code>parent_agent</code> and in the
+Auth Tokens issued or provided under the same Mission Reference; auth
+and resource tokens carry no chain claim, so the PS itself holds the
+call-chain state.  The tree operation reports those native
+relationships; it <span class="bcp14">MUST NOT</span> invent a second child mission identifier or
+imply algebraic scope inheritance.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">An authorized caller sends:<a href="#section-8-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8-3">
+<pre>
+{
+  "operation": "delegation_tree",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "max_results": 100,
+  "cursor": "opaque-next-page-value"
+}
+</pre><a href="#section-8-3" class="pilcrow">¶</a>
+</div>
+<p id="section-8-4"><code>max_results</code> and <code>cursor</code> are <span class="bcp14">OPTIONAL</span>.  A cursor <span class="bcp14">MUST</span> be opaque to the
+caller, integrity protected, scoped to the caller and Mission
+Reference, and short lived.  The PS <span class="bcp14">MUST</span> set and document a maximum
+page size.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">The response contains the relationships the PS observed while
+processing the mission:<a href="#section-8-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8-6">
+<pre>
+{
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "as_of": "2026-04-10T09:15:00Z",
+  "nodes": [
+    {
+      "agent": "aauth:planner.7f3c@vendor.example",
+      "relationship": "root"
+    },
+    {
+      "agent": "aauth:planner.7f3c+search1@vendor.example",
+      "relationship": "sub_agent",
+      "parent_agent": "aauth:planner.7f3c@vendor.example",
+      "tokens": [
+        { "iss": "https://as.search.example", "jti": "token-19" }
+      ]
+    }
+  ],
+  "complete": true
+}
+</pre><a href="#section-8-6" class="pilcrow">¶</a>
+</div>
+<p id="section-8-7"><code>mission_s256</code>, <code>as_of</code>, <code>nodes</code>, and <code>complete</code> are <span class="bcp14">REQUIRED</span>.  When another
+page exists, <code>next_cursor</code> is <span class="bcp14">REQUIRED</span> and <code>complete</code> is false.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">A node contains an <code>agent</code> and one of <code>root</code>, <code>sub_agent</code>, or
+<code>call_chain</code> as <code>relationship</code>.  A non-root node contains
+<code>parent_agent</code>.  <code>tokens</code> <span class="bcp14">MAY</span>
+be returned to a Person or authorized administrator and <span class="bcp14">SHOULD</span> be
+omitted from an Agent response unless required for that Agent's own
+revocation accounting.<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9">The result is observational, not exhaustive proof.  Identity-based
+calls and resource-managed access can occur without a PS token request.
+An intermediary can make a downstream call outside the PS's view.
+<code>complete</code> means only that the returned page exhausts the PS's current
+records; it <span class="bcp14">MUST NOT</span> be described as proof that no other delegation or
+resource access occurred.<a href="#section-8-9" class="pilcrow">¶</a></p>
+<p id="section-8-10">The PS <span class="bcp14">MUST</span> authorize every returned node for the caller.  It <span class="bcp14">MUST NOT</span>
+leak another tenant's agent identifiers, token identifiers, topology,
+or activity.  Tree reads are sensitive events and <span class="bcp14">MUST</span> be recorded in
+the mission log or, for rejected/unknown references, a security audit
+log that does not create a false mission record.<a href="#section-8-10" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="errors">
+<section id="section-9">
+      <h2 id="name-error-responses-and-anti-or">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-error-responses-and-anti-or" class="section-name selfRef">Error Responses and Anti-Oracle Behavior</a>
+      </h2>
+<p id="section-9-1">Errors use <code>application/problem+json</code> <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</span> as profiled by AAuth.  The
+following error strings are defined:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Error</th>
+            <th class="text-left" rowspan="1" colspan="1">HTTP status</th>
+            <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_request</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">400</td>
+            <td class="text-left" rowspan="1" colspan="1">The JSON or required members are invalid.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_mission_reference</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">400</td>
+            <td class="text-left" rowspan="1" colspan="1">The reference syntax or local approver check failed.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>unsupported_operation</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">400</td>
+            <td class="text-left" rowspan="1" colspan="1">The PS does not support the requested operation.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_termination_reason</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">400</td>
+            <td class="text-left" rowspan="1" colspan="1">The reason is unknown or not permitted for the operation.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>idempotency_conflict</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">409</td>
+            <td class="text-left" rowspan="1" colspan="1">The request identifier was reused with different content.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>mission_not_found</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">404</td>
+            <td class="text-left" rowspan="1" colspan="1">The mission does not exist or the caller is not authorized to know it exists.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>rate_limited</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">429</td>
+            <td class="text-left" rowspan="1" colspan="1">The caller exceeded a PS policy limit.</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-9-3">For a syntactically valid reference, a PS <span class="bcp14">MUST</span> return the same status,
+error, body shape, header set, and observably equivalent timing whether
+the mission is absent or the authenticated caller lacks authorization.
+The PS <span class="bcp14">MUST</span> use <code>mission_not_found</code> for both.  It <span class="bcp14">MUST NOT</span> disclose the
+state, Agent identifier, timestamps, expiry, reason, or tenant before
+authorization succeeds.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">Malformed references can fail before lookup.  Repeated failures <span class="bcp14">MUST</span> be
+rate limited and security logged.  Logs for probes <span class="bcp14">MUST</span> avoid storing
+raw references longer than needed; a keyed digest can support abuse
+correlation without building a reusable existence index.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">The base <code>mission_terminated</code> error remains the response when an Agent
+attempts another PS operation under a terminated mission.  The
+authenticated <code>status</code> and <code>terminate</code> operations defined here instead
+return terminal status so an authorized caller can learn the result.<a href="#section-9-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="logging">
+<section id="section-10">
+      <h2 id="name-mission-log-and-retention">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-mission-log-and-retention" class="section-name selfRef">Mission Log and Retention</a>
+      </h2>
+<p id="section-10-1">The PS <span class="bcp14">MUST</span> append an ordered mission-log event for:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">every authorized status read;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">every committed termination, including automatic expiry and accepted
+completion;<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.3">
+          <p id="section-10-2.3.1">every authorized termination request received after termination;<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.4">
+          <p id="section-10-2.4.1">every token-revocation attempt and result; and<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.5">
+          <p id="section-10-2.5.1">every authorized delegation-tree read.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-3">A management event <span class="bcp14">MUST</span> contain the Mission Reference, PS-local ordered
+sequence value, event time, event type, authenticated actor and role,
+authorization decision or policy reference, and, when applicable,
+<code>request_id</code>, termination reason, purpose, and token-impact summary.
+Token events identify a token by the pair <code>(iss, jti)</code>, never <code>jti</code>
+alone.  The PS <span class="bcp14">MUST NOT</span> place private keys, raw Agent Tokens, raw Auth
+Tokens, or the mission blob in a management event merely to satisfy this
+requirement.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">Automatic expiry is attributed to the PS scheduler, not to the Agent or
+Person.  Completion remains attributed to the Person who accepted the
+Agent's completion interaction.  A security log <span class="bcp14">MUST</span> capture rejected
+administrative requests and oracle probes without associating an
+unverified reference with a real mission.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5">The PS <span class="bcp14">MUST</span> retain the terminal state and its reason for at least as
+long as any Tracked Auth Token could remain valid, plus the deployment's
+audit and dispute period.  It <span class="bcp14">SHOULD</span> retain the immutable mission blob
+and log for the same period when lawful.  Retention limits, deletion,
+legal holds, and access controls <span class="bcp14">MUST</span> be documented.  Deletion of the
+mission body <span class="bcp14">MUST NOT</span> cause the PS to treat a formerly terminated
+reference as active; the PS retains a tombstone sufficient to reject it
+for the maximum relevant replay and audit horizon.<a href="#section-10-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="token-consequences">
+<section id="section-11">
+      <h2 id="name-consequences-for-tokens-and">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-consequences-for-tokens-and" class="section-name selfRef">Consequences for Tokens and Requests</a>
+      </h2>
+<div id="local-gating">
+<section id="section-11.1">
+        <h3 id="name-local-gating">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-local-gating" class="section-name selfRef">Local Gating</a>
+        </h3>
+<p id="section-11.1-1">Immediately after the terminal commit, the PS <span class="bcp14">MUST</span> reject every new
+token, permission, audit, and interaction request under the Mission
+Reference with the AAuth <code>mission_terminated</code> error.  It <span class="bcp14">MUST</span> stop
+federating resource-token requests under that mission.  This is the
+reliable AAuth management effect because it occurs at the server that
+owns the mission context.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">A Resource Token is a signed request artifact, not authority.  It does
+not need revocation; submitting it under the terminated mission fails at
+the PS.  Terminating a mission does not revoke the Agent Token, because
+the Agent identity can legitimately be used for another mission or for
+missionless AAuth interactions.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="tracking-auth-tokens">
+<section id="section-11.2">
+        <h3 id="name-tracking-auth-tokens">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-tracking-auth-tokens" class="section-name selfRef">Tracking Auth Tokens</a>
+        </h3>
+<p id="section-11.2-1">For each Auth Token it issues or provides under a mission, a conforming
+PS <span class="bcp14">MUST</span> retain:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.2-2.1">
+            <p id="section-11.2-2.1.1">the Mission Reference;<a href="#section-11.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-2.2">
+            <p id="section-11.2-2.2.1">the token's <code>iss</code> and <code>jti</code> as a compound identity;<a href="#section-11.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-2.3">
+            <p id="section-11.2-2.3.1"><code>aud</code> and <code>exp</code>;<a href="#section-11.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-2.4">
+            <p id="section-11.2-2.4.1">the Resource revocation endpoint, when advertised; and<a href="#section-11.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-2.5">
+            <p id="section-11.2-2.5.1">whether the PS issued the token or obtained it through federation.<a href="#section-11.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.2-3">The PS <span class="bcp14">MUST NOT</span> key revocation by <code>jti</code> alone.  It <span class="bcp14">SHOULD</span> also retain the
+AS and Resource endpoints required to retry revocation.  These records
+are sensitive and follow <a href="#logging" class="auto internal xref">Section 10</a>.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="revocation-attempts">
+<section id="section-11.3">
+        <h3 id="name-revocation-attempts">
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-revocation-attempts" class="section-name selfRef">Revocation Attempts</a>
+        </h3>
+<p id="section-11.3-1">After termination, the PS <span class="bcp14">SHOULD</span> invoke each applicable AAuth
+<code>revocation_endpoint</code> with <code>(iss, jti)</code> for every unexpired Tracked Auth
+Token.  In PS-asserted access, this normally means the Resource.  In
+federated access, the PS <span class="bcp14">SHOULD</span> notify the Resource and <span class="bcp14">MAY</span> also notify
+the issuing AS as supported by the base AAuth protocol.  Retries <span class="bcp14">MUST</span> be
+bounded, authenticated, rate limited, and recorded.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+<p id="section-11.3-2">A <code>200</code> response or natural token expiry closes the tracked residual for
+that token.  A timeout, unreachable endpoint, absent endpoint, or
+ambiguous result remains unconfirmed until expiry.  The PS <span class="bcp14">MUST NOT</span>
+report successful mission-wide revocation merely because it marked its
+local state or contacted an AS.<a href="#section-11.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="residuals">
+<section id="section-11.4">
+        <h3 id="name-honest-residual-bounds">
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-honest-residual-bounds" class="section-name selfRef">Honest Residual Bounds</a>
+        </h3>
+<p id="section-11.4-1">Termination is not retroactive.  It cannot undo an action already
+performed or necessarily stop an action already accepted.  A
+self-contained Auth Token can remain acceptable until its <code>exp</code> unless
+the Resource receives and enforces revocation.  Network partitions and
+Resource policy therefore create an unavoidable residual window.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
+<p id="section-11.4-2">The PS can provide a time bound only for the Tracked Auth Tokens whose
+expiry it knows.  The conservative tracked bound is the latest <code>exp</code>
+among tokens not confirmed revoked.  If the PS cannot determine an
+expiry, it <span class="bcp14">MUST</span> report the tracked residual as unbounded rather than
+inventing a deadline.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
+<p id="section-11.4-3">The PS has no general visibility or control over:<a href="#section-11.4-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.4-4.1">
+            <p id="section-11.4-4.1.1">identity-based access where a Resource authorizes the Agent directly;<a href="#section-11.4-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.4-4.2">
+            <p id="section-11.4-4.2.1">an opaque <code>AAuth-Access</code> token issued in resource-managed access;<a href="#section-11.4-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.4-4.3">
+            <p id="section-11.4-4.3.1">a Resource that violated the base protocol's <code>mission_s256</code> copy rule;<a href="#section-11.4-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.4-4.4">
+            <p id="section-11.4-4.4.1">credentials or side effects acquired outside AAuth; or<a href="#section-11.4-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.4-4.5">
+            <p id="section-11.4-4.5.1">a downstream call made without returning through this PS.<a href="#section-11.4-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.4-5">Where any such path was possible, the PS <span class="bcp14">MUST</span> mark mission-wide
+revocation completeness as false or unknown.  Deployment documentation
+<span class="bcp14">MUST</span> state which AAuth access modes are covered, the maximum configured
+Auth Token lifetime, whether Resources implement revocation, retry
+policy, and the worst-case residual expected under partition.  Risky
+deployments <span class="bcp14">SHOULD</span> use short Auth Token lifetimes and action-time
+Resource checks in addition to PS gating.<a href="#section-11.4-5" class="pilcrow">¶</a></p>
+<p id="section-11.4-6">The base AAuth text sometimes describes this action as revoking a
+mission.  In this profile, "revoke the mission" means the single,
+permanent transition to <code>terminated</code> with Termination Reason <code>revoked</code>.
+It is not a distinct <code>revoked</code> state and does not invoke an OAuth token
+revocation or status protocol for the mission itself.<a href="#section-11.4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy">
+<section id="section-12">
+      <h2 id="name-privacy-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-12-1">A Mission Reference is correlatable anywhere it appears.  Status and
+tree endpoints can amplify that correlation by revealing timestamps,
+relationships, and token issuers.  The PS therefore discloses no mission
+body, description, tools, justification, or log contents through this
+profile and minimizes status fields to lifecycle facts.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">Delegation trees expose organizational topology and Agent behavior.
+They require distinct authorization, pagination bounds, and tenant
+isolation.  Token identifiers <span class="bcp14">SHOULD</span> be omitted unless the caller needs
+them for incident response.  User interfaces <span class="bcp14">SHOULD</span> summarize topology
+without exposing raw identifiers by default.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3">Administrative purpose strings, termination reasons, and actor
+identities can themselves be sensitive.  Access controls, encryption at
+rest, retention limits, deletion policy, and audit access <span class="bcp14">MUST</span> be
+documented.  A PS <span class="bcp14">SHOULD</span> support data-subject access and deletion where
+applicable without deleting the minimum tombstone needed to keep a
+terminated mission terminated.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">Polling exposes access patterns to the PS and network observers.  Agents
+<span class="bcp14">SHOULD</span> use a cadence proportionate to risk and <span class="bcp14">SHOULD</span> stop polling after
+terminal status.  The management surface defines no push channel.<a href="#section-12-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="reference-substitution-and-cross-ps-confusion">
+<section id="section-13.1">
+        <h3 id="name-reference-substitution-and-">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-reference-substitution-and-" class="section-name selfRef">Reference Substitution and Cross-PS Confusion</a>
+        </h3>
+<p id="section-13.1-1">An attacker can substitute a known <code>mission_s256</code> value, including one
+issued by a different PS.  Exact digest comparison, resolving
+<code>mission_s256</code> only within this PS's own approved-mission store,
+signature verification, and authorization against the resolved mission
+are all mandatory.  <code>mission_s256</code> is not interpreted as a fetch URL.
+The PS never retrieves a mission from a caller-selected location.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="request-replay">
+<section id="section-13.2">
+        <h3 id="name-request-replay">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-request-replay" class="section-name selfRef">Request Replay</a>
+        </h3>
+<p id="section-13.2-1">A termination replay is safe only if its content is bound to the
+signature and its idempotency rules are enforced.  The request body
+<span class="bcp14">MUST</span> have content integrity under the AAuth HTTP Message Signatures
+profile.  The PS enforces signature freshness and nonce/replay policy as
+defined by AAuth and binds <code>request_id</code> to authenticated caller and exact
+content.  Logging a repeated request must not overwrite the first
+reason or create a false second transition.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="compromised-agents">
+<section id="section-13.3">
+        <h3 id="name-compromised-agents">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-compromised-agents" class="section-name selfRef">Compromised Agents</a>
+        </h3>
+<p id="section-13.3-1">A compromised Owning Agent can terminate its own mission, causing
+denial of service.  It cannot gain authority by doing so and cannot
+reactivate the mission, choose administrative reasons, or manage another
+mission.  The Person can create a newly approved mission after recovery.
+Because an Agent request for completion still requires Person
+acceptance, compromise cannot falsely record <code>completed</code> through this
+endpoint.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="administrative-blast-radius">
+<section id="section-13.4">
+        <h3 id="name-administrative-blast-radius">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-administrative-blast-radius" class="section-name selfRef">Administrative Blast Radius</a>
+        </h3>
+<p id="section-13.4-1">Administrative credentials can terminate many missions even though
+this profile exposes only single-mission operations.  A PS <span class="bcp14">MUST</span> scope
+them, rate limit them, protect them with sender constraint, and audit
+their use.  Management automation <span class="bcp14">SHOULD</span> require a declared purpose and
+<span class="bcp14">SHOULD</span> use approval or dual control appropriate to its potential blast
+radius.  The endpoint <span class="bcp14">MUST NOT</span> infer administrative authority from an
+Agent's domain or <code>parent_agent</code> relationship.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="races-and-failures">
+<section id="section-13.5">
+        <h3 id="name-races-and-failures">
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-races-and-failures" class="section-name selfRef">Races and Failures</a>
+        </h3>
+<p id="section-13.5-1">The local terminal commit precedes external revocation.  Transactional
+state evaluation prevents a token request racing with termination from
+being issued after the commit.  Implementations <span class="bcp14">MUST</span> ensure every local
+decision path consults the same authoritative state or a cache whose
+failure behavior is fail closed.  Expiry is checked synchronously so a
+failed scheduler cannot keep a mission active.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+<p id="section-13.5-2">External failures do not restore the mission.  Revocation retries are
+durable work and survive PS restarts.  A Resource that needs a stronger
+cutoff cannot rely only on cached status or token expiry; it needs an
+action-time decision or effective revocation mechanism.<a href="#section-13.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="log-integrity">
+<section id="section-13.6">
+        <h3 id="name-log-integrity">
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-log-integrity" class="section-name selfRef">Log Integrity</a>
+        </h3>
+<p id="section-13.6-1">The mission log influences future governance and is security-critical.
+The PS <span class="bcp14">MUST</span> prevent Agents and ordinary operators from rewriting or
+reordering it.  Sequence allocation, durable storage, authenticated
+actor attribution, backup, and restricted access are required.  This
+document does not require a public transparency mechanism, but a PS <span class="bcp14">MAY</span>
+add tamper-evident storage or signed checkpoints.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="delegation-tree-limits">
+<section id="section-13.7">
+        <h3 id="name-delegation-tree-limits">
+<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-delegation-tree-limits" class="section-name selfRef">Delegation-Tree Limits</a>
+        </h3>
+<p id="section-13.7-1">The returned tree is based on PS observations, not global execution.
+Treating it as complete evidence can hide identity-based, opaque-token,
+or off-path activity.  Consumers <span class="bcp14">MUST</span> preserve the distinction between
+page completeness and observational completeness.  <code>parent_agent</code>
+values and the PS's own issuance-linked chain state are accepted only
+after their normal AAuth verification; unverified caller assertions
+never create edges.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transport">
+<section id="section-13.8">
+        <h3 id="name-transport">
+<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+        </h3>
+<p id="section-13.8-1">All operations use HTTPS and the TLS requirements of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> and <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.  Responses
+<span class="bcp14">SHOULD</span> carry cache controls preventing shared caching.  Management
+clients <span class="bcp14">MUST</span> validate the PS metadata issuer and endpoint origin before
+sending references or credentials.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana">
+<section id="section-14">
+      <h2 id="name-iana-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-14-1">This document requests no IANA registrations.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2">This specification does define new wire elements:<a href="#section-14-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14-3.1">
+          <p id="section-14-3.1.1">the <code>mission_management_operations_supported</code> Person Server metadata
+member;<a href="#section-14-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.2">
+          <p id="section-14-3.2.1">the <code>status</code>, <code>terminate</code>, and <code>delegation_tree</code> operation values;<a href="#section-14-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.3">
+          <p id="section-14-3.3.1">the JSON request and response members defined by <a href="#endpoint" class="auto internal xref">Section 4</a>,
+<a href="#status" class="auto internal xref">Section 6</a>, <a href="#terminate" class="auto internal xref">Section 7</a>, and <a href="#delegation-tree" class="auto internal xref">Section 8</a>, including the
+token-residual and pagination members;<a href="#section-14-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.4">
+          <p id="section-14-3.4.1">the termination-reason values in <a href="#state" class="auto internal xref">Section 3.2</a> and the <code>root</code>,
+<code>sub_agent</code>, and <code>call_chain</code> relationship values; and<a href="#section-14-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.5">
+          <p id="section-14-3.5.1">the error values in <a href="#errors" class="auto internal xref">Section 9</a>.<a href="#section-14-3.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-14-4">The AAuth Protocol does not currently establish an IANA registry for
+Person Server metadata members, mission-endpoint operations or JSON
+members, termination reasons, delegation relationships, or AAuth error
+values.  Consequently, there is no
+applicable registry in which to register any of the wire elements above.
+They are defined by this document and compared as specified here.<a href="#section-14-4" class="pilcrow">¶</a></p>
+<p id="section-14-5">If AAuth creates applicable registries before publication, this document
+will request registration of every corresponding element above rather
+than relying on this no-action section.  Termination reasons remain
+audit facts rather than lifecycle states; creating a reason registry
+would not turn them into protocol states.  Extension specifications
+defining new reasons need to specify their authorization, audit, and
+privacy semantics.<a href="#section-14-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-15">
+      <h2 id="name-conformance">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-15-1">An <strong>AAuth Mission Management PS</strong> conforms to this specification when
+it:<a href="#section-15-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-15-2">
+<li id="section-15-2.1">
+          <p id="section-15-2.1.1">implements <code>status</code> and <code>terminate</code> at the existing
+<code>mission_endpoint</code> and advertises both operations;<a href="#section-15-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.2">
+          <p id="section-15-2.2.1">keys every operation solely by the flat <code>mission_s256</code> member,
+resolving it only among missions for which it is itself the
+<code>approver</code>;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.3">
+          <p id="section-15-2.3.1">preserves exactly the <code>active</code> and <code>terminated</code> states, makes
+termination permanent, and records reasons separately;<a href="#section-15-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.4">
+          <p id="section-15-2.4.1">authenticates and authorizes every request according to caller role,
+with anti-oracle equivalence for absent and unauthorized references;<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.5">
+          <p id="section-15-2.5.1">serializes expiry, completion, and termination, closes every local PS
+decision path at the terminal commit, and enforces idempotency;<a href="#section-15-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.6">
+          <p id="section-15-2.6.1">records the management and revocation events required by
+<a href="#logging" class="auto internal xref">Section 10</a>;<a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.7">
+          <p id="section-15-2.7.1">tracks Auth Tokens by <code>(iss, jti)</code>, attempts applicable revocation,
+and reports residual limits without claiming control over unseen or
+independently managed access; and<a href="#section-15-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-15-2.8">
+          <p id="section-15-2.8.1">meets the security, privacy, retention, and TLS requirements of this
+document and the base AAuth Protocol.<a href="#section-15-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-15-3">Expiry support is <span class="bcp14">OPTIONAL</span>.  If implemented, the PS conforms to
+AAuth's native <code>expires_at</code> definition and enforcement, to the
+retained deltas of <span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>, and
+to <a href="#expiry" class="auto internal xref">Section 3.3</a> in full.  Delegation-tree support is <span class="bcp14">OPTIONAL</span>.  If
+advertised, the PS conforms to <a href="#delegation-tree" class="auto internal xref">Section 8</a> in full.<a href="#section-15-3" class="pilcrow">¶</a></p>
+<p id="section-15-4">A deployment claiming conformance <span class="bcp14">MUST</span> publish or otherwise make
+available its caller-role authorization policy, Auth Token retention
+period, supported access-mode coverage, maximum token lifetime,
+revocation retry policy, expiry clock policy if used, and worst-case
+residual behavior.  It <span class="bcp14">MUST NOT</span> claim that Mission termination revokes
+identity-based, opaque resource-managed, or otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html">https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9110">[RFC9110]</dt>
+        <dd>
+<span class="refAuthor">Fielding, R., Ed.</span>, <span class="refAuthor">Nottingham, M., Ed.</span>, and <span class="refAuthor">J. Reschke, Ed.</span>, <span class="refTitle">"HTTP Semantics"</span>, <span class="seriesInfo">STD 97</span>, <span class="seriesInfo">RFC 9110</span>, <span class="seriesInfo">DOI 10.17487/RFC9110</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9110">https://www.rfc-editor.org/rfc/rfc9110</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9325">[RFC9325]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Saint-Andre, P.</span>, and <span class="refAuthor">T. Fossati</span>, <span class="refTitle">"Recommendations for Secure Use of Transport Layer Security (TLS) and Datagram Transport Layer Security (DTLS)"</span>, <span class="seriesInfo">BCP 195</span>, <span class="seriesInfo">RFC 9325</span>, <span class="seriesInfo">DOI 10.17487/RFC9325</span>, <time datetime="2022-11" class="refDate">November 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9325">https://www.rfc-editor.org/rfc/rfc9325</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9421">[RFC9421]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Richer, J., Ed.</span>, and <span class="refAuthor">M. Sporny</span>, <span class="refTitle">"HTTP Message Signatures"</span>, <span class="seriesInfo">RFC 9421</span>, <span class="seriesInfo">DOI 10.17487/RFC9421</span>, <time datetime="2024-02" class="refDate">February 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9421">https://www.rfc-editor.org/rfc/rfc9421</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9457">[RFC9457]</dt>
+      <dd>
+<span class="refAuthor">Nottingham, M.</span>, <span class="refAuthor">Wilde, E.</span>, and <span class="refAuthor">S. Dalal</span>, <span class="refTitle">"Problem Details for HTTP APIs"</span>, <span class="seriesInfo">RFC 9457</span>, <span class="seriesInfo">DOI 10.17487/RFC9457</span>, <time datetime="2023-07" class="refDate">July 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9457">https://www.rfc-editor.org/rfc/rfc9457</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">The AAuth mission-management seam and two-state lifecycle were defined
+by Dick Hardt in the AAuth Protocol.  This companion preserves those
+native choices.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
