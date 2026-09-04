@@ -510,6 +510,33 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(pb.mission_expires_at).toBe(successor?.expires_at);
   });
 
+  it("@spec mission#approval-event: a ceiling that passes while the approval pends creates NO Mission (access_denied)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    // The Approver adjudicates with an approval whose horizon has ALREADY
+    // passed, the deferred-window stand-in for a requested ceiling passing while
+    // the approval pends: the effective expiry the successor would commit is not
+    // later than its creation instant, so the creation transaction refuses.
+    as.expansionDeferrals.approve(ob.deferral_code as string, {
+      approver: { iss: ISSUER, sub: "bob" },
+      approvalEventId: `apev-exp-past-${apev++}`,
+      approvedUntil: "2020-01-01T00:00:00Z",
+    });
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { error?: string; access_token?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(400);
+    expect(pb.error).toBe("access_denied");
+    expect(pb.access_token).toBeUndefined();
+    // No successor exists, and the predecessor was never superseded: completion
+    // created no Mission at all rather than committing a dead one.
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+  });
+
   it("check (a): a predecessor REVOKED during the deferred window fails completion (access_denied) — a deferred approval MUST NOT bypass termination", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [

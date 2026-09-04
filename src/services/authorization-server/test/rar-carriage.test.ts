@@ -333,6 +333,29 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
   });
 
+  it("refuses an already-past requested expires_at at submission acceptance (invalid_request)", async () => {
+    // @spec mission#mission-intent (issue #647) — the requested ceiling is
+    // refused at submission acceptance, not rewritten forward and not accepted
+    // into a Mission that would be expired the instant it committed.
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({
+        intent: { ...TASK_INTENT, expires_at: "2020-01-01T00:00:00Z" },
+      }),
+      authorization_details: JSON.stringify(PROPOSAL),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  });
+
+  it("refuses an unparseable requested expires_at at submission acceptance (invalid_request)", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, expires_at: "whenever" } }),
+      authorization_details: JSON.stringify(PROPOSAL),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  });
+
   it("refuses a proposal entry whose resource is not among the Intent resources", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
