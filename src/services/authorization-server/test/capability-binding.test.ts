@@ -29,6 +29,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -63,6 +64,15 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    // The suite approves as `ap-agent` under approver `bob`, and its template
+    // dispatches to the `worker` recipient: gate 1 resolves both, gate 2 names
+    // the Approver each path actually activates with, and gate 3's ceiling is
+    // this suite's own derivation ceiling.
+    authoritySourceCatalog: testAuthoritySourceCatalog(
+      DERIVATION_POLICY.ceiling,
+      ["ap-agent", "worker"],
+      ["bob"],
+    ),
     statusKey: privateKey,
     statusKid: "as-status",
     // The child-creation suite below delegates to this AS-asserted `ai_agent`.
@@ -477,7 +487,7 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
       rate_per_min: 20,
       approval_event_id: "tmpl-cap-consent",
       expires_at: EXP,
-    }).id;
+    }, kernel.authoritySourceOptions()).id;
   });
 
   const dispatch = (actions: string[]) =>
