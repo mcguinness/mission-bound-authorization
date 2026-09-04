@@ -37,8 +37,9 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
-import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
+import { buildAuthorizationServer, type BuiltAs, createChildMission, SourceUnavailableError } from "../src/index.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -144,7 +145,10 @@ async function codeTokenRequest(params: Record<string, string>): Promise<Respons
  * Full PAR -> approval -> token code flow yielding an ACTIVE Mission, a base mission
  * ACCESS token (DPoP-bound to codeDpop), and the Mission's code-flow refresh token.
  */
-async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
+async function issueBaseMission(
+  expiresAt: string = FAR_EXP,
+  authority: unknown = fullAuthority(),
+): Promise<{
   missionId: string;
   baseAccessToken: string;
   missionRefreshToken: string;
@@ -174,7 +178,7 @@ async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: intent,
-      authorization_details: JSON.stringify(fullAuthority()),
+      authorization_details: JSON.stringify(authority),
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -221,6 +225,14 @@ interface ExchangeOpts {
   resource?: string;
   /** @spec continuation#transport-async — REQUIRED; `null` omits it (the missing-param test). */
   creationRequestId?: string | null;
+  /**
+   * Authenticate as the child actor client (subagent-invoice-extractor) instead
+   * of the default acting client (ap-agent). @spec #651 — the subject_token's
+   * client_id MUST equal the authenticated client (continuation-grant.ts), so a
+   * family rooted at a Child Mission's own access token requires the child
+   * itself to be the acting client.
+   */
+  actingAs?: "child";
 }
 
 /** POST /token: token-exchange + request_refresh_token=true (the async transport). */
@@ -244,7 +256,27 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, extra) },
       body: new URLSearchParams({
         ...params,
-        client_assertion: await clientAssertion(),
+        client_assertion: opts.actingAs === "child" ? await childClientAssertion() : await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+/** POST /token grant_type=jwt-bearer: the child actor redeems its child-bound
+ *  assertion AS ITSELF for its own DPoP-bound Mission access token. */
+async function childRedeem(assertion: string, keys: Keys = actingDpop): Promise<Response> {
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(`${ISSUER}/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(keys, extra) },
+      body: new URLSearchParams({
+        grant_type: CHILD_JWT_BEARER_GRANT_TYPE,
+        assertion,
+        client_assertion: await childClientAssertion(),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -1166,6 +1198,177 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
     // Nothing was created or counted.
     expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(0);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(before);
+  });
+});
+
+describe("async-delegation family fallback preserves lineage (@spec child-delegation#parent-member, expansion#predecessor-member, #651)", () => {
+  /** A narrower authority than fullAuthority(), so an expansion below genuinely widens. */
+  const readOnlyAuthority = () => [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+
+  it("successor-rooted: a family opened from a Successor Mission's own access token preserves `predecessor` on the initial token and after refresh", async () => {
+    const { missionId: predecessorId, baseAccessToken: predecessorAccessToken } = await issueBaseMission(
+      FAR_EXP,
+      readOnlyAuthority(),
+    );
+
+    // Widen via the expansion exchange (deferred): ap-agent + codeDpop, the same
+    // client/key the predecessor's own code flow authenticated with.
+    const opened = await codeTokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: predecessorAccessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      mission_intent: JSON.stringify({
+        intent: {
+          goal: "Widen for the async-delegation family lineage regression (#651)",
+          target_resources: [RESOURCE],
+          expires_at: FAR_EXP,
+        },
+      }),
+      authorization_details: JSON.stringify(fullAuthority()),
+      creation_request_id: crypto.randomUUID(),
+    });
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+
+    as.expansionDeferrals.approve(ob.deferral_code as string, {
+      approver: { iss: ISSUER, sub: "bob" },
+      approvalEventId: `apev-651-${crypto.randomUUID()}`,
+      approvedUntil: FAR_EXP,
+    });
+    const poll = await codeTokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      deferral_code: ob.deferral_code as string,
+    });
+    const pb = (await poll.json()) as { access_token?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    const successorAccessToken = pb.access_token as string;
+    const successorClaims = decodeJwt(successorAccessToken) as {
+      client_id?: string;
+      mission?: { id?: string; predecessor?: string };
+    };
+    // asyncDelegate()'s default acting client is ap-agent: the successor must
+    // still be owned by it (expansion never reassigns client_id).
+    expect(successorClaims.client_id).toBe("ap-agent");
+    const successorId = successorClaims.mission?.id as string;
+    expect(successorClaims.mission?.predecessor).toBe(predecessorId);
+
+    // Open an async-delegation family ROOTED at the Successor Mission's OWN
+    // access token (subject_token). Before the fix this silently dropped
+    // `predecessor` from the family fallback's claim (provider.ts #651).
+    const first = await asyncDelegate(successorAccessToken);
+    const firstBody = (await first.json()) as { access_token?: string; refresh_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const { payload: initialPayload } = await jwtVerify(firstBody.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    const initialMission = initialPayload.mission as { id?: string; predecessor?: string };
+    expect(initialMission.id).toBe(successorId);
+    expect(initialMission.predecessor).toBe(predecessorId);
+
+    // The family fallback re-projects lineage on every refresh too.
+    const refreshed = await refreshFamily(firstBody.refresh_token as string);
+    const refreshedBody = (await refreshed.json()) as { access_token?: string };
+    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(200);
+    const { payload: refreshedPayload } = await jwtVerify(refreshedBody.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    const refreshedMission = refreshedPayload.mission as { id?: string; predecessor?: string };
+    expect(refreshedMission.id).toBe(successorId);
+    expect(refreshedMission.predecessor).toBe(predecessorId);
+  });
+
+  /**
+   * Child-rooted, part 1: the full HTTP journey (create the Child Mission, have
+   * it redeem its own assertion, then present its OWN access token as the
+   * async-delegation subject_token) is BLOCKED by the shipped client registry,
+   * not by the fix under test — see "Uncertainty / not done" in the PR body.
+   * config/clients.json grants "subagent-invoice-extractor" only the
+   * jwt-bearer grant type, and continuation-grant.ts's async-delegation
+   * handler requires the AUTHENTICATED client to equal subject_token's
+   * client_id, so the child itself must be the acting client. This test pins
+   * that config-level block as an executable fact (it flips if the
+   * registration ever changes), and part 2 below proves the FIX (the claim
+   * dispatch) end-to-end at /token via a seam injection instead.
+   */
+  it("child-rooted, part 1 (config-blocked): the child actor client cannot invoke the async-delegation exchange at all", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const created = await createChildViaExchange(baseAccessToken, missionId);
+    const createdBody = (await created.json()) as { access_token?: string; mission_id?: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(200);
+
+    const redeemed = await childRedeem(createdBody.access_token as string);
+    const redeemedBody = (await redeemed.json()) as { access_token?: string };
+    expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
+    const childAccessToken = redeemedBody.access_token as string;
+
+    const res = await asyncDelegate(childAccessToken, { actingAs: "child" });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not allowed for this client");
+  });
+
+  /**
+   * Child-rooted, part 2 (seam-level): proves the FIX itself end-to-end at
+   * /token -> extraTokenClaims -> the family fallback -> gateActive ->
+   * jwks verification. A real ap-agent family is opened, then the family
+   * row is re-pointed (direct store injection, the same seam-injection
+   * pattern the expansion tests already use via as.kernel.db /
+   * as.expansionDeferrals.db) at a Child Mission record created directly via
+   * the kernel, simulating the state a full child-rooted journey would reach
+   * were the child actor client also granted the token-exchange grant type.
+   */
+  it("child-rooted, part 2 (seam-level): a family row resolving to a Child Mission record projects `parent` on refresh", async () => {
+    const { missionId: parentId, baseAccessToken } = await issueBaseMission();
+    const first = await asyncDelegate(baseAccessToken);
+    const firstBody = (await first.json()) as { access_token?: string; refresh_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const families = as.delegationFamilyStore.familiesForMission(parentId);
+    expect(families).toHaveLength(1);
+    const grantId = families[0] as string;
+
+    const { child } = createChildMission(as.kernel, {
+      parentId,
+      intent: {
+        goal: "Extract Acme invoices (#651 seam)",
+        target_resources: [RESOURCE],
+        expires_at: FAR_EXP,
+      },
+      proposedAuthority: confinedAuthority(),
+      childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
+    });
+    expect(child.state).toBe("active");
+    expect(child.parent?.id).toBe(parentId);
+
+    // Re-point the existing family row at the Child Mission record: no
+    // test-time client-registry override exists to reach this state over real
+    // HTTP (see part 1 above and "Uncertainty / not done").
+    as.delegationFamilyStore.db
+      .prepare("UPDATE delegation_families SET mission_id = ? WHERE grant_id = ?")
+      .run(child.id, grantId);
+
+    const refreshed = await refreshFamily(firstBody.refresh_token as string);
+    const refreshedBody = (await refreshed.json()) as { access_token?: string };
+    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(200);
+    const { payload } = await jwtVerify(refreshedBody.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    const mission = payload.mission as { id?: string; parent?: { id?: string } };
+    expect(mission.id).toBe(child.id);
+    expect(mission.parent?.id).toBe(parentId);
   });
 });
 
