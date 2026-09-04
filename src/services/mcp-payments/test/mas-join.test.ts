@@ -106,13 +106,16 @@ describe("baseline MAS Join: configuration gate (@spec authority-server#mission-
     expect(res.refusal_reason).toBe("unknown_mission");
   });
 
-  it("refuses unknown_mission for a malformed propagated reference", async () => {
+  it("refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
       missionReference: { malformed: true },
     });
     expect(res.permitted).toBe(false);
-    expect(res.refusal_reason).toBe("unknown_mission");
+    // @spec authority-server#mission-reference-field (#557) — unusable
+    // carriage where governance requires a reference, not a Mission that
+    // could not be found: the two failures are reported apart.
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
   });
 });
 
@@ -139,8 +142,10 @@ describe("baseline MAS Join: successful join (@spec authority-server#mission-joi
         masJoin: {
           delegatePolicy: { delegates: { "delegate-client": {} } },
           resolveOrdinaryAuthority: FULL_AUTHORITY,
-          resolveDelegateDepth: (clientId, mid) =>
-            records.resolveDepth({ issuer: ISSUER, id: mid }, clientId, view.client_id),
+          // The hook takes the canonical reference and the Mission's own
+          // client, so the ledger's resolver satisfies it directly: no
+          // adapter, and no issuer bound at construction.
+          resolveDelegateDepth: records.resolveDepth.bind(records),
         },
       },
       delegateView,

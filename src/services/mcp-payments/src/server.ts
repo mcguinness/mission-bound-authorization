@@ -16,7 +16,14 @@ import {
   toolsOf,
   verifyAttenuationChain,
 } from "@mission/core";
-import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
+import {
+  calculateJwkThumbprint,
+  createLocalJWKSet,
+  decodeProtectedHeader,
+  type JWK,
+  type JWTPayload,
+  jwtVerify,
+} from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import type { Decision, MissionView } from "@mission/pdp";
 import {
@@ -236,10 +243,21 @@ export class McpPaymentsServer {
   }
 
   /**
-   * Validate a DPoP-bound access token, returning TokenFacts.
-   * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
+   * @spec mission#rs-enforcement — the ONE verification step every DPoP-bound
+   * credential presented over HTTP passes through, whichever class it turns
+   * out to be: a transaction token refused outright, the signature, issuer
+   * and audience verified against this resource's own trusted keys, `cnf.jkt`
+   * required, and the request's DPoP proof bound both to that key and to this
+   * token (`ath`). It returns the VERIFIED payload, so a caller that must tell
+   * one credential class from another branches on verified claims and never on
+   * a caught error string.
    */
-  async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<MissionBoundTokenFacts> {
+  private async verifyDpopBoundToken(
+    accessToken: string,
+    dpopProof: string,
+    htu: string,
+    htm: string,
+  ): Promise<{ payload: JWTPayload; cnfJkt: string }> {
     refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
@@ -250,7 +268,15 @@ export class McpPaymentsServer {
     // Verify the DPoP proof and bind it to the token's cnf.jkt AND to the token
     // itself (`ath`), under the same verifier the transaction path uses.
     await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
+    return { payload, cnfJkt: cnf.jkt };
+  }
 
+  /**
+   * The Mission-bound facts of an already-verified payload. A `mission` claim
+   * that is present but not the profiled shape THROWS here: it is a refusal,
+   * never a credential silently demoted to the ordinary class.
+   */
+  private missionBoundFactsFrom(payload: JWTPayload, cnfJkt: string): MissionBoundTokenFacts {
     // @spec cross-domain#mission-subject — readTxnMissionClaim validates the
     // REQUIRED invariants and, when present, the closed {iss, sub} shape of
     // the origin principal; a present-but-malformed `subject` is a refusal
@@ -273,7 +299,7 @@ export class McpPaymentsServer {
         ...(mission.subject ? { subject: mission.subject } : {}),
       },
       missionClaim: mission,
-      cnfJkt: cnf.jkt,
+      cnfJkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
       ...(payload.identity_continuation_handle
         ? { identityContinuationHandle: payload.identity_continuation_handle as string }
@@ -282,13 +308,44 @@ export class McpPaymentsServer {
   }
 
   /**
+   * @spec authority-server#mission-join (#557) — the ordinary facts of an
+   * already-verified payload carrying NO `mission` claim. `scope` is carried
+   * verbatim: it is rule 8 bound 1's input, the authority the acting
+   * credential holds as issued.
+   */
+  private ordinaryFactsFrom(payload: JWTPayload, cnfJkt: string): OrdinaryTokenFacts {
+    return {
+      sub: payload.sub as string,
+      clientId: payload.client_id as string,
+      // @spec authzen#pdp-request rule 10 — this resource's own verified
+      // issuer, never a claim on the (nonexistent) mission.
+      iss: this.deps.issuer,
+      ...(payload.act ? { act: payload.act as ActObject } : {}),
+      cnfJkt,
+      ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
+      ...(payload.jti ? { jti: payload.jti as string } : {}),
+    };
+  }
+
+  /**
+   * Validate a DPoP-bound access token, returning TokenFacts.
+   * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
+   */
+  async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<MissionBoundTokenFacts> {
+    const { payload, cnfJkt } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
+    return this.missionBoundFactsFrom(payload, cnfJkt);
+  }
+
+  /**
    * @spec authority-server#mission-join (#557) — validates an ORDINARY DPoP-
    * bound OAuth credential (issuer, audience, `cnf.jkt`, DPoP proof: all the
    * SAME checks {@link validateToken} performs) that carries NO `mission`
    * claim at all. Returns `TokenFacts` with `mission` absent, `sub`/
-   * `clientId` from the credential's own authenticated claims. A gateway
-   * chooses to route a given HTTP request here instead of
-   * {@link validateToken}; {@link validateToken} itself is UNCHANGED and
+   * `clientId` from the credential's own authenticated claims. This method
+   * assumes its caller already knows the credential's class; a gateway route
+   * that must decide the class from the credential itself calls
+   * {@link validateGatewayCredential}, which verifies once and branches on
+   * the verified `mission` claim. {@link validateToken} itself is UNCHANGED and
    * still rejects a no-claim token outright, so an existing Mission-bound
    * route configured to call it keeps doing exactly that. `Pep.enforce`
    * separately refuses `unknown_mission` when `PepDeps.masJoin` is not
@@ -301,25 +358,40 @@ export class McpPaymentsServer {
    * -- those stay Mission-bound-only.
    */
   async validateOrdinaryToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<OrdinaryTokenFacts> {
-    refuseTransactionToken(accessToken);
-    const { payload } = await jwtVerify(accessToken, this.resolveKey, {
-      issuer: this.deps.issuer,
-      audience: CANONICAL_RESOURCE,
-    });
-    const cnf = payload.cnf as { jkt?: string } | undefined;
-    if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
-    await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
+    const { payload, cnfJkt } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
+    return this.ordinaryFactsFrom(payload, cnfJkt);
+  }
 
-    return {
-      sub: payload.sub as string,
-      clientId: payload.client_id as string,
-      // @spec authzen#pdp-request rule 10 — this resource's own verified
-      // issuer, never a claim on the (nonexistent) mission.
-      iss: this.deps.issuer,
-      ...(payload.act ? { act: payload.act as ActObject } : {}),
-      cnfJkt: cnf.jkt,
-      ...(payload.jti ? { jti: payload.jti as string } : {}),
-    };
+  /**
+   * @spec authority-server#mission-join (#557) — the credential validator a
+   * GATEWAY route uses: it verifies the presented credential exactly once
+   * ({@link verifyDpopBoundToken}) and then branches on the VERIFIED payload's
+   * `mission` claim presence. Branching on a verified claim is what keeps the
+   * two classes apart honestly: a caught error string from a Mission-bound
+   * validator would also match a bad signature, an expired token, or a failed
+   * proof, so a route that fell back on one would admit as ordinary exactly
+   * the credentials it must refuse.
+   *
+   * `admitsOrdinary` is the route's own configuration. False (a Mission-bound
+   * route): a credential with no `mission` claim is refused here, the same
+   * outcome {@link validateToken} produces. True (a MAS-governed route): it is
+   * returned as {@link OrdinaryTokenFacts} for the baseline Join, which the
+   * PEP still gates on its own `PepDeps.masJoin` configuration.
+   *
+   * A `mission` claim that is present but not the profiled shape is a refusal
+   * on either setting: presence decides the class, and the class then verifies
+   * strictly, so stripping or corrupting a claim never downgrades a
+   * Mission-bound credential into a joinable ordinary one.
+   */
+  async validateGatewayCredential(
+    accessToken: string,
+    pop: DpopPresentation,
+    admitsOrdinary: boolean,
+  ): Promise<TokenFacts> {
+    const { payload, cnfJkt } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
+    if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, cnfJkt);
+    if (!admitsOrdinary) throw new Error("token missing mission claim");
+    return this.ordinaryFactsFrom(payload, cnfJkt);
   }
 
   /**
