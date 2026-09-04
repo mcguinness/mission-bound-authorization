@@ -242,3 +242,73 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
   });
 });
+
+/**
+ * @spec cross-domain#dual-axis (#744) — the OPTIONAL action- and
+ * resource-scoped grain of the same observation. The PDP evaluates one
+ * action against one audience per call, so narrowing shows up here as a
+ * per-action decision: the entitled action permits, the delegated but
+ * unentitled one denies, and the rest of the delegated set is untouched.
+ */
+describe("evaluateInner cross-domain entitlement authority (@spec cross-domain#dual-axis, #744)", () => {
+  /** A view delegating both actions on the audience, so only entitlement decides. */
+  const twoActionView: MissionView = {
+    ...view,
+    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:invoice.read", "payments:payment.schedule"] }],
+  };
+
+  const entitledTo = (authority: Array<{ resource: string; actions: string[] }>): EntitlementObservation => ({
+    entitled: true,
+    observed_at: "2026-08-23T11:59:00Z",
+    authority,
+  });
+
+  const optsFor = (entitlement: EntitlementObservation): EvaluateOptions => ({
+    ...resolverOpts(FRESH_MAPPING, entitlement, 600),
+    view: twoActionView,
+  });
+
+  it("no authority on the observation: the audience-scoped grain still permits, unchanged", async () => {
+    const dec = await evaluate(req(), optsFor(ENTITLED));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+  });
+
+  it("authority covering the requested (audience, action): permits", async () => {
+    const dec = await evaluate(req(), optsFor(entitledTo([{ resource: RESOURCE, actions: ["payments:invoice.read"] }])));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+  });
+
+  it("authority present but excluding this action, while the delegated set carries it: denies principal_mapping_failed", async () => {
+    const opts = optsFor(entitledTo([{ resource: RESOURCE, actions: ["payments:invoice.read"] }]));
+    const dec = await evaluate(req({ action: { name: "payments:payment.schedule" } }), opts);
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("principal_mapping_failed");
+  });
+
+  it("the surviving subset is unaffected: the same entitlement that denies one action still permits the other", async () => {
+    const opts = optsFor(entitledTo([{ resource: RESOURCE, actions: ["payments:payment.schedule"] }]));
+    const denied = await evaluate(req(), opts);
+    const permitted = await evaluate(req({ action: { name: "payments:payment.schedule" } }), opts);
+    expect(denied.decision).toBe(false);
+    expect(denied.context.denial_reason).toBe("principal_mapping_failed");
+    expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
+  });
+
+  it("authority naming a different resource than the request's audience: denies principal_mapping_failed", async () => {
+    const dec = await evaluate(req(), optsFor(entitledTo([{ resource: "https://other.test/mcp", actions: ["payments:invoice.read"] }])));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("principal_mapping_failed");
+  });
+
+  it("matches the audience exactly: a prefix of it entitles nothing (denies principal_mapping_failed)", async () => {
+    const dec = await evaluate(req(), optsFor(entitledTo([{ resource: "http://localhost:4403", actions: ["payments:invoice.read"] }])));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("principal_mapping_failed");
+  });
+
+  it("an empty authority array entitles nothing: denies principal_mapping_failed", async () => {
+    const dec = await evaluate(req(), optsFor(entitledTo([])));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("principal_mapping_failed");
+  });
+});

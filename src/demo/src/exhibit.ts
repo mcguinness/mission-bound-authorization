@@ -1610,8 +1610,8 @@ async function main() {
   // ---- 9. Cross-domain: the ID-JAG leg into the SaaS estate ---------------
   step(9, "Cross-domain: an ID-JAG grant crosses into the LedgerCloud (SaaS) estate");
   goal(
-    "The agent carries the mission across domains: an ID-JAG grant is redeemed at the LedgerCloud RAS, then a journal entry is posted.",
-    "the RAS mints a local SaaS token, the post succeeds, and a second redemption of the same grant is rejected (single-use).",
+    "The agent carries the mission across domains: an ID-JAG grant is redeemed at the LedgerCloud RAS, and the dual axes decide what survives.",
+    "the RAS mints a local SaaS token narrowed to what alice-ledgercloud is currently entitled to, the entitled read succeeds, the unentitled journal write is refused, and a second redemption of the same grant is rejected (single-use).",
   );
   hop("LedgerCloud admin", "RAS", "client onboarded (out-of-band registration)", "config/admin action, in-process");
   as.ras.registerClient(issued.dpopJkt, TOPOLOGY.rasLocalClientId);
@@ -1627,8 +1627,27 @@ async function main() {
   const redeemed = await as.ras.redeem(grant.grant, issued.dpopJkt);
   block("RAS local token — decoded claims", decodeClaims(redeemed.access_token));
   note(`the RAS minted a LOCAL token (iss = ${as.rasIssuer}, aud = ${as.saasResource}); the SaaS PEP enforces from this token alone (token-only, no PDP).`);
+  note(
+    `@spec cross-domain#dual-axis: the grant delegated ledger:vendor.read AND ledger:journal.write, but alice-ledgercloud is currently entitled to the read alone. ` +
+      "The effective authority is the intersection, so authorization_details on the local token above carries the read entry only. A partial entitlement narrows; it does not refuse the whole redemption.",
+  );
 
   const saasDpop = await dpopProofFor(issued.dpopKeys, as.saasResource, "POST");
+  hop("Agent", "SaaS RS", "tools/call get_vendor_bank_details", `in-process; represents ${as.saasResource}`);
+  block("MCP tools/call — get_vendor_bank_details (SaaS estate)", {
+    tool: "get_vendor_bank_details",
+    arguments: { vendor_id: "acme" },
+    authorization: "DPoP <RAS local token>",
+  });
+  const saasRead = await as.saas.callTool("get_vendor_bank_details", { vendor_id: "acme" }, redeemed.access_token, saasDpop);
+  block("SaaS tool result", saasRead);
+  outcome({
+    decision: saasRead.ok ? "PERMIT" : "DENY",
+    ...(saasRead.ok ? {} : { reason: saasRead.error ?? "" }),
+    observed: saasRead.ok ? `get_vendor_bank_details(acme) returned ${JSON.stringify(saasRead.result)}` : "get_vendor_bank_details denied",
+    ok: saasRead.ok,
+  });
+
   hop("Agent", "SaaS RS", "tools/call post_journal_entry", `in-process; represents ${as.saasResource}`);
   block("MCP tools/call — post_journal_entry (SaaS estate)", {
     tool: "post_journal_entry",
@@ -1640,8 +1659,10 @@ async function main() {
   outcome({
     decision: saasCall.ok ? "PERMIT" : "DENY",
     ...(saasCall.ok ? {} : { reason: saasCall.error ?? "" }),
-    observed: saasCall.ok ? `post_journal_entry(acme, $125.00) returned ${JSON.stringify(saasCall.result)}` : "post_journal_entry denied",
-    ok: saasCall.ok,
+    observed: saasCall.ok
+      ? `post_journal_entry(acme, $125.00) returned ${JSON.stringify(saasCall.result)}`
+      : `post_journal_entry refused ${saasCall.error ?? ""}: the action was delegated but not entitled, so it never reached the local token`,
+    ok: !saasCall.ok && saasCall.error === "out_of_authority",
   });
 
   // Replay: the ID-JAG grant is single-use (one-time jti).

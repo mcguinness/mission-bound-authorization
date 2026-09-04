@@ -10,6 +10,7 @@
 
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
+import { inheritCapabilitySources } from "./capability-binding.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import type {
@@ -112,7 +113,19 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   }
 
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  const authoritySet = kernel.derive(input.intent, proposal);
+  // @spec capability-binding#capability-source-binding — carry the
+  // predecessor's recorded bindings for every retained catalog-sourced action,
+  // before `authorityHashValue` below. The grantor is the predecessor's
+  // APPROVED Authority Set, not its effective set: containment MUST NOT
+  // propagate to a successor (see the containment history disclosure below),
+  // and an expansion that restores a contained action restores the recorded
+  // fact about that action with it rather than emitting the action unbound.
+  // Actions the successor's own approval ADDS are not inherited: a binding
+  // originates only in a trusted resolution at the approval that records it.
+  const authoritySet = inheritCapabilitySources(
+    kernel.derive(input.intent, proposal),
+    predecessor.authority_set,
+  );
   // @spec expansion#successor-expiry — ONE creation instant for the successor:
   // the record's `created_at` and the instant every lifetime ceiling is
   // measured from are the same read.

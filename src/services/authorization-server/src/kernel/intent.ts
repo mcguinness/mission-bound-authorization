@@ -26,6 +26,7 @@ import {
   MISSION_INTENT_EVIDENCE_TYP,
   parseStrictJson,
 } from "@mission/core";
+import { type AmountBindingCandidate, amountBearingBindingError } from "@mission/demo-data";
 import {
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
@@ -559,7 +560,9 @@ function validateMissionIntentObject(
  * of an advertised type and MUST validate against that type's published JSON
  * Schema (refused `invalid_authorization_details`, never silently kept), and
  * each entry's `resource` MUST be among the Intent's `target_resources`
- * (refused `invalid_request`).
+ * (refused `invalid_request`). An entry binding `max_amount` to an action the
+ * deployment catalog marks not amount-bearing is refused
+ * `invalid_authorization_details` (#743).
  */
 export function validateAuthorityProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
   if (Buffer.byteLength(raw, "utf8") > MAX_INTENT_BYTES) {
@@ -607,6 +610,22 @@ function validateProposedEntry(entry: JsonValue, targetResources: string[]): voi
     throw new IntentError(
       "invalid_authorization_details",
       `authorization_details entry fails its published schema: ${schemaError}`,
+    );
+  }
+  // #743 — the entry MUST NOT bind `max_amount` to an action the deployment
+  // catalog marks not amount-bearing: an entry's constraints bind every action
+  // in it, so such a cap is one no request for that action can ever satisfy.
+  // Refused `invalid_authorization_details` (a request fault: the client
+  // proposed it), by the SAME validator the typed config loader applies to a
+  // configured ceiling entry, so a correct ceiling cannot be undone from the
+  // proposal side. Runs AFTER the published-schema check, so a malformed
+  // `max_amount` still refuses as a schema failure. An action the catalog does
+  // not declare carries no claim and is not refused here.
+  const amountError = amountBearingBindingError(e as unknown as AmountBindingCandidate);
+  if (amountError) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      `authorization_details entry ${amountError}`,
     );
   }
   // @spec mission#authority-proposal: each proposed entry carrying `resource`

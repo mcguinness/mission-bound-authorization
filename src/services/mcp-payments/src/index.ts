@@ -50,6 +50,8 @@ export {
   CANONICAL_RESOURCE,
   TOOL_BASE,
   sourceDigestOf,
+  TOOL_ACTIONS,
+  type ActionMapping,
 } from "./pep.js";
 export {
   McpPaymentsServer,
@@ -150,3 +152,4 @@ export {
   serveResourceMetadata,
   startResourceMetadataServer,
 } from "./resource-metadata.js";
+export { ActorRecords, type ActorRecord, type MissionRef } from "./actor-records.js";

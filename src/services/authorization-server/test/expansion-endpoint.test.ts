@@ -673,7 +673,10 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
   });
 
   it("cascade under replay (#641): a child-bearing predecessor's crash-window replay re-cascades nothing", async () => {
-    const pred = await issuePredecessor(["payments:invoice.read", "payments:vendor.read"]);
+    // #743 — `authority()` binds a `max_amount`, so every action here must be
+    // amount-bearing; `payments:vendor.read` is not, and PAR intake refuses
+    // that entry. Nothing below asserts on the second action.
+    const pred = await issuePredecessor(["payments:invoice.read"]);
     const { child } = createChildMission(as.kernel, {
       parentId: pred.missionId,
       intent: { goal: "Classify invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },

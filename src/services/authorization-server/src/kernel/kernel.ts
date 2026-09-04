@@ -9,6 +9,10 @@ import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
+  attachCapabilitySources,
+  type CapabilitySourceResolution,
+} from "./capability-binding.js";
+import {
   buildContainmentEvidence,
   type ContainmentEvidence,
   type ContainmentPolicy,
@@ -171,6 +175,17 @@ export interface ApproveInput {
    * means none verified — always the case today, with no registered types.
    */
   submissionEvidence?: IntentSubmissionEvidenceFact[];
+  /**
+   * @spec capability-binding#capability-source-binding — the validating
+   * server's TRUSTED CATALOG RESOLUTION for this approval: one outcome per
+   * catalog-sourced `(resource, action)` pair of the derived set. Verified
+   * facts, produced by the AS approval path from configured trusted catalogs,
+   * exactly as `submissionEvidence` is: the client's proposal never supplies
+   * them, and a client-supplied digest is never authoritative. Absent means no
+   * action was resolved as catalog-sourced, and every derived entry keeps the
+   * member absent.
+   */
+  capabilityResolution?: CapabilitySourceResolution[];
 }
 
 export interface KernelOptions {
@@ -385,7 +400,15 @@ export class MissionKernel {
     // is treated as absent). Present iff submitted: template-mode Missions
     // carry neither `proposed_authority` nor `proposal_hash`.
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-    const authoritySet = this.derive(input.intent, proposal);
+    // @spec capability-binding#capability-source-binding — the resolved
+    // bindings are attached to the DERIVED entries here, before
+    // `authorityHash` below, so `authority_hash` covers them by construction.
+    // An unresolvable catalog-sourced action refuses the derivation
+    // (IntentError) rather than being approved unbound.
+    const authoritySet = attachCapabilitySources(
+      this.derive(input.intent, proposal),
+      input.capabilityResolution,
+    );
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
     const id = newMissionId();

@@ -193,6 +193,7 @@ async function authenticate(
   res: ServerResponse,
   paymentsServer: McpPaymentsServer,
   transport: StreamableHTTPServerTransport,
+  masGoverned: boolean,
 ): Promise<void> {
   const authz = req.headers.authorization;
   const proof = req.headers.dpop;
@@ -210,11 +211,20 @@ async function authenticate(
 
   let facts: TokenFacts;
   try {
+    // @spec authority-server#mission-join (#557) — a MAS-GOVERNED route
+    // admits an ordinary OAuth credential carrying no `mission` claim and
+    // joins it against the propagated reference below, so it validates
+    // through `validateGatewayCredential`, which verifies once and branches
+    // on the VERIFIED payload's claim presence. Every other route keeps
+    // `validateCredential` and stays Mission-bound-only.
+    //
     // @spec txn-authorization#transaction-token — ONE credential in the
     // Authorization header: an ordinary Mission-bound access token, or the
     // transaction token that authorizes the retry of a challenged operation.
     // Nothing else on this request carries a transaction token.
-    facts = await paymentsServer.validateCredential(accessToken, { proof, htu, htm });
+    facts = masGoverned
+      ? await paymentsServer.validateGatewayCredential(accessToken, { proof, htu, htm }, true)
+      : await paymentsServer.validateCredential(accessToken, { proof, htu, htm });
   } catch {
     return unauthorized(res, "DPoP proof-of-possession failed");
   }
@@ -257,9 +267,21 @@ async function authenticate(
  */
 export async function createHttpMcpChannel(
   paymentsServer: McpPaymentsServer,
-  opts?: { host?: string },
+  opts?: {
+    host?: string;
+    /**
+     * @spec authority-server#mission-join (#557) — this route is MAS-governed:
+     * it admits an ordinary OAuth credential with no `mission` claim and joins
+     * it against the propagated Mission Reference. Default false, a
+     * Mission-bound-only route, so an existing channel is unchanged. A
+     * deployment turning this on MUST also configure the PEP's `masJoin`, or
+     * every joined request refuses with no usable permit.
+     */
+    masGoverned?: boolean;
+  },
 ): Promise<HttpMcpChannel> {
   const host = opts?.host ?? "127.0.0.1";
+  const masGoverned = opts?.masGoverned ?? false;
   const mcpServer = createHttpMcpServer(paymentsServer);
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
@@ -275,7 +297,7 @@ export async function createHttpMcpChannel(
     // routes (RFC 9728 metadata + txn_challenge_jwks_uri) are served in front of
     // the credential gate: they publish public keys and metadata.
     if (serveResourceMetadata(paymentsServer, req, res)) return;
-    authenticate(req as AuthedRequest, res, paymentsServer, transport).catch(() => {
+    authenticate(req as AuthedRequest, res, paymentsServer, transport, masGoverned).catch(() => {
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "server_error" }));

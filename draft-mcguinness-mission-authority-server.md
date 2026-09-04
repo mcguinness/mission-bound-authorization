@@ -324,7 +324,7 @@ the bindings rather than a maturity one.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 26 conformance rows in conformance-manifest.json (10 tested, 3 partial, 13 todo).
+Implementation: 26 conformance rows in conformance-manifest.json (13 tested, 13 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).
@@ -1253,7 +1253,9 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    ({{I-D.draft-mcguinness-oauth-mission}}): entries without a
    `delegation` member are excluded, `allowed_delegates` is applied,
    and `max_depth` is evaluated from the deployment's actor records
-   rather than from a Mission-bound token's `act` chain.
+   rather than from a Mission-bound token's `act` chain. A delegate
+   with no actor record under the Mission is not recorded as acting
+   under it, and the join fails `mission_mismatch`.
 6. **Join failure is a deny.** A failure of the subject or client join
    MUST be denied with the `mission_mismatch` denial reason: the
    presented credential does not join to the referenced Mission
@@ -1714,7 +1716,11 @@ claims:
   ({{I-D.draft-mcguinness-oauth-mission}}). The MAS MAY additionally
   include `authority_hash` as an audit anchor; where included, PDP
   Consumption's cross-check applies to it too
-  ({{join-assertion-pdp}}).
+  ({{join-assertion-pdp}}). This object MUST NOT carry
+  `approval_context_commitment`: the Approval Context Commitment
+  profile fixes this descriptor as a must-not-carry site alongside the
+  baseline `mission` claim
+  ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
 `token`:
 : REQUIRED. An object containing `sha256`, the token digest as in

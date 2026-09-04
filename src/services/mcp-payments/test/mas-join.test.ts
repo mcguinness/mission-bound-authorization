@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 import type { AuthorityEntry, Fga, MissionView } from "@mission/pdp";
 import {
+  ActorRecords,
   CANONICAL_RESOURCE,
   createEphemeralEvidenceKeys,
   EvidenceStore,
@@ -30,6 +31,10 @@ import {
 const ISSUER = "https://as.test";
 const RESOURCE = "vendor.example";
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+// @spec authority-server#mission-join rule 8, bound 3 — current Resource
+// policy, the bound the existing FGA check enforces. Refusing here with both
+// other bounds satisfied is what shows the third bound is evaluated at all.
+const denyingFga = { checkWithContext: async () => false } as unknown as Fga;
 
 const READ = "payments:vendor.read";
 const missionId = "msn_557_join";
@@ -105,13 +110,16 @@ describe("baseline MAS Join: configuration gate (@spec authority-server#mission-
     expect(res.refusal_reason).toBe("unknown_mission");
   });
 
-  it("refuses unknown_mission for a malformed propagated reference", async () => {
+  it("refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
       missionReference: { malformed: true },
     });
     expect(res.permitted).toBe(false);
-    expect(res.refusal_reason).toBe("unknown_mission");
+    // @spec authority-server#mission-reference-field (#557) — unusable
+    // carriage where governance requires a reference, not a Mission that
+    // could not be found: the two failures are reported apart.
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
   });
 });
 
@@ -127,11 +135,21 @@ describe("baseline MAS Join: successful join (@spec authority-server#mission-joi
 
   it("permits an authorized delegate and narrows the effective authority to the delegable subset", async () => {
     const delegateView: MissionView = { ...view, authority_set: [DIRECT_ENTRY, DELEGABLE_ENTRY] };
+    // @spec authority-server#mission-join rule 5 — depth comes from the
+    // deployment's own actor records, and the delegate must have one: the
+    // entry here declares no max_depth, so before the absent-record rule
+    // this joined with no depth check at all.
+    const records = new ActorRecords();
+    records.record({ mission: REFERENCE, clientId: "delegate-client", delegatedBy: view.client_id });
     const pep = build(
       {
         masJoin: {
           delegatePolicy: { delegates: { "delegate-client": {} } },
           resolveOrdinaryAuthority: FULL_AUTHORITY,
+          // The hook takes the canonical reference and the Mission's own
+          // client, so the ledger's resolver satisfies it directly: no
+          // adapter, and no issuer bound at construction.
+          resolveDelegateDepth: records.resolveDepth.bind(records),
         },
       },
       delegateView,
@@ -189,7 +207,7 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
     expect(res.denial_reason).toBe("mission_mismatch");
   });
 
-  it("treats an unconfigured resolveDelegateDepth as unbounded depth, denying closed against a max_depth-bearing entry", async () => {
+  it("denies mission_mismatch with an unconfigured resolveDelegateDepth: a delegate with no actor record is not recorded as acting under the Mission", async () => {
     const pep = build(
       {
         masJoin: {
@@ -275,6 +293,135 @@ describe("baseline MAS Join: rule 8, bound 1 (acting credential authority)", () 
     });
     expect(res.permitted).toBe(false);
     expect(res.refusal_reason).toBe("out_of_authority");
+  });
+});
+
+describe("baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5)", () => {
+  const delegateView: MissionView = { ...view, authority_set: [DIRECT_ENTRY, DELEGABLE_ENTRY] };
+  const delegateToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "delegate-client" };
+
+  /** A ledger recording `delegate-client` two hops from the Mission's own client. */
+  function twoHopLedger(): ActorRecords {
+    const records = new ActorRecords();
+    records.record({ mission: REFERENCE, clientId: "middle-client", delegatedBy: view.client_id });
+    records.record({ mission: REFERENCE, clientId: "delegate-client", delegatedBy: "middle-client" });
+    return records;
+  }
+
+  function pepFor(records: ActorRecords, maxDepth: number): Pep {
+    return build(
+      {
+        masJoin: {
+          delegatePolicy: { delegates: { "delegate-client": { maxDepth } } },
+          resolveOrdinaryAuthority: FULL_AUTHORITY,
+          resolveDelegateDepth: records.resolveDepth.bind(records),
+        },
+      },
+      delegateView,
+    );
+  }
+
+  it("permits a delegate whose ledger-resolved depth is within the deployment's ceiling", async () => {
+    const res = await pepFor(twoHopLedger(), 2).enforce(
+      "lookup_vendor",
+      { vendor_id: RESOURCE },
+      delegateToken,
+      undefined,
+      { missionReference: REFERENCE },
+    );
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+  });
+
+  it("denies mission_mismatch for the SAME delegate once the recorded chain is one hop too long for the ceiling", async () => {
+    // The only difference from the permit above is the ceiling: the depth is
+    // the ledger's, walked over the recorded edges, not a token act chain.
+    const res = await pepFor(twoHopLedger(), 1).enforce(
+      "lookup_vendor",
+      { vendor_id: RESOURCE },
+      delegateToken,
+      undefined,
+      { missionReference: REFERENCE },
+    );
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.decision).toBeDefined();
+  });
+
+  it("denies mission_mismatch when the ledger records the delegation under a DIFFERENT issuer's same-id Mission", async () => {
+    const records = new ActorRecords();
+    records.record({
+      mission: { id: missionId, issuer: "https://other.example" },
+      clientId: "delegate-client",
+      delegatedBy: view.client_id,
+    });
+    const res = await pepFor(records, 2).enforce(
+      "lookup_vendor",
+      { vendor_id: RESOURCE },
+      delegateToken,
+      undefined,
+      { missionReference: REFERENCE },
+    );
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("mission_mismatch");
+  });
+});
+
+describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8)", () => {
+  const INVOICE_READ = "payments:invoice.read";
+  // A Mission granting only the invoice read, under a credential whose own
+  // authority covers BOTH that and the vendor read.
+  const missionShortView: MissionView = {
+    ...view,
+    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ] }],
+  };
+  const BROAD_CREDENTIAL: () => AuthorityEntry[] = () => [
+    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ, READ] },
+  ];
+
+  it("bound 1: an action outside the ACTING CREDENTIAL's own authority refuses out_of_authority", async () => {
+    const pep = build({
+      masJoin: {
+        resolveOrdinaryAuthority: () => [
+          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ] },
+        ],
+      },
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted).toBe(false);
+    expect(res.refusal_reason).toBe("out_of_authority");
+  });
+
+  it("bound 2: an action the credential carries but the MISSION does not denies out_of_authority, so the permit's authority is the Mission's", async () => {
+    const pep = build({ masJoin: { resolveOrdinaryAuthority: BROAD_CREDENTIAL } }, missionShortView);
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted).toBe(false);
+    // A genuine Decision: the join succeeded and the action was evaluated
+    // against the JOINED Mission authority, which does not carry it. The
+    // credential's own claim to that action never substitutes for it.
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(res.decision).toBeDefined();
+  });
+
+  it("bound 3: current RESOURCE POLICY refusing denies out_of_authority with both other bounds satisfied", async () => {
+    const pep = build({ fga: denyingFga, masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(res.decision).toBeDefined();
+  });
+
+  it("all three bounds satisfied permits, so the three denials above are attributable to each bound", async () => {
+    const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
   });
 });
 

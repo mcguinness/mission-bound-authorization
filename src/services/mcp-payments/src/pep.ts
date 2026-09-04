@@ -174,6 +174,16 @@ export interface MissionBoundTokenFacts extends CommonTokenFacts {
 export interface OrdinaryTokenFacts extends CommonTokenFacts {
   mission?: undefined;
   missionClaim?: undefined;
+  /**
+   * @spec authority-server#mission-join rule 8 (bound 1) — the credential's
+   * own `scope` claim, verbatim from the verified token. It is what the
+   * acting credential carries AS ISSUED, the input a deployment's
+   * `resolveOrdinaryAuthority` evaluator maps to authority; absent on a
+   * credential that carries no `scope` at all, which that evaluator then
+   * resolves to no authority rather than to an unbounded one. Never read on
+   * the Mission-bound path, where the Mission's own Authority Set governs.
+   */
+  scope?: string;
 }
 
 /**
@@ -422,11 +432,30 @@ export interface PepDeps {
      * Mission, "evaluated from the deployment's actor records rather than
      * from a Mission-bound token's `act` chain": resolved FRESH per
      * request (never a token's own `act` chain) and carried onto the PDP
-     * request as `context.mission_join.delegate_depth`. Absent (including
-     * an absent hook): the PDP treats depth as unbounded, so a
-     * `max_depth`-bearing delegate policy or entry denies closed.
+     * request as `context.mission_join.delegate_depth`. `ActorRecords`
+     * (`actor-records.ts`) is this deployment's own record store and
+     * satisfies this hook directly.
+     *
+     * The hook takes the CANONICAL Mission reference (issuer and id, @spec
+     * authority-server#reference-tuple) rather than a bare `mission_id`, and
+     * the Mission's OWN `client_id`, which is depth 0. Both are facts of the
+     * request the PEP already holds (the propagated reference it selected and
+     * the Mission view it loaded), so a record store keyed on the canonical
+     * pair is satisfied without binding an issuer or a Mission client at
+     * construction, which would re-collapse the issuer distinction the store
+     * exists to keep.
+     *
+     * Absent (including an absent hook): the delegate has no actor record
+     * under the Mission, so the PDP denies `mission_mismatch` whether or
+     * not any `max_depth` is declared. An unconfigured deployment therefore
+     * fails closed on the delegate disposition; the direct-client
+     * disposition consults no depth at all.
      */
-    resolveDelegateDepth?: (clientId: string, missionId: string) => number | undefined;
+    resolveDelegateDepth?: (
+      mission: MissionReference,
+      clientId: string,
+      missionClientId: string,
+    ) => number | undefined;
   };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
@@ -691,8 +720,18 @@ export class Pep {
       // behavior would have (an unrecognized/no-claim credential).
       if (!this.deps.masJoin) return await this.refuse(token, "unknown_mission", mapping.action);
 
+      // @spec authority-server#mission-reference-field (#557) — an ABSENT
+      // reference and an UNUSABLE one are different failures. An absent
+      // reference names no Mission at all, and this credential carries no
+      // claim either, so nothing establishes a Mission: `unknown_mission`.
+      // A malformed reference where governance requires one is carriage that
+      // cannot be used, refused `mission_reference_conflict` rather than
+      // parsed on a best-effort basis or reported as an unknown Mission.
       const propagated = signals?.missionReference;
-      if (!propagated || "malformed" in propagated) return await this.refuse(token, "unknown_mission", mapping.action);
+      if (!propagated) return await this.refuse(token, "unknown_mission", mapping.action);
+      if ("malformed" in propagated) {
+        return await this.refuse(token, "mission_reference_conflict", mapping.action);
+      }
 
       const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
       if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action, undefined, propagated.id);
@@ -722,7 +761,11 @@ export class Pep {
       freshness = loaded.freshness;
       missionAnchor = { id: propagated.id, issuer: propagated.issuer };
       isBaselineJoin = true;
-      delegateDepth = this.deps.masJoin.resolveDelegateDepth?.(token.clientId, propagated.id);
+      delegateDepth = this.deps.masJoin.resolveDelegateDepth?.(
+        { id: propagated.id, issuer: propagated.issuer },
+        token.clientId,
+        loaded.view.client_id,
+      );
     }
 
     // @spec attenuation#mission-binding-check: when the credential is an
