@@ -20,6 +20,7 @@ import {
 } from "@mission/authorization-server";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer, SAAS_RESOURCE } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
@@ -87,7 +88,7 @@ async function dpopProof(htu: string): Promise<string> {
 beforeAll(async () => {
   asKeys = await generateKeyPair("ES256", { extractable: true });
   const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
-  kernel = new MissionKernel({ issuer: AS_ISS, policy: POLICY as never, statusKey: asKeys.privateKey, statusKid: "as-status" });
+  kernel = new MissionKernel({ issuer: AS_ISS, policy: POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]), statusKey: asKeys.privateKey, statusKid: "as-status" });
 
   // Two distinct destination-local clients, registered at the RAS by key
   // BEFORE any redemption (S-12: this IS the RAS's own client authentication).

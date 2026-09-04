@@ -124,7 +124,7 @@ export interface CreateTemplateInput {
 export function createTemplate(
   store: TemplateStore,
   input: CreateTemplateInput,
-  options?: { authoritySourceCatalog?: AuthoritySourceCatalog; deploymentCeiling?: AuthorityEntry[] },
+  options: { authoritySourceCatalog: AuthoritySourceCatalog },
 ): MissionTemplate {
   if (input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
@@ -176,10 +176,9 @@ export function createTemplate(
  */
 function establishTemplateAuthoritySource(
   input: CreateTemplateInput,
-  options?: { authoritySourceCatalog?: AuthoritySourceCatalog; deploymentCeiling?: AuthorityEntry[] },
+  options: { authoritySourceCatalog: AuthoritySourceCatalog },
 ): AuthoritySource {
-  const catalog = options?.authoritySourceCatalog;
-  const deploymentCeiling = options?.deploymentCeiling ?? input.ceiling;
+  const catalog = options.authoritySourceCatalog;
   if (input.recipients.length === 0) {
     throw new TemplateError("template recipients must be non-empty");
   }
@@ -187,7 +186,7 @@ function establishTemplateAuthoritySource(
   for (const recipient of input.recipients) {
     let resolved: ReturnType<typeof resolveSourceForClient>;
     try {
-      resolved = resolveSourceForClient(catalog, recipient, deploymentCeiling);
+      resolved = resolveSourceForClient(catalog, recipient);
     } catch (e) {
       throw new TemplateError((e as Error).message);
     }

@@ -5,7 +5,8 @@
   "license": "BSD-2-Clause",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test-support": "./test/authority-source.helper.ts"
   },
   "dependencies": {
     "@mission/core": "workspace:*",

@@ -18,6 +18,7 @@ import type { DecisionEvidenceObject, EvidenceEnvelope, Evidence, ExecutionEvide
 import { EvidenceStore } from "@mission/mcp-payments";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { activityByTrace, AuthzError, buildActivityLog, ConsoleBff } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 
 const M = "msn_run_1";
 const TRACE = "trace-abc";
@@ -407,6 +408,7 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     const kernel = new MissionKernel({
       issuer: "https://as.test",
       policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
       statusKey: keys.privateKey,
       statusKid: "as-status",
     });

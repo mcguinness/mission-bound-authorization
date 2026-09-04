@@ -245,12 +245,11 @@ export interface KernelOptions {
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
    * {@link ApproveInput}, a submission envelope, or any other client
-   * assertion. OPTIONAL: absent, the deployment declares the single implicit
-   * user-delegated source bounded by its own derivation ceiling
-   * ({@link defaultAuthoritySourceEntry}), so the REQUIRED record member is
-   * populated everywhere and the discriminator and ceiling rules still apply.
+   * assertion. REQUIRED: whose authority an approval draws on is a deployment
+   * declaration, and a kernel with no catalog would have to invent one, which
+   * is exactly the fail-open the five gates exist to prevent.
    */
-  authoritySourceCatalog?: AuthoritySourceCatalog;
+  authoritySourceCatalog: AuthoritySourceCatalog;
 }
 
 export class MissionKernel {
@@ -284,7 +283,15 @@ export class MissionKernel {
     // source identity would make a drawdown's re-resolution ambiguous, and one
     // client declared twice would make establishment ambiguous. Both refuse
     // construction rather than letting a lookup silently pick a winner.
-    if (opts.authoritySourceCatalog) validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
+    // A plain Error, not an IntentError: a missing catalog is deployment
+    // misconfiguration, never a request refusal, so it must not reach a client
+    // as `access_denied`. The five gates stay the only `access_denied` source.
+    if (!opts.authoritySourceCatalog) {
+      throw new Error(
+        "authoritySourceCatalog is required: an Authorization Server that declares no authority source has no authority for an approval to activate",
+      );
+    }
+    validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
     this.db = openStore(SCHEMA);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
@@ -411,21 +418,13 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#authority-sources — the trusted catalog and the deployment
-   * ceiling, for the one surface that establishes a source OUTSIDE a Mission
-   * Record: template consent ({@link createTemplate}). Exposed rather than
-   * duplicated as an adapter option so a deployment has exactly one catalog.
+   * @spec mission#authority-sources — the trusted catalog, for the one surface
+   * that establishes a source OUTSIDE a Mission Record: template consent
+   * ({@link createTemplate}). Exposed rather than duplicated as an adapter
+   * option so a deployment has exactly one catalog.
    */
-  authoritySourceOptions(): {
-    authoritySourceCatalog?: AuthoritySourceCatalog;
-    deploymentCeiling: AuthorityEntry[];
-  } {
-    return {
-      ...(this.opts.authoritySourceCatalog
-        ? { authoritySourceCatalog: this.opts.authoritySourceCatalog }
-        : {}),
-      deploymentCeiling: this.opts.policy.ceiling as AuthorityEntry[],
-    };
+  authoritySourceOptions(): { authoritySourceCatalog: AuthoritySourceCatalog } {
+    return { authoritySourceCatalog: this.opts.authoritySourceCatalog };
   }
 
   /**
@@ -434,11 +433,7 @@ export class MissionKernel {
    * is deployment configuration; nothing a client sends reaches it.
    */
   authoritySourceEntry(clientId: string): AuthoritySourceCatalogEntry {
-    return resolveSourceForClient(
-      this.opts.authoritySourceCatalog,
-      clientId,
-      this.opts.policy.ceiling,
-    );
+    return resolveSourceForClient(this.opts.authoritySourceCatalog, clientId);
   }
 
   /**
@@ -493,7 +488,7 @@ export class MissionKernel {
   ): void {
     assertSubjectDiscipline(
       this.opts.authoritySourceCatalog,
-      resolveDeclaredSource(this.opts.authoritySourceCatalog, source, this.opts.policy.ceiling),
+      resolveDeclaredSource(this.opts.authoritySourceCatalog, source),
       subject,
     );
   }
@@ -502,11 +497,7 @@ export class MissionKernel {
     inherited: AuthoritySource,
     authoritySet: readonly AuthorityEntry[],
   ): void {
-    const entry = resolveDeclaredSource(
-      this.opts.authoritySourceCatalog,
-      inherited,
-      this.opts.policy.ceiling,
-    );
+    const entry = resolveDeclaredSource(this.opts.authoritySourceCatalog, inherited);
     assertWithinSourceCeiling(entry, authoritySet);
   }
 

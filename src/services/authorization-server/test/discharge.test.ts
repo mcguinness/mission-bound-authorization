@@ -58,6 +58,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.discharge.test";
 const RES = "https://payments.test/mcp";
@@ -129,6 +130,7 @@ function newKernel(opts: {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
     statusKey: {} as never,
     statusKid: "as-status",
     now: () => NOW,
@@ -181,6 +183,7 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
     const local = new MissionKernel({
       issuer: ISS,
       policy: { policy_version: "u", ceiling: ceilingWithCondition } as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(ceilingWithCondition, ["ap-agent"]),
       statusKey: {} as never,
       statusKid: "as-status",
       now: () => NOW,

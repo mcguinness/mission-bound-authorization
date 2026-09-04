@@ -20,6 +20,7 @@ import {
   validateMissionIntent,
   verifyStatusListToken,
 } from "@mission/authorization-server";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import { decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
@@ -83,6 +84,7 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
@@ -176,6 +178,7 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,

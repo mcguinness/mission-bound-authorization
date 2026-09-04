@@ -17,6 +17,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -45,6 +46,7 @@ beforeEach(() => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"]),
     statusKey: key,
     statusKid: "as-status",
     now,

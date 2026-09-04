@@ -18,6 +18,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 // The AS asserts these child actors as `ai_agent` (config-driven in production;
@@ -80,6 +81,7 @@ beforeEach(() => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"]),
     statusKey: key,
     statusKid: "as-status",
     now,
@@ -414,6 +416,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     const k = new MissionKernel({
       issuer: ISS,
       policy: openPolicy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(openPolicy.ceiling, ["parent-agent"]),
       statusKey: key,
       statusKid: "as-status",
       now,
@@ -573,9 +576,9 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
         activation_actor: { iss: ISS, sub: "bob" },
         root_commitment: "sha-256:d-authority",
       },
-      // @spec mission#authority-sources — REQUIRED and immutable; this kernel
-      // declares no catalog, so the deployment's implicit user-delegated
-      // source is what a real approval would have established.
+      // @spec mission#authority-sources — REQUIRED and immutable; the source
+      // this kernel's catalog declares, which is what a real approval would
+      // have established.
       authority_source: { type: "user_delegated" },
       client_id: "parent-agent",
       policy_version: "d-policy",
@@ -831,6 +834,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     const basisKernel = new MissionKernel({
       issuer: ISS,
       policy: policy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["parent-agent"]),
       statusKey: key,
       statusKid: "as-status",
       now,

@@ -39,6 +39,7 @@ import {
   sourceDigestOf,
   type TokenFacts,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 
 /** Fail-closed EvidenceStore (issue #649): every `evidence:` fixture below needs a signer. */
 const evidenceSigner = createEphemeralEvidenceKeys().signing;
@@ -120,6 +121,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: AS_ISS,
     policy: POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
     statusKey: asKeys.privateKey,
     statusKid: "as-status",
   });

@@ -86,7 +86,9 @@ export interface AuthoritySourceCatalogEntry {
 /**
  * The deployment's authority-source catalog: trusted configuration, injected
  * into the kernel (and the template admin plane), never assembled from a
- * request.
+ * request. REQUIRED: a deployment that declares no catalog has declared no
+ * authority for any Agent to draw on, so the kernel refuses construction
+ * rather than standing one up on its behalf.
  */
 export interface AuthoritySourceCatalog {
   entries: readonly AuthoritySourceCatalogEntry[];
@@ -105,26 +107,6 @@ function sourceIdentity(source: {
   policy?: { id: string; version: string };
 }): string {
   return source.policy ? `${source.type}:${source.policy.id}:${source.policy.version}` : source.type;
-}
-
-/**
- * @spec mission#authority-sources — the implicit source of a deployment that
- * declares no catalog: a single user-delegated source bounded by the
- * deployment's own derivation ceiling. Still trusted configuration (the AS's
- * own policy, not client input), so the REQUIRED record member is populated
- * everywhere; the discriminator rule and gate 3 both still apply. A deployment
- * that distinguishes workload or organizational authority declares a catalog.
- */
-export function implicitAuthoritySourceEntry(
-  ceiling: readonly AuthorityEntry[],
-): AuthoritySourceCatalogEntry {
-  return {
-    id: "implicit-user-delegated",
-    type: "user_delegated",
-    clients: [],
-    activators: [],
-    ceiling,
-  };
 }
 
 /**
@@ -169,11 +151,9 @@ export function validateAuthoritySourceCatalog(catalog: AuthoritySourceCatalog):
  * falling back to a permissive default.
  */
 export function resolveSourceForClient(
-  catalog: AuthoritySourceCatalog | undefined,
+  catalog: AuthoritySourceCatalog,
   clientId: string,
-  deploymentCeiling: readonly AuthorityEntry[],
 ): AuthoritySourceCatalogEntry {
-  if (!catalog) return implicitAuthoritySourceEntry(deploymentCeiling);
   const entry = catalog.entries.find((e) => e.clients.includes(clientId));
   if (!entry) {
     throw new IntentError(
@@ -196,19 +176,9 @@ export function resolveSourceForClient(
  * drift refuses.
  */
 export function resolveDeclaredSource(
-  catalog: AuthoritySourceCatalog | undefined,
+  catalog: AuthoritySourceCatalog,
   source: AuthoritySource,
-  deploymentCeiling: readonly AuthorityEntry[],
 ): AuthoritySourceCatalogEntry {
-  if (!catalog) {
-    if (source.type !== "user_delegated") {
-      throw new IntentError(
-        "access_denied",
-        `this deployment declares no ${source.type} authority source`,
-      );
-    }
-    return implicitAuthoritySourceEntry(deploymentCeiling);
-  }
   const identity = sourceIdentity(source);
   const entry = catalog.entries.find((e) => sourceIdentity(e) === identity);
   if (!entry) {
@@ -236,8 +206,8 @@ export function authoritySourceOf(entry: AuthoritySourceCatalogEntry): Authority
  * never reads the Authority Set, so an activator holding none of the
  * ceiling's operational permissions still activates.
  *
- * An entry with an EMPTY `activators` list places no activation restriction
- * (the implicit user-delegated source of an uncatalogued deployment); a
+ * An entry with an EMPTY `activators` list places no activation restriction, so
+ * a deployment that does not gate activation declares one deliberately; a
  * non-empty list is exhaustive.
  */
 export function assertApproverMayActivate(
@@ -279,12 +249,12 @@ export function assertWithinSourceCeiling(
  * person, so the gate is vacuous there.
  */
 export function assertSubjectDiscipline(
-  catalog: AuthoritySourceCatalog | undefined,
+  catalog: AuthoritySourceCatalog,
   entry: AuthoritySourceCatalogEntry,
   subject: { iss: string; sub: string },
 ): void {
   if (entry.type === "user_delegated") return;
-  if (catalog?.humanPrincipals.includes(subject.sub)) {
+  if (catalog.humanPrincipals.includes(subject.sub)) {
     throw new IntentError(
       "access_denied",
       `a ${entry.type} Mission MUST NOT record the human principal '${subject.sub}' as its subject`,

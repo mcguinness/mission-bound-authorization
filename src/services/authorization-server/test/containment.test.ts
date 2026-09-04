@@ -53,6 +53,7 @@ import {
   verifyStatusListToken,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.containment.test";
 const RES_PAY = "https://payments.test/mcp";
@@ -112,6 +113,7 @@ function makeHarness(containmentPolicy?: ContainmentPolicy): Harness {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
     ...(containmentPolicy ? { containmentPolicy } : {}),
     actorProfiles: aiAgents(
       "child-agent",

@@ -21,6 +21,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { TXN_TOKEN_PROHIBITED_CLAIMS } from "@mission/core";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 /** Stand in for the Challenge-Issuing Resource (the resource owns the signing). */
 async function signChallenge(
@@ -107,6 +108,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: NARROW_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(NARROW_POLICY.ceiling, ["ap-agent"]),
     statusKey,
     statusKid: "as-status",
   });

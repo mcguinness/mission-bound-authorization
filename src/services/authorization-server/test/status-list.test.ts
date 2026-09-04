@@ -21,6 +21,7 @@ import {
   validateMissionIntent,
   verifyStatusListToken,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
@@ -61,6 +62,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
     statusKey: keys.privateKey,
     statusKid: "as-status",
     now,

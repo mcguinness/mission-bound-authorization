@@ -35,6 +35,7 @@ import {
   type AuthorityEntry,
   type BuiltAs,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const PORT = 14502;
 const ISSUER = `http://localhost:${PORT}`;
@@ -111,6 +112,7 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     kernel = new MissionKernel({
       issuer: ISSUER,
       policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
       statusKey: key,
       statusKid: "as-status",
     });

@@ -659,7 +659,6 @@ export async function buildAuthorizationServer(opts: {
   // declares.
   createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never, {
     authoritySourceCatalog: AUTHORITY_SOURCES as never,
-    deploymentCeiling: DERIVATION_POLICY.ceiling as never,
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
