@@ -49,6 +49,13 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-orchestration:
+    title: "Mission Orchestration"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC9700:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
