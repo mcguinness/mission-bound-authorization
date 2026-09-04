@@ -50,6 +50,8 @@ export {
   CANONICAL_RESOURCE,
   TOOL_BASE,
   sourceDigestOf,
+  TOOL_ACTIONS,
+  type ActionMapping,
 } from "./pep.js";
 export {
   McpPaymentsServer,
