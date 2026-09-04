@@ -1504,7 +1504,7 @@ the bindings rather than a maturity one.<a href="#section-1.1-2" class="pilcrow"
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-2-1">Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 26 conformance rows in conformance-manifest.json (10 tested, 3 partial, 13 todo).
+Implementation: 26 conformance rows in conformance-manifest.json (13 tested, 13 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -2797,7 +2797,9 @@ per-entry <code>delegation</code> rules
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): entries without a
 <code>delegation</code> member are excluded, <code>allowed_delegates</code> is applied,
 and <code>max_depth</code> is evaluated from the deployment's actor records
-rather than from a Mission-bound token's <code>act</code> chain.<a href="#section-11-6.5.1" class="pilcrow">¶</a></p>
+rather than from a Mission-bound token's <code>act</code> chain. A delegate
+with no actor record under the Mission is not recorded as acting
+under it, and the join fails <code>mission_mismatch</code>.<a href="#section-11-6.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-6.6">
           <p id="section-11-6.6.1"><strong>Join failure is a deny.</strong> A failure of the subject or client join
@@ -3337,7 +3339,11 @@ claims:<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The MAS <span class="bcp14">MAY</span> additionally
 include <code>authority_hash</code> as an audit anchor; where included, PDP
 Consumption's cross-check applies to it too
-(<a href="#join-assertion-pdp" class="auto internal xref">Section 13.3</a>).<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#join-assertion-pdp" class="auto internal xref">Section 13.3</a>). This object <span class="bcp14">MUST NOT</span> carry
+<code>approval_context_commitment</code>: the Approval Context Commitment
+profile fixes this descriptor as a must-not-carry site alongside the
+baseline <code>mission</code> claim
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-13.2-2.5">

@@ -1400,7 +1400,7 @@ are referenced, not duplicated, here.<a href="#section-1-6" class="pilcrow">¶</
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 91 conformance rows in conformance-manifest.json (8 tested, 6 partial, 77 todo).
+Implementation: 91 conformance rows in conformance-manifest.json (8 tested, 9 partial, 74 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -2220,7 +2220,14 @@ PEP or executor. For a Refusal Record, the emitter is the refusing
 PEP. This procedure applies wherever verification of the
 <code>evidence_envelope</code> is described in this document, including for
 Execution Evidence and Refusal Records.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
-<p id="section-5.3-5">A verifier <span class="bcp14">MUST</span> confirm that the signing key selected by the JWS <code>kid</code>
+<p id="section-5.3-5">The emitter constructs the record on its own emission path, from the
+state it holds, and signs it there. A component that reconstructs a
+record for a decision or an outcome it did not itself reach is not
+the emitter, whatever signing key it holds: such a record attests the
+reconstructing component's view under another component's identity. A
+component that receives a record it did not emit verifies it and
+retains it as received.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
+<p id="section-5.3-6">A verifier <span class="bcp14">MUST</span> confirm that the signing key selected by the JWS <code>kid</code>
 is the published key of the component named in the record's <code>emitter</code>
 member, and that this key is bound to the enforcement scope and
 audience the record serves: the record's own <code>audience</code> member,
@@ -2230,35 +2237,35 @@ decision-API request's audience member,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A verifier <span class="bcp14">MUST</span> reject a
 record whose signing key is not published for that scope, so one
 component's key cannot sign evidence for a resource, audience, or
-scope it does not serve.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
-<p id="section-5.3-6">Where the selected signing key is identified as compromised by the
+scope it does not serve.<a href="#section-5.3-6" class="pilcrow">¶</a></p>
+<p id="section-5.3-7">Where the selected signing key is identified as compromised by the
 deployment-defined key-status mechanism, the verifier <span class="bcp14">MUST</span> apply the
 compromise-boundary rule of <a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 11.2</a>
 before treating the signature as verified: only an independently
 trusted existence proof over the complete signed artifact, or its
 unambiguous typed digest, establishing existence before the
 authenticated boundary permits the remaining steps to continue, and
-the record's own asserted timestamps never satisfy it.<a href="#section-5.3-6" class="pilcrow">¶</a></p>
-<p id="section-5.3-7">The JWS protected header <span class="bcp14">MUST</span> carry:<a href="#section-5.3-7" class="pilcrow">¶</a></p>
+the record's own asserted timestamps never satisfy it.<a href="#section-5.3-7" class="pilcrow">¶</a></p>
+<p id="section-5.3-8">The JWS protected header <span class="bcp14">MUST</span> carry:<a href="#section-5.3-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.3-8.1">
-            <p id="section-5.3-8.1.1"><code>kid</code>: a key identifier resolvable in the emitter's published JWKS
+<li class="normal" id="section-5.3-9.1">
+            <p id="section-5.3-9.1.1"><code>kid</code>: a key identifier resolvable in the emitter's published JWKS
 (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 11.2</a>), so a verifier can select the
-emitter's signing key independently.<a href="#section-5.3-8.1.1" class="pilcrow">¶</a></p>
+emitter's signing key independently.<a href="#section-5.3-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.3-8.2">
-            <p id="section-5.3-8.2.1"><code>alg</code>: <code>ES256</code> <span>[<a href="#RFC7518" class="cite xref">RFC7518</a>]</span> is mandatory to implement; an
+          <li class="normal" id="section-5.3-9.2">
+            <p id="section-5.3-9.2.1"><code>alg</code>: <code>ES256</code> <span>[<a href="#RFC7518" class="cite xref">RFC7518</a>]</span> is mandatory to implement; an
 implementation <span class="bcp14">MAY</span> offer other JOSE algorithms but <span class="bcp14">MUST</span> implement
-<code>ES256</code>.<a href="#section-5.3-8.2.1" class="pilcrow">¶</a></p>
+<code>ES256</code>.<a href="#section-5.3-9.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.3-8.3">
-            <p id="section-5.3-8.3.1"><code>typ</code>: <code>application/mission-runtime-evidence+jws</code>, the secured
+          <li class="normal" id="section-5.3-9.3">
+            <p id="section-5.3-9.3.1"><code>typ</code>: <code>application/mission-runtime-evidence+jws</code>, the secured
 runtime-evidence representation this document registers
 (<a href="#iana" class="auto internal xref">Section 13</a>): one value for every record kind this envelope secures,
-identifying the complete JWS (<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, Section 4.1.9).<a href="#section-5.3-8.3.1" class="pilcrow">¶</a></p>
+identifying the complete JWS (<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, Section 4.1.9).<a href="#section-5.3-9.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.3-8.4">
-            <p id="section-5.3-8.4.1"><code>cty</code>: the registered media type of the evidence object being
+          <li class="normal" id="section-5.3-9.4">
+            <p id="section-5.3-9.4.1"><code>cty</code>: the registered media type of the evidence object being
 signed (<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, Section 4.1.10):
 <code>application/mission-decision-evidence+json</code> for Decision Evidence,
 <code>application/mission-execution-evidence+json</code> for Execution
@@ -2268,17 +2275,17 @@ Receipts (<a href="#iana" class="auto internal xref">Section 13</a>). A verifier
 <code>typ</code> is not <code>application/mission-runtime-evidence+jws</code> or whose
 protected <code>cty</code> is not the media type of the object it is
 verifying, so signatures over one record kind cannot be cross-used
-for another.<a href="#section-5.3-8.4.1" class="pilcrow">¶</a></p>
+for another.<a href="#section-5.3-9.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.3-9">This rule is unaffected by the members Decision Evidence, Execution
+<p id="section-5.3-10">This rule is unaffected by the members Decision Evidence, Execution
 Evidence, and Refusal Records share with each other and with other
 evidence types, named once as a base shape
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Shared member names describe
 a common shape for readability; they carry no exemption, and the
 <code>cty</code> check above remains the sole authority for which kind a
-signature covers.<a href="#section-5.3-9" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.3-10">
+signature covers.<a href="#section-5.3-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.3-11">
 <pre>
 {
   "evidence_envelope": {
@@ -2286,11 +2293,11 @@ signature covers.<a href="#section-5.3-9" class="pilcrow">¶</a></p>
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
   }
 }
-</pre><a href="#section-5.3-10" class="pilcrow">¶</a>
+</pre><a href="#section-5.3-11" class="pilcrow">¶</a>
 </div>
-<p id="section-5.3-11">This document defines only the <code>jws-compact</code> format. Additional formats
+<p id="section-5.3-12">This document defines only the <code>jws-compact</code> format. Additional formats
 <span class="bcp14">MAY</span> be defined by future specifications; implementations <span class="bcp14">MUST</span> reject
-envelopes with unsupported formats.<a href="#section-5.3-11" class="pilcrow">¶</a></p>
+envelopes with unsupported formats.<a href="#section-5.3-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-example">

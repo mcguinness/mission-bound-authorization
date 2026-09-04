@@ -2151,8 +2151,14 @@ approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref"
 <li class="normal" id="section-8-2.4.2.1">
               <p id="section-8-2.4.2.1.1">When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>issuer</code>,
 <code>intent_hash</code>, <code>authority_hash</code>, <code>proposal_hash</code> when the Mission
-records an authority proposal, and, when this profile records
-it on the Mission, <code>consent_rendering_hash</code>.<a href="#section-8-2.4.2.1.1" class="pilcrow">¶</a></p>
+records an authority proposal, <code>consent_rendering_hash</code> when this
+profile records it on the Mission, and, where the
+deployment computes it, <code>approval_context_commitment</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>): <span class="bcp14">OPTIONAL</span>,
+a string, the commitment over the created Mission's immutable
+creation facts, carried so this object and another authenticated
+artifact disclosing the same commitment match to one approval
+transaction.<a href="#section-8-2.4.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8-2.4.2.2">
               <p id="section-8-2.4.2.2.1">When <code>decision</code> is <code>declined</code>, no Mission was created
@@ -2171,15 +2177,19 @@ present), matching that disclosure's
 <code>source_hashes</code>, and <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-8-2.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-8-2.4.3">This descriptor follows the evidence-descriptor convention of the
+<p id="section-8-2.4.3"><code>approval_context_commitment</code> appears on the <code>approved</code> branch
+only. A <code>declined</code> or <code>narrowed</code> descriptor <span class="bcp14">MUST NOT</span> contain it:
+no Mission was created, so the Mission creation facts it commits do
+not exist, exactly the reason both branches also lack <code>id</code>.<a href="#section-8-2.4.3" class="pilcrow">¶</a></p>
+<p id="section-8-2.4.4">This descriptor follows the evidence-descriptor convention of the
 issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): it is the
 <code>mission</code> claim shape (<code>id</code> and <code>issuer</code>) extended with the
 collision-resistantly named audit members <code>authority_hash</code>,
 reintroduced here as this document's own audit anchor since a
 Consent Evidence object is retained and correlated independently of
 any token, <code>intent_hash</code>, <code>consent_rendering_hash</code>, and, where
-present, <code>proposal_hash</code>, and it is not authority-bearing on its
-own.<a href="#section-8-2.4.3" class="pilcrow">¶</a></p>
+present, <code>proposal_hash</code> and <code>approval_context_commitment</code>, and it
+is not authority-bearing on its own.<a href="#section-8-2.4.4" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-2.5">

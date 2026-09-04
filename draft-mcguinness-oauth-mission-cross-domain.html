@@ -1555,12 +1555,19 @@ originating issuer.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-6-3">The same composition extends to the proposed agent profile of
 Transaction Tokens
-(<span>[<a href="#I-D.draft-araut-oauth-transaction-tokens-for-agents" class="cite xref">I-D.draft-araut-oauth-transaction-tokens-for-agents</a>]</span>), whose
-<code>agentic_ctx</code> member carries roles, intent, and constraints along
-the call chain. The <code>mission</code> claim object is the natural anchor to
-carry there, inert as evidence exactly as in the chaining profile
-above, so call-chain intent context stays joined to the committed
-record instead of growing an unanchored twin of it.<a href="#section-6-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-araut-oauth-transaction-tokens-for-agents" class="cite xref">I-D.draft-araut-oauth-transaction-tokens-for-agents</a>]</span>). Its
+<code>agentic_ctx</code> claim's normative fields, as of -02, are
+<code>current_actor</code>, <code>originator</code>, and <code>chain_metadata</code>: hop-to-hop
+agent-chain context, who is acting now, who started the chain, and
+how many agent transitions occurred. A Mission reference is a
+different axis, the governing transaction or authority context the
+chain executes under, and it does not change hop to hop the way
+those fields do. Where that context travels within a Transaction
+Token (a top-level claim, the base transaction context, or an
+<code>agentic_ctx</code> extension) is for that draft's authors to settle and
+is not decided here. Mission context does not itself confer
+authority: a consumer applies this profile's validation before using
+it for authorization.<a href="#section-6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-continuation">

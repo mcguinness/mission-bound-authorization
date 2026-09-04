@@ -1102,7 +1102,7 @@ Table of Contents
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
    Implementation: 122 conformance rows in conformance-manifest.json (30
-   tested, 19 partial, 70 todo, 3 blocked).  Adopt when: Actions need a
+   tested, 21 partial, 68 todo, 3 blocked).  Adopt when: Actions need a
    point-of-use check, not just issuance-time gating.  Requires: Mission
    Substrate Requirements.  Also requires, conditionally: Mission-Bound
    Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when
