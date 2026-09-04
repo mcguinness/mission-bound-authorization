@@ -30,6 +30,11 @@ export interface ActorRecord {
   recordedAt: string;
 }
 
+/**
+ * A canonical Mission reference. Distinct from `MissionReference` (`pep.ts`),
+ * which models a PROPAGATED reference and carries a `malformed` arm: a
+ * reference that failed strict parsing never reaches this store.
+ */
 export interface MissionRef {
   issuer: string;
   id: string;
