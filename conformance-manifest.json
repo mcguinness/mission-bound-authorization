@@ -814,6 +814,12 @@
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses kernel construction when the deployment declares no catalog",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source intake (@spec mission#submission-via-par, mission#authority-sources) > refuses a client-supplied authority_source in the submission envelope with invalid_request",
      "level": "endpoint",
      "surface": "par"
@@ -967,6 +973,12 @@
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when no trusted source is declared for the client",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses every approval when the catalog declares no source at all",
      "level": "unit",
      "surface": "derivation"
     },

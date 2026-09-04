@@ -226,6 +226,35 @@ describe("authority source establishment (@spec mission#authority-sources, missi
     } as never);
     expect(record.authority_source).toEqual({ type: "user_delegated" });
   });
+
+  it("refuses kernel construction when the deployment declares no catalog", () => {
+    // There is no implicit source. A deployment that declares no catalog has
+    // declared no authority for an approval to activate, so construction
+    // refuses rather than standing a permissive source up on its behalf.
+    // A plain Error, not an IntentError: deployment misconfiguration is never
+    // an `access_denied` an Agent sees, and the five gates stay the only
+    // producers of that code.
+    let thrown: unknown;
+    try {
+      makeKernel({ authoritySourceCatalog: undefined });
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).not.toBeInstanceOf(IntentError);
+    expect((thrown as Error).message).toMatch(/authoritySourceCatalog is required/);
+  });
+
+  it("refuses every approval when the catalog declares no source at all", () => {
+    // The other half of the same rule: an empty catalog is still a catalog,
+    // and gate 1 refuses every Agent under it. No approval path reaches a
+    // record without a declared source.
+    const kernel = makeKernel({
+      authoritySourceCatalog: { humanPrincipals: [], entries: [] } as never,
+    });
+    expect(() => approve(kernel)).toThrow(IntentError);
+    expect(() => approve(kernel)).toThrow(/no trusted authority source is declared/);
+  });
 });
 
 describe("authority source intake (@spec mission#submission-via-par, mission#authority-sources)", () => {
