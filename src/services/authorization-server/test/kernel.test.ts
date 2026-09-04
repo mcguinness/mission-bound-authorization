@@ -405,7 +405,139 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
     const record = approve(raw, 200);
     expect(Date.parse(record.expires_at)).toBeLessThanOrEqual(Date.parse(requested.expires_at));
   });
+
+  /** A kernel whose deployment ceiling and clock are both injected. */
+  const ceilingKernel = async (maxMissionLifetimeS: number | null, clock: () => Date) => {
+    const { privateKey } = await generateKeyPair("ES256");
+    return new MissionKernel({
+      issuer: ISS,
+      policy: { ...DERIVATION_POLICY, max_mission_lifetime_s: maxMissionLifetimeS } as never,
+      statusKey: privateKey,
+      statusKid: "as-status",
+      now: clock,
+    });
+  };
+
+  const CREATED = "2026-07-01T00:00:00Z";
+
+  it("a deployment ceiling shorter than the request narrows the committed expires_at", async () => {
+    const k = await ceilingKernel(3600, () => new Date(CREATED));
+    const record = k.approve({
+      intent: k.validateIntent(intent({ expires_at: "2027-01-01T00:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-ceiling-short",
+    });
+    // Shortening is measured from the COMMITTED created_at, not a second read.
+    expect(record.created_at).toBe("2026-07-01T00:00:00.000Z");
+    expect(record.expires_at).toBe("2026-07-01T01:00:00.000Z");
+    expect(Date.parse(record.expires_at)).toBeLessThan(Date.parse("2027-01-01T00:00:00Z"));
+  });
+
+  it("a request narrower than the deployment ceiling keeps the requested value verbatim", async () => {
+    const k = await ceilingKernel(86_400, () => new Date(CREATED));
+    const record = k.approve({
+      intent: k.validateIntent(intent({ expires_at: "2026-07-01T00:30:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-ceiling-wide",
+    });
+    // The winning bound's string is returned VERBATIM, never re-serialized.
+    expect(record.expires_at).toBe("2026-07-01T00:30:00Z");
+  });
+
+  it("no deployment ceiling leaves the requested value unchanged", async () => {
+    const k = await ceilingKernel(null, () => new Date(CREATED));
+    const record = k.approve({
+      intent: k.validateIntent(intent({ expires_at: "2027-01-01T00:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-ceiling-none",
+    });
+    expect(record.expires_at).toBe("2027-01-01T00:00:00Z");
+  });
+
+  it("insertRecord refuses a record whose expires_at is later than intent.expires_at", async () => {
+    const k = await ceilingKernel(null, () => new Date(CREATED));
+    const record = k.approve({
+      intent: k.validateIntent(intent({ expires_at: "2026-07-01T01:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-funnel-1",
+    });
+    // The funnel is checked against the record's OWN intent, whatever built it.
+    expect(() =>
+      k.insertRecord({
+        ...record,
+        id: newMissionId(),
+        approval_event_id: "apev-funnel-2",
+        expires_at: "2026-07-01T02:00:00Z",
+      }),
+    ).toThrow(/later than the requested ceiling/);
+  });
+
+  it("insertRecord refuses a record whose expires_at is not later than created_at", async () => {
+    const k = await ceilingKernel(null, () => new Date(CREATED));
+    const record = k.approve({
+      intent: k.validateIntent(intent({ expires_at: "2026-07-01T01:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-atomic-1",
+    });
+    // @spec mission#approval-event — the atomic creation-time check: a ceiling
+    // that passes while the approval pends creates no Mission.
+    const e = refuse(() =>
+      k.insertRecord({
+        ...record,
+        id: newMissionId(),
+        approval_event_id: "apev-atomic-2",
+        created_at: "2026-07-01T01:00:00Z",
+      }),
+    );
+    expect(e).toBeInstanceOf(IntentError);
+    expect((e as IntentError).code).toBe("invalid_request");
+    expect((e as IntentError).message).toMatch(/not later than the creation instant/);
+  });
+
+  it("intake refuses an already-past requested expires_at with invalid_request", async () => {
+    const k = await ceilingKernel(null, () => new Date(CREATED));
+    const e = refuse(() => k.validateIntent(intent({ expires_at: "2026-06-30T23:59:59Z" })));
+    expect(e).toBeInstanceOf(IntentError);
+    expect((e as IntentError).code).toBe("invalid_request");
+    expect((e as IntentError).message).toMatch(/already past/);
+    // An unparseable value is the same refusal, not a different one.
+    expect((refuse(() => k.validateIntent(intent({ expires_at: "not-a-date" }))) as IntentError).code).toBe(
+      "invalid_request",
+    );
+  });
+
+  it("the Submission envelope carries the same already-past refusal", async () => {
+    const k = await ceilingKernel(null, () => new Date(CREATED));
+    const e = refuse(() =>
+      k.validateSubmission(
+        JSON.stringify({ intent: JSON.parse(intent({ expires_at: "2026-06-30T23:59:59Z" })) }),
+      ),
+    );
+    expect(e).toBeInstanceOf(IntentError);
+    expect((e as IntentError).code).toBe("invalid_request");
+  });
 });
+
+/** Run `fn` and return whatever it threw (an assertion helper, so the thrown
+ *  value's code and message are both inspectable). */
+function refuse(fn: () => unknown): unknown {
+  try {
+    fn();
+  } catch (e) {
+    return e;
+  }
+  throw new Error("expected a refusal");
+}
 
 describe("approval basis (@spec mission#approval-basis)", () => {
   it("records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor", () => {
@@ -651,10 +783,32 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     expect(localApprove({}, 3).derivation_limit).toBe(5);
   });
 
-  it("expiry clock: past expires_at the mission is expired and non-deriving", () => {
-    const r = approve(intent({ expires_at: "2020-01-01T00:00:00Z" }), 5);
-    expect(() => kernel.gateDerivation(r.id)).toThrow(GateError);
-    expect(kernel.get(r.id)?.state).toBe("expired");
+  it("expiry clock: past expires_at the mission is expired and non-deriving", async () => {
+    // A Mission can no longer be CREATED already expired: intake refuses an
+    // already-past requested ceiling, and insertRecord refuses a record whose
+    // effective expiry is not later than its creation instant. So the expiry
+    // clock is exercised the way it actually runs, by advancing an injected
+    // clock past a Mission that was live when it committed.
+    const { privateKey } = await generateKeyPair("ES256");
+    let clock = new Date("2026-07-01T00:00:00Z");
+    const localKernel = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      statusKey: privateKey,
+      statusKid: "as-status",
+      now: () => clock,
+    });
+    const r = localKernel.approve({
+      intent: localKernel.validateIntent(intent({ expires_at: "2026-07-01T01:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-expiry-clock",
+    });
+    expect(localKernel.gateDerivation(r.id).state).toBe("active");
+    clock = new Date("2026-07-01T02:00:00Z");
+    expect(() => localKernel.gateDerivation(r.id)).toThrow(GateError);
+    expect(localKernel.get(r.id)?.state).toBe("expired");
   });
 });
 

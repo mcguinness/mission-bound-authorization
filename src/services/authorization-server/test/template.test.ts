@@ -15,7 +15,6 @@ import {
   type MissionRecord,
   TemplateError,
   TemplateStore,
-  validateMissionIntent,
 } from "../src/index.js";
 
 const ISS = "https://as.test";
@@ -67,7 +66,9 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
 /** An untrusted Intent proposing the given actions (default max_amount 500,
  *  which is exactly the policy ceiling, so any narrower final is attributable). */
 const intentOf = (actions: string[], opts: { maxAmount?: string; expiresAt?: string } = {}) =>
-  validateMissionIntent(
+  // kernel.validateIntent judges the requested ceiling against the INJECTED
+  // clock (@spec mission#mission-intent), the same instant dispatch commits at.
+  kernel.validateIntent(
     JSON.stringify({
       goal: "reconcile Acme",
       target_resources: [RESOURCE],

@@ -195,6 +195,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       token_type?: string;
       expires_in?: number;
       mission_id?: string;
+      mission_expires_at?: string;
       authorization_details?: unknown;
     };
     expect(res.status, JSON.stringify(body)).toBe(200);
@@ -226,6 +227,15 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
 
     const record = as.kernel.get(body.mission_id as string);
     expect(record).toBeDefined();
+    // @spec mission#grant-binding (issue #647) — the dispatch body carries the
+    // instance's COMMITTED effective expiry verbatim off the record.
+    expect(body.mission_expires_at).toBe(record?.expires_at);
+    // @spec mission-template#dispatch — the template's per_instance_lifetime_s
+    // (900s) is the narrowest bound here, and the addend is measured from the
+    // instance's OWN committed created_at: created_at + 900s EXACTLY, not from a
+    // second clock read taken elsewhere in the dispatch.
+    expect(Date.parse(record!.expires_at) - Date.parse(record!.created_at)).toBe(900_000);
+    expect(Date.parse(record!.expires_at)).toBeLessThan(Date.parse(FAR_FUTURE));
     expect(body.authorization_details).toEqual(as.kernel.effectiveAuthoritySet(record!));
     const actions = (body.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
     for (const a of actions) {
@@ -237,9 +247,13 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
 
     // A SECOND dispatch with the SAME dispatch_event_id is idempotent: same mission_id.
     const second = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: "evt-happy" });
-    const secondBody = (await second.json()) as { mission_id?: string };
+    const secondBody = (await second.json()) as { mission_id?: string; mission_expires_at?: string };
     expect(second.status, JSON.stringify(secondBody)).toBe(200);
     expect(secondBody.mission_id).toBe(body.mission_id);
+    // @spec mission#grant-binding — a creation replay returns the COMMITTED
+    // value unchanged: the same string, never re-derived from the replay's own
+    // (later) clock.
+    expect(secondBody.mission_expires_at).toBe(body.mission_expires_at);
   });
 
   it("param-stripping regression: template_id/mission_intent/dispatch_event_id survive to the handler", async () => {

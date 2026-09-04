@@ -53,5 +53,6 @@
   "dispatch_prohibited_actions": [
     "payments:payment.execute",
     "payments:remittance.send"
-  ]
+  ],
+  "max_mission_lifetime_s": null
 }
