@@ -3,12 +3,14 @@
  *
  * The resource-server PEP for the payments estate. Validates the DPoP-bound
  * token and mission claim, builds the AuthZEN envelope (context.actor via
- * @mission/actor-chain, parameter_digest), obtains a PDP decision, and emits
- * Decision Evidence / Refusal Records. Core enforcement tier (M4); the
+ * @mission/actor-chain, parameter_digest), obtains a PDP decision, retains
+ * the Decision Evidence the PDP emitted with it, and emits its own Refusal
+ * Records and Execution Evidence. Core enforcement tier (M4); the
  * transaction-assurance tier (permits/leases) lands in M5. Does not present
  * `context.capability_source` on the PDP request envelope (#657; see
- * `sourceDigestOf` below); the retained Decision Evidence still carries it
- * as a coordinated extension member (issue #649).
+ * `sourceDigestOf` below), and no longer carries it on the retained Decision
+ * Evidence either (#741: the PDP emits and signs that record, from its own
+ * validated inputs).
  */
 
 import { createHash, randomUUID } from "node:crypto";
@@ -50,7 +52,9 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
+/** The tool-id base for this server's capabilities (@spec runtime-evidence#evidence-extensions `capability_source.tool_id`). */
 export const TOOL_BASE = "mcp://payments.demo/tools";
+
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
  * credential presented on THIS request was a transaction token. The retry of a
