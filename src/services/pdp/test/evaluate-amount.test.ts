@@ -79,7 +79,7 @@ const requestWithoutAmount = (action = "payments:payment.execute"): EvaluationRe
 });
 
 /** A Mission view whose matched entry binds `max_amount` to an action the
- *  deployment's own mapping (`payments:invoice.read`, PAYMENTS_RELATIONS)
+ *  deployment's own mapping (`payments:invoice.list`, PAYMENTS_RELATIONS)
  *  marks `needsAmount: false`: the admission layer let a cap through onto
  *  an action whose input schema carries no amount at all. */
 const viewCapOnNonAmountAction = (maxAmount: string): MissionView => ({
@@ -92,7 +92,7 @@ const viewCapOnNonAmountAction = (maxAmount: string): MissionView => ({
     {
       type: "mission_resource_access",
       resource: RESOURCE,
-      actions: ["payments:invoice.read"],
+      actions: ["payments:invoice.list"],
       constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
     },
   ],
@@ -171,12 +171,12 @@ describe("a bound max_amount the PDP cannot supply an amount input for refuses, 
   });
 
   it("a max_amount bound to an action the deployment's own mapping marks needsAmount: false is still enforced, not silently unenforceable", async () => {
-    // payments:invoice.read (PAYMENTS_RELATIONS) declares needsAmount: false;
+    // payments:invoice.list (PAYMENTS_RELATIONS) declares needsAmount: false;
     // the matched entry binds max_amount to it anyway. The cap must still be
     // enforceable, so an absent amount refuses exactly as it would on an
     // action the mapping does mark needsAmount: true for.
     const decision = await evaluate(
-      requestWithoutAmount("payments:invoice.read"),
+      requestWithoutAmount("payments:invoice.list"),
       optsFor(viewCapOnNonAmountAction("500.00")),
     );
     expect(decision.decision, JSON.stringify(decision.context)).toBe(false);
