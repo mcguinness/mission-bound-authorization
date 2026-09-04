@@ -39,13 +39,24 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
-import { buildAuthorizationServer, type BuiltAs, createChildMission, SourceUnavailableError } from "../src/index.js";
+import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE; // served by ISSUER (intra-domain target)
 const FAR_EXP = "2027-01-01T00:00:00Z";
+/**
+ * @spec async-delegation (#651) — the TEST-ONLY child actor client. The shipped
+ * child actor (`subagent-invoice-extractor`, config/clients.json) is granted
+ * only the jwt-bearer grant type, so it cannot open an async-delegation family
+ * over real HTTP; that block is pinned as its own negative below. This client
+ * clones that registration and adds the token-exchange and refresh_token grant
+ * types, so a Child Mission naming it as `child_actor` can mint and refresh a
+ * child-rooted family through /token. Registered through the AS builder's
+ * `testClients` seam; config/clients.json is untouched.
+ */
+const EXCHANGER_CLIENT_ID = "test-child-exchanger";
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
@@ -53,6 +64,7 @@ let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let childClientKey: CryptoKey; // child actor private_key_jwt key
+let exchangerClientKey: CryptoKey; // TEST-ONLY child actor private_key_jwt key (#651)
 let codeDpop: Keys; // DPoP key for the base-mission code flow
 let actingDpop: Keys; // DPoP key for the async exchange + refreshes (a DIFFERENT key)
 let actingJkt: string;
@@ -102,6 +114,25 @@ async function childClientAssertion(): Promise<string> {
     .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
     .sign(childClientKey);
+}
+
+async function exchangerClientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: `${EXCHANGER_CLIENT_ID}-auth` })
+    .setIssuer(EXCHANGER_CLIENT_ID)
+    .setSubject(EXCHANGER_CLIENT_ID)
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(exchangerClientKey);
+}
+
+/** The private_key_jwt assertion of the client a flow authenticates AS. */
+function assertionFor(actingAs: ActingClient | undefined): Promise<string> {
+  if (actingAs === "child") return childClientAssertion();
+  if (actingAs === "exchanger") return exchangerClientAssertion();
+  return clientAssertion();
 }
 
 async function dpopProof(keys: Keys, extra: Record<string, unknown> = {}): Promise<string> {
@@ -220,19 +251,23 @@ async function issueBaseMission(
   return { missionId: claims.mission.id, baseAccessToken: body.access_token, missionRefreshToken: body.refresh_token };
 }
 
+/**
+ * Which registered client a /token request authenticates as. Default (absent) is
+ * the acting client `ap-agent`. @spec #651 — the async-delegation exchange
+ * requires the `subject_token`'s client_id to equal the authenticated client
+ * (continuation-grant.ts), so a family rooted at a Child Mission's own access
+ * token is opened by that Mission's OWN child actor: `child` is the shipped one
+ * (jwt-bearer only, so the exchange is refused), `exchanger` the test-only one.
+ */
+type ActingClient = "child" | "exchanger";
+
 interface ExchangeOpts {
   authorizationDetails?: unknown;
   resource?: string;
   /** @spec continuation#transport-async — REQUIRED; `null` omits it (the missing-param test). */
   creationRequestId?: string | null;
-  /**
-   * Authenticate as the child actor client (subagent-invoice-extractor) instead
-   * of the default acting client (ap-agent). @spec #651 — the subject_token's
-   * client_id MUST equal the authenticated client (continuation-grant.ts), so a
-   * family rooted at a Child Mission's own access token requires the child
-   * itself to be the acting client.
-   */
-  actingAs?: "child";
+  /** Authenticate as a child actor client instead of `ap-agent` (@see ActingClient). */
+  actingAs?: ActingClient;
 }
 
 /** POST /token: token-exchange + request_refresh_token=true (the async transport). */
@@ -256,7 +291,7 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, extra) },
       body: new URLSearchParams({
         ...params,
-        client_assertion: opts.actingAs === "child" ? await childClientAssertion() : await clientAssertion(),
+        client_assertion: await assertionFor(opts.actingAs),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -268,7 +303,11 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
 
 /** POST /token grant_type=jwt-bearer: the child actor redeems its child-bound
  *  assertion AS ITSELF for its own DPoP-bound Mission access token. */
-async function childRedeem(assertion: string, keys: Keys = actingDpop): Promise<Response> {
+async function childRedeem(
+  assertion: string,
+  actingAs: ActingClient = "child",
+  keys: Keys = actingDpop,
+): Promise<Response> {
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(`${ISSUER}/token`, {
       method: "POST",
@@ -276,7 +315,7 @@ async function childRedeem(assertion: string, keys: Keys = actingDpop): Promise<
       body: new URLSearchParams({
         grant_type: CHILD_JWT_BEARER_GRANT_TYPE,
         assertion,
-        client_assertion: await childClientAssertion(),
+        client_assertion: await assertionFor(actingAs),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -286,8 +325,16 @@ async function childRedeem(assertion: string, keys: Keys = actingDpop): Promise<
   return res;
 }
 
-/** Native grant_type=refresh_token with a FRESH DPoP proof (default key = actingDpop). */
-async function refreshFamily(refreshToken: string, keys: Keys = actingDpop): Promise<Response> {
+/**
+ * Native grant_type=refresh_token with a FRESH DPoP proof (default key =
+ * actingDpop). The per-delegation Grant is owned by the client that opened the
+ * family, so a child-rooted family (#651) refreshes as that child actor.
+ */
+async function refreshFamily(
+  refreshToken: string,
+  keys: Keys = actingDpop,
+  actingAs?: ActingClient,
+): Promise<Response> {
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(`${ISSUER}/token`, {
       method: "POST",
@@ -295,7 +342,7 @@ async function refreshFamily(refreshToken: string, keys: Keys = actingDpop): Pro
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: refreshToken,
-        client_assertion: await clientAssertion(),
+        client_assertion: await assertionFor(actingAs),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -312,7 +359,11 @@ async function refreshFamily(refreshToken: string, keys: Keys = actingDpop): Pro
  * (codeTokenRequest signs with codeDpop). The parent is resolved FROM subject_token;
  * `parent` is a non-authoritative cross-check. No refresh token is involved.
  */
-async function createChildViaExchange(subjectToken: string, parentId: string): Promise<Response> {
+async function createChildViaExchange(
+  subjectToken: string,
+  parentId: string,
+  childActorSub = "subagent-invoice-extractor",
+): Promise<Response> {
   return codeTokenRequest({
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
     subject_token: subjectToken,
@@ -328,7 +379,7 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
       },
     }),
     authorization_details: JSON.stringify(confinedAuthority()),
-    child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
+    child_actor: JSON.stringify({ sub: childActorSub, sub_profile: "ai_agent" }),
   });
 }
 
@@ -344,6 +395,16 @@ let sourceOutage: string | undefined;
 const RETRY_AFTER_SECONDS = 7;
 
 beforeAll(async () => {
+  // @spec async-delegation (#651) — the TEST-ONLY child actor registration (see
+  // EXCHANGER_CLIENT_ID). The test holds the private half and signs its own
+  // client assertions; the AS only ever sees the public JWK.
+  const exchangerKeys = await generateKeyPair("ES256", { extractable: true });
+  exchangerClientKey = exchangerKeys.privateKey;
+  const exchangerJwk = {
+    ...(await exportJWK(exchangerKeys.publicKey)),
+    kid: `${EXCHANGER_CLIENT_ID}-auth`,
+    alg: "ES256",
+  };
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
@@ -354,6 +415,23 @@ beforeAll(async () => {
       },
     },
     stateRecoveryRetryAfter: RETRY_AFTER_SECONDS,
+    testClients: [
+      {
+        client_id: EXCHANGER_CLIENT_ID,
+        client_name: "Invoice Extraction Sub-Agent (token-exchange capable)",
+        grant_types: [CHILD_JWT_BEARER_GRANT_TYPE, TOKEN_EXCHANGE_GRANT_TYPE, "refresh_token"],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [exchangerJwk] },
+        scope: "payments",
+        authorization_details_types: ["mission_resource_access"],
+      },
+    ],
+    // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS asserts
+    // the test-only child actor's type, exactly as config does for the shipped one.
+    actorProfiles: { [EXCHANGER_CLIENT_ID]: "ai_agent" },
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -1289,20 +1367,65 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
     expect(refreshedMission.predecessor).toBe(predecessorId);
   });
 
+  it("child-rooted: a family opened from a Child Mission's own access token preserves `parent` on the initial token and after refresh", async () => {
+    // The parent Mission, then a Child Mission whose actor is the test-only
+    // child client (the shipped one cannot exchange; see the negative below).
+    const { missionId: parentId, baseAccessToken } = await issueBaseMission();
+    const created = await createChildViaExchange(baseAccessToken, parentId, EXCHANGER_CLIENT_ID);
+    const createdBody = (await created.json()) as { access_token?: string; mission_id?: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(200);
+    const childId = createdBody.mission_id as string;
+
+    // @spec child-delegation#child-client-identity — the child redeems its OWN
+    // child-bound assertion AS ITSELF for its own DPoP-bound access token.
+    const redeemed = await childRedeem(createdBody.access_token as string, "exchanger");
+    const redeemedBody = (await redeemed.json()) as { access_token?: string };
+    expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
+    const childAccessToken = redeemedBody.access_token as string;
+    const childClaims = decodeJwt(childAccessToken) as {
+      client_id?: string;
+      mission?: { id?: string; parent?: { id?: string } };
+    };
+    expect(childClaims.client_id).toBe(EXCHANGER_CLIENT_ID);
+    expect(childClaims.mission?.id).toBe(childId);
+    expect(childClaims.mission?.parent?.id).toBe(parentId);
+
+    // Open an async-delegation family ROOTED at the Child Mission's OWN access
+    // token (subject_token), authenticated as the child actor itself. Before
+    // the fix the INITIAL mint silently dropped `parent` (provider.ts #651).
+    const first = await asyncDelegate(childAccessToken, { actingAs: "exchanger" });
+    const firstBody = (await first.json()) as { access_token?: string; refresh_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const { payload: initialPayload } = await jwtVerify(firstBody.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    const initialMission = initialPayload.mission as { id?: string; parent?: { id?: string } };
+    expect(initialMission.id).toBe(childId);
+    expect(initialMission.parent?.id).toBe(parentId);
+
+    // The family fallback re-projects lineage on every refresh too. The
+    // per-delegation Grant is owned by the child actor, so it refreshes as itself.
+    const refreshed = await refreshFamily(firstBody.refresh_token as string, actingDpop, "exchanger");
+    const refreshedBody = (await refreshed.json()) as { access_token?: string };
+    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(200);
+    const { payload: refreshedPayload } = await jwtVerify(refreshedBody.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    const refreshedMission = refreshedPayload.mission as { id?: string; parent?: { id?: string } };
+    expect(refreshedMission.id).toBe(childId);
+    expect(refreshedMission.parent?.id).toBe(parentId);
+  });
+
   /**
-   * Child-rooted, part 1: the full HTTP journey (create the Child Mission, have
-   * it redeem its own assertion, then present its OWN access token as the
-   * async-delegation subject_token) is BLOCKED by the shipped client registry,
-   * not by the fix under test — see "Uncertainty / not done" in the PR body.
-   * config/clients.json grants "subagent-invoice-extractor" only the
-   * jwt-bearer grant type, and continuation-grant.ts's async-delegation
-   * handler requires the AUTHENTICATED client to equal subject_token's
-   * client_id, so the child itself must be the acting client. This test pins
-   * that config-level block as an executable fact (it flips if the
-   * registration ever changes), and part 2 below proves the FIX (the claim
-   * dispatch) end-to-end at /token via a seam injection instead.
+   * Separate coverage for the SHIPPED registration, which is deliberately
+   * narrower than the test-only one above: config/clients.json grants
+   * "subagent-invoice-extractor" only the jwt-bearer grant type, so the shipped
+   * child actor redeems its assertion but cannot open a delegation family. The
+   * test pins that as an executable fact; it flips if the registration widens.
    */
-  it("child-rooted, part 1 (config-blocked): the child actor client cannot invoke the async-delegation exchange at all", async () => {
+  it("the SHIPPED child actor registration permits redemption but refuses the async-delegation exchange", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
     const created = await createChildViaExchange(baseAccessToken, missionId);
     const createdBody = (await created.json()) as { access_token?: string; mission_id?: string };
@@ -1318,57 +1441,6 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("not allowed for this client");
-  });
-
-  /**
-   * Child-rooted, part 2 (seam-level): proves the FIX itself end-to-end at
-   * /token -> extraTokenClaims -> the family fallback -> gateActive ->
-   * jwks verification. A real ap-agent family is opened, then the family
-   * row is re-pointed (direct store injection, the same seam-injection
-   * pattern the expansion tests already use via as.kernel.db /
-   * as.expansionDeferrals.db) at a Child Mission record created directly via
-   * the kernel, simulating the state a full child-rooted journey would reach
-   * were the child actor client also granted the token-exchange grant type.
-   */
-  it("child-rooted, part 2 (seam-level): a family row resolving to a Child Mission record projects `parent` on refresh", async () => {
-    const { missionId: parentId, baseAccessToken } = await issueBaseMission();
-    const first = await asyncDelegate(baseAccessToken);
-    const firstBody = (await first.json()) as { access_token?: string; refresh_token?: string };
-    expect(first.status, JSON.stringify(firstBody)).toBe(200);
-    const families = as.delegationFamilyStore.familiesForMission(parentId);
-    expect(families).toHaveLength(1);
-    const grantId = families[0] as string;
-
-    const { child } = createChildMission(as.kernel, {
-      parentId,
-      intent: {
-        goal: "Extract Acme invoices (#651 seam)",
-        target_resources: [RESOURCE],
-        expires_at: FAR_EXP,
-      },
-      proposedAuthority: confinedAuthority(),
-      childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
-    });
-    expect(child.state).toBe("active");
-    expect(child.parent?.id).toBe(parentId);
-
-    // Re-point the existing family row at the Child Mission record: no
-    // test-time client-registry override exists to reach this state over real
-    // HTTP (see part 1 above and "Uncertainty / not done").
-    as.delegationFamilyStore.db
-      .prepare("UPDATE delegation_families SET mission_id = ? WHERE grant_id = ?")
-      .run(child.id, grantId);
-
-    const refreshed = await refreshFamily(firstBody.refresh_token as string);
-    const refreshedBody = (await refreshed.json()) as { access_token?: string };
-    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(200);
-    const { payload } = await jwtVerify(refreshedBody.access_token as string, remoteJwks, {
-      issuer: ISSUER,
-      audience: RESOURCE,
-    });
-    const mission = payload.mission as { id?: string; parent?: { id?: string } };
-    expect(mission.id).toBe(child.id);
-    expect(mission.parent?.id).toBe(parentId);
   });
 });
 
