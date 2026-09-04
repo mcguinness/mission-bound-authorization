@@ -17,7 +17,9 @@
       { "id": "payments:remittance.send", "amount_bearing": true }
     ],
     "connection": { "profile": "oauth", "type": "authorization_code" },
-    "approvable": true
+    "approvable": true,
+    "trusted": true,
+    "tool_catalog": "tool-catalogs/payments.json"
   },
   {
     "id": "ledgercloud",
@@ -32,7 +34,8 @@
       { "id": "ledger:journal.write", "amount_bearing": false }
     ],
     "connection": { "profile": "oauth", "type": "id_jag" },
-    "approvable": true
+    "approvable": true,
+    "trusted": false
   },
   {
     "id": "hr-files",
@@ -43,6 +46,7 @@
     "tags": ["hr"],
     "resource": "http://localhost:4499/mcp",
     "connection": { "profile": "oauth", "type": "authorization_code" },
-    "approvable": false
+    "approvable": false,
+    "trusted": false
   }
 ]

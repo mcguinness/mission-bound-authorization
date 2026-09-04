@@ -54,6 +54,17 @@ export type {
 } from "./binding.js";
 export { canonicalDigest, canonicalize, type JsonValue } from "./canonicalize.js";
 export {
+  assertSupportedDigest,
+  CAPABILITY_DIGEST_PREFIX,
+  CapabilityBindingError,
+  type CapabilitySourceBinding,
+  capabilitySourceDigest,
+  capabilitySourceIdentity,
+  catalogDigest,
+  extractMcpToolDefinition,
+  normalizeCapabilitySources,
+} from "./capability-binding.js";
+export {
   type CompromiseBoundaryOutcome,
   evaluateCompromiseBoundary,
   type ProofCommitment,

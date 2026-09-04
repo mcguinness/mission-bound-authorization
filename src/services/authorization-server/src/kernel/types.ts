@@ -1,4 +1,4 @@
-import type { JsonValue } from "@mission/core";
+import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 
 /**
  * @spec mission#mission-intent — pure TASK context. The Intent carries no
@@ -142,6 +142,26 @@ export interface AuthorityEntry {
   type: "mission_resource_access";
   resource: string;
   actions: string[];
+  /**
+   * @spec capability-binding#capability-source-binding — the capability-source
+   * bindings the validating server recorded at derivation for this entry's
+   * CATALOG-SOURCED actions. Part of the derived authority, so it is covered
+   * by `authority_hash`: it is attached in `approve` before the anchor is
+   * computed, and a proposal can never introduce or rewrite it (derive.ts
+   * builds the derived entry member by member, so the member is dropped from
+   * an untrusted proposal by construction).
+   *
+   * Applicability is PER ACTION, not per entry: a mixed entry is valid, where
+   * catalog-sourced actions carry at least one binding and first-party actions
+   * with stable identity carry none. One action MAY name several `tool_id`
+   * values; `(action, tool_id)` is unique. Absent means no action of this
+   * entry was resolved as catalog-sourced. Imported from `@mission/core`
+   * rather than restated, so the kernel entry and the PDP's materialized entry
+   * are one byte-identical type (this member rides inside `authority_hash`;
+   * `join_delegation`, a PDP-local member, sits outside every commitment and
+   * sets no precedent here).
+   */
+  capability_sources?: CapabilitySourceBinding[];
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];

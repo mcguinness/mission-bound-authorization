@@ -23,6 +23,7 @@
 
 import { randomBytes } from "node:crypto";
 import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
+import { inheritCapabilitySources } from "./capability-binding.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -310,7 +311,21 @@ export function dispatchFromTemplate(
   // carried a delegation/children grant the policy ceiling lacked would be
   // INHERITED by the second derivation and widen past the policy; isSubsetSet
   // against `derived` catches exactly that and refuses structurally.
-  if (!(isSubsetSet(final, template.ceiling) && isSubsetSet(final, derived))) {
+  // The `derived` half runs on the PRE-INHERITANCE set, and must stay there:
+  // derivation never reads `capability_sources`, so the policy-derived set
+  // structurally carries none and an inherited binding would read as one the
+  // grantor lacks. Keep the two halves separate; recombining them refuses
+  // every dispatch from a ceiling that records a binding.
+  if (!isSubsetSet(final, derived)) {
+    throw new Error(`dispatch from ${template.id} violated the double-intersection invariant`);
+  }
+  // @spec capability-binding#capability-source-binding — carry the template
+  // ceiling's recorded bindings for every retained catalog-sourced action,
+  // before the ceiling half of the invariant and before `authority_hash`
+  // below. The consenting human's ceiling is the grantor; the dispatcher's
+  // proposal contributes nothing here.
+  final = inheritCapabilitySources(final, template.ceiling);
+  if (!isSubsetSet(final, template.ceiling)) {
     throw new Error(`dispatch from ${template.id} violated the double-intersection invariant`);
   }
 
