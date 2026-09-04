@@ -8,8 +8,18 @@
     "tags": ["internal", "ap"],
     "server_card_uri": "http://localhost:4403/.well-known/mcp",
     "resource": "http://localhost:4403/mcp",
+    "actions": [
+      { "id": "payments:invoice.list", "amount_bearing": false },
+      { "id": "payments:invoice.read", "amount_bearing": true },
+      { "id": "payments:vendor.read", "amount_bearing": false },
+      { "id": "payments:payment.schedule", "amount_bearing": true },
+      { "id": "payments:payment.execute", "amount_bearing": true },
+      { "id": "payments:remittance.send", "amount_bearing": true }
+    ],
     "connection": { "profile": "oauth", "type": "authorization_code" },
-    "approvable": true
+    "approvable": true,
+    "trusted": true,
+    "tool_catalog": "tool-catalogs/payments.json"
   },
   {
     "id": "ledgercloud",
@@ -19,8 +29,13 @@
     "categories": ["accounting"],
     "tags": ["saas"],
     "resource": "http://localhost:4406/mcp",
+    "actions": [
+      { "id": "ledger:vendor.read", "amount_bearing": false },
+      { "id": "ledger:journal.write", "amount_bearing": false }
+    ],
     "connection": { "profile": "oauth", "type": "id_jag" },
-    "approvable": true
+    "approvable": true,
+    "trusted": false
   },
   {
     "id": "hr-files",
@@ -31,6 +46,7 @@
     "tags": ["hr"],
     "resource": "http://localhost:4499/mcp",
     "connection": { "profile": "oauth", "type": "authorization_code" },
-    "approvable": false
+    "approvable": false,
+    "trusted": false
   }
 ]
