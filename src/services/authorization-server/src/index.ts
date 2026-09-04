@@ -531,6 +531,20 @@ export async function buildAuthorizationServer(opts: {
    */
   testTokenSigningJwk?: JWK;
   /**
+   * @spec async-delegation (issue #651) — TEST-ONLY: additional client
+   * registrations composed ONTO the config-shipped registry
+   * (`config/clients.json`), never replacing an entry of it. A test that needs
+   * a registration the demo deliberately does not ship registers it here and
+   * signs its own `private_key_jwt` assertions with the private half of the
+   * `jwks` it supplies, so this function never hands a shipped client's key
+   * back. The child-rooted async-delegation family is the motivating case: the
+   * shipped child actor is granted only the jwt-bearer grant type, so driving
+   * a family rooted at a Child Mission's own access token over real HTTP needs
+   * a child actor registered for the token-exchange grant as well. Production
+   * callers MUST omit this.
+   */
+  testClients?: Record<string, unknown>[];
+  /**
    * @spec cross-org-delegation#projection-exchange — destination Resource AS
    * configuration for Chain acceptance (federation trust, principal mapping,
    * local ceiling, evidence sink). Absent = the exchange is refused.
@@ -611,6 +625,17 @@ export async function buildAuthorizationServer(opts: {
   // @spec mission#downgrade-by-omission — the Mission-governed demo client:
   // registered so the AS-side anti-downgrade hook is exercisable end to end.
   const governed = await seedGovernedClient();
+  // @spec async-delegation (issue #651) — TEST-ONLY registrations compose ONTO
+  // the shipped registry. A duplicate `client_id` would SHADOW a shipped
+  // registration rather than add to it (silently widening what the demo
+  // ships), so it is refused outright.
+  const shippedClientIds = new Set([agent, child, governed].map((c) => c.metadata.client_id));
+  for (const testClient of opts.testClients ?? []) {
+    const id = String(testClient.client_id);
+    if (shippedClientIds.has(id)) {
+      throw new Error(`testClients MUST NOT redefine the config-shipped client ${id}`);
+    }
+  }
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`
@@ -756,7 +781,7 @@ export async function buildAuthorizationServer(opts: {
     expansionDeferrals,
     creationIdempotency,
     statusListPublisher,
-    clients: [agent.metadata, child.metadata, governed.metadata],
+    clients: [agent.metadata, child.metadata, governed.metadata, ...(opts.testClients ?? [])],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,

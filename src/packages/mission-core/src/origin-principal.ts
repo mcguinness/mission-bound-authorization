@@ -65,6 +65,73 @@ export interface EntitlementObservation {
   entitled: boolean;
   /** RFC 3339 date-time: when this entitlement was established or confirmed. */
   observed_at: string;
+  /**
+   * @spec cross-domain#dual-axis — OPTIONAL. The mapped principal's
+   * currently entitled `(resource, actions)` set at this audience. Absent
+   * means the observation is audience-scoped: `entitled` alone gates the
+   * complete delegated set, unchanged. Present means the caller intersects
+   * the delegated `authorization_details` with this set, per action, and
+   * carries only the surviving subset forward ("the effective authority is
+   * the intersection of the verified delegated `authorization_details`, the
+   * current entitlement of the mapped origin principal, and current
+   * resource and deployment policy").
+   *
+   * `resource` matches exactly, the way an authority entry's `resource`
+   * matches everywhere else in the family's authority model; there is no
+   * wildcard or prefix form. The entry carries no constraints: entitlement
+   * answers who, what, and where, while amount and vendor terms stay owned
+   * by the delegated and ceiling axes.
+   */
+  authority?: EntitlementAuthorityEntry[];
+}
+
+/**
+ * @spec cross-domain#dual-axis — one currently entitled `(resource,
+ * actions)` pair. The same exact-resource, array-of-actions shape an
+ * authority entry uses, without its constraint and delegation members.
+ */
+export interface EntitlementAuthorityEntry {
+  resource: string;
+  actions: string[];
+}
+
+/**
+ * @spec cross-domain#dual-axis — whether an entitlement authority set
+ * covers one `(resource, action)` pair. Exact match on both members, and
+ * total: a malformed row cannot throw, it simply covers nothing.
+ */
+export function entitlementPermits(
+  authority: readonly EntitlementAuthorityEntry[],
+  resource: string,
+  action: string,
+): boolean {
+  return authority.some(
+    (a) => a?.resource === resource && Array.isArray(a.actions) && a.actions.includes(action),
+  );
+}
+
+/**
+ * @spec cross-domain#dual-axis — intersect a delegated authority set with
+ * an entitlement authority set, per action.
+ *
+ * An entry survives with the actions the entitlement covers for its exact
+ * resource, in the delegated order, and is dropped when none survive. A
+ * partial match therefore narrows rather than refuses: the caller mints or
+ * evaluates the surviving subset, and refuses only on an empty result. Every
+ * other member of a surviving entry (constraints, delegation) is carried
+ * through unchanged, because entitlement does not own those axes.
+ */
+export function narrowToEntitledAuthority<T extends { resource: string; actions: string[] }>(
+  delegated: readonly T[],
+  authority: readonly EntitlementAuthorityEntry[],
+): T[] {
+  const narrowed: T[] = [];
+  for (const entry of delegated) {
+    if (!entry || typeof entry.resource !== "string" || !Array.isArray(entry.actions)) continue;
+    const actions = entry.actions.filter((a) => entitlementPermits(authority, entry.resource, a));
+    if (actions.length > 0) narrowed.push({ ...entry, actions });
+  }
+  return narrowed;
 }
 
 /**
@@ -75,16 +142,14 @@ export interface EntitlementObservation {
  * both are "a failed ... result" at the entitlement step
  * (@spec authzen#pdp-request).
  *
- * This contract is an audience-wide, all-or-none entitlement model: a
- * single Boolean gates the complete delegated `authorization_details` set
- * for the mapped principal at that audience. It authorizes or refuses the
- * whole set, and cannot itself narrow individual entries by action or
- * resource -- that narrowing, where a deployment needs it, is the "current
- * resource and deployment policy" arm of {{cross-domain#dual-axis}}'s
- * three-bound intersection, applied downstream of entitlement rather than
- * inside it. A deployment needing per-entry entitlement would return the
- * locally entitled authority subset instead of a bare Boolean; this
- * contract does not.
+ * The observation carries two grains. A bare Boolean is audience-scoped: it
+ * authorizes or refuses the complete delegated `authorization_details` set
+ * for the mapped principal at that audience. An observation that also
+ * carries `authority` is action- and resource-scoped: the caller
+ * intersects the delegated set with it, per action, and carries the
+ * surviving subset forward, refusing only when nothing survives.
+ * `authority` is OPTIONAL, and absence means the audience-scoped grain, so
+ * a deployment that does not populate it behaves exactly as before.
  */
 export interface EntitlementResolver {
   resolve(input: {

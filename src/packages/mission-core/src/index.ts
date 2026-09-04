@@ -109,12 +109,15 @@ export {
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";
-export type {
-  EntitlementObservation,
-  EntitlementResolver,
-  OriginPrincipal,
-  PrincipalMappingObservation,
-  PrincipalMappingResolver,
+export {
+  type EntitlementAuthorityEntry,
+  type EntitlementObservation,
+  type EntitlementResolver,
+  entitlementPermits,
+  narrowToEntitledAuthority,
+  type OriginPrincipal,
+  type PrincipalMappingObservation,
+  type PrincipalMappingResolver,
 } from "./origin-principal.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {

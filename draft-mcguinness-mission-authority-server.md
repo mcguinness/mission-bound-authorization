@@ -1714,7 +1714,11 @@ claims:
   ({{I-D.draft-mcguinness-oauth-mission}}). The MAS MAY additionally
   include `authority_hash` as an audit anchor; where included, PDP
   Consumption's cross-check applies to it too
-  ({{join-assertion-pdp}}).
+  ({{join-assertion-pdp}}). This object MUST NOT carry
+  `approval_context_commitment`: the Approval Context Commitment
+  profile fixes this descriptor as a must-not-carry site alongside the
+  baseline `mission` claim
+  ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
 `token`:
 : REQUIRED. An object containing `sha256`, the token digest as in
