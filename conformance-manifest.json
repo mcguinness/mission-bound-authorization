@@ -1271,7 +1271,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "`authority_source` appears in no integrity-anchor input and on no access-token claim; introspection discloses it only to a caller holding the deployment's provenance disclosure privilege"
+    "normative": "`authority_source` appears in no integrity-anchor input and on no access-token claim; introspection discloses it only to a caller holding the deployment's provenance disclosure privilege, as `type` plus, for `organizational`, the governed policy's `id` and `version`, never the policy `digest`"
    },
    "level": "unit",
    "coverage": "tested",
@@ -1294,7 +1294,8 @@
      "level": "unit",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",
@@ -2274,7 +2275,7 @@
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
-    "normative": "derivations_remaining and proposal_hash are member-gated (budget and provenance privileges); an audience-authorized RS without them receives the enforcement projection alone"
+    "normative": "derivations_remaining, proposal_hash, authority_hash, approval_basis, and authority_source are member-gated (budget and provenance privileges); an audience-authorized RS without them receives the enforcement projection alone"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -2296,9 +2297,15 @@
      "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > the inactive response is member-scoped too: a privilege-less principal sees no budget or provenance metadata",
      "level": "endpoint",
      "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source disclosure (@spec mission#introspection, mission#authority-sources) > discloses the source to a provenance caller and withholds it from a bare caller",
+     "level": "unit",
+     "surface": "introspection"
     }
    ],
-   "notes": "Draft rule and budget-privilege gating landed together (tri-doc review round 2)."
+   "notes": "Draft rule and budget-privilege gating landed together (tri-doc review round 2). #760 names `authority_source` in this section's enumeration beside `approval_basis`; the added mapping is the disclosure test asserting its provenance-gated shape."
   },
   {
    "id": "core.introspection.caller-authorization",
