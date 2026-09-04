@@ -48,6 +48,7 @@ export {
   attachCapabilitySources,
   type CapabilitySourceResolution,
   type CapabilitySourceResolver,
+  inheritCapabilitySources,
 } from "./kernel/capability-binding.js";
 export {
   buildContainmentEvidence,
