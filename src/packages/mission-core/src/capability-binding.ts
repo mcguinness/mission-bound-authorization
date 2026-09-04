@@ -92,7 +92,8 @@ export function capabilitySourceDigest(definition: JsonValue): string {
  * and any other byte of the served document are inside this commitment.
  */
 export function catalogDigest(retrieved: string | Uint8Array): string {
-  const bytes = typeof retrieved === "string" ? Buffer.from(retrieved, "utf8") : Buffer.from(retrieved);
+  const bytes =
+    typeof retrieved === "string" ? Buffer.from(retrieved, "utf8") : Buffer.from(retrieved);
   return `${CAPABILITY_DIGEST_PREFIX}${createHash("sha256").update(bytes).digest("base64url")}`;
 }
 
