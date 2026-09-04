@@ -23,6 +23,13 @@
 
 import { randomBytes } from "node:crypto";
 import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
+import {
+  assertApproverMayActivate,
+  assertSubjectDiscipline,
+  type AuthoritySourceCatalog,
+  authoritySourceOf,
+  resolveSourceForClient,
+} from "./authority-source.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -36,6 +43,7 @@ import {
 import {
   type ApprovalBasis,
   type AuthorityEntry,
+  type AuthoritySource,
   type MissionIntent,
   type IntentSubmissionEvidenceFact,
   type MissionRecord,
@@ -102,8 +110,22 @@ export interface CreateTemplateInput {
  * the consented body. IDEMPOTENT by `approval_event_id`: a repeat returns the
  * template that approval already created (so a retried consent never mints a
  * second template nor a mismatched hash).
+ *
+ * @spec mission#approval-event (step 3), mission#authority-sources — template
+ * consent IS an approval event, so it establishes the template's
+ * `authority_source` from the injected trusted catalog, keyed on the
+ * `recipients` (the Agents that will run the dispatched instances) and never
+ * from the request body. Every recipient MUST resolve to the SAME declared
+ * source, or the template is refused: a template whose instances would draw on
+ * two different authorities has no single provenance to inherit. The
+ * established source is provenance and stays OUTSIDE `template_hash`, exactly
+ * as `authority_source` stays outside both Mission anchors.
  */
-export function createTemplate(store: TemplateStore, input: CreateTemplateInput): MissionTemplate {
+export function createTemplate(
+  store: TemplateStore,
+  input: CreateTemplateInput,
+  options?: { authoritySourceCatalog?: AuthoritySourceCatalog; deploymentCeiling?: AuthorityEntry[] },
+): MissionTemplate {
   if (input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
   }
@@ -121,6 +143,8 @@ export function createTemplate(store: TemplateStore, input: CreateTemplateInput)
   // than recomputing the hash (a body change would need a NEW approval event).
   const existing = store.getByApprovalEvent(input.approval_event_id);
   if (existing) return existing;
+
+  const authority_source = establishTemplateAuthoritySource(input, options);
 
   const templateBody = {
     template_version: input.template_version,
@@ -140,8 +164,47 @@ export function createTemplate(store: TemplateStore, input: CreateTemplateInput)
     templateBody as unknown as JsonValue,
   );
   const id = `tmpl_${randomBytes(18).toString("base64url")}`;
-  const create: TemplateCreate = { ...input, id, template_hash };
+  const create: TemplateCreate = { ...input, id, template_hash, authority_source };
   return store.create(create);
+}
+
+/**
+ * @spec mission#approval-event (step 3) — gates 1 and 2 at template consent.
+ * Gate 3 (the source ceiling) and gate 4 (subject discipline) belong to
+ * DISPATCH: a template ceiling is standing consent, and both the derived set
+ * an instance commits and the Subject it acts for exist only per instance.
+ */
+function establishTemplateAuthoritySource(
+  input: CreateTemplateInput,
+  options?: { authoritySourceCatalog?: AuthoritySourceCatalog; deploymentCeiling?: AuthorityEntry[] },
+): AuthoritySource {
+  const catalog = options?.authoritySourceCatalog;
+  const deploymentCeiling = options?.deploymentCeiling ?? input.ceiling;
+  if (input.recipients.length === 0) {
+    throw new TemplateError("template recipients must be non-empty");
+  }
+  let entry: ReturnType<typeof resolveSourceForClient> | undefined;
+  for (const recipient of input.recipients) {
+    let resolved: ReturnType<typeof resolveSourceForClient>;
+    try {
+      resolved = resolveSourceForClient(catalog, recipient, deploymentCeiling);
+    } catch (e) {
+      throw new TemplateError((e as Error).message);
+    }
+    if (entry && resolved.id !== entry.id) {
+      throw new TemplateError(
+        "template recipients draw on more than one authority source; a template has one source",
+      );
+    }
+    entry = resolved;
+  }
+  const resolvedEntry = entry as NonNullable<typeof entry>;
+  try {
+    assertApproverMayActivate(resolvedEntry, input.approver);
+  } catch (e) {
+    throw new TemplateError((e as Error).message);
+  }
+  return authoritySourceOf(resolvedEntry);
 }
 
 export interface DispatchInput {
@@ -324,6 +387,19 @@ export function dispatchFromTemplate(
     );
   }
 
+  // @spec mission#authority-sources, mission#approval-event (step 3) — a
+  // dispatched instance is a DRAWDOWN on the template's standing consent, so
+  // it inherits the template's established `authority_source` verbatim: the
+  // member is immutable, and re-establishing it per dispatch would let a
+  // dispatch change provenance with no approval event. What re-runs at each
+  // dispatch, against catalog and governance state current at that moment, is
+  // gate 3 (the source ceiling, so a source narrowed since consent refuses)
+  // and gate 4 (subject discipline, since the Subject is per instance). Both
+  // run before the instance's anchors are computed.
+  const authoritySource = template.authority_source;
+  kernel.assertInheritedAuthoritySource(authoritySource, final);
+  kernel.assertSubjectDisciplineForSource(authoritySource, input.subject);
+
   // e. Build a NORMAL MissionRecord (as expansion.ts does). Anchors are over
   // the INSTANCE's own intent and `final` set (never the template body). The
   // approver is the TEMPLATE's approver: the human of record, not the
@@ -380,6 +456,7 @@ export function dispatchFromTemplate(
     subject: input.subject,
     approver: template.approver,
     approval_basis: approvalBasis,
+    authority_source: authoritySource,
     client_id: input.recipient,
     policy_version: input.policyVersion,
     approval_event_id: approvalEventId,
