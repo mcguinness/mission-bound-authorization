@@ -854,7 +854,7 @@
    "surface": "authorization-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approver outside the established source's declared activators is refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates"
+    "normative": "an Approver outside the established source's declared activators is refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -868,6 +868,36 @@
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > admits an activator holding none of the ceiling's operational permissions (activation is not possession)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > gates activation on the shared suite fixture: an Approver outside its activators is refused",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses a source that declares no activator, rather than admitting every Approver",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "authority-source config loader (@spec mission#authority-sources) > refuses a source whose activators list is empty",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "authority-source config loader (@spec mission#authority-sources) > refuses a source that declares no activators member at all",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > names an activator on every declared source",
      "level": "unit",
      "surface": "derivation"
     },

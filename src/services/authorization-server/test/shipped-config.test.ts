@@ -24,7 +24,10 @@
  * test's input too, instead of leaving a stale copy green.
  */
 
-import { describe, expect, it } from "vitest";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AUTHORITY_SOURCES,
   CANONICAL_RESOURCE,
@@ -161,6 +164,14 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
     }
   });
 
+  it("names an activator on every declared source", () => {
+    // Gate 2 has no vacuous form: an empty `activators` list would be a source
+    // nobody may activate, so the shipped catalog names them everywhere.
+    for (const entry of AUTHORITY_SOURCES.entries) {
+      expect(entry.activators.length, entry.id).toBeGreaterThan(0);
+    }
+  });
+
   it("declares the work-product agents as user-delegated, the source their Missions draw on", () => {
     // agent-A1 and parent-P approve for the human Subject alice under bob's
     // approval: an agent acting on a person's delegated authority, so the
@@ -204,5 +215,59 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
       /no trusted authority source is declared/,
     );
     expect(as.kernel.authoritySourceEntry("governed-agent").type).toBe("organizational");
+  });
+});
+
+
+/**
+ * @spec mission#authority-sources — the TYPED CONFIG LOADER, driven over a copy
+ * of the shipped `config/` with one member broken. `MISSION_CONFIG_DIR` points
+ * the loader at the copy and the module registry is reset, so the refusal under
+ * test is the real load path a deployment hits at boot, not a re-implementation
+ * of it.
+ */
+describe("authority-source config loader (@spec mission#authority-sources)", () => {
+  const dirs: string[] = [];
+  const original = process.env.MISSION_CONFIG_DIR;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.MISSION_CONFIG_DIR;
+    else process.env.MISSION_CONFIG_DIR = original;
+    vi.resetModules();
+    for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
+
+  /** A copy of the shipped config with `authority-sources.json` rewritten. */
+  const configWith = (edit: (source: Record<string, unknown>) => void): string => {
+    const dir = mkdtempSync(join(tmpdir(), "mission-config-"));
+    dirs.push(dir);
+    cpSync(join(import.meta.dirname, "../../../config"), dir, { recursive: true });
+    const file = join(dir, "authority-sources.json");
+    const doc = JSON.parse(readFileSync(file, "utf8")) as {
+      sources: Record<string, unknown>[];
+    };
+    edit(doc.sources[0] as Record<string, unknown>);
+    writeFileSync(file, JSON.stringify(doc, null, 2));
+    return dir;
+  };
+
+  it("refuses a source whose activators list is empty", async () => {
+    process.env.MISSION_CONFIG_DIR = configWith((source) => {
+      source.activators = [];
+    });
+    vi.resetModules();
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      /activators is empty for source 'acme-people'/,
+    );
+  });
+
+  it("refuses a source that declares no activators member at all", async () => {
+    process.env.MISSION_CONFIG_DIR = configWith((source) => {
+      delete source.activators;
+    });
+    vi.resetModules();
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      /activators must be a string array/,
+    );
   });
 });

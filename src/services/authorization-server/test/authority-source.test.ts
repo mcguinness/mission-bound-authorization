@@ -18,6 +18,7 @@ import {
   validateMissionIntent,
   validateMissionIntentSubmission,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
@@ -227,6 +228,24 @@ describe("authority source establishment (@spec mission#authority-sources, missi
     expect(record.authority_source).toEqual({ type: "user_delegated" });
   });
 
+  it("gates activation on the shared suite fixture: an Approver outside its activators is refused", () => {
+    // The fixture every other suite injects declares its activators, so gate 2
+    // is a live check there and not a vacuous one: the Approver a suite names
+    // activates, and any other Approver is refused.
+    const kernel = makeKernel({
+      authoritySourceCatalog: testAuthoritySourceCatalog(
+        DEPLOYMENT_CEILING,
+        ["ap-agent"],
+        ["bob"],
+      ) as never,
+    });
+    expect(approve(kernel, { approver: "bob" }).authority_source).toEqual({
+      type: "user_delegated",
+    });
+    expect(() => approve(kernel, { approver: "mallory" })).toThrow(IntentError);
+    expect(() => approve(kernel, { approver: "mallory" })).toThrow(/is not authorized to activate/);
+  });
+
   it("refuses kernel construction when the deployment declares no catalog", () => {
     // There is no implicit source. A deployment that declares no catalog has
     // declared no authority for an approval to activate, so construction
@@ -328,6 +347,24 @@ describe("authority source discriminator (@spec mission#mission-record, mission#
         ],
       }),
     ).toThrow(/unrecognized type/);
+  });
+
+  it("refuses a source that declares no activator, rather than admitting every Approver", () => {
+    // An empty list means nobody, never everybody: gate 2 has no vacuous form,
+    // so the refusal is at load, before any approval can rely on it.
+    const empty = catalog();
+    (empty.entries as { activators: string[] }[])[0].activators = [];
+    expect(() => validateAuthoritySourceCatalog(empty)).toThrow(
+      /'people': activators must be non-empty/,
+    );
+    const missing = catalog();
+    delete (missing.entries as { activators?: string[] }[])[0].activators;
+    expect(() => validateAuthoritySourceCatalog(missing)).toThrow(
+      /'people': activators must be non-empty/,
+    );
+    expect(() => makeKernel({ authoritySourceCatalog: empty as never })).toThrow(
+      /activators must be non-empty/,
+    );
   });
 
   it("refuses kernel construction on a catalog whose invariants do not hold", () => {
