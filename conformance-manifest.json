@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "73ebc0577a34d8a8b53e1a578d9301a3af71c1ad",
-    "content_sha256": "66578aedc2a28f8c907969cc2dcd019ac738a96423ec66f0ba49855994a81edd"
+    "revision": "9a38e3c25dda9947383f4f26f2c1989a3f880c75",
+    "content_sha256": "47af4f0b1b36ac114caf70b220ef35e8554b873c9c2cfebed993ec97744d128d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -55,8 +55,8 @@
     "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
-    "content_sha256": "8fb582dc630c9cc7edc8989187d1e5f56cd28489445d1ec3e4dd1595b505619b"
+    "revision": "9a38e3c25dda9947383f4f26f2c1989a3f880c75",
+    "content_sha256": "9c0c14b5fc68d95ca49e1442bd6c448be9d571cf4cf95bdb8e7828becc6a59cb"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -79,8 +79,8 @@
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "e566e1a5dc65d21b378560b4b381643c9009a7c8",
-    "content_sha256": "4f4482abf41e6454a59346089f0e5fbda3328f26a717eb1a5494b4d26bb14842"
+    "revision": "0fe668db9531ad3cd28021e972d738fc420c1930",
+    "content_sha256": "e4246cdcb23be68bfddd1df355fe0ec445bf1fe246bc3909326e5098a422bbf1"
    }
   }
  },
@@ -17300,8 +17300,15 @@
     "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
+     "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699) > adds no Mission record member: a committed record carries no approval_context_commitment",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ]
   },
   {
    "id": "approval-context.computation.cache-is-derived-state",
@@ -17509,8 +17516,16 @@
     "normative": "approval_context_commitment never appears on a Mission-bound access token's baseline mission claim, and never on another credential-bound Mission descriptor a companion profile mints for correlation (for example, the Mission Authority Server's Join Assertion): each such descriptor keeps to its own already-fixed minimal member set."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
+     "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-carriage, #699) > is never carried on a Mission-bound access token's baseline mission claim",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
   }
  ]
 }
