@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "73ebc0577a34d8a8b53e1a578d9301a3af71c1ad",
-    "content_sha256": "66578aedc2a28f8c907969cc2dcd019ac738a96423ec66f0ba49855994a81edd"
+    "revision": "5adebf40e758f24894ec570afebae65f3c6985ca",
+    "content_sha256": "73c71bba87f3a19468f5c43e662b6a8a55663a8e211c4b1e7e83792e99d37bdf"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -3947,7 +3947,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3)",
+    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3). The depth source is the deployment's own actor records (ActorRecords, services/mcp-payments/src/actor-records.ts): records are keyed on the canonical (issuer, id) pair, and resolveDepth walks delegated_by toward the Mission's own client_id (depth 0, adding 1 per hop), resolving ABSENT for no record, an unrooted chain, a cycle, or a chain that never reaches the Mission's client. An absent depth denies unconditionally on the delegate disposition, including where no max_depth is declared anywhere, per rule 5's own sentence: \"A delegate with no actor record under the Mission is not recorded as acting under it, and the join fails `mission_mismatch`.\"",
     "local": "join_delegation is a PDP-package-local field (MissionView.authority_set[].join_delegation), not the kernel's own AuthorityEntry.delegation (authorization-server/src/kernel/types.ts, a richer DelegateMatcher-based shape this package has no dependency on). #557 review point 2: deriveJoinDelegation (services/pdp/src/mas-join.ts) is a deterministic adapter from the kernel shape, and the canonical Mission loader (src/demo/src/stack.ts's viewFor) now applies it when materializing a MissionView's authority_set, closing the 'no canonical loader populates it' gap; the client_id-vs-{sub,sub_profile} matching-semantics divergence itself remains (only an exact sub matcher maps deterministically, a sub_profile matcher is dropped fail-closed, see the adapter's own doc)"
    },
    "level": "unit",
@@ -4006,9 +4006,57 @@
      "name": "baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authority-server#mission-join rule 5, #557 review point 1) > denies mission_mismatch when the resolved depth exceeds the entry's own join_delegation.max_depth",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_mismatch when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > joins that same no-max_depth delegable entry once an actor record supplies a depth",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves depth 0 for the Mission's own client, with no record required",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves depth 2 across two hops, adding 1 per hop toward the Mission's client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves ABSENT for a client with no record at all",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves ABSENT for a cycle rather than walking it forever",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves ABSENT for an unrooted chain that runs out of records before the Mission's client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > ignores a same-id record from another issuer: records are keyed on the canonical (issuer, id) pair",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2)."
+   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2). The absent-record denial is rule 5's own sentence, quoted in observation.normative, not a local implementation policy."
   },
   {
    "id": "mas.baseline-join.no-fallback-denial",
