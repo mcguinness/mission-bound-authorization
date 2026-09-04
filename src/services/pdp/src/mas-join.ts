@@ -14,8 +14,9 @@
  * independently testable against `MissionView` fixtures without either.
  *
  * Rules implemented: 3 (subject join), 4 (client join, direct or explicit
- * delegate), 5 (delegate narrowing, both the deployment's DelegatePolicy
- * ceiling and each entry's own join_delegation.max_depth), 6 (uniform
+ * delegate), 5 (delegate narrowing: an absent actor record denies, and both
+ * the deployment's DelegatePolicy ceiling and each entry's own
+ * join_delegation.max_depth are enforced), 6 (uniform
  * `mission_mismatch` denial, no fallback), and the Mission-authority half of
  * 8 (the acting credential's own authority and current Resource policy are
  * bounds the CALLER independently intersects; this resolver only ever
@@ -62,10 +63,12 @@ export interface BaselineJoinInput {
    * "evaluated from the deployment's actor records rather than from a
    * Mission-bound token's `act` chain": the caller resolves it itself and
    * supplies it here; this resolver never reads a token's own `act` chain
-   * for it. Absent is treated as unbounded depth, so a `max_depth`-bearing
-   * delegate policy or entry (either DelegatePolicy.delegates[...].maxDepth
-   * or an entry's own join_delegation.max_depth) denies closed rather than
-   * assuming a shallow default.
+   * for it. ABSENT on the delegate disposition denies `mission_mismatch`
+   * unconditionally: "a delegate with no actor record under the Mission is
+   * not recorded as acting under it, and the join fails
+   * `mission_mismatch`". An absent depth is not a shallow default, and not
+   * an unbounded one either; it is the deployment saying it has no record
+   * of this client acting under this Mission.
    */
   delegateDepth?: number;
 }
@@ -98,7 +101,19 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   // is the caller-supplied, per-decision current depth (see the type doc).
   const delegateRule = input.delegatePolicy?.delegates[input.clientId];
   if (!delegateRule) return { ok: false, reason: "mission_mismatch" };
-  if (delegateRule.maxDepth !== undefined && (input.delegateDepth ?? Number.POSITIVE_INFINITY) > delegateRule.maxDepth) {
+
+  // Rule 5: "A delegate with no actor record under the Mission is not
+  // recorded as acting under it, and the join fails `mission_mismatch`."
+  // Depth is read from the deployment's actor records, so an absent depth
+  // means no such record exists, and the delegate disposition denies here
+  // whether or not any max_depth is declared. This is the only bound that
+  // closes the hole where a delegable entry carries no `max_depth` and no
+  // delegate-policy ceiling applies. Held in a const so the narrowing
+  // survives into the filter callback below.
+  const depth = input.delegateDepth;
+  if (depth === undefined) return { ok: false, reason: "mission_mismatch" };
+
+  if (delegateRule.maxDepth !== undefined && depth > delegateRule.maxDepth) {
     return { ok: false, reason: "mission_mismatch" };
   }
 
@@ -113,10 +128,7 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   const narrowed = input.view.authority_set.filter((e) => {
     if (!e.join_delegation) return false;
     if (e.join_delegation.allowed_delegates && !e.join_delegation.allowed_delegates.includes(input.clientId)) return false;
-    if (
-      e.join_delegation.max_depth !== undefined &&
-      (input.delegateDepth ?? Number.POSITIVE_INFINITY) > e.join_delegation.max_depth
-    ) {
+    if (e.join_delegation.max_depth !== undefined && depth > e.join_delegation.max_depth) {
       return false;
     }
     return true;
