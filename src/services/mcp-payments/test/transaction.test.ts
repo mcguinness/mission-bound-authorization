@@ -28,6 +28,11 @@ import {
   type TxnConsumptionStore,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 const CA = process.env.OPENFGA_CA_CERT;
@@ -151,12 +156,13 @@ function build(
     [{ id: "acme", name: "Acme", status: "approved" }],
     [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
   );
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
   const gated = Boolean(opts.jit || opts.challengeSigner || opts.gateRemittance);
   const pep = new Pep({
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,

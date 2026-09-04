@@ -15,15 +15,14 @@
  * carries a member this PEP does not recognize as a condition (or as
  * decision metadata) must be refused, never silently granted (@spec
  * decision-output: "a condition the enforcing component does not recognize
- * makes the permit unusable"). These tests mock @mission/pdp's `evaluate`
- * (pass-through by default) so a synthetic unrecognized member can be
- * injected onto an otherwise-ordinary permit without a live PDP, and run
- * unconditionally.
+ * makes the permit unusable"). These tests wrap the decision point's own
+ * `decide` in a spy (pass-through by default) so a synthetic unrecognized
+ * member can be injected onto an otherwise-ordinary permit without a live
+ * PDP, and run unconditionally.
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { Fga, type MissionView } from "@mission/pdp";
-import * as pdp from "@mission/pdp";
+import { createEphemeralDecisionPoint, Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   createEphemeralEvidenceKeys,
@@ -37,13 +36,18 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741, PR #753 review): one
+// decision point per test module, plus the enforcement-side bundle that
+// verifies what it emits. `PDP.emitter` is the PDP-side seam this file uses to
+// mint the record a real decision would have carried; the PEP built below
+// receives `decide` and the store's resolver, and nothing that can emit.
+const PDP = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ decisionPoint: PDP });
+
 // Pass-through by default: every GAP 1 case below exercises the REAL PDP
-// over live OpenFGA. Only the GAP 2 test overrides one call, via
+// over live OpenFGA. Only the GAP 2 cases override one call, via
 // mockResolvedValueOnce, to inject a synthetic unrecognized member.
-vi.mock("@mission/pdp", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@mission/pdp")>();
-  return { ...actual, evaluate: vi.fn(actual.evaluate) };
-});
+const decide = vi.fn(EVIDENCE_KEYS.decide);
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -104,9 +108,10 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       client_id: "ap-agent",
     };
     const payments = seedPayments();
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const card = { name: "payments", tools: ["list_invoices"] };
     const pep = new Pep({
+      decide,
       payments,
       evidence,
       fga: conn.fga,
@@ -281,13 +286,14 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       client_id: "ap-agent",
     };
     const payments = seedPayments();
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const card = { name: "payments", tools: ["list_invoices"] };
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === current.issuer
         ? { view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
         : undefined;
     const pep = new Pep({
+      decide,
       payments,
       evidence,
       fga: conn.fga,
@@ -356,13 +362,14 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
 
   function build(fga: import("@mission/pdp").Fga): { server: McpPaymentsServer } {
     const payments = seedPayments();
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const card = { name: "payments", tools: ["list_invoices"] };
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === view.issuer
         ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
         : undefined;
     const pep = new Pep({
+      decide,
       payments,
       evidence,
       fga,
@@ -423,11 +430,12 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
 
   function build(): { pep: Pep; evidence: EvidenceStore } {
     const payments = new PaymentsStore();
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
+      decide,
       payments,
       evidence,
-      // Never reached: evaluate() is mocked for this describe block's tests.
+      // Never reached: `decide` is stubbed for this describe block's tests.
       fga: {} as unknown as import("@mission/pdp").Fga,
       modelId: "unused",
       loadView: (ref) =>
@@ -459,9 +467,32 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     },
   };
 
+  /**
+   * @spec runtime-evidence#decision-evidence-object (#741): a mocked PERMIT
+   * still has to carry the Decision Evidence the real PDP would have emitted
+   * and signed, because the PEP refuses a permit it cannot evidence. Signed
+   * by the same emitter the store's resolver is built from, so these cases
+   * exercise the member enumeration they are about rather than the retention
+   * gate.
+   */
+  const permitContext = async (extra: Record<string, unknown> = {}) => {
+    const decision_evidence = await PDP.emitter.emit({
+      mission: { id: missionId, issuer: ISSUER, policy_view_id: "pv_1", authority_hash: view.authority_hash },
+      subject: { id: TOKEN.sub },
+      resource: { type: "vendor", id: "acme" },
+      action: { name: "payments:vendor.read" },
+      audience: CANONICAL_RESOURCE,
+      evaluation_id: "dec_1",
+      decision: "permit",
+      evaluated_at: new Date().toISOString(),
+      action_class: "irreversible_action",
+    });
+    return { ...FULLY_RECOGNIZED_CONTEXT, ...extra, decision_evidence };
+  };
+
   it("a permit whose context carries only recognized members is granted", async () => {
     const { pep, evidence } = build();
-    vi.mocked(pdp.evaluate).mockResolvedValueOnce({ decision: true, context: { ...FULLY_RECOGNIZED_CONTEXT } });
+    decide.mockResolvedValueOnce({ decision: true, context: await permitContext() });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
     expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
@@ -469,12 +500,11 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
 
   it("a permit whose context carries ONE unrecognized member INSIDE conditions is refused with zero effect, never silently granted", async () => {
     const { pep, evidence } = build();
-    vi.mocked(pdp.evaluate).mockResolvedValueOnce({
+    decide.mockResolvedValueOnce({
       decision: true,
-      context: {
-        ...FULLY_RECOGNIZED_CONTEXT,
+      context: await permitContext({
         conditions: { ...FULLY_RECOGNIZED_CONTEXT.conditions, require_step_up: true },
-      },
+      }),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
@@ -486,9 +516,9 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
 
   it("a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted: the must-understand rule is scoped to conditions, never the whole response context", async () => {
     const { pep, evidence } = build();
-    vi.mocked(pdp.evaluate).mockResolvedValueOnce({
+    decide.mockResolvedValueOnce({
       decision: true,
-      context: { ...FULLY_RECOGNIZED_CONTEXT, next_action: "none", some_future_response_member: "x" },
+      context: await permitContext({ next_action: "none", some_future_response_member: "x" }),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -497,9 +527,9 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
 
   it("a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition", async () => {
     const { pep, evidence } = build();
-    vi.mocked(pdp.evaluate).mockResolvedValueOnce({
+    decide.mockResolvedValueOnce({
       decision: true,
-      context: { ...FULLY_RECOGNIZED_CONTEXT, obligations: [{ type: "step_up" }] },
+      context: await permitContext({ obligations: [{ type: "step_up" }] }),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
@@ -510,7 +540,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
 
   it("a DENY decision (no permit) is unaffected by the recognized-member enumeration", async () => {
     const { pep } = build();
-    vi.mocked(pdp.evaluate).mockResolvedValueOnce({
+    decide.mockResolvedValueOnce({
       decision: false,
       context: { decision_id: "dec_2", evaluation_id: "dec_2", policy_view_id: "pv_2", denial_reason: "out_of_authority", reason: "out_of_authority" },
     });

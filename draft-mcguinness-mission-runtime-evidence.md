@@ -199,7 +199,7 @@ are referenced, not duplicated, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 91 conformance rows in conformance-manifest.json (8 tested, 6 partial, 77 todo).
+Implementation: 91 conformance rows in conformance-manifest.json (8 tested, 9 partial, 74 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).
@@ -804,6 +804,14 @@ PEP or executor. For a Refusal Record, the emitter is the refusing
 PEP. This procedure applies wherever verification of the
 `evidence_envelope` is described in this document, including for
 Execution Evidence and Refusal Records.
+
+The emitter constructs the record on its own emission path, from the
+state it holds, and signs it there. A component that reconstructs a
+record for a decision or an outcome it did not itself reach is not
+the emitter, whatever signing key it holds: such a record attests the
+reconstructing component's view under another component's identity. A
+component that receives a record it did not emit verifies it and
+retains it as received.
 
 A verifier MUST confirm that the signing key selected by the JWS `kid`
 is the published key of the component named in the record's `emitter`

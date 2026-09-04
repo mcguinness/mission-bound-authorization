@@ -7,16 +7,16 @@
     "content_sha256": "bb32eb7c901f567a68dd8ae90e769da72408061ff3925aa1a6862679d254d82a"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
-    "content_sha256": "bb7eee08f80b1d48f2f1b8a6ebe146ce40a346e210f520a53b14cea10ad67d24"
+    "revision": "889e4294ab7d91469458b72a6da85593fcdd571f",
+    "content_sha256": "3dcdbc730422e4d361fd27c8d5d456bd327f1bc7f9571965602b35239a54555b"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "2c58ddec84bb7ca58bb7be4a8615f3e08e4fd1a9",
-    "content_sha256": "b9caa933d2da82196299f57b1e5bdaf0c2cba4edeaca7031ee4969a8105447ca"
+    "revision": "dd7115f882e01828ef4dcba369fdf1d81f377acc",
+    "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "c6a37a102a0ba2765759d64a3e970497e103c1ff",
-    "content_sha256": "15e8eb3f394428bab07be2eb17c3537abdbad6a03b4c867f6e6d942d16285df1"
+    "revision": "dd7115f882e01828ef4dcba369fdf1d81f377acc",
+    "content_sha256": "58d6d40b46d8330daef7baa68f5426bb5f6a124804dcf7e2fc4b3ca2dc7f59eb"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -6248,7 +6248,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "No evidence-signing key exists anywhere in this codebase: EvidenceStore.record() (services/mcp-payments/src/evidence.ts) stamps trace_id/at and pushes a plain object, and its own header comment states signing and SCITT registration are M10 future work. There is no signing key for a decision to (mis)treat as a grant, so this row's MUST NOT has no code path to falsify -- covers all five agent-isolated-evidence-emission rows below plus negative-conformance.evidence-emission-should-demonstrate, which depends on the same missing capability."
+   "notes": "An evidence-signing key exists per emitter role (#649), and the PDP signs the Decision Evidence it emits (#741), so this MUST NOT now has a code path to falsify. It is not falsified: no decision path reads a signature as authority. The record the PDP returns on the response context is retained evidence only, and the PEP acts on the decision itself; but nothing yet ASSERTS that, so this row stays todo rather than claiming a negative it does not observe."
   },
   {
    "id": "runtime.evidence-emission.isolated-construction-condition",
@@ -6272,7 +6272,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "runtime.agent-isolated-evidence-emission is not implemented: there is no evidence-signing key at all (see runtime.evidence-emission.signing-key-not-authority), so there is no key-custody boundary to assert non-exportability or inaccessibility against."
+   "notes": "runtime.agent-isolated-evidence-emission is not claimed by this deployment: it publishes no Enforcement Scope Statement instance to declare the condition against. An evidence-signing key does exist per emitter role (#649), and #741 moved Decision Evidence construction and signing onto the PDP's own emission path, but the PDP and PEP are co-resident in one process, so the key is not non-exportable to or inaccessible from the co-resident component. That is a key-custody boundary, which this change does not establish; the remote decision channel is the topology where custody genuinely separates. PR #753 narrows what the co-resident component can reach: the emitter is constructed inside createDecisionPoint and closed over by its decision function, so it appears nowhere in the PEP's dependency graph (services/mcp-payments/test/pep-emission-boundary.test.ts). That is a dependency-injection boundary, not key custody, so this row stays todo."
   },
   {
    "id": "runtime.evidence-emission.no-caller-supplied-record-or-relabeling",
@@ -6294,9 +6294,52 @@
     "normative": "the trusted emission path refuses a caller-supplied complete evidence object or arbitrary digest presented for signature, and a signing result cannot be relabeled or reused for another emitter, role, scope, audience, or evidence type"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Same gap as runtime.evidence-emission.isolated-construction-condition: no signing operation exists for a caller to submit a complete object or digest to, so there is nothing to refuse."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > offers a caller no seam to set the record's emitter, decision, or sequence",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses to sign for an audience its published key does not serve",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "the enforcement path holds no PDP evidence key (@spec runtime-evidence#decision-evidence-object, #741) > the signer configuration has no `pdp` role to configure",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "the enforcement path holds no PDP evidence key (@spec runtime-evidence#decision-evidence-object, #741) > a store asked to sign a `pdp`-role record fails closed rather than minting one",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-emission-boundary.test.ts",
+     "name": "the enforcement-side dependency graph has no reachable PDP emission capability (#741, PR #753 review) > no value at any depth of the PEP's retained dependencies exposes an `emit` function",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-emission-boundary.test.ts",
+     "name": "the enforcement-side dependency graph has no reachable PDP emission capability (#741, PR #753 review) > the dependency surface has no `decisionEvidence` seam to pass an emitter through",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-emission-boundary.test.ts",
+     "name": "the enforcement-side dependency graph has no reachable PDP emission capability (#741, PR #753 review) > no enforcement source file imports an emitter symbol from the PDP package",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial. The emission path takes the decision's own state and derives the emitter identity, role, and sequence itself, so there is no seam for a caller to submit a completed record; it refuses to sign for a scope its key does not serve; and the enforcement path holds no PDP evidence key to invoke (#741). Not witnessed at this row's full breadth: an arbitrary digest presented for signature has no API to present it to, so the refusal is structural rather than observed, and cross-evidence-type reuse is covered by the cty binding in runtime-evidence-integrity.test.ts rather than here. PR #753 closes the remaining caller seam: the enforcement component receives a decision function rather than the emission path, so it holds no object whose emit() would accept a caller's record content at all, asserted by walking the dependency object the PEP retains and by scanning every enforcement source file for an emitter import."
   },
   {
    "id": "runtime.evidence-emission.key-separation-should-and-not-inferred",
@@ -9000,9 +9043,40 @@
     "normative": "a deployment claiming the agent-isolated evidence-emission condition demonstrates, per covered emitter, that key export, caller-supplied records, misdirected signatures, cross-emitter key use, and signer-unavailability fallback are all refused"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Depends entirely on runtime.agent-isolated-evidence-emission, which is unimplemented (no evidence-signing key exists at all; see runtime.evidence-emission.signing-key-not-authority): the bypass-attempt table (key export, caller-supplied record, misdirected signature, cross-emitter key use, signer-unavailability fallback) has no signing path in this codebase to attack or demonstrate refusing."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retainDecision verifies before it retains (@spec runtime-evidence#decision-evidence-integrity, #741) > refuses a genuinely signed record whose emitter id is not the one the key is published for",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > permits and retains when the same decision IS evidenced: the refusal above is the missing record, not the fixture",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > offers a caller no seam to set the record's emitter, decision, or sequence",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-emission-boundary.test.ts",
+     "name": "the enforcement-side dependency graph has no reachable PDP emission capability (#741, PR #753 review) > no value at any depth of the PEP's retained dependencies exposes an `emit` function",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial. The bypass-attempt row this issue names, one emitter identity invoking another emitter's key or emission path, is demonstrated refused (#741): a record claiming a different emitter id is refused with nothing retained, the enforcement path holds no PDP key to invoke, and a caller has no seam to supply a record. Signer-unavailability fallback is demonstrated as a refusal to act rather than a fallback to an unsigned record. Not demonstrated: key export, which needs the key-custody boundary runtime.evidence-emission.isolated-construction-condition records as absent in a co-resident topology. The caller-supplied-record row of that table is demonstrated structurally as of PR #753: the enforcement dependency graph exposes no emit() to invoke."
   },
   {
    "id": "runtime.negative-conformance.decision-channel-should-demonstrate",
@@ -13826,8 +13900,22 @@
     "normative": "sequence is zero or greater and monotonically increasing per (Mission, emitter); cross-emitter ordering is best-effort from correlation members and timestamps, never reconstructed from sequence alone"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > allocates the emitter's OWN monotonic per-(Mission, emitter) sequence, which does not reset within a process",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-evidence-signed-e2e.test.ts",
+     "name": "Decision Evidence per-(mission, emitter, role) sequence allocation > allocates a monotonically increasing sequence per role, independently per role, even under the SAME mission and emitter id",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial: the counter is the PDP emitter's own (#741), and monotonicity per (Mission, emitter) is asserted at the emission path and end to end through the real call sites. The row's cross-component level is not reached: gap detection and ordering across two independently running emitters have no second emitter in this deployment to order against, and the counter is in-memory per process, so it says nothing about ordering across a restart."
   },
   {
    "id": "evidence.decision.denial-reason-unrecognized-and-split",
@@ -13936,8 +14024,22 @@
     "normative": "the emitted Decision Evidence Object carries evidence_id (string), evaluation_id (string), mission (object), subject (object), resource (object), action (object), audience (string), action_class (string), decision (string, permit or deny), sequence (integer), emitter (object), evaluated_at (timestamp), and evidence_envelope (object) on every record; it also carries class_source (string) whenever action_class is present, obligations (array of objects) whenever the decision response carried obligations, conditions (object) whenever the decision is permit for a consequential action, and contributing_constraints (array of strings) whenever the decision turned on one or more constraint or authority entries"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > returns a signed record on a PERMIT that an independent verifier accepts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > returns a signed record on a DENY, carrying the PDP's own denial reason",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial. The emitted record carries the REQUIRED members and class_source, asserted against a decision the PDP actually reached rather than a hand-built object, and conditions ride a permit. Not witnessed: obligations (this deployment attaches none) and contributing_constraints (the PDP does not track which entries a decision turned on). capability_source is deliberately absent from the record (#741): the member left the decision request envelope with #657/#730, so no validated PDP-side input carries it, and a PEP-supplied copy would be caller-asserted record content. It returns once #657's per-action capability-binding resolver supplies it from the PDP's own verified inputs."
   },
   {
    "id": "evidence.decision.actor-minimized-never-raw-claims",
@@ -14255,7 +14357,7 @@
    "coverage": "partial",
    "tests": [
     {
-     "file": "src/services/mcp-payments/test/runtime-evidence-integrity.test.ts",
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
      "name": "runtime-evidence-integrity: sign/verify > rejects a key not bound to this record's emitter role / scope / audience",
      "level": "unit",
      "surface": "verification"
@@ -14271,9 +14373,27 @@
      "name": "buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1) > never wildcards a missing audience for a pdp/pep/executor key, even when one is registered without one",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retainDecision verifies before it retains (@spec runtime-evidence#decision-evidence-integrity, #741) > refuses a genuinely signed record whose emitter id is not the one the key is published for",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retainDecision verifies before it retains (@spec runtime-evidence#decision-evidence-integrity, #741) > refuses a record for an audience the emitter's key is not published for",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses to sign for an audience its published key does not serve",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. Partial, not tested: the cited tests exercise the resolver-contract level (a resolver that ignores emitter.id, role, or audience fails to authenticate); this deployment's own `buildEvidenceKeyResolver` (src/services/mcp-payments/src/evidence.ts) is the only resolver implementation exercised, and its keys are ephemeral, per-process test fixtures, not resolved through a genuinely published, deployment-scoped enforcement-scope-statement key set, so the \"published key of the component named in the record's emitter member\" half of this requirement (as opposed to the binding logic itself) remains unexercised."
+   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
@@ -15279,8 +15399,34 @@
     "normative": "a conforming PRODUCER emits a Decision Evidence Object for every PDP decision on a consequential action, a Refusal Record for a pre-decision PEP or PDP refusal, an Execution Evidence Object for the classes the transaction-assurance tier covers, and signs every record with the integrity envelope, a resolvable kid, and a typ matching the record's own media type"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > returns a signed record on a PERMIT that an independent verifier accepts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > returns a signed record on a DENY, carrying the PDP's own denial reason",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > carries the protected header the integrity section fixes: kid, alg, typ, and the record kind's cty",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial. The emitter half is now genuine for each kind: the PDP builds and signs Decision Evidence on its own emission path (#741), and the PEP signs its own Refusal Records and Execution Evidence, each under a distinct key with a resolvable kid and the record kind's own cty. Not yet witnessed as one bar: 'for every PDP decision on a consequential action' is a completeness property over a deployment's whole decision traffic, and Execution Evidence for every class the transaction-assurance tier covers is exercised by the transaction tests rather than asserted against the tier's class list."
   },
   {
    "id": "evidence.conformance.consumer-verifier-bar",

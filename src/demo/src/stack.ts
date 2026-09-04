@@ -22,6 +22,7 @@ import {
 import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
+  createDecisionPoint,
   deriveJoinDelegation,
   Fga,
   type MissionView,
@@ -29,6 +30,7 @@ import {
 } from "@mission/pdp";
 import {
   ActorRecords,
+  buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
@@ -425,11 +427,42 @@ export async function composeStack(opts: {
     ],
   );
 
-  // @spec runtime-evidence#decision-evidence-integrity (issue #649): a fresh,
-  // per-process ES256 signer: fine for this demo stack (nothing outside this
-  // process ever needs to verify a record it signs), NOT a substitute for a
-  // deployment's own published, durable JWKS.
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  // @spec runtime-evidence#decision-evidence-integrity (issue #649, #741): a
+  // fresh, per-process ES256 signer per emitter role: fine for this demo
+  // stack (nothing outside this process ever needs to verify a record it
+  // signs), NOT a substitute for a deployment's own published, durable JWKS.
+  //
+  // The PDP's Decision Evidence key is its OWN (#741): a distinct kid, static
+  // in config with the key generated per boot (D25), never the `pdpEvidence`
+  // kid the transparency producer Statements already spend. The runtime
+  // profile forbids inferring one key plane's isolation from custody of
+  // another, so the two planes do not share a kid. `emitterId`/`audience` are
+  // this deployment's real values, so the verifier's key-to-emitter and
+  // key-to-audience binding is checked against what the records actually
+  // carry rather than a placeholder.
+  const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
+  const decisionEvidenceKeys = await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
+  // The decision point owns the emission path (#741, PR #753 review): the
+  // emitter is constructed inside `createDecisionPoint` and closed over by
+  // `decide`. This wiring, and the PEP it wires, hold the decision function
+  // and the published verification material, and nothing that can emit.
+  const decisionPoint = createDecisionPoint({
+    evidence: {
+      signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
+      verificationKey: decisionEvidenceKeys.publicKey,
+      emitterId: CANONICAL_RESOURCE,
+      audience: CANONICAL_RESOURCE,
+    },
+  });
+  const evidenceKeys = createEphemeralEvidenceKeys();
+  const evidence = new EvidenceStore(
+    evidenceKeys.signing,
+    buildEvidenceKeyResolver([
+      ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
+      // Exactly what the decision point publishes for the records it emits.
+      { ...decisionPoint.evidenceVerification, role: "pdp" },
+    ]),
+  );
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
   // Egress stays on the pre-existing unsigned path (issue #649's deferred slice B).
   const egressEvidence = new EvidenceStore();
@@ -523,6 +556,7 @@ export async function composeStack(opts: {
   const pep = new Pep({
     payments,
     evidence,
+    decide: decisionPoint.decide,
     fga,
     modelId,
     loadView,

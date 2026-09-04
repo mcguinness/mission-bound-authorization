@@ -41,6 +41,11 @@ import {
   TransactionEngine,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 const CA = process.env.OPENFGA_CA_CERT;
@@ -143,7 +148,7 @@ async function build(): Promise<{
       { id: "inv-3", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
     ],
   );
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
@@ -160,6 +165,7 @@ async function build(): Promise<{
       ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,
@@ -513,7 +519,11 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
         },
       ],
     );
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    // @spec runtime-evidence#decision-evidence-object (#741): this module's
+    // one bundle, the same one the Mission-bound fixture above uses. The
+    // joined path is a decision path like any other, so its PEP receives
+    // `decide` and a resolver that verifies what the decision point emits.
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const card = { name: "payments" };
     // Conforming (@spec authority-server#reference-tuple): keyed on the full
     // canonical pair, unlike this file's Mission-bound fixture, which keys on
@@ -535,6 +545,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       });
     }
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       fga,

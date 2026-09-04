@@ -31,7 +31,7 @@ import {
   REFUSAL_RECORD_MEDIA_TYPE,
   signEvidenceEnvelope,
   verifyEvidenceEnvelope,
-} from "./runtime-evidence-integrity.js";
+} from "@mission/pdp";
 
 export type MissionReceiptKind = "decision" | "execution" | "refusal";
 

@@ -35,6 +35,11 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const ISSUER = "https://as.test";
 
 /** Proves a denial was reached WITHOUT ever consulting FGA. */
@@ -77,7 +82,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
     [{ id: "acme", name: "Acme", status: "approved" }],
     [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
   );
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
@@ -88,6 +93,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
       ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,
@@ -250,9 +256,10 @@ describe("a PDP deny is terminal for the attempted action: no execution, and no 
       [{ id: "acme", name: "Acme", status: "approved" }],
       [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
     );
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     let current: MissionView = view(["payments:invoice.read"]);
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       fga: alwaysAllowFga,
@@ -301,8 +308,9 @@ describe("a decision bound to one resource is never honored at another (@spec ru
 describe("the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation)", () => {
   async function buildTokenValidationServer(pubJwk: Record<string, unknown>) {
     const payments = new PaymentsStore();
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       fga: poisonFga,

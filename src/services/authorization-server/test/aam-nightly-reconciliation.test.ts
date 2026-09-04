@@ -71,6 +71,11 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const PORT = 14501;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
@@ -444,8 +449,9 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       [{ id: "acme", name: "Acme", status: "approved" }],
       [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
     );
-    pepEvidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    pepEvidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence: pepEvidence,
       fga,
