@@ -826,7 +826,7 @@
     },
     {
      "file": "src/services/authorization-server/test/shipped-config.test.ts",
-     "name": "shipped authority-source catalog (@spec mission#authority-sources) > the real AS assembly runs with the shipped catalog, not the implicit source",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > the real AS assembly runs with the shipped catalog and refuses an undeclared client",
      "level": "unit",
      "surface": "derivation"
     }

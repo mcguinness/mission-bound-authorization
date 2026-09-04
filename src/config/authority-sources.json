@@ -4,7 +4,7 @@
     {
       "id": "acme-people",
       "type": "user_delegated",
-      "clients": ["ap-agent", "subagent-invoice-extractor"],
+      "clients": ["ap-agent", "subagent-invoice-extractor", "agent-A1", "parent-P"],
       "activators": ["alice", "bob"],
       "ceiling": "deployment"
     },

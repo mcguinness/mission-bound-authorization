@@ -148,10 +148,9 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
 /**
  * @spec mission#authority-sources, mission#approval-event — the SHIPPED
  * `config/authority-sources.json` and `config/governed-policy.json`, and the
- * fact that the real AS assembly is wired with them. A deployment that omitted
- * the catalog would still populate the REQUIRED record member (the implicit
- * user-delegated source), so nothing but this assertion catches a shipped AS
- * running with no declared sources at all.
+ * fact that the real AS assembly is wired with them. The kernel refuses
+ * construction without a catalog, so a shipped AS cannot run with no declared
+ * sources; these assertions cover the content of the one it does run with.
  */
 describe("shipped authority-source catalog (@spec mission#authority-sources)", () => {
   it("declares a trusted source for every shipped client, with no duplicate identity", () => {
@@ -160,6 +159,18 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
     for (const client of ["ap-agent", "subagent-invoice-extractor", "governed-agent"]) {
       expect(declared.has(client)).toBe(true);
     }
+  });
+
+  it("declares the work-product agents as user-delegated, the source their Missions draw on", () => {
+    // agent-A1 and parent-P approve for the human Subject alice under bob's
+    // approval: an agent acting on a person's delegated authority, so the
+    // source is user_delegated. A `service_owned` declaration would misstate
+    // the provenance AND refuse at gate 4, alice being a human principal.
+    const declared = AUTHORITY_SOURCES.entries.find((e) => e.clients.includes("agent-A1"));
+    expect(declared?.type).toBe("user_delegated");
+    expect(declared?.clients).toContain("parent-P");
+    expect(declared?.activators).toContain("bob");
+    expect(AUTHORITY_SOURCES.humanPrincipals).toContain("alice");
   });
 
   it("resolves the organizational source's ceiling and digest from the governed policy", () => {
@@ -182,7 +193,7 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
     expect(organizational?.policy?.digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
   });
 
-  it("the real AS assembly runs with the shipped catalog, not the implicit source", async () => {
+  it("the real AS assembly runs with the shipped catalog and refuses an undeclared client", async () => {
     const as = await buildAuthorizationServer({
       issuer: "http://localhost:14599",
       allowHeadlessAdjudication: true,
