@@ -25,7 +25,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY, MAS_JOIN } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
 import { deriveAuthoritySet, validateAuthorityProposal, validateMissionIntent } from "../src/index.js";
 
@@ -128,5 +128,52 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     );
     expect(decision.decision).toBe(false);
     expect(decision.context.denial_reason).toBe("constraint_exceeded");
+  });
+});
+
+
+/**
+ * @spec authority-server#mission-join (#557)
+ *
+ * The SHIPPED `config/mas-join.json`, read through the same typed loader the
+ * demo stack reads it with. Same motivation as the policy block above: the
+ * demo stack is the only consumer, so a Join policy that could never
+ * authorize its own demo would otherwise pass CI. The MAS-Join shape of that
+ * defect is a `scope_actions` map covering no derived Authority Set entry,
+ * which refuses `out_of_authority` on every joined request.
+ */
+describe("shipped config/mas-join.json authorizes a joined read of its own demo (#557)", () => {
+  it("declares the payments resource governed, so the demo stack starts a MAS-governed route at all", () => {
+    expect(MAS_JOIN.governed_resources).toContain(CANONICAL_RESOURCE);
+  });
+
+  it("maps every configured scope to actions this deployment can actually enforce", () => {
+    const actions = Object.values(MAS_JOIN.scope_actions).flat();
+    expect(actions.length).toBeGreaterThan(0);
+    // relationForAction is the PDP's own recognition of an action; a scope
+    // naming anything else would carry authority no resource can evaluate.
+    for (const action of actions) expect(relationForAction(action), action).toBeDefined();
+  });
+
+  it("enumerates each delegate with its own non-negative integer max_depth ceiling (rule 4: explicit, never a default)", () => {
+    const entries = Object.entries(MAS_JOIN.delegates);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [clientId, delegate] of entries) {
+      expect(Number.isInteger(delegate.max_depth), clientId).toBe(true);
+      expect(delegate.max_depth, clientId).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("a shipped scope covers a shipped-derived Authority Set entry, so rule 8's first bound leaves something to permit", () => {
+    // The SAME intersection the PEP's bound-1 filter runs
+    // (services/mcp-payments/src/pep.ts): an entry survives only when the
+    // credential's own authority covers every one of its actions.
+    const derived = deriveDemoAuthoritySet();
+    const covered = Object.values(MAS_JOIN.scope_actions).some((scopeActions) =>
+      derived.some(
+        (e) => e.resource === CANONICAL_RESOURCE && e.actions.every((a) => scopeActions.includes(a)),
+      ),
+    );
+    expect(covered, JSON.stringify({ scope_actions: MAS_JOIN.scope_actions, derived })).toBe(true);
   });
 });
