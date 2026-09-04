@@ -15,8 +15,8 @@
     "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "dd7115f882e01828ef4dcba369fdf1d81f377acc",
-    "content_sha256": "58d6d40b46d8330daef7baa68f5426bb5f6a124804dcf7e2fc4b3ca2dc7f59eb"
+    "revision": "0277fc47b1790933763772d0dbdd5359155cc72f",
+    "content_sha256": "08f799cf2af8a08ec66a1a3c7da7638e772a5821ee42c8a12fd1e6fcfbdbe019"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -51,8 +51,8 @@
     "content_sha256": "c46703c3740d19dcaa21aa1f348708da36729f6cac54626874b29ef3851763d9"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
-    "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
+    "revision": "fbed64bed5224daa7ff42dec42b9866f6a690e9d",
+    "content_sha256": "0f30b727ab177312962bef21135a05a6bd2b69dd7c09895190e3f557a2b75059"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "3b0de2648fbc2153d05e0606d7847255ae1457c8",
@@ -192,6 +192,282 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "runtime.compound-actions.decision-per-phase",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "Every consequential phase MUST obtain its own Decision.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Every consequential phase MUST obtain its own Decision.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.no-cross-phase-permit-reuse",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A permit MUST NOT authorize more than one phase.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A permit MUST NOT authorize more than one phase.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.preflight-not-a-gate",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A preflight Decision MUST NOT satisfy the gate for a consequential phase.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A preflight Decision MUST NOT satisfy the gate for a consequential phase.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.commit-reevaluates-state",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The commit phase MUST obtain its own Decision against the Mission's effective authority and active state under the existing state-freshness bounds.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The commit phase MUST obtain its own Decision against the Mission's effective authority and active state under the existing state-freshness bounds.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.phase-on-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "Decision Evidence for a phase MUST record its action_phase.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence for a phase MUST record its action_phase.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.compensate-link-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A compensate-phase Decision MUST carry compensates_evaluation_id identifying the evaluation whose committed effect it offsets.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A compensate-phase Decision MUST carry compensates_evaluation_id identifying the evaluation whose committed effect it offsets.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.compensate-not-under-original-permit",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A compensation MUST NOT be authorized by the compensated action's permit.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A compensation MUST NOT be authorized by the compensated action's permit.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.permit-binds-phase",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A permit for a phase MUST bind that phase.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A permit for a phase MUST bind that phase.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.phase-pep-derived",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The PEP MUST NOT derive the phase from an agent-supplied argument.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The PEP MUST NOT derive the phase from an agent-supplied argument.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.phase-verified-at-use",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The executing PEP MUST compare the permit's bound phase with the phase of the crossing before releasing an effect.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The executing PEP MUST compare the permit's bound phase with the phase of the crossing before releasing an effect.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.unrecognized-phase-condition-invalid",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A PEP that does not recognize the phase condition MUST treat the permit as invalid.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A PEP that does not recognize the phase condition MUST treat the permit as invalid.",
+    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.idempotency.phase-in-scope",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "Where compound-action phases share an action identifier, the idempotency scope MUST include the phase",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "Shared-identifier phases use phase-scoped idempotency.",
+    "local": "Conditional clause applies to shared-identifier phases; implementation follows in #252 PR C."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
   {
    "id": "core.submission.front-channel-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
