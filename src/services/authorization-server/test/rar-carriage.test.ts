@@ -333,6 +333,29 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
   });
 
+  it("refuses an already-past requested expires_at at submission acceptance (invalid_request)", async () => {
+    // @spec mission#mission-intent (issue #647) — the requested ceiling is
+    // refused at submission acceptance, not rewritten forward and not accepted
+    // into a Mission that would be expired the instant it committed.
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({
+        intent: { ...TASK_INTENT, expires_at: "2020-01-01T00:00:00Z" },
+      }),
+      authorization_details: JSON.stringify(PROPOSAL),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  });
+
+  it("refuses an unparseable requested expires_at at submission acceptance (invalid_request)", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, expires_at: "whenever" } }),
+      authorization_details: JSON.stringify(PROPOSAL),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  });
+
   it("refuses a proposal entry whose resource is not among the Intent resources", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
@@ -471,6 +494,7 @@ describe("end-to-end issuance under the new carriage", () => {
       access_token: string;
       authorization_details: AuthorityEntry[];
       mission_id?: string;
+      mission_expires_at?: string;
     };
 
     // The granted echo is the ISSUER-DERIVED set (a same-type subset of the
@@ -502,6 +526,16 @@ describe("end-to-end issuance under the new carriage", () => {
     // surface) reports proposal_hash beside state.
     const missionId = claims.mission.id as string;
     const record = as.kernel.get(missionId);
+    // @spec mission#grant-binding (issue #647) — the DIRECT-creation success
+    // response, the body that first delivers the new Mission's credential,
+    // carries both common members: the identifier, and the COMMITTED effective
+    // expiry verbatim off the record (not `expires_in`, which is the access
+    // token's own lifetime).
+    expect(body.mission_id).toBe(missionId);
+    expect(body.mission_expires_at).toBe(record?.expires_at);
+    expect(Date.parse(body.mission_expires_at as string)).toBeLessThanOrEqual(
+      Date.parse(TASK_INTENT.expires_at),
+    );
     expect(record?.proposed_authority).toEqual(OVER_ASK);
     expect(record?.proposal_hash).toBe(proposalHash(ISSUER, OVER_ASK as never));
     const introspection = await fetch(`${ISSUER}/introspect`, {

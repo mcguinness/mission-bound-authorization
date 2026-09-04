@@ -1,0 +1,50 @@
+{
+  "tools": [
+    {
+      "name": "list_invoices",
+      "description": "List invoices",
+      "inputSchema": { "type": "object", "properties": { "vendor_id": { "type": "string" } } }
+    },
+    {
+      "name": "get_invoice",
+      "description": "Read one invoice",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "invoice_id": { "type": "string" } },
+        "required": ["invoice_id"]
+      }
+    },
+    {
+      "name": "lookup_vendor",
+      "description": "Look up a vendor",
+      "inputSchema": { "type": "object", "properties": { "vendor_id": { "type": "string" } } }
+    },
+    {
+      "name": "schedule_payment",
+      "description": "Schedule a payment",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "invoice_id": { "type": "string" } },
+        "required": ["invoice_id"]
+      }
+    },
+    {
+      "name": "execute_wire_transfer",
+      "description": "Execute a wire transfer",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "invoice_id": { "type": "string" } },
+        "required": ["invoice_id"]
+      }
+    },
+    {
+      "name": "send_remittance_email",
+      "description": "Send remittance advice",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "invoice_id": { "type": "string" } },
+        "required": ["invoice_id"]
+      }
+    }
+  ]
+}

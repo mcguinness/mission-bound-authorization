@@ -14,6 +14,7 @@ import {
   compareAmounts,
   computeAnchor,
   type EntitlementObservation,
+  entitlementPermits,
   type EntitlementResolver,
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
@@ -624,13 +625,25 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     }
     const observedAtMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
     const entitlementAgeMs = now().getTime() - observedAtMs;
+    // @spec cross-domain#dual-axis (#744) -- the OPTIONAL action- and
+    // resource-scoped grain of the same observation. Absent `authority`
+    // keeps the audience-scoped grain exactly as before. Present, it is
+    // intersected with this request's own (resource, action) pair, so an
+    // entitlement gap on one action denies that action alone and leaves the
+    // rest of the delegated set evaluable. The resource matched here is
+    // `context.audience`, the same member step 5 below matches an authority
+    // entry's `resource` against; the AuthZEN `resource.id` names the
+    // object instance, a different namespace the delegated set is not keyed
+    // by.
     const entitlementCurrent =
       entitlementBoundS !== undefined &&
       entitlement !== undefined &&
       entitlement.entitled === true &&
       Number.isFinite(observedAtMs) &&
       entitlementAgeMs >= -skewToleranceMs &&
-      entitlementAgeMs <= entitlementBoundS * 1000;
+      entitlementAgeMs <= entitlementBoundS * 1000 &&
+      (entitlement.authority === undefined ||
+        entitlementPermits(entitlement.authority, req.context.audience, req.action.name));
     if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 

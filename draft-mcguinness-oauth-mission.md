@@ -3944,6 +3944,14 @@ disclosure privilege; an audience-authorized Resource Server receives
 the ordinary audience-filtered enforcement projection defined above,
 without them, by default.
 
+The same member-scoped rule governs any further `mission` member a
+companion profile defines for disclosure here. Such a member is
+disclosed only to a caller the deployment has granted that member's
+disclosure privilege, never by default, and it is audit and
+correlation metadata under this section's minimization rules, never
+an enforcement input ({{rs-enforcement}}). This document defines no
+such member.
+
 ## Composite Active State {#composite-active}
 
 The introspection `active` member reflects the composite

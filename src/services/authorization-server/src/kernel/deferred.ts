@@ -17,6 +17,7 @@ import { openStore, withTransaction, type Database } from "@mission/store";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { isSubsetSet } from "./derive.js";
 import { createExpansion } from "./expansion.js";
+import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import type {
   AuthorityEntry,
@@ -555,7 +556,47 @@ export class ExpansionDeferralStore {
     // INSIDE it, so successor authority is never issued past a predecessor
     // that stopped being effectively active between check and commit. The
     // handler mints only after this commit succeeds.
-    const txOut = this.kernel.suppressEmits(() => withTransaction(this.kernel.db, () => {
+    // @spec expansion#successor-expiry — completion inherits the issuance
+    // profile's atomic creation-time check. Where the submission's requested
+    // ceiling (or the recorded approval expiry) has passed while the expansion
+    // was pending, `insertRecord` refuses inside the creation transaction: the
+    // whole transaction rolls back, no successor exists, and the exchange fails
+    // with this profile's denial semantics, the same path a predecessor that
+    // stopped being effectively active takes.
+    let txOut: { successor: MissionRecord; predecessorId: string } | undefined;
+    try {
+      txOut = this.redeemInTransaction(row, intent, recorded, approver, submissionEvidence, creationRequestId);
+    } catch (e) {
+      if (!(e instanceof IntentError)) throw e;
+      txOut = undefined;
+    }
+    if (!txOut) {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
+        .run(deferralCode);
+      return { error: "access_denied" };
+    }
+    this.kernel.drainExpansionOutbox();
+    this.db
+      .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
+      .run(deferralCode);
+    return {
+      successor: txOut.successor,
+      approvedUntil: row.approved_until as string,
+      ...(creationRequestId ? { creationRequestId } : {}),
+    };
+  }
+
+  /** The single expansion-completion transaction (see {@link redeem}). */
+  private redeemInTransaction(
+    row: Record<string, unknown>,
+    intent: MissionIntent,
+    recorded: { pr?: AuthorityEntry[] },
+    approver: { iss: string; sub: string },
+    submissionEvidence: IntentSubmissionEvidenceFact[] | undefined,
+    creationRequestId: string | undefined,
+  ): { successor: MissionRecord; predecessorId: string } | undefined {
+    return this.kernel.suppressEmits(() => withTransaction(this.kernel.db, () => {
       // Read-only effective-active re-check inside the transaction (emission
       // is suppressed here, so nothing is materialized; lazy expiry stays
       // with the ordinary gates).
@@ -595,20 +636,5 @@ export class ExpansionDeferralStore {
       this.kernel.enqueueExpansionFinalize(cas.predecessorId, res.successor.id);
       return { successor: res.successor, predecessorId: cas.predecessorId };
     }));
-    if (!txOut) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
-    }
-    this.kernel.drainExpansionOutbox();
-    this.db
-      .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
-      .run(deferralCode);
-    return {
-      successor: txOut.successor,
-      approvedUntil: row.approved_until as string,
-      ...(creationRequestId ? { creationRequestId } : {}),
-    };
   }
 }

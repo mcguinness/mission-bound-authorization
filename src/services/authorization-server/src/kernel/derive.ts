@@ -8,8 +8,8 @@
  * they propose can widen past the ceiling (the compromised-shaper property).
  */
 
-import { compareAmounts, isValidAmount } from "@mission/core";
-import type { JsonValue } from "@mission/core";
+import { capabilitySourceIdentity, compareAmounts, isValidAmount } from "@mission/core";
+import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 import { conditionsNoBroader, unionConditions } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
@@ -84,6 +84,13 @@ export interface DerivationPolicy {
    * if the client requested nothing either). See {@link resolveDerivationLimit}.
    */
   derivation_limit_ceiling?: number | null;
+  /**
+   * @spec mission#mission-record — the deployment's own ceiling on a Mission's
+   * granted lifetime, in seconds from the creation instant, independent of any
+   * requested `intent.expires_at`. `null`/absent means the deployment imposes
+   * no ceiling of its own. See {@link resolveEffectiveExpiry}.
+   */
+  max_mission_lifetime_s?: number | null;
 }
 
 /**
@@ -103,6 +110,97 @@ export function resolveDerivationLimit(
   if (req === null) return ceil;
   if (ceil === null) return req;
   return Math.min(req, ceil);
+}
+
+/**
+ * @spec mission#mission-record — the ceilings a Mission-creating surface
+ * contributes beyond the requested `intent.expires_at` and this deployment's
+ * own policy ceiling. Every member is a bound, never a grant: an absent member
+ * contributes nothing, and no member can move the effective value later than
+ * the requested ceiling.
+ */
+export interface ExpiryCeilings {
+  /** @spec child-delegation#attenuation — child creation: the parent's `expires_at`. */
+  parent?: string;
+  /** @spec expansion#successor-expiry — expansion: the predecessor's `expires_at`. */
+  predecessor?: string;
+  /**
+   * @spec expansion#successor-expiry — the exact extension ceiling recorded at
+   * the expansion consent event. Present ONLY where the Mission Issuer's policy
+   * explicitly permits extension AND the extension was disclosed to the
+   * Approver, which is what allows a successor to outlive its predecessor. It
+   * REPLACES `predecessor` as the lineage bound and is itself a bound: the
+   * requested ceiling, the approval expiry, and the deployment ceiling all
+   * still apply.
+   */
+  approvedExtensionUntil?: string;
+  /** @spec expansion#successor-expiry — the recorded approval expiry (`approved_until`). */
+  approvedUntil?: string;
+  /** @spec mission-template#dispatch — the template's own expiry and per-instance lifetime. */
+  template?: { expiresAt: string; instanceLifetimeS: number };
+}
+
+/** The earliest of several {ms, iso} candidates, returning the winner's iso
+ *  VERBATIM (never re-serialized, so a clamp preserves the exact input string). */
+function earliestIso(candidates: Array<{ ms: number; iso: string }>): string {
+  return candidates.reduce((a, b) => (b.ms < a.ms ? b : a)).iso;
+}
+
+/**
+ * @spec mission#mission-record, mission#approval-event (step 4) — establish the
+ * effective Mission `expires_at` every Mission-creating surface commits: the
+ * earliest applicable bound, never the requested value copied verbatim.
+ *
+ * The requested `intent.expires_at` is always a candidate, so the result is
+ * never later than the requested ceiling; extension beyond the submitted
+ * request is not expressible here. Every other candidate is a ceiling an
+ * applicable policy or an already-approved parent, predecessor, template, or
+ * approval contributes, which is ordinary narrowing of the granted lifetime,
+ * not Authority Set derivation.
+ *
+ * `createdAt` is SUPPLIED, never read from a clock inside this function: the
+ * caller passes the exact instant it commits as `created_at`, so a lifetime
+ * addend (the deployment ceiling, a template's `per_instance_lifetime_s`) is
+ * measured from the committed creation instant rather than from a second,
+ * later clock read.
+ */
+export function resolveEffectiveExpiry(input: {
+  /** The requested ceiling: `intent.expires_at`. */
+  requested: string;
+  /** The instant the record commits, as its `created_at`. */
+  createdAt: string;
+  /** This deployment's own ceiling, in seconds; `null`/absent imposes none. */
+  policyMaxLifetimeS: number | null | undefined;
+  /** The creating surface's own ceilings, where it has any. */
+  ceilings?: ExpiryCeilings;
+}): string {
+  const createdMs = Date.parse(input.createdAt);
+  const candidates: Array<{ ms: number; iso: string }> = [
+    { ms: Date.parse(input.requested), iso: input.requested },
+  ];
+  const addIso = (iso: string | undefined): void => {
+    if (iso !== undefined) candidates.push({ ms: Date.parse(iso), iso });
+  };
+  const addLifetime = (seconds: number): void => {
+    const ms = createdMs + seconds * 1000;
+    candidates.push({ ms, iso: new Date(ms).toISOString() });
+  };
+  if (input.policyMaxLifetimeS != null) addLifetime(input.policyMaxLifetimeS);
+  const c = input.ceilings;
+  if (c) {
+    addIso(c.parent);
+    // @spec expansion#successor-expiry — the disclosed, policy-permitted
+    // extension ceiling REPLACES the predecessor bound; absent one the
+    // predecessor's own expiry binds, so a successor never silently outlives
+    // the Mission it replaced.
+    addIso(c.approvedExtensionUntil ?? c.predecessor);
+    addIso(c.approvedUntil);
+    if (c.template) {
+      addIso(c.template.expiresAt);
+      addLifetime(c.template.instanceLifetimeS);
+    }
+  }
+  return earliestIso(candidates);
 }
 
 /**
@@ -184,7 +282,17 @@ export function deriveAuthoritySet(
   return derived;
 }
 
-/** Narrow proposal by ceiling; the result is a subset of both. */
+/**
+ * Narrow proposal by ceiling; the result is a subset of both.
+ *
+ * @spec capability-binding#capability-source-binding — `capability_sources` is
+ * NEVER read from either operand here. The derived entry is built member by
+ * member below, so a proposal carrying the member cannot inject a binding (the
+ * compromised-shaper property this function already applies to `delegation`),
+ * and a ceiling entry cannot pre-seed one either: bindings originate only in
+ * the validating server's trusted catalog resolution and are attached in
+ * `approve`, before `authority_hash`.
+ */
 function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): AuthorityEntry | null {
   const actions = proposal.actions.filter((a) => ceiling.actions.includes(a));
   if (actions.length === 0) return null;
@@ -426,6 +534,12 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   if (!conditionsNoBroader(candidate.constraints?.terminal_when, granted.constraints?.terminal_when)) {
     return false;
   }
+  // @spec capability-binding#capability-source-binding — MONOTONIC derivation:
+  // a candidate retaining a catalog-sourced action carries every binding the
+  // grantor recorded for that action, byte-identical, and introduces none the
+  // grantor lacks. Dropping the action entirely is narrower and already passes
+  // through the actions-subset test above.
+  if (!capabilitySourcesNoBroader(candidate, granted)) return false;
   // @spec attenuation#delegation, child-delegation#attenuation — delegation is a
   // GRANT and NARROWS: the direction is the OPPOSITE of the constraint rules
   // above. A candidate that OMITS delegation the grantor has is strictly
@@ -442,6 +556,49 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   }
   // gDel present, cDel absent -> PASS: the child does not re-delegate.
   return true;
+}
+
+/**
+ * @spec capability-binding#capability-source-binding — the capability clause of
+ * the subset rule, in BOTH directions.
+ *
+ * A binding is a recorded FACT about a catalog-sourced action, not a
+ * restriction, so neither the constraint direction nor the delegation
+ * direction alone is right:
+ *   - every binding the grantor recorded for an action the candidate RETAINS
+ *     appears byte-identical in the candidate; retaining a catalog-sourced
+ *     action with a dropped or altered binding widens (the candidate would be
+ *     bound to a capability the grantor never recorded), so it fails;
+ *   - every binding the candidate carries appears byte-identical among the
+ *     grantor's; introducing one the grantor lacks is the GRANT direction and
+ *     fails, exactly as introducing `delegation` does.
+ *
+ * Total and non-throwing, like the rest of {@link isSubsetEntry}: comparison
+ * is over canonical bytes, with a value that cannot be canonicalized treated
+ * as matching nothing (fail closed) rather than throwing.
+ */
+function capabilitySourcesNoBroader(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
+  const cSources = candidate.capability_sources ?? [];
+  const gSources = granted.capability_sources ?? [];
+  if (cSources.length === 0 && gSources.length === 0) return true;
+  const cKeys = cSources.map(bindingKey);
+  const gKeys = gSources.map(bindingKey);
+  if (cKeys.includes(null) || gKeys.includes(null)) return false;
+  const gSet = new Set(gKeys);
+  if (!cKeys.every((k) => gSet.has(k))) return false; // introduces an unrecorded binding
+  const cSet = new Set(cKeys);
+  return gSources.every(
+    (g, i) => !candidate.actions.includes(g.action) || cSet.has(gKeys[i] as string),
+  );
+}
+
+/** Canonical bytes of one binding, or null when it cannot be canonicalized. */
+function bindingKey(binding: CapabilitySourceBinding): string | null {
+  try {
+    return capabilitySourceIdentity(binding);
+  } catch {
+    return null;
+  }
 }
 
 /** A restriction-list subset test mirroring the vendors rule: grantor-absent is
@@ -631,11 +788,55 @@ function intersectForProjection(
     return null;
   }
   if (conditions) constraints.terminal_when = conditions;
+  // @spec capability-binding#capability-source-binding — the fragment must
+  // satisfy `isSubsetEntry` against BOTH sides, and a recorded binding is
+  // monotonic in both directions there (it must be retained for a retained
+  // action, and may not be introduced). A fragment can therefore carry only
+  // bindings both sides recorded byte-identically for the retained actions;
+  // where the two sides disagree, no fragment is a subset of both and the
+  // pairing drops, exactly as an unprojectable constraint does.
+  const sources = projectCapabilitySources(candidate, effective, actions);
+  if (sources === null) return null;
   const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
+  if (sources) entry.capability_sources = sources;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);
   if (delegation) entry.delegation = delegation;
   return entry;
+}
+
+/**
+ * The retained-action bindings both sides agree on: `undefined` where neither
+ * side records any, `null` where the pairing is unprovable (the two sides
+ * disagree, or a binding cannot be canonicalized). Total, like the rest of
+ * this projection, which is fail-closed-by-DROPPING rather than throwing.
+ */
+function projectCapabilitySources(
+  candidate: AuthorityEntry,
+  effective: AuthorityEntry,
+  actions: string[],
+): CapabilitySourceBinding[] | null | undefined {
+  const retained = new Set(actions);
+  const forRetained = (e: AuthorityEntry) =>
+    (e.capability_sources ?? []).filter((b) => retained.has(b.action));
+  const cSources = forRetained(candidate);
+  const eSources = forRetained(effective);
+  if (cSources.length === 0 && eSources.length === 0) return undefined;
+  const byKey = new Map<string, CapabilitySourceBinding>();
+  for (const b of cSources) {
+    const key = bindingKey(b);
+    if (key === null) return null;
+    byKey.set(key, b);
+  }
+  const eKeys = new Set<string>();
+  for (const b of eSources) {
+    const key = bindingKey(b);
+    if (key === null) return null;
+    eKeys.add(key);
+  }
+  if (byKey.size !== eKeys.size) return null;
+  for (const key of byKey.keys()) if (!eKeys.has(key)) return null;
+  return [...byKey.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, b]) => b);
 }
 
 /**

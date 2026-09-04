@@ -24,13 +24,26 @@
  * test's input too, instead of leaving a stale copy green.
  */
 
-import { describe, expect, it } from "vitest";
-import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY } from "@mission/demo-data";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it, vi } from "vitest";
+import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY, MAS_JOIN } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
 import { deriveAuthoritySet, validateAuthorityProposal, validateMissionIntent } from "../src/index.js";
 
 const ISS = "https://as.test";
 const MISSION_ID = "msn_shipped_config_test";
+
+/** The repo-root `config/` directory the reference deployment ships. */
+const SHIPPED_CONFIG_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "config",
+);
 
 /** The demo's own PAR proposal (@mission/demo-data's DEMO_AGENT_PROPOSAL, agent-run.ts's single source), validated. */
 const DEMO_PROPOSAL = validateAuthorityProposal(JSON.stringify(DEMO_AGENT_PROPOSAL), [CANONICAL_RESOURCE]);
@@ -128,5 +141,105 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     );
     expect(decision.decision).toBe(false);
     expect(decision.context.denial_reason).toBe("constraint_exceeded");
+  });
+});
+
+/**
+ * @spec mission#mission-record (issue #647) — the shipped deployment ceiling on
+ * a Mission's granted lifetime, and the loader that validates it. The reference
+ * deployment declares NO ceiling of its own (`null`, mirroring
+ * `derivation_limit_ceiling`), so the demo's observable Mission lifetimes are
+ * exactly the requested ones; the narrowing arm is proven with an injected
+ * ceiling in `kernel.test.ts`. What must not regress is the VALIDATION: a
+ * lifetime that is not a positive integer is a fail-fast configuration error,
+ * never a silently-ignored member.
+ */
+describe("config/policy.json max_mission_lifetime_s (@spec mission#mission-record)", () => {
+  /** Load demo-data afresh against a copy of the shipped config whose
+   *  policy.json carries `value` for max_mission_lifetime_s. */
+  async function loadWith(value: unknown): Promise<{ max_mission_lifetime_s: number | null }> {
+    const dir = mkdtempSync(join(tmpdir(), "mission-policy-"));
+    cpSync(SHIPPED_CONFIG_DIR, dir, { recursive: true });
+    const policy = JSON.parse(readFileSync(join(dir, "policy.json"), "utf8")) as Record<string, unknown>;
+    if (value === undefined) delete policy.max_mission_lifetime_s;
+    else policy.max_mission_lifetime_s = value;
+    writeFileSync(join(dir, "policy.json"), JSON.stringify(policy));
+    const previous = process.env.MISSION_CONFIG_DIR;
+    process.env.MISSION_CONFIG_DIR = dir;
+    vi.resetModules();
+    try {
+      const mod = (await import("@mission/demo-data")) as typeof import("@mission/demo-data");
+      return mod.DERIVATION_POLICY;
+    } finally {
+      if (previous === undefined) delete process.env.MISSION_CONFIG_DIR;
+      else process.env.MISSION_CONFIG_DIR = previous;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("the shipped value loads: this deployment declares no lifetime ceiling", () => {
+    expect(DERIVATION_POLICY.max_mission_lifetime_s).toBeNull();
+  });
+
+  it("an absent member means the same thing as an explicit null", async () => {
+    expect((await loadWith(undefined)).max_mission_lifetime_s).toBeNull();
+  });
+
+  it("a positive integer loads as this deployment's ceiling, in seconds", async () => {
+    expect((await loadWith(2_592_000)).max_mission_lifetime_s).toBe(2_592_000);
+  });
+
+  it("zero, a negative, a non-integer, or a non-number is a ConfigError", async () => {
+    for (const bad of [0, -1, 1.5, "3600"]) {
+      await expect(loadWith(bad)).rejects.toThrow(
+        /policy.max_mission_lifetime_s must be an integer >= 1, or null/,
+      );
+    }
+  });
+});
+
+/**
+ * @spec authority-server#mission-join (#557)
+ *
+ * The SHIPPED `config/mas-join.json`, read through the same typed loader the
+ * demo stack reads it with. Same motivation as the policy block above: the
+ * demo stack is the only consumer, so a Join policy that could never
+ * authorize its own demo would otherwise pass CI. The MAS-Join shape of that
+ * defect is a `scope_actions` map covering no derived Authority Set entry,
+ * which refuses `out_of_authority` on every joined request.
+ */
+describe("shipped config/mas-join.json authorizes a joined read of its own demo (#557)", () => {
+  it("declares the payments resource governed, so the demo stack starts a MAS-governed route at all", () => {
+    expect(MAS_JOIN.governed_resources).toContain(CANONICAL_RESOURCE);
+  });
+
+  it("maps every configured scope to actions this deployment can actually enforce", () => {
+    const actions = Object.values(MAS_JOIN.scope_actions).flat();
+    expect(actions.length).toBeGreaterThan(0);
+    // relationForAction is the PDP's own recognition of an action; a scope
+    // naming anything else would carry authority no resource can evaluate.
+    for (const action of actions) expect(relationForAction(action), action).toBeDefined();
+  });
+
+  it("enumerates each delegate with its own non-negative integer max_depth ceiling (rule 4: explicit, never a default)", () => {
+    const entries = Object.entries(MAS_JOIN.delegates);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [clientId, delegate] of entries) {
+      expect(Number.isInteger(delegate.max_depth), clientId).toBe(true);
+      expect(delegate.max_depth, clientId).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("a shipped scope covers a shipped-derived Authority Set entry, so rule 8's first bound leaves something to permit", () => {
+    // The SAME intersection the PEP's bound-1 filter runs
+    // (services/mcp-payments/src/pep.ts): an entry survives only when the
+    // credential's own authority covers every one of its actions.
+    const derived = deriveDemoAuthoritySet();
+    const covered = Object.values(MAS_JOIN.scope_actions).some((scopeActions) =>
+      derived.some(
+        (e) => e.resource === CANONICAL_RESOURCE && e.actions.every((a) => scopeActions.includes(a)),
+      ),
+    );
+    expect(covered, JSON.stringify({ scope_actions: MAS_JOIN.scope_actions, derived })).toBe(true);
   });
 });

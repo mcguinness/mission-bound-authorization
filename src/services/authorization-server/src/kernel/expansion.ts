@@ -10,6 +10,7 @@
 
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
+import { inheritCapabilitySources } from "./capability-binding.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import type {
@@ -35,6 +36,15 @@ export interface ExpansionInput {
   approvalEventId: string;
   /** Bounds the successor credential; MUST NOT be exceeded (approved_until). */
   approvedUntil: string;
+  /**
+   * @spec expansion#successor-expiry — the EXACT extension ceiling recorded at
+   * the expansion consent event. Supplied ONLY where the Mission Issuer's
+   * policy explicitly permits extension AND the extension was disclosed to the
+   * Approver; supplying it is what lets a successor outlive its predecessor,
+   * and only up to this recorded value. Absent (the reference deployment's
+   * policy permits no extension) the predecessor's own `expires_at` binds.
+   */
+  approvedExtensionUntil?: string;
   /**
    * @spec mission#intent-submission-evidence — the VERIFIED Intent Submission
    * Evidence facts of the widening submission (stage-2 output, verified at
@@ -103,13 +113,41 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   }
 
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  const authoritySet = kernel.derive(input.intent, proposal);
-  // @spec expansion: successor expiry MUST NOT exceed the recorded approval
-  // expiry (approved_until) -- the credential is bounded by the approval.
-  const expiresAt =
-    Date.parse(input.intent.expires_at) <= Date.parse(input.approvedUntil)
-      ? input.intent.expires_at
-      : input.approvedUntil;
+  // @spec capability-binding#capability-source-binding — carry the
+  // predecessor's recorded bindings for every retained catalog-sourced action,
+  // before `authorityHashValue` below. The grantor is the predecessor's
+  // APPROVED Authority Set, not its effective set: containment MUST NOT
+  // propagate to a successor (see the containment history disclosure below),
+  // and an expansion that restores a contained action restores the recorded
+  // fact about that action with it rather than emitting the action unbound.
+  // Actions the successor's own approval ADDS are not inherited: a binding
+  // originates only in a trusted resolution at the approval that records it.
+  const authoritySet = inheritCapabilitySources(
+    kernel.derive(input.intent, proposal),
+    predecessor.authority_set,
+  );
+  // @spec expansion#successor-expiry — ONE creation instant for the successor:
+  // the record's `created_at` and the instant every lifetime ceiling is
+  // measured from are the same read.
+  const createdAt = kernel.nowDate().toISOString();
+  // @spec expansion#successor-expiry — the successor is bounded by the
+  // submission's requested ceiling, by the recorded approval expiry
+  // (`approved_until`), and by the PREDECESSOR's own `expires_at` unless a
+  // recorded, disclosed, policy-permitted extension supplies the exact approved
+  // extension ceiling in its place. Expansion adds authority; it is not a
+  // lifetime-extension mechanism, so a successor never silently outlives the
+  // Mission it replaces.
+  const expiresAt = kernel.resolveEffectiveExpiry({
+    requested: input.intent.expires_at,
+    createdAt,
+    ceilings: {
+      predecessor: predecessor.expires_at,
+      ...(input.approvedExtensionUntil
+        ? { approvedExtensionUntil: input.approvedExtensionUntil }
+        : {}),
+      approvedUntil: input.approvedUntil,
+    },
+  });
 
   const id = newMissionId();
   const authorityHashValue = authorityHash(predecessor.issuer, authoritySet as never);
@@ -141,7 +179,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     client_id: predecessor.client_id,
     policy_version: predecessor.policy_version,
     approval_event_id: input.approvalEventId,
-    created_at: kernel.nowDate().toISOString(),
+    created_at: createdAt,
     expires_at: expiresAt,
     version: 1,
     // @spec mission#derivation-issuance-policy — every approval event

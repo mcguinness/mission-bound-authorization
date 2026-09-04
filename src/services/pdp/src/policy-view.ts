@@ -7,7 +7,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize, type JsonValue } from "@mission/core";
+import { canonicalize, type CapabilitySourceBinding, type JsonValue } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
 
 /**
@@ -24,6 +24,21 @@ export interface AuthorityEntry {
   type: typeof MISSION_RESOURCE_ACCESS_TYPE;
   resource: string;
   actions: string[];
+  /**
+   * @spec capability-binding#capability-source-binding — the capability-source
+   * bindings the validating server recorded at derivation, materialized into
+   * the policy view exactly as the kernel committed them.
+   *
+   * The `join_delegation` precedent below does NOT apply: that member sits
+   * outside every commitment, so a PDP-local equivalent is safe there. These
+   * bindings ride INSIDE `authority_hash`, so the kernel entry and this entry
+   * MUST be one byte-identical type; a PDP-local restatement could silently
+   * perturb the commitment. Hence the shared `@mission/core` type.
+   *
+   * Recorded here, verified nowhere yet: decision-time comparison and the
+   * `capability_drift` denial reason are a separate change.
+   */
+  capability_sources?: CapabilitySourceBinding[];
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];

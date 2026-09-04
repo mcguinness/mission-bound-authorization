@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "73ebc0577a34d8a8b53e1a578d9301a3af71c1ad",
-    "content_sha256": "66578aedc2a28f8c907969cc2dcd019ac738a96423ec66f0ba49855994a81edd"
+    "revision": "16cd23afa44c7bbe9a8813e4dc5d739e2697f047",
+    "content_sha256": "bb32eb7c901f567a68dd8ae90e769da72408061ff3925aa1a6862679d254d82a"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "889e4294ab7d91469458b72a6da85593fcdd571f",
@@ -31,8 +31,8 @@
     "content_sha256": "5a69341e68c6d6b9db684c94f00a2aeae15e053a0af208576b3973455ac16dfc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "3db332592f65282752c70697a79ca2eee2e12f16",
-    "content_sha256": "52ff3c648a04cbc6a11f5753ba01e541555c02440070e883d75db844ee19c955"
+    "revision": "1e87bfa7d56039bffd1f1e77b6ee71fc7549819e",
+    "content_sha256": "9ffee3c2139259552755eb526894e90d58969dbe3db807fe42a485677ab76a3e"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
@@ -55,8 +55,8 @@
     "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
-    "content_sha256": "8fb582dc630c9cc7edc8989187d1e5f56cd28489445d1ec3e4dd1595b505619b"
+    "revision": "9a38e3c25dda9947383f4f26f2c1989a3f880c75",
+    "content_sha256": "9c0c14b5fc68d95ca49e1442bd6c448be9d571cf4cf95bdb8e7828becc6a59cb"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -79,8 +79,8 @@
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "e566e1a5dc65d21b378560b4b381643c9009a7c8",
-    "content_sha256": "4f4482abf41e6454a59346089f0e5fbda3328f26a717eb1a5494b4d26bb14842"
+    "revision": "fffa419c72a629491f83a2cb83d3f28a829be588",
+    "content_sha256": "39500f65856a5a98aad55444c2326bd0d1fced3773ad19fa0cc2913535ae79a0"
    }
   }
  },
@@ -835,9 +835,34 @@
     "normative": "a mission_intent whose expires_at is malformed or already past fails invalid_request at submission acceptance; the AS never rewrites the requested value"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite; row replaces the pre-#525 invalid_authorization_details behavior."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses an already-past requested expires_at at submission acceptance (invalid_request)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses an unparseable requested expires_at at submission acceptance (invalid_request)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > intake refuses an already-past requested expires_at with invalid_request",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > the Submission envelope carries the same already-past refusal",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Both refusal arms (unparseable and already-past) are invalid_request at submission acceptance, judged against the kernel clock. The requested value is never rewritten forward. Row replaces the pre-#525 invalid_authorization_details behavior."
   },
   {
    "id": "core.record.effective-not-later-than-requested",
@@ -866,9 +891,15 @@
      "name": "mission record expiry ceiling (@spec mission#mission-record) > commits an effective expires_at never later than the Intent's requested ceiling",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is later than intent.expires_at",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "The AS currently copies intent.expires_at verbatim into the record (no independent AS-policy shortening path exists yet); the test asserts the MUST NOT ceiling as an ordering relation (<=) rather than equality, so it stays valid if shortening is added."
+   "notes": "The record no longer copies intent.expires_at verbatim: resolveEffectiveExpiry establishes the effective value and insertRecord independently refuses any record later than the requested ceiling, so the MUST NOT holds at the single creation funnel whatever built the record."
   },
   {
    "id": "core.record.applicable-shortening",
@@ -890,9 +921,34 @@
     "normative": "an applicable policy or profile ceiling shortens the effective expiry below the requested ceiling without touching Authority Set derivation"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > a deployment ceiling shorter than the request narrows the committed expires_at",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > a request narrower than the deployment ceiling keeps the requested value verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "expansion: successor expiry (@spec expansion#successor-expiry) > is bounded by the predecessor's expires_at absent a recorded extension",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > token exchange (subject_token = parent access token) creates a Child Mission and returns a child-bound grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "One resolveEffectiveExpiry hook takes the earliest applicable bound from a single supplied creation instant: the deployment's own max_mission_lifetime_s (policy.json, validated in the typed loader), a template's expiry and per-instance lifetime, a parent's expiry, the recorded approval expiry, and an expansion predecessor's expiry. The Authority Set is untouched by any of it. The reference deployment ships no lifetime ceiling of its own, so the narrowing arm is proven with an injected ceiling."
   },
   {
    "id": "core.creation.atomic-expiry-check",
@@ -914,9 +970,22 @@
     "normative": "a requested ceiling that passes while approval is pending completes as no Mission; deferred and relocated flows inherit the check at their own creation commit"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite; per-flow completion errors are each profile's."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > @spec mission#approval-event: a ceiling that passes while the approval pends creates NO Mission (access_denied)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is not later than created_at",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics."
   },
   {
    "id": "core.response.mission-expires-at-on-creation",
@@ -938,9 +1007,34 @@
     "normative": "every Mission-creating success response carries mission_expires_at with the committed effective value"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite; the member is the common Mission-creation response member, additionally registered for OAuth token responses."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > token exchange (subject_token = parent access token) creates a Child Mission and returns a child-bound grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "All four Mission-creating success bodies carry it: the direct-creation authorization_code token response, the template-dispatch grant, the child-creation exchange, and the expansion completion. Each stamps the committed record value verbatim, never a value recomputed while rendering. The member is additionally registered for OAuth token responses."
   },
   {
    "id": "core.response.replay-returns-committed-value",
@@ -962,9 +1056,28 @@
     "normative": "an idempotent creation replay returns mission_expires_at equal to the committed record value, never a recomputed one"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Executable tests ride the #245 suite."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "child-creation idempotency (@spec child-delegation#creation-request-id) > lost-response retry returns the SAME child: mission id equal, fan-out counted ONCE, one activating lifecycle commit (no second Child Evidence)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "expansion idempotency (@spec expansion#creation-request-id) > pending retry returns the SAME deferral_code; after completion, the superseded-predecessor retry recovers the SAME successor (lookup-order rule)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Deduplicated under creation_request_id (child creation, expansion) and under dispatch_event_id (template dispatch): the recovered body reads the stored record rather than recomputing an expiry from the replay's own, later clock."
   },
   {
    "id": "core.derivation.configured-mapping-lookup",
@@ -3405,10 +3518,10 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "governed work with no establishable Mission reference is refused before evaluation"
+    "normative": "governed work with no establishable Mission reference is refused before evaluation, on both arms. On the MAS Join path the propagated reference is the ONLY source: an absent or stripped field refuses unknown_mission and a malformed one refuses mission_reference_conflict, so governed work never runs ungoverned. On the credential-carried path an absent field correctly leaves the credential-established reference in force, and a malformed field still refuses"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
@@ -3421,9 +3534,33 @@
      "name": "Mission-Reference field parsing (@spec authority-server#mission-reference-field) > rejects more than one field line",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "Malformed carriage is exercised end-to-end (#557 part 1). The missing/stripped arm, where no Mission reference is establishable from any source, requires the MAS Join consumption path, which keeps #557 open; on the credential-carried path an absent header correctly leaves the credential-established reference in force."
+   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses unknown_mission and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
   },
   {
    "id": "mas.reference.reject-extra-data",
@@ -3551,7 +3688,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "notes": "Still todo after #557 stage C2, for a structural reason rather than missing effort: the requirement is a Mission-required tool on a channel with NO configured or negotiated propagation support, and neither demo channel is that. Both the HTTP channel (the Mission-Reference field) and the in-process mediated channel (the _meta propagation key) carry a reference and parse it, so neither can present the unsupported case. Exercising this needs a channel built without propagation support, which is its own slice."
   },
   {
    "id": "mas.reference.no-cross-domain-forwarding",
@@ -3572,7 +3709,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+   "notes": "Still todo after #557 stage C2: the requirement is about an INTERMEDIARY's egress, not about the gateway's ingress, which is all #557 wires. Nothing in this tree forwards a Mission reference onward to another authority domain, so there is no forwarding path to strip on. Egress stripping is its own slice."
   },
   {
    "id": "mas.join.stronger-claim-requires-issuance",
@@ -3799,7 +3936,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference; missing or malformed carriage refuses unknown_mission, never a silent no-op or fallback to some other guess"
+    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference, and the two unusable-carriage cases are reported apart: an ABSENT reference names no Mission at all and the credential carries none either, so the request refuses unknown_mission; a MALFORMED reference where governance requires one is carriage that cannot be used and refuses mission_reference_conflict. Neither is a silent no-op and neither falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
    },
    "level": "unit",
    "coverage": "tested",
@@ -3812,7 +3949,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for a malformed propagated reference",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -3821,9 +3958,33 @@
      "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits a direct-client ordinary credential whose subject matches the Mission's subject",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > permits a joined read for an ordinary credential when the Mission-Reference field is present",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-join-stack.test.ts",
+     "name": "composed stack: the MAS-governed channel joins an ordinary credential (#557) > permits a joined read end to end, with authority drawn from the referenced Mission",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path."
+   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path. #557 stage C2 splits the reason: a malformed reference refuses mission_reference_conflict rather than unknown_mission, so an unusable reference and an unknown Mission are distinguishable. The row's level stays unit: the endpoint and cross-component entries auto-skip without OpenFGA, so the claim rests on the always-run unit cases and those are additional coverage."
   },
   {
    "id": "mas.baseline-join.subject-join",
@@ -3947,7 +4108,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3)",
+    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3). The depth source is the deployment's own actor records (ActorRecords, services/mcp-payments/src/actor-records.ts): records are keyed on the canonical (issuer, id) pair, and resolveDepth walks delegated_by toward the Mission's own client_id (depth 0, adding 1 per hop), resolving ABSENT for no record, an unrooted chain, a cycle, or a chain that never reaches the Mission's client. An absent depth denies unconditionally on the delegate disposition, including where no max_depth is declared anywhere, per rule 5's own sentence: \"A delegate with no actor record under the Mission is not recorded as acting under it, and the join fails `mission_mismatch`.\" The hook the PEP resolves depth through takes the canonical (issuer, id) reference and the Mission's own client_id, both facts of the request the PEP already holds, so the ledger's resolver satisfies it with no issuer bound at construction: a record appended under one issuer is never consumed for a same-id Mission from another (#557 stage C2). The demo stack (src/demo/src/stack.ts) wires that ledger and seeds nothing into it, so every delegate join there denies until the deployment records an edge.",
     "local": "join_delegation is a PDP-package-local field (MissionView.authority_set[].join_delegation), not the kernel's own AuthorityEntry.delegation (authorization-server/src/kernel/types.ts, a richer DelegateMatcher-based shape this package has no dependency on). #557 review point 2: deriveJoinDelegation (services/pdp/src/mas-join.ts) is a deterministic adapter from the kernel shape, and the canonical Mission loader (src/demo/src/stack.ts's viewFor) now applies it when materializing a MissionView's authority_set, closing the 'no canonical loader populates it' gap; the client_id-vs-{sub,sub_profile} matching-semantics divergence itself remains (only an exact sub matcher maps deterministically, a sub_profile matcher is dropped fail-closed, see the adapter's own doc)"
    },
    "level": "unit",
@@ -4006,9 +4167,87 @@
      "name": "baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authority-server#mission-join rule 5, #557 review point 1) > denies mission_mismatch when the resolved depth exceeds the entry's own join_delegation.max_depth",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_mismatch when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > joins that same no-max_depth delegable entry once an actor record supplies a depth",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves depth 0 for the Mission's own client, with no record required",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves depth 2 across two hops, adding 1 per hop toward the Mission's client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves ABSENT for a client with no record at all",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves ABSENT for a cycle rather than walking it forever",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > resolves ABSENT for an unrooted chain that runs out of records before the Mission's client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > ignores a same-id record from another issuer: records are keyed on the canonical (issuer, id) pair",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > permits a delegate whose ledger-resolved depth is within the deployment's ceiling",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > denies mission_mismatch for the SAME delegate once the recorded chain is one hop too long for the ceiling",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > denies mission_mismatch when the ledger records the delegation under a DIFFERENT issuer's same-id Mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > permits a delegate whose depth the deployment's actor records supply, narrowed to the delegable subset",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > denies mission_mismatch for the SAME delegate when nothing recorded the edge: no actor record, no join",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2)."
+   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2). The absent-record denial is rule 5's own sentence, quoted in observation.normative, not a local implementation policy. #557 stage C2 adds the endpoint arm: the same delegate joins over a real MAS-governed HTTP channel when the deployment recorded the edge and denies mission_mismatch when it did not, with nothing else about the request changed. Those two entries auto-skip without OpenFGA, so the row's level stays unit."
   },
   {
    "id": "mas.baseline-join.no-fallback-denial",
@@ -4066,19 +4305,37 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permitted joined decision's authority always traces to the resolved MissionView's authority_set (direct or delegate-narrowed), never to any claim on the ordinary credential itself, which carries no authorization_details at all in this reference implementation"
+    "normative": "a permitted joined decision's authority always traces to the resolved MissionView's authority_set (direct or delegate-narrowed), never to any claim on the ordinary credential itself. The negative that shows this is a credential whose OWN authority covers an action the referenced Mission does not: the join succeeds, evaluate() matches the action against the JOINED authority set, finds nothing, and denies out_of_authority as a genuine Decision. The credential's own coverage of that action never substitutes for the Mission's"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
      "name": "baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8) > permits a direct-client ordinary credential whose subject matches the Mission's subject",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 2: an action the credential carries but the MISSION does not denies out_of_authority, so the permit's authority is the Mission's",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > permits a joined read for an ordinary credential when the Mission-Reference field is present",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-join-stack.test.ts",
+     "name": "composed stack: the MAS-governed channel joins an ordinary credential (#557) > permits a joined read end to end, with authority drawn from the referenced Mission",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Partial: the positive case (authority sourced from the Mission) is exercised; no dedicated negative test proves the credential's OWN claims can never substitute for it, since this reference implementation's ordinary credentials carry no authorization_details member to attempt that substitution with."
+   "notes": "#557. Moved partial -> tested by #557 stage C2's outside-the-Mission negative: this reference implementation's ordinary credentials carry no authorization_details member, so the substitution is attempted through the credential-authority evaluator instead (the acting credential's own authority names the action, the Mission does not), which is the same claim the clause makes. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit negative always runs."
   },
   {
    "id": "mas.baseline-join.three-bound-intersection",
@@ -4095,10 +4352,11 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "PepDeps.masJoin.resolveOrdinaryAuthority supplies bound 1 (the acting credential's own authority); its result is intersected against the joined Mission authority (bound 2) by resource+action before the existing FGA/PDP call independently enforces bound 3 (current Resource policy) unchanged. Absent, bound 1 cannot be honestly evaluated, so the joined route fails closed with out_of_authority on every request rather than treating an unconfigured bound as unbounded"
+    "normative": "each of the three bounds denies ON ITS OWN with the other two satisfied, and all three satisfied permits, which is what makes them independently evaluated rather than one check wearing three names. Bound 1 is the acting credential's own authority (PepDeps.masJoin.resolveOrdinaryAuthority), intersected against the joined Mission authority by resource+action before the PDP runs; absent, it cannot be honestly evaluated, so the joined route fails closed with out_of_authority rather than treating an unconfigured bound as unbounded. Bound 2 is the Mission's approved authority, matched by evaluate() against the joined authority set. Bound 3 is current Resource policy, the existing fga.checkWithContext call, which denies out_of_authority with both other bounds satisfied. The demo supplies a real bound-1 evaluator (src/demo/src/stack.ts): the credential's verified scope claim mapped through config/mas-join.json's scope_actions, so it models the token AS ISSUED and a narrower token yields a narrower permit for the same client",
+    "local": "bound 3's independence is shown by evaluation, not by an independent policy SOURCE: the contextual tuples the FGA check runs against are themselves derived from the matched Mission authority entry's own constraints (policy-view.ts, 'authority + constraint -> ephemeral grant'). A deployment whose resource policy is authored separately from the Mission would exercise the same call with a genuinely independent input; this one does not, and the row does not claim it does"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
@@ -4111,9 +4369,45 @@
      "name": "baseline MAS Join: rule 8, bound 1 (acting credential authority) > intersects the acting credential's own authority with the joined Mission authority: an action outside the credential's own authority is refused out_of_authority",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 1: an action outside the ACTING CREDENTIAL's own authority refuses out_of_authority",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 2: an action the credential carries but the MISSION does not denies out_of_authority, so the permit's authority is the Mission's",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 3: current RESOURCE POLICY refusing denies out_of_authority with both other bounds satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > all three bounds satisfied permits, so the three denials above are attributable to each bound",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses out_of_authority for a scope this route maps to nothing, even with a well-formed reference",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped config/mas-join.json authorizes a joined read of its own demo (#557) > a shipped scope covers a shipped-derived Authority Set entry, so rule 8's first bound leaves something to permit",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Partial: bound 1's contract and fail-closed default, plus its intersection with bound 2, are tested. No deployment-side resolveOrdinaryAuthority evaluator (an OAuth-scope-to-authority model) is implemented here -- a documented remainder, not a silent gap (see the PR body). Kept partial per review: bound 3 (\"current Resource policy\") is exercised as the existing FGA/PDP call (deriveContextualTuples + fga.checkWithContext), but that check's contextual tuples are themselves DERIVED from the matched Mission authority entry's own constraints (its vendors/amount scope), the same relationship policy-view.ts's own doc records (\"authority + constraint -> ephemeral grant\") -- not the independent, Mission-authority-agnostic Resource-policy arm the quoted text's third bound describes. This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it."
+   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy."
   },
   {
    "id": "mas.baseline-join.join-view-commitment",
@@ -16456,7 +16750,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The entitlement axis itself is profiled audience-wide and all-or-none: a positive result authorizes the complete already-intersected authorization_details set for that audience, unmodified; it does not narrow individual entries by action or resource, so this row does not exercise the quoted text's general per-entry three-bound intersection, only the audience-wide instance of it"
+    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance"
    },
    "level": "cross-component",
    "coverage": "partial",
@@ -16520,9 +16814,81 @@
      "name": "RAS continuation carve-out (@spec id-continuation-assertion) > still denies invalid_grant for a continuation grant when entitlement fails",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > mints the ceiling-intersected set unchanged when the observation carries no authority (audience-scoped grain)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > narrows the minted set to the entitled actions, keeps the entry's constraints, and records the narrowed set as output_authority",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > refuses when the entitlement authority covers none of the delegated resources (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "origin-principal entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > matches the resource exactly: a prefix of the delegated resource entitles nothing (invalid_grant)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > mints the delegated set verbatim when the observation carries no authority (audience-scoped grain)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > narrows the minted authorization_details to the entitled actions, keeping every other entry member",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > denies invalid_grant when the entitlement authority covers none of the delegated resources",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS entitlement authority narrowing (@spec cross-domain#dual-axis, #744) > narrows a continuation grant's delegated set the same way, since entitlement runs on every redemption",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain entitlement authority (@spec cross-domain#dual-axis, #744) > authority covering the requested (audience, action): permits",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain entitlement authority (@spec cross-domain#dual-axis, #744) > authority present but excluding this action, while the delegated set carries it: denies principal_mapping_failed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain entitlement authority (@spec cross-domain#dual-axis, #744) > the surviving subset is unaffected: the same entitlement that denies one action still permits the other",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > an entitlement entitled to the read alone narrows the local token, so the read permits and the delegated journal write is refused",
+     "level": "cross-component",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. Kept partial (not flipped to tested) per review: a Boolean audience-level `entitled` result gates the complete delegated authorization_details set for the audience but cannot narrow individual entries by action or resource, so it is an audience-wide all-or-none instance of the quoted text's three-bound intersection, not the general per-entry one. Action/resource-scoped entitlement queries are NOT implemented (the shared EntitlementResolver contract is audience-scoped only, matching its existing PDP-side shape); extending it is left as a documented remainder rather than risking the already-tested PDP dual-axis rows."
+   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. #744 adds the action- and resource-scoped grain: an OPTIONAL, additive `authority` member on EntitlementObservation carrying the mapped principal's currently entitled (resource, actions) set. Absent, every deployment and every pre-existing row behaves exactly as before (regression-guarded at each consumer). Present, mission-core's shared narrowToEntitledAuthority intersects it with the delegated set per action on exact resource matching (no wildcard or prefix form), and all three consumers carry the surviving subset forward: the Cross-Org adapter mints it and records it as output_authority (no evidence schema change), the RAS mints it on base and continuation grants alike, and the PDP folds the (audience, action) check into entitlementCurrent. Only an empty intersection refuses, with the same non-oracular errors as before (invalid_grant at the RAS and Cross-Org, principal_mapping_failed at the PDP); no new denial reason. Kept partial for one narrower remaining reason: the RAS mints from the grant with no local-ceiling or deployment-policy intersection at all, so the quoted clause's third bound is demonstrated at the Cross-Org adapter (localCeiling) and the PDP (policy view and FGA) but not at that entry point. The audience-wide caveat that previously held this row partial no longer applies."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
@@ -17446,8 +17812,16 @@
     "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
+     "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699) > adds no Mission record member: a committed record carries no approval_context_commitment",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#699 asserts the AS kernel's committed MissionRecord, and the ungated issuer introspection view over it, carry no approval_context_commitment. That record type does not yet implement every core Mission Record member (authority_source is absent), so absence there is weaker than the row's own observation about the Mission Record, and coverage stays partial until the record type is complete."
   },
   {
    "id": "approval-context.computation.cache-is-derived-state",
@@ -17655,8 +18029,16 @@
     "normative": "approval_context_commitment never appears on a Mission-bound access token's baseline mission claim, and never on another credential-bound Mission descriptor a companion profile mints for correlation (for example, the Mission Authority Server's Join Assertion): each such descriptor keeps to its own already-fixed minimal member set."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
+     "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-carriage, #699) > is never carried on a Mission-bound access token's baseline mission claim",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
   }
  ]
 }

@@ -9,13 +9,22 @@ import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
+  attachCapabilitySources,
+  type CapabilitySourceResolution,
+} from "./capability-binding.js";
+import {
   buildContainmentEvidence,
   type ContainmentEvidence,
   type ContainmentPolicy,
   UnknownProtectedEventError,
 } from "./containment.js";
-import type { DerivationPolicy } from "./derive.js";
-import { deriveAuthoritySet, isSubsetSet, resolveDerivationLimit } from "./derive.js";
+import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
+import {
+  deriveAuthoritySet,
+  isSubsetSet,
+  resolveDerivationLimit,
+  resolveEffectiveExpiry,
+} from "./derive.js";
 import {
   assertDischargePoliciesResolvable,
   conditionDigest,
@@ -35,6 +44,7 @@ import { DischargeEventStore, type DischargeEventKey } from "./lifecycle-idempot
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
+  IntentError,
   type IntentSubmissionPresenter,
   provisionalIntentHash,
   type SubmissionEvidenceBounds,
@@ -165,6 +175,17 @@ export interface ApproveInput {
    * means none verified — always the case today, with no registered types.
    */
   submissionEvidence?: IntentSubmissionEvidenceFact[];
+  /**
+   * @spec capability-binding#capability-source-binding — the validating
+   * server's TRUSTED CATALOG RESOLUTION for this approval: one outcome per
+   * catalog-sourced `(resource, action)` pair of the derived set. Verified
+   * facts, produced by the AS approval path from configured trusted catalogs,
+   * exactly as `submissionEvidence` is: the client's proposal never supplies
+   * them, and a client-supplied digest is never authoritative. Absent means no
+   * action was resolved as catalog-sourced, and every derived entry keeps the
+   * member absent.
+   */
+  capabilityResolution?: CapabilitySourceResolution[];
 }
 
 export interface KernelOptions {
@@ -262,7 +283,7 @@ export class MissionKernel {
   }
 
   validateIntent(raw: string): MissionIntent {
-    return validateMissionIntent(raw);
+    return validateMissionIntent(raw, { now: this.now() });
   }
 
   /**
@@ -273,7 +294,7 @@ export class MissionKernel {
    * typed, bounded, and never silently ignored.
    */
   validateSubmission(raw: string, bounds?: SubmissionEvidenceBounds): MissionIntentSubmission {
-    return validateMissionIntentSubmission(raw, bounds);
+    return validateMissionIntentSubmission(raw, bounds, { now: this.now() });
   }
 
   /**
@@ -331,6 +352,26 @@ export class MissionKernel {
     return resolveDerivationLimit(requested, this.opts.policy.derivation_limit_ceiling);
   }
 
+  /**
+   * @spec mission#mission-record, mission#approval-event — establish the
+   * effective `expires_at` a Mission Record commits, for every Mission-creating
+   * surface (direct approval, child creation, template dispatch, expansion):
+   * the earliest of the requested ceiling, THIS deployment's
+   * `max_mission_lifetime_s`, and whatever ceilings the creating surface
+   * contributes. The caller supplies the exact instant it commits as
+   * `created_at`, so every lifetime addend is measured from that one instant.
+   */
+  resolveEffectiveExpiry(input: {
+    requested: string;
+    createdAt: string;
+    ceilings?: ExpiryCeilings;
+  }): string {
+    return resolveEffectiveExpiry({
+      ...input,
+      policyMaxLifetimeS: this.opts.policy.max_mission_lifetime_s,
+    });
+  }
+
   /** @spec mission#authority-proposal — intake of the submitted proposal. */
   validateProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
     return validateAuthorityProposal(raw, targetResources);
@@ -359,7 +400,15 @@ export class MissionKernel {
     // is treated as absent). Present iff submitted: template-mode Missions
     // carry neither `proposed_authority` nor `proposal_hash`.
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-    const authoritySet = this.derive(input.intent, proposal);
+    // @spec capability-binding#capability-source-binding — the resolved
+    // bindings are attached to the DERIVED entries here, before
+    // `authorityHash` below, so `authority_hash` covers them by construction.
+    // An unresolvable catalog-sourced action refuses the derivation
+    // (IntentError) rather than being approved unbound.
+    const authoritySet = attachCapabilitySources(
+      this.derive(input.intent, proposal),
+      input.capabilityResolution,
+    );
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
     const id = newMissionId();
@@ -371,6 +420,11 @@ export class MissionKernel {
     // every anchor, so a swapped proposal under an unchanged intent_hash
     // cannot equivocate.
     const authorityHashValue = authorityHash(this.opts.issuer, authoritySet as never);
+    // @spec mission#approval-event (step 4) — ONE creation instant: the record's
+    // `created_at` and the instant every lifetime ceiling is measured from are
+    // the same read, so the established expiry and the committed creation time
+    // can never drift apart.
+    const createdAt = this.now().toISOString();
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
@@ -402,8 +456,15 @@ export class MissionKernel {
       client_id: input.clientId,
       policy_version: this.opts.policy.policy_version,
       approval_event_id: input.approvalEventId,
-      created_at: this.now().toISOString(),
-      expires_at: input.intent.expires_at,
+      created_at: createdAt,
+      // @spec mission#mission-record — the AS-ESTABLISHED effective expiry, not
+      // the requested value copied verbatim: the requested ceiling narrowed by
+      // this deployment's own `max_mission_lifetime_s`. Direct creation under
+      // the core carries no other ceiling.
+      expires_at: this.resolveEffectiveExpiry({
+        requested: input.intent.expires_at,
+        createdAt,
+      }),
       version: 1,
       // @spec mission#derivation-issuance-policy — the immutable EFFECTIVE
       // ceiling: min(deployment policy, the client's requested_derivation_limit),
@@ -439,6 +500,28 @@ export class MissionKernel {
     // intersection), and refuses the creation when one maps to nothing.
     assertDischargePoliciesResolvable(record.authority_set, this.opts.dischargeAuthority);
     withTransaction(this.db, () => {
+      // @spec mission#mission-record, mission#approval-event (step 4) — the
+      // creation-transaction expiry invariant, checked INDEPENDENTLY of whatever
+      // established the value: `created_at < expires_at <= intent.expires_at`.
+      // Every creator funnels through here, so a surface that forgot to narrow,
+      // or narrowed the wrong way, creates no Mission rather than committing a
+      // record the core forbids. Inside the transaction, so the check and the
+      // INSERT are one atomic commit: a requested ceiling that passes while an
+      // approval pends completes as no Mission at all.
+      const createdMs = Date.parse(record.created_at);
+      const expiresMs = Date.parse(record.expires_at);
+      const requestedMs = Date.parse(record.intent.expires_at);
+      if (!(expiresMs <= requestedMs)) {
+        throw new Error(
+          `mission ${record.id} would commit expires_at ${record.expires_at} later than the requested ceiling ${record.intent.expires_at}`,
+        );
+      }
+      if (!(createdMs < expiresMs)) {
+        throw new IntentError(
+          "invalid_request",
+          `effective expires_at ${record.expires_at} is not later than the creation instant ${record.created_at}`,
+        );
+      }
       this.db
         .prepare(
           `INSERT INTO missions (id, issuer, state, intent_json, proposed_authority_json,

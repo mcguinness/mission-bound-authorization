@@ -45,6 +45,12 @@ import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
+  attachCapabilitySources,
+  type CapabilitySourceResolution,
+  type CapabilitySourceResolver,
+  inheritCapabilitySources,
+} from "./kernel/capability-binding.js";
+export {
   buildContainmentEvidence,
   containmentEvidenceBytes,
   CONTAINMENT_EVIDENCE_MEDIA_TYPE,
@@ -525,6 +531,20 @@ export async function buildAuthorizationServer(opts: {
    */
   testTokenSigningJwk?: JWK;
   /**
+   * @spec async-delegation (issue #651) — TEST-ONLY: additional client
+   * registrations composed ONTO the config-shipped registry
+   * (`config/clients.json`), never replacing an entry of it. A test that needs
+   * a registration the demo deliberately does not ship registers it here and
+   * signs its own `private_key_jwt` assertions with the private half of the
+   * `jwks` it supplies, so this function never hands a shipped client's key
+   * back. The child-rooted async-delegation family is the motivating case: the
+   * shipped child actor is granted only the jwt-bearer grant type, so driving
+   * a family rooted at a Child Mission's own access token over real HTTP needs
+   * a child actor registered for the token-exchange grant as well. Production
+   * callers MUST omit this.
+   */
+  testClients?: Record<string, unknown>[];
+  /**
    * @spec cross-org-delegation#projection-exchange — destination Resource AS
    * configuration for Chain acceptance (federation trust, principal mapping,
    * local ceiling, evidence sink). Absent = the exchange is refused.
@@ -542,6 +562,16 @@ export async function buildAuthorizationServer(opts: {
   authoritySource?: EffectiveAuthoritySource;
   /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
   stateRecoveryRetryAfter?: number;
+  /**
+   * @spec authority-server#mission-join (#557) — DEV ONLY: serve
+   * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
+   * token (a `scope`, the payments audience, no `mission` claim) on a
+   * registered service token's authority. The MAS Join acts under exactly
+   * that credential class and nothing else here issues one, so the demo
+   * stack turns it on to have a credential to present. Absent (the default):
+   * no such route exists.
+   */
+  devOrdinaryIssuance?: boolean;
   /**
    * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
@@ -605,6 +635,17 @@ export async function buildAuthorizationServer(opts: {
   // @spec mission#downgrade-by-omission — the Mission-governed demo client:
   // registered so the AS-side anti-downgrade hook is exercisable end to end.
   const governed = await seedGovernedClient();
+  // @spec async-delegation (issue #651) — TEST-ONLY registrations compose ONTO
+  // the shipped registry. A duplicate `client_id` would SHADOW a shipped
+  // registration rather than add to it (silently widening what the demo
+  // ships), so it is refused outright.
+  const shippedClientIds = new Set([agent, child, governed].map((c) => c.metadata.client_id));
+  for (const testClient of opts.testClients ?? []) {
+    const id = String(testClient.client_id);
+    if (shippedClientIds.has(id)) {
+      throw new Error(`testClients MUST NOT redefine the config-shipped client ${id}`);
+    }
+  }
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`
@@ -750,7 +791,7 @@ export async function buildAuthorizationServer(opts: {
     expansionDeferrals,
     creationIdempotency,
     statusListPublisher,
-    clients: [agent.metadata, child.metadata, governed.metadata],
+    clients: [agent.metadata, child.metadata, governed.metadata, ...(opts.testClients ?? [])],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
@@ -785,6 +826,19 @@ export async function buildAuthorizationServer(opts: {
     childGrantKey: tokenPrivateKey,
     childGrantKid: asToken.kid,
     childGrantAlg: asToken.alg,
+    // @spec authority-server#mission-join (#557) — the dev-only ordinary
+    // issuance route, signed with this AS's own token key so the resource
+    // verifies it on the jwks_uri exactly as it verifies a Mission-bound one.
+    ...(opts.devOrdinaryIssuance
+      ? {
+          devOrdinaryIssuance: {
+            key: tokenPrivateKey,
+            kid: asToken.kid,
+            alg: asToken.alg,
+            audience: CANONICAL_RESOURCE,
+          },
+        }
+      : {}),
     // @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
     // grant. The continuation ID-JAG is an identity grant, so it is signed with
     // its OWN dedicated ES256 as-continuation key (D39 per-purpose). That key is

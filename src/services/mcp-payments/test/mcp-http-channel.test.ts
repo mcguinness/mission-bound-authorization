@@ -22,6 +22,7 @@ import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jos
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
+  ActorRecords,
   CANONICAL_RESOURCE,
   Connectors,
   canonicalHtu,
@@ -436,5 +437,237 @@ d("Mission-Reference propagation (gateway PEP)", () => {
   it("an absent reference leaves the credential-established path unchanged", async () => {
     const res = await callWithHeader(undefined);
     expect(res.ok).toBe(true);
+  });
+});
+
+// @spec authority-server#mission-join (#557) — the MAS-GOVERNED route: an
+// ORDINARY OAuth credential (no `mission` claim at all) admitted by the
+// channel's own validator and joined against the propagated Mission
+// Reference, which is the ONLY thing naming a Mission on this path. Auto-skips
+// without OpenFGA like every block here, so each conformance claim also
+// anchors on services/mcp-payments/test/mas-join.test.ts, which always runs.
+d("MAS-governed HTTP MCP channel (baseline Join)", () => {
+  beforeAll(async () => {
+    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    fga = conn.fga;
+    modelId = conn.modelId;
+    const kp = await generateKeyPair("ES256", { extractable: true });
+    signKey = kp.privateKey;
+    pubJwk = { ...(await exportJWK(kp.publicKey)), kid: "mission-key", alg: "ES256" };
+    dpopKeys = await generateKeyPair("ES256", { extractable: true });
+    cnfJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+  });
+
+  /** This route's scope-to-authority model (rule 8, bound 1), as config ships it. */
+  const SCOPE_ACTIONS: Record<string, string[]> = {
+    "payments.read": ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
+  };
+
+  /**
+   * An ORDINARY DPoP-bound credential: this AS's own issuer and the payments
+   * audience, a `scope`, and NO `mission` claim. Minted inline with this
+   * file's own key, so the coverage here is independent of the demo stack's
+   * dev issuance route.
+   */
+  async function signOrdinaryToken(opts: { scope?: string; sub?: string; clientId?: string } = {}): Promise<string> {
+    return new SignJWT({
+      client_id: opts.clientId ?? "ap-agent",
+      scope: opts.scope ?? "payments.read",
+      cnf: { jkt: cnfJkt },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+      .setIssuer(ISSUER)
+      .setAudience(CANONICAL_RESOURCE)
+      .setSubject(opts.sub ?? "alice")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(signKey);
+  }
+
+  /**
+   * @spec authority-server#mission-join rule 5 — the same Mission with its
+   * one entry made delegable to `delegate-client` at a depth of 1.
+   */
+  const DELEGATE_VIEW: MissionView = {
+    ...VIEW,
+    authority_set: VIEW.authority_set.map((e) => ({
+      ...e,
+      join_delegation: { max_depth: 1, allowed_delegates: ["delegate-client"] },
+    })),
+  };
+
+  /**
+   * A stack whose ONE channel is MAS-governed, with the PEP configured to
+   * join. `delegate` swaps in the delegable view, the enumerated delegate
+   * policy, and a deployment actor-record ledger; `recordEdge` decides
+   * whether that ledger actually records the delegation.
+   */
+  async function buildGoverned(
+    opts: { delegate?: boolean; recordEdge?: boolean } = {},
+  ): Promise<{ url: string; evidence: EvidenceStore }> {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved" }],
+      [
+        {
+          id: "inv-1",
+          vendor_id: "acme",
+          amount: "125.00",
+          currency: "USD",
+          payee_account: "acct-acme",
+          status: "payable",
+        },
+      ],
+    );
+    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const card = { name: "payments" };
+    // Conforming (@spec authority-server#reference-tuple): keyed on the full
+    // canonical pair, unlike this file's Mission-bound fixture, which keys on
+    // `id` alone on purpose.
+    const view = opts.delegate ? DELEGATE_VIEW : VIEW;
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        : undefined;
+    // The deployment's actor records: rule 5's depth source. Empty unless this
+    // deployment recorded the edge, which is what makes an unrecorded
+    // delegate fail closed rather than join on a declared ceiling alone.
+    const records = new ActorRecords();
+    if (opts.recordEdge) {
+      records.record({
+        mission: { id: view.id, issuer: view.issuer },
+        clientId: "delegate-client",
+        delegatedBy: view.client_id,
+      });
+    }
+    const pep = new Pep({
+      payments,
+      evidence,
+      fga,
+      modelId,
+      loadView,
+      instanceEpoch: "epoch-1",
+      sourceDigest: sourceDigestOf(card),
+      allowedFreshnessSources: new Set(["load_view"]),
+      masJoin: {
+        // Rule 8, bound 1: read from the credential AS ISSUED, its own scope.
+        resolveOrdinaryAuthority: (token) => {
+          if (token.mission || !token.scope) return undefined;
+          const actions = SCOPE_ACTIONS[token.scope];
+          return actions
+            ? [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions }]
+            : undefined;
+        },
+        // Rule 4: enumerated, never a default.
+        ...(opts.delegate ? { delegatePolicy: { delegates: { "delegate-client": { maxDepth: 1 } } } } : {}),
+        resolveDelegateDepth: records.resolveDepth.bind(records),
+      },
+    });
+    const server = new McpPaymentsServer({
+      pep,
+      payments,
+      loadView,
+      jwks: { keys: [pubJwk] },
+      issuer: ISSUER,
+      serverCard: card,
+    });
+    const channel = await createHttpMcpChannel(server, { masGoverned: true });
+    cleanups.push(channel.close);
+    return { url: channel.url, evidence };
+  }
+
+  it("permits a joined read for an ordinary credential when the Mission-Reference field is present", async () => {
+    const { url } = await buildGoverned();
+    const { client, close } = await createHttpMediatedClient(url, await signOrdinaryToken(), dpopKeys, {
+      "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}"`,
+    });
+    cleanups.push(close);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+  });
+
+  it("refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own", async () => {
+    const { url } = await buildGoverned();
+    const { client, close } = await createHttpMediatedClient(url, await signOrdinaryToken(), dpopKeys);
+    cleanups.push(close);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("unknown_mission");
+  });
+
+  it("refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one", async () => {
+    const { url } = await buildGoverned();
+    const { client, close } = await createHttpMediatedClient(url, await signOrdinaryToken(), dpopKeys, {
+      "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}", state="active"`,
+    });
+    cleanups.push(close);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("refuses out_of_authority for a scope this route maps to nothing, even with a well-formed reference", async () => {
+    const { url } = await buildGoverned();
+    const { client, close } = await createHttpMediatedClient(
+      url,
+      await signOrdinaryToken({ scope: "payments.unmapped" }),
+      dpopKeys,
+      { "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}"` },
+    );
+    cleanups.push(close);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("out_of_authority");
+  });
+
+  it("permits a delegate whose depth the deployment's actor records supply, narrowed to the delegable subset", async () => {
+    const { url } = await buildGoverned({ delegate: true, recordEdge: true });
+    const { client, close } = await createHttpMediatedClient(
+      url,
+      await signOrdinaryToken({ clientId: "delegate-client" }),
+      dpopKeys,
+      { "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}"` },
+    );
+    cleanups.push(close);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+  });
+
+  it("denies mission_mismatch for the SAME delegate when nothing recorded the edge: no actor record, no join", async () => {
+    const { url } = await buildGoverned({ delegate: true });
+    const { client, close } = await createHttpMediatedClient(
+      url,
+      await signOrdinaryToken({ clientId: "delegate-client" }),
+      dpopKeys,
+      { "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}"` },
+    );
+    cleanups.push(close);
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("mission_mismatch");
+  });
+
+  it("the MISSION-BOUND channel rejects the same ordinary credential at the gate, before the PEP", async () => {
+    // The route's validator is the first of the two keys: a channel that is
+    // not MAS-governed keeps validateCredential and refuses a credential with
+    // no `mission` claim outright, whatever the reference says.
+    const { url, evidence } = await build();
+    const jwt = await signOrdinaryToken();
+    const proof = await dpopProofFor(dpopKeys, canonicalHtu(new URL(url)), "POST");
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: `DPoP ${jwt}`,
+        dpop: proof,
+        "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}"`,
+      },
+      body: toolsCallBody("get_invoice", { invoice_id: "inv-1" }),
+    });
+    await res.text();
+    expect(res.status).toBe(401);
+    // Never reached the PEP: no decision, no refusal record.
+    expect(evidence.all()).toHaveLength(0);
   });
 });
