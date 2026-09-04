@@ -14,6 +14,18 @@ import {
   type ContainmentPolicy,
   UnknownProtectedEventError,
 } from "./containment.js";
+import {
+  assertApproverMayActivate,
+  assertInheritedSourceStillHolds,
+  assertPolicyReference,
+  assertSubjectDiscipline,
+  assertWithinSourceCeiling,
+  type AuthoritySourceCatalog,
+  type AuthoritySourceCatalogEntry,
+  authoritySourceOf,
+  parseAuthoritySource,
+  resolveAuthoritySourceEntry,
+} from "./authority-source.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet, resolveDerivationLimit } from "./derive.js";
 import {
@@ -53,6 +65,7 @@ import {
 import {
   type ApprovalBasis,
   type AuthorityEntry,
+  type AuthoritySource,
   type ContainmentEventRecord,
   type DischargedEntry,
   type IntentSubmissionEvidenceEntry,
@@ -90,6 +103,7 @@ CREATE TABLE IF NOT EXISTS missions (
   approver_iss TEXT NOT NULL,
   approver_sub TEXT NOT NULL,
   approval_basis_json TEXT NOT NULL,
+  authority_source_json TEXT NOT NULL,
   client_id TEXT NOT NULL,
   policy_version TEXT NOT NULL,
   approval_event_id TEXT NOT NULL UNIQUE,
@@ -220,6 +234,17 @@ export interface KernelOptions {
    * class for any actor, so only `{ "sub": ... }` matchers can admit a delegate.
    */
   actorProfiles?: Record<string, string>;
+  /**
+   * @spec mission#authority-sources, mission#approval-event — the deployment's
+   * TRUSTED authority-source catalog. The approval event establishes
+   * `authority_source` from this and from nothing else: never from
+   * {@link ApproveInput}, a submission envelope, or any other client
+   * assertion. OPTIONAL: absent, the deployment declares the single implicit
+   * user-delegated source bounded by its own derivation ceiling
+   * ({@link defaultAuthoritySourceEntry}), so the REQUIRED record member is
+   * populated everywhere and the discriminator and ceiling rules still apply.
+   */
+  authoritySourceCatalog?: AuthoritySourceCatalog;
 }
 
 export class MissionKernel {
