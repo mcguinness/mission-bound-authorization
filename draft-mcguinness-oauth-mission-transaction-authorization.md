@@ -358,6 +358,11 @@ Transaction token:
 
 # Applicability {#applicability}
 
+For compound actions, the runtime profile's Compound Actions section
+places this profile's single-use authorization at one commit-phase
+operation, never across preparation, commit, and compensation
+({{I-D.draft-mcguinness-mission-runtime}}).
+
 This profile is invoked when any of these requires action-bound
 approval for a normalized operation:
 
@@ -1218,6 +1223,13 @@ JWT or an ordinary Mission token presented as a transaction token; a
 privacy projection showing raw parameters and approval detail absent
 from the token; and evidence correlation from challenge and decision
 through exactly one execution or terminal refusal.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Linked applicability to the runtime compound-action model: a
+  transaction token authorizes one commit-phase operation (#252).
 
 # Acknowledgments
 {:numbered="false"}
