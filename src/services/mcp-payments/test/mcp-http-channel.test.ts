@@ -519,7 +519,11 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
         },
       ],
     );
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    // @spec runtime-evidence#decision-evidence-object (#741): this module's
+    // one bundle, the same one the Mission-bound fixture above uses. The
+    // joined path is a decision path like any other, so its PEP receives
+    // `decide` and a resolver that verifies what the decision point emits.
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const card = { name: "payments" };
     // Conforming (@spec authority-server#reference-tuple): keyed on the full
     // canonical pair, unlike this file's Mission-bound fixture, which keys on
@@ -541,6 +545,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       });
     }
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       fga,
