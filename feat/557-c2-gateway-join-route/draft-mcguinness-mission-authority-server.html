@@ -3339,7 +3339,11 @@ claims:<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The MAS <span class="bcp14">MAY</span> additionally
 include <code>authority_hash</code> as an audit anchor; where included, PDP
 Consumption's cross-check applies to it too
-(<a href="#join-assertion-pdp" class="auto internal xref">Section 13.3</a>).<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#join-assertion-pdp" class="auto internal xref">Section 13.3</a>). This object <span class="bcp14">MUST NOT</span> carry
+<code>approval_context_commitment</code>: the Approval Context Commitment
+profile fixes this descriptor as a must-not-carry site alongside the
+baseline <code>mission</code> claim
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-13.2-2.5">

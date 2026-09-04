@@ -1333,7 +1333,7 @@ approval, deferred approval
 Mission Authority Server's native asynchronous approval alike, and
 depends on no deferral substrate.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 15 conformance rows in conformance-manifest.json (6 tested, 9 todo).
+Implementation: 15 conformance rows in conformance-manifest.json (6 tested, 2 partial, 7 todo).
 Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling).<a href="#section-2-3" class="pilcrow">¶</a></p>
@@ -1445,9 +1445,31 @@ is retained with is invalid.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.5">
-<code>approval_policy</code>:</dt>
+<code>approval_context_commitment</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.6">
-          <p id="section-5-2.6.1"><span class="bcp14">REQUIRED</span>. An object identifying the governing
+          <p id="section-5-2.6.1"><span class="bcp14">OPTIONAL</span>. A string. The Approval Context Commitment over the
+governed Mission's immutable creation facts
+(<a href="#approval-context-commitment" class="auto internal xref">Section 12</a>), in the encoded form
+<a href="#conventions-and-definitions" class="auto internal xref">Section 3</a> fixes. It is a member of this
+record, never of the Mission record: the profile adds no Mission
+record member (<a href="#approval-context-computation" class="auto internal xref">Section 12.3</a>). An issuer that
+records it computes it in the same commit that creates the Mission
+and persists this record, before the record is signed
+(<a href="#atomic-commitment" class="auto internal xref">Section 7</a>), so the signed payload commits to it. The
+<code>mission</code> member above carries no Mission <code>id</code>, so a verifier
+recomputes this value from the Mission record this record is
+retained with, the record the mission binding check already
+resolves (<a href="#envelope" class="auto internal xref">Section 9</a>, step 5), and rejects the reference on a
+mismatch (<a href="#approval-context-computation" class="auto internal xref">Section 12.3</a>). Its presence is what
+lets this record and another authenticated artifact disclosing the
+same commitment be matched to one approval transaction without
+either re-deriving the other's fields.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.7">
+<code>approval_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.8">
+          <p id="section-5-2.8.1"><span class="bcp14">REQUIRED</span>. An object identifying the governing
 delegation-of-authority policy: <code>id</code> (an identifier), <code>version</code> (a
 string), and <code>digest</code> (an integrity anchor over the retained policy
 snapshot, in the encoded form <a href="#conventions-and-definitions" class="auto internal xref">Section 3</a>
@@ -1466,56 +1488,56 @@ reproduces the digest exactly and re-checks the evaluation against
 the policy that governed it. Threshold, quorum, veto, and separation-of-duty semantics live
 in the referenced policy; any human-readable summary of them in
 deployment tooling is advisory and carries no semantics in this
-record.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+record.<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-2.7">
+<dt id="section-5-2.9">
 <code>assertions</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-2.8">
-          <p id="section-5-2.8.1"><span class="bcp14">REQUIRED</span>. An array of one or more decision assertions. Each
-carries:<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5-2.8.2">
-            <dt id="section-5-2.8.2.1">
+        <dd style="margin-left: 1.5em" id="section-5-2.10">
+          <p id="section-5-2.10.1"><span class="bcp14">REQUIRED</span>. An array of one or more decision assertions. Each
+carries:<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2.10.2">
+            <dt id="section-5-2.10.2.1">
 <code>assertion_id</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.2">
-              <p id="section-5-2.8.2.2.1"><span class="bcp14">REQUIRED</span>. A string, unique within the record.<a href="#section-5-2.8.2.2.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.2">
+              <p id="section-5-2.10.2.2.1"><span class="bcp14">REQUIRED</span>. A string, unique within the record.<a href="#section-5-2.10.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-2.8.2.3">
+<dt id="section-5-2.10.2.3">
 <code>principal</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.4">
-              <p id="section-5-2.8.2.4.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>.<a href="#section-5-2.8.2.4.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.4">
+              <p id="section-5-2.10.2.4.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>.<a href="#section-5-2.10.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-2.8.2.5">
+<dt id="section-5-2.10.2.5">
 <code>kind</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.6">
-              <p id="section-5-2.8.2.6.1"><span class="bcp14">REQUIRED</span>. A string, one of <code>human</code>, <code>service</code>, or <code>policy</code>.<a href="#section-5-2.8.2.6.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.6">
+              <p id="section-5-2.10.2.6.1"><span class="bcp14">REQUIRED</span>. A string, one of <code>human</code>, <code>service</code>, or <code>policy</code>.<a href="#section-5-2.10.2.6.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-2.8.2.7">
+<dt id="section-5-2.10.2.7">
 <code>decision</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.8">
-              <p id="section-5-2.8.2.8.1"><span class="bcp14">REQUIRED</span>. A string, one of <code>approve</code> or <code>deny</code>.<a href="#section-5-2.8.2.8.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.8">
+              <p id="section-5-2.10.2.8.1"><span class="bcp14">REQUIRED</span>. A string, one of <code>approve</code> or <code>deny</code>.<a href="#section-5-2.10.2.8.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-2.8.2.9">
+<dt id="section-5-2.10.2.9">
 <code>decided_at</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.10">
-              <p id="section-5-2.8.2.10.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-5-2.8.2.10.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.10">
+              <p id="section-5-2.10.2.10.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-5-2.10.2.10.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-2.8.2.11">
+<dt id="section-5-2.10.2.11">
 <code>authority</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.12">
-              <p id="section-5-2.8.2.12.1"><span class="bcp14">REQUIRED</span>. A reference to the provenance under which this
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.12">
+              <p id="section-5-2.10.2.12.1"><span class="bcp14">REQUIRED</span>. A reference to the provenance under which this
 principal was authorized to decide. For a <code>human</code> assertion,
 the authentication context of the assertion. For a <code>policy</code>
 assertion, the deciding policy's identifier and version, and
 <code>approved_at</code>: the family's provenance chain for non-human
 approval, in which the policy approves the instance because a
-human approved the policy.<a href="#section-5-2.8.2.12.1" class="pilcrow">¶</a></p>
-<p id="section-5-2.8.2.12.2"><code>approved_at</code> is an RFC 3339 timestamp: the human approval
+human approved the policy.<a href="#section-5-2.10.2.12.1" class="pilcrow">¶</a></p>
+<p id="section-5-2.10.2.12.2"><code>approved_at</code> is an RFC 3339 timestamp: the human approval
 instant of that exact policy version, not the assertion
 instant. <code>decided_at</code> records when the policy asserted;
 <code>approved_at</code> records when a human approved the version it
@@ -1523,34 +1545,34 @@ asserts under. The issuer <span class="bcp14">MUST</span> verify <code>approved_
 retained, authenticated governance state for the named
 <code>policy_id</code> and <code>version</code>; it <span class="bcp14">MUST NOT</span> accept <code>approved_at</code> as
 the assertion's own uncorroborated clock value
-(<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>).<a href="#section-5-2.8.2.12.2" class="pilcrow">¶</a></p>
+(<a href="#policy-approval-recency" class="auto internal xref">Section 8</a>).<a href="#section-5-2.10.2.12.2" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-2.8.2.13">
+<dt id="section-5-2.10.2.13">
 <code>reason</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-2.8.2.14">
-              <p id="section-5-2.8.2.14.1"><span class="bcp14">OPTIONAL</span>. A string.<a href="#section-5-2.8.2.14.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-5-2.10.2.14">
+              <p id="section-5-2.10.2.14.1"><span class="bcp14">OPTIONAL</span>. A string.<a href="#section-5-2.10.2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-2.9">
+<dt id="section-5-2.11">
 <code>evaluation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-2.10">
-          <p id="section-5-2.10.1"><span class="bcp14">REQUIRED</span>. An object recording the outcome: <code>decision</code> (a string,
+        <dd style="margin-left: 1.5em" id="section-5-2.12">
+          <p id="section-5-2.12.1"><span class="bcp14">REQUIRED</span>. An object recording the outcome: <code>decision</code> (a string,
 <code>approved</code>, the only value a committed record carries, since a
 record exists only for an approval that committed,
 <a href="#atomic-commitment" class="auto internal xref">Section 7</a>), <code>evaluated_at</code> (an RFC 3339 timestamp),
 and <code>contributing</code> (an array of the <code>assertion_id</code> values the
-evaluation relied on).<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+evaluation relied on).<a href="#section-5-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-2.11">
+<dt id="section-5-2.13">
 <code>envelope</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-2.12">
-          <p id="section-5-2.12.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection over the members above,
-in the form <a href="#envelope" class="auto internal xref">Section 9</a> defines.<a href="#section-5-2.12.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-5-2.14">
+          <p id="section-5-2.14.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection over the members above,
+in the form <a href="#envelope" class="auto internal xref">Section 9</a> defines.<a href="#section-5-2.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1687,9 +1709,14 @@ exists without a Mission record. The issuer signs
 the evaluated record (<a href="#envelope" class="auto internal xref">Section 9</a>) and persists the signed form in
 the same commit as the Mission's creation; signing follows
 evaluation and precedes persistence, never the reverse.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">A committed record is immutable. A subsequent governance action, a
+<p id="section-7-2">Where the record carries <code>approval_context_commitment</code> (<a href="#record" class="auto internal xref">Section 5</a>),
+the issuer computes it in this same commit, from the Mission record
+being created, and before signing. A value computed after the commit
+is not covered by the record's signature and <span class="bcp14">MUST NOT</span> be added to a
+committed record.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">A committed record is immutable. A subsequent governance action, a
 re-review or an incident finding, is a new record about a new event,
-never an edit.<a href="#section-7-2" class="pilcrow">¶</a></p>
+never an edit.<a href="#section-7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-approval-recency">
@@ -2141,7 +2168,10 @@ canonical element order (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" cl
 <p id="section-12.3-1">An issuer computes <code>approval_context_commitment</code> on demand from the
 Mission's immutable creation facts, fixed at the approval event
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This document adds no
-Mission Record member for it. A deployment <span class="bcp14">MAY</span> cache the computed
+Mission Record member for it; an Approval Governance Record <span class="bcp14">MAY</span> carry
+it as a member of its own signed record (<a href="#record" class="auto internal xref">Section 5</a>), which is a
+disclosure of the computed value, not a second place the Mission
+record holds it. A deployment <span class="bcp14">MAY</span> cache the computed
 value; a cached value is derived state and <span class="bcp14">MUST NOT</span> be treated as
 authoritative where it disagrees with a fresh computation from the
 record.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
@@ -2198,7 +2228,8 @@ requires disclosing the whole object.<a href="#section-12.4-2.3.1" class="pilcro
         </h3>
 <p id="section-12.5-1"><code>approval_context_commitment</code> <span class="bcp14">MAY</span> appear as a signed member of an
 artifact that already authenticates a reference to the Mission, for
-example a Consent Evidence object
+example this document's own Approval Governance Record
+(<a href="#record" class="auto internal xref">Section 5</a>) or a Consent Evidence object
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), or under
 an introspection caller's member-scoped disclosure privilege, the
 same privilege that already gates <code>proposal_hash</code>

@@ -1667,20 +1667,34 @@ auditor can correlate the Mandate to the approval-event evidence
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-1.23">
-<code>authority_set</code>:</dt>
+<code>approval_context_commitment</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.24">
-            <p id="section-5.2-1.24.1"><span class="bcp14">OPTIONAL</span>. An array. The full consented Authority Set, exactly as
-recorded on the Mission record, preserving array order (the order is
-part of the canonical form under the issuance profile's
-canonicalization rules). When present, a verifier that relies on
-its contents recomputes <code>authority_hash</code> over it
+            <p id="section-5.2-1.24.1"><span class="bcp14">OPTIONAL</span>. A string. The Approval Context Commitment over the
+Mission's immutable creation facts, in the form the Approval
+Context Commitment profile fixes
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>). It is
+correlation material: it matches this Mandate to another
+authenticated artifact that discloses the same commitment for the
+same Mission, without either artifact re-deriving the other's
+fields. It carries no authority and is never an enforcement input
 (<a href="#verification" class="auto internal xref">Section 7</a>).<a href="#section-5.2-1.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-1.25">
-<code>mandate_exp</code>:</dt>
+<code>authority_set</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.26">
-            <p id="section-5.2-1.26.1"><span class="bcp14">OPTIONAL</span>. A NumericDate. An expiry of the Mandate artifact itself,
+            <p id="section-5.2-1.26.1"><span class="bcp14">OPTIONAL</span>. An array. The full consented Authority Set, exactly as
+recorded on the Mission record, preserving array order (the order is
+part of the canonical form under the issuance profile's
+canonicalization rules). When present, a verifier that relies on
+its contents recomputes <code>authority_hash</code> over it
+(<a href="#verification" class="auto internal xref">Section 7</a>).<a href="#section-5.2-1.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.2-1.27">
+<code>mandate_exp</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.28">
+            <p id="section-5.2-1.28.1"><span class="bcp14">OPTIONAL</span>. A NumericDate. An expiry of the Mandate artifact itself,
 distinct from the Mission's <code>expires_at</code>: after it, the Mandate <span class="bcp14">MUST NOT</span> be
 relied on as evidence. When absent, the Mandate is valid as evidence
 for the Mission's audit horizon, the retention term the issuance
@@ -1689,17 +1703,17 @@ the audit horizon is the issuer's retention term, which a
 third-party verifier cannot discover, so an absent <code>mandate_exp</code>
 leaves the evidence bound unverifiable from the artifact alone. It
 is deliberately not the standard <code>exp</code> claim, whose validity window
-would read as a credential lifetime.<a href="#section-5.2-1.26.1" class="pilcrow">¶</a></p>
+would read as a credential lifetime.<a href="#section-5.2-1.28.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.2-1.27">
+<dt id="section-5.2-1.29">
 <code>minted_for</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.2-1.28">
-            <p id="section-5.2-1.28.1"><span class="bcp14">OPTIONAL</span>. A string. An identifier for the party this Mandate was
+          <dd style="margin-left: 1.5em" id="section-5.2-1.30">
+            <p id="section-5.2-1.30.1"><span class="bcp14">OPTIONAL</span>. A string. An identifier for the party this Mandate was
 minted for. It is attribution, not audience: it binds nothing. A
 verifier <span class="bcp14">MUST NOT</span> treat it as access control or reject a Mandate
 over its value. Its use is that a Mandate found where it should
-not be names its leak path (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>).<a href="#section-5.2-1.28.1" class="pilcrow">¶</a></p>
+not be names its leak path (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>).<a href="#section-5.2-1.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2108,14 +2122,26 @@ prefix the verifier does not recognize, and never treat an
 unrecognized prefix as <code>sha-256</code>, per the issuance profile.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-7-3">Where the deployment runs the audit transparency profile, a verifier
+<p id="section-7-3">Where <code>approval_context_commitment</code> (<a href="#claims" class="auto internal xref">Section 5.2</a>) is present, a
+verifier that holds the Mission's immutable creation facts <span class="bcp14">MAY</span>
+recompute it and <span class="bcp14">MUST</span> reject the Mandate on a mismatch, the recompute
+rule the Approval Context Commitment profile fixes
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>). A Mandate
+usually travels to a verifier with no channel back to the Mission
+Issuer, so those facts are usually not held and no recompute is
+possible. There the value is correlation material only: it matches
+this Mandate to another authenticated artifact disclosing the same
+commitment, and proves nothing further about the approval beyond what
+this Mandate's own signature already authenticates. Its absence is
+never a verification failure.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">Where the deployment runs the audit transparency profile, a verifier
 <span class="bcp14">MAY</span> additionally confirm an audit-registration Receipt
 (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) before high-consequence reliance, and under a
 key revoked for compromise the Receipt is the only path on which
 verification continues (step 3). Transparency-hardened verification
 (<a href="#transparency-hardened" class="auto internal xref">Section 7.2</a>) makes both sides mandatory; the
 issuer-key-compromise consideration states what the hardening bounds
-and what its absence leaves open (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+and what its absence leaves open (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7-4" class="pilcrow">¶</a></p>
 <div id="failures">
 <section id="section-7.1">
         <h3 id="name-failure-taxonomy">
@@ -2819,6 +2845,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
         <dd>

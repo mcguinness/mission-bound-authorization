@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-04T01:25:38Z
-Source repository commit: b454bccd8689a12f8f57faf49368fb0b8d6ab462
+Generated: 2026-09-04T05:28:35Z
+Source repository commit: 3a301a297488829ceed48d7d553a4dae566b1b46
 Member count: 9
 
 Reading order:
@@ -9936,6 +9936,14 @@ Table of Contents
    disclosure privilege; an audience-authorized Resource Server receives
    the ordinary audience-filtered enforcement projection defined above,
    without them, by default.
+
+   The same member-scoped rule governs any further mission member a
+   companion profile defines for disclosure here.  Such a member is
+   disclosed only to a caller the deployment has granted that member's
+   disclosure privilege, never by default, and it is audit and
+   correlation metadata under this section's minimization rules, never
+   an enforcement input (Section 9.3).  This document defines no such
+   member.
 
 11.2.  Composite Active State
 
@@ -26933,8 +26941,14 @@ Table of Contents
 
       *  When decision is approved, it contains id, issuer, intent_hash,
          authority_hash, proposal_hash when the Mission records an
-         authority proposal, and, when this profile records it on the
-         Mission, consent_rendering_hash.
+         authority proposal, consent_rendering_hash when this profile
+         records it on the Mission, and, where the deployment computes
+         it, approval_context_commitment
+         ([I-D.draft-mcguinness-mission-approval-governance]): OPTIONAL,
+         a string, the commitment over the created Mission's immutable
+         creation facts, carried so this object and another
+         authenticated artifact disclosing the same commitment match to
+         one approval transaction.
 
       *  When decision is declined, no Mission was created
          (Section 9.1), so there is no id.  It instead contains issuer
@@ -26950,6 +26964,11 @@ Table of Contents
          present), matching that disclosure's source_hashes, and MUST
          NOT contain id.
 
+      approval_context_commitment appears on the approved branch only.
+      A declined or narrowed descriptor MUST NOT contain it: no Mission
+      was created, so the Mission creation facts it commits do not
+      exist, exactly the reason both branches also lack id.
+
       This descriptor follows the evidence-descriptor convention of the
       issuance profile ([I-D.draft-mcguinness-oauth-mission]): it is the
       mission claim shape (id and issuer) extended with the collision-
@@ -26957,7 +26976,8 @@ Table of Contents
       as this document's own audit anchor since a Consent Evidence
       object is retained and correlated independently of any token,
       intent_hash, consent_rendering_hash, and, where present,
-      proposal_hash, and it is not authority-bearing on its own.
+      proposal_hash and approval_context_commitment, and it is not
+      authority-bearing on its own.
 
    approver:  REQUIRED.  An object identifying the authenticated
       Approver.  It MUST carry iss and sub, per the Mission record's

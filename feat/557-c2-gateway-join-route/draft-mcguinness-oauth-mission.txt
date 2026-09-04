@@ -3960,6 +3960,14 @@ Table of Contents
    the ordinary audience-filtered enforcement projection defined above,
    without them, by default.
 
+   The same member-scoped rule governs any further mission member a
+   companion profile defines for disclosure here.  Such a member is
+   disclosed only to a caller the deployment has granted that member's
+   disclosure privilege, never by default, and it is audit and
+   correlation metadata under this section's minimization rules, never
+   an enforcement input (Section 9.3).  This document defines no such
+   member.
+
 11.2.  Composite Active State
 
    The introspection active member reflects the composite authorization,
