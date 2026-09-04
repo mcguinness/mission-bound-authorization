@@ -182,7 +182,7 @@ depends on no deferral substrate.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 15 conformance rows in conformance-manifest.json (6 tested, 9 todo).
+Implementation: 15 conformance rows in conformance-manifest.json (7 tested, 1 partial, 7 todo).
 Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling).
