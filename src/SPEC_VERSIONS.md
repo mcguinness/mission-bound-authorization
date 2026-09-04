@@ -28,8 +28,8 @@ this matrix and the `@spec` tags to the affected code and tests.
 
 | Spec | Pinned version | Component | Surfaces (`@spec` doc key) | Tests |
 |---|---|---|---|---|
-| `draft-mcguinness-oauth-mission` | `c2053e5` (2026-07-17) | `packages/mission-core` | `mission#integrity-anchors`, `mission#canonicalization`, `mission#test-vectors` | `packages/mission-core/test/anchors.test.ts` |
-| `draft-mcguinness-oauth-mission` | `cf8727d` (2026-08-21) | `services/authorization-server` (kernel + adapters) | `mission#submission-via-par`, `mission#mission-intent`, `mission#authorization-derivation`, `mission#subset`, `mission#integrity-anchors`, `mission#the-mission-claim`, `mission#lifecycle`, `mission#introspection`, `mission#as-metadata` | `services/authorization-server/test/{kernel,tracer,authorization-endpoint}.test.ts` |
+| `draft-mcguinness-oauth-mission` | `7f5cbd5` (2026-08-25) | `packages/mission-core` | `mission#integrity-anchors`, `mission#canonicalization`, `mission#test-vectors`, `mission#authority-sources` | `packages/mission-core/test/anchors.test.ts` |
+| `draft-mcguinness-oauth-mission` | `7f5cbd5` (2026-08-25) | `services/authorization-server` (kernel + adapters) | `mission#submission-via-par`, `mission#mission-intent`, `mission#authorization-derivation`, `mission#subset`, `mission#integrity-anchors`, `mission#the-mission-claim`, `mission#lifecycle`, `mission#introspection`, `mission#as-metadata`, `mission#approval-event`, `mission#authority-sources`, `mission#mission-record` | `services/authorization-server/test/{kernel,tracer,authorization-endpoint,authority-source,rar-carriage}.test.ts` |
 | `draft-mcguinness-oauth-mission-status` | `49fc10f` (2026-08-26) | `services/authorization-server` (kernel + adapters) | `status#legal-transitions`, `status#state-machine`, `status#mission-status-response`, `status#mission-status-anti-oracle`, `status#mission-status-errors`, `status#mission-status-authentication`, `status#idempotency` | `services/authorization-server/test/{kernel,tracer}.test.ts` |
 | `draft-mcguinness-oauth-mission-discharge` | `172fb46` (2026-08-25) | `services/authorization-server` (kernel + adapters, incl. `kernel/discharge.ts`, `kernel/discharge-pin-store.ts`, `kernel/lifecycle-idempotency.ts`), `services/pdp/src/{evaluate.ts,policy-view.ts}` | `discharge#completion`, `discharge#terminal-when`, `discharge#subset-extension`, `discharge#discharge`, `discharge#determining`, `discharge#visibility`, `discharge#discharge-operation`, `discharge#discharge-authority`, `discharge#discharge-anti-oracle`, `discharge#discharge-idempotency`, `discharge#discharge-result`, `discharge#completion-security`, `discharge#runtime` | `services/authorization-server/test/discharge.test.ts`, `services/pdp/test/evaluate-discharge.test.ts` |
 | `draft-mcguinness-oauth-mission-status-list` | `01306cc` (2026-08-25) | `services/authorization-server/src/kernel/status-list.ts` | `status-list#status-list` | `services/authorization-server/test/status-list.test.ts` |
@@ -104,10 +104,9 @@ this matrix and the `@spec` tags to the affected code and tests.
   any vector whose intent carried a proposal; the repo's four existing vectors
   were unaffected and a fifth `proposal_hash` vector was added); new anchor
   `proposal_hash` (`typ: mission-proposed-authority`, present iff submitted,
-  record + introspection, not the claim). The OAuth binding's rows above pin `c2053e5`,
-  which predates this; the `@spec` surfaces `mission#submission-via-par` /
-  `mission#authorization-derivation` now realize the new carriage in code
-  (PR #478). The OAuth binding's pin bump remains deliberate-deferred per D25/D41.
+  record + introspection, not the claim). Both OAuth binding rows above pin
+  `7f5cbd5`, which carries this carriage, so the deferral it recorded is
+  discharged (issue #646).
 - DTR (`-00`) initiation is folded into the deferred grant type rather than
   carried as `completion_mode=deferred` on the originating grant:
   node-oidc-provider offers no pre-issuance defer hook for built-in grants. A
