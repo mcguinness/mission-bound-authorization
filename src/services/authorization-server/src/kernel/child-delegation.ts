@@ -291,7 +291,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // recorded bindings for every retained catalog-sourced action, BEFORE the
   // child `authority_hash` below and before the strict-subset proof: a child
   // that dropped a parent binding is correctly refused by isSubsetEntry, so
-  // the derived path inherits rather than leaving the member bare.
+  // the derived path inherits rather than leaving the member bare. The grantor
+  // is the EFFECTIVE set, unlike createExpansion's approved-set grantor: a
+  // contained capability MUST NOT re-derive into a child, while an Expansion
+  // successor's own approval MAY restore one.
   const childAuthority = inheritCapabilitySources(
     inheritActionApprovalRequirement(kernel.derive(input.intent, proposal), parentEffective),
     parentEffective,
