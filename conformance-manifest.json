@@ -15,8 +15,8 @@
     "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "dd7115f882e01828ef4dcba369fdf1d81f377acc",
-    "content_sha256": "58d6d40b46d8330daef7baa68f5426bb5f6a124804dcf7e2fc4b3ca2dc7f59eb"
+    "revision": "86773dd6b0727688206f85b968cada9499a696fb",
+    "content_sha256": "013a50e3c33fdb39306478752123e802f7ab7f5756a3adc391ac1cd008de0c24"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -192,6 +192,52 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "runtime.conformance.perimeter-disposition-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "Each declared resource and excluded path MUST have exactly one perimeter disposition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every declared entry has one disposition, with the defined legacy-resource shorthand; invalid nested shapes and conflicting keys refuse.",
+    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.conformance.no-reconstructed-as-mediated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "A deployment MUST NOT represent reconstructed or unrecorded entries as mediation.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A claim must name a mediated resource and no excluded execution path.",
+    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
   {
    "id": "core.submission.front-channel-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
