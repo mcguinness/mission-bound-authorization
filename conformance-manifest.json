@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "2d9d9e591992bd6748a9f60ed17c3e45f66be78d",
-    "content_sha256": "12f95e037cb119cf91be58909f39d2141bf1286b68ce07369e0504844021c672"
+    "revision": "16cd23afa44c7bbe9a8813e4dc5d739e2697f047",
+    "content_sha256": "bb32eb7c901f567a68dd8ae90e769da72408061ff3925aa1a6862679d254d82a"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
