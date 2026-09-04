@@ -413,9 +413,13 @@ Transaction Tokens
 agent-chain context, who is acting now, who started the chain, and
 how many agent transitions occurred. A Mission reference is a
 different axis, the governing transaction or authority context the
-chain executes under; it does not change hop to hop the way those
-fields do, and it rides as a sibling claim there, inert as evidence,
-exactly as in this document's own end-to-end example above.
+chain executes under, and it does not change hop to hop the way
+those fields do. Where that context travels within a Transaction
+Token (a top-level claim, the base transaction context, or an
+`agentic_ctx` extension) is for that draft's authors to settle and
+is not decided here. Mission context does not itself confer
+authority: a consumer applies this profile's validation before using
+it for authorization.
 
 # Relationship to Mission Continuation {#mission-continuation}
 
