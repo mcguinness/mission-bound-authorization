@@ -35,6 +35,7 @@ import {
   type CrossOrgOptions,
   type FederationConfig,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const PORT = 14503;
 const ISSUER = `http://localhost:${PORT}`;
@@ -185,20 +186,22 @@ beforeAll(async () => {
     bounds: { maxHops: 6, maxBytes: 200_000 },
     stateFreshnessSeconds: 300,
   };
+  const originPolicy = {
+    policy_version: "xorg-endpoint-1",
+    ceiling: [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: [READ, SCHEDULE],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+        delegation: { max_depth: 3 },
+      },
+    ],
+  };
   originKernel = new MissionKernel({
     issuer: ORIGIN_ISS,
-    policy: {
-      policy_version: "xorg-endpoint-1",
-      ceiling: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: [READ, SCHEDULE],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" } },
-          delegation: { max_depth: 3 },
-        },
-      ],
-    } as never,
+    policy: originPolicy as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(originPolicy.ceiling, ["agent-a"], ["bob"]),
     statusKey: originKeys.privateKey,
     statusKid: "as-status",
   });

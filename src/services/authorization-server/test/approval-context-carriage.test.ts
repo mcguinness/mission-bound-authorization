@@ -21,6 +21,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { MissionKernel, type MissionRecord, validateMissionIntent } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -34,6 +35,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey: privateKey,
     statusKid: "as-status",
   });

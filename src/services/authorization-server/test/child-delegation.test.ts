@@ -18,6 +18,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 // The AS asserts these child actors as `ai_agent` (config-driven in production;
@@ -80,6 +81,7 @@ beforeEach(() => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"], ["bob"]),
     statusKey: key,
     statusKid: "as-status",
     now,
@@ -414,6 +416,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     const k = new MissionKernel({
       issuer: ISS,
       policy: openPolicy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(openPolicy.ceiling, ["parent-agent"], ["bob"]),
       statusKey: key,
       statusKid: "as-status",
       now,
@@ -520,6 +523,31 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       statusKid: "as-status",
       now,
       actorProfiles: aiAgents("d-agent-0", "d-agent-1"),
+      // @spec mission#authority-sources — the hand-built parent below stands in
+      // for one a real approval would have produced, so the deployment declares
+      // the user-delegated source whose authority covers it; the drawdown's
+      // ceiling assertion then runs against that source, not the narrower
+      // derivation ceiling this fan-out case deliberately exceeds.
+      authoritySourceCatalog: {
+        humanPrincipals: ["alice", "bob"],
+        entries: [
+          {
+            id: "d-people",
+            type: "user_delegated",
+            clients: [],
+            activators: ["bob"],
+            ceiling: [
+              {
+                type: "mission_resource_access",
+                resource: R,
+                actions: ["res.read"],
+                constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+                delegation: { max_depth: 2, children: childrenCtl(5) },
+              },
+            ],
+          },
+        ],
+      } as never,
     });
     // Hand-built parent whose Authority Set is TWO same-resource entries:
     // A (index 0, cap 1) then B (index 1, cap 5). The child subsets both.
@@ -548,6 +576,10 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
         activation_actor: { iss: ISS, sub: "bob" },
         root_commitment: "sha-256:d-authority",
       },
+      // @spec mission#authority-sources — REQUIRED and immutable; the source
+      // this kernel's catalog declares, which is what a real approval would
+      // have established.
+      authority_source: { type: "user_delegated" },
       client_id: "parent-agent",
       policy_version: "d-policy",
       approval_event_id: dApprovalEventId,
@@ -802,6 +834,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     const basisKernel = new MissionKernel({
       issuer: ISS,
       policy: policy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["parent-agent"], ["bob"]),
       statusKey: key,
       statusKid: "as-status",
       now,

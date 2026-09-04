@@ -1,0 +1,20 @@
+{
+  "human_principals": ["alice", "bob"],
+  "sources": [
+    {
+      "id": "acme-people",
+      "type": "user_delegated",
+      "clients": ["ap-agent", "subagent-invoice-extractor", "agent-A1", "parent-P"],
+      "activators": ["alice", "bob"],
+      "ceiling": "deployment"
+    },
+    {
+      "id": "acme-accounts-payable",
+      "type": "organizational",
+      "clients": ["governed-agent"],
+      "activators": ["bob"],
+      "principals": ["acme-accounts-payable"],
+      "policy": { "id": "acme-accounts-payable-controls", "version": "2026-09-01" }
+    }
+  ]
+}

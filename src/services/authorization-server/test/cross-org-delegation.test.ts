@@ -19,6 +19,7 @@ import {
   WORKLOAD_ATTESTATION_TYPE,
   type FederationConfig,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ORIGIN_ISS = "https://as.org1.test";
 const ORG3_API = "https://api.org3.test";
@@ -61,20 +62,22 @@ beforeAll(async () => {
   attestKeys = await generateKeyPair("ES256", { extractable: true });
   nowS = Math.floor(Date.now() / 1000);
 
+  const originPolicy = {
+    policy_version: "xorg-1",
+    ceiling: [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read", "payments:payment.schedule"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+        delegation: { max_depth: 3 },
+      },
+    ],
+  };
   kernel = new MissionKernel({
     issuer: ORIGIN_ISS,
-    policy: {
-      policy_version: "xorg-1",
-      ceiling: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read", "payments:payment.schedule"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" } },
-          delegation: { max_depth: 3 },
-        },
-      ],
-    } as never,
+    policy: originPolicy as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(originPolicy.ceiling, ["agent-a"], ["bob"]),
     statusKey: asKeys.privateKey,
     statusKid: "as-status",
   });

@@ -26,6 +26,7 @@ import {
   ProvenanceCustodyError,
   validateMissionIntent,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.wp.test";
 const RESOURCE = "https://payments.test/mcp";
@@ -60,6 +61,7 @@ beforeEach(() => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["agent-A1", "agent-A2", "agent-A3", "agent-A4", "agent-A5", "agent-B1", "agent-B2", "agent-B3", "agent-B4"], ["bob"]),
     statusKey: key,
     statusKid: "as-status",
     now: () => NOW,

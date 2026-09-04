@@ -24,6 +24,7 @@ import {
   type MissionIntent,
   validateMissionIntent,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const EXP = "2027-01-01T00:00:00Z";
@@ -212,7 +213,7 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
   });
 
   const mkKernel = (policy: unknown) =>
-    new MissionKernel({ issuer: ISS, policy: policy as never, statusKey: signKey, statusKid: "as-status" });
+    new MissionKernel({ issuer: ISS, policy: policy as never, authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["agent"], ["bob"]), statusKey: signKey, statusKid: "as-status" });
 
   const approveTemplate = (kernel: MissionKernel, resources: string[]) =>
     kernel.approve({

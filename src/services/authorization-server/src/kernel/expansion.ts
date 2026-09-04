@@ -126,6 +126,18 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     kernel.derive(input.intent, proposal),
     predecessor.authority_set,
   );
+  // @spec mission#approval-event (step 3), mission#authority-sources —
+  // Expansion is a FRESH approval event with its own Approver (the
+  // `approval_basis` built below is `direct`, exactly kernel.approve()'s
+  // path), so step 3 applies verbatim: establish the source from trusted
+  // configuration and assert the successor's derived set against it, both
+  // before any anchor is computed.
+  const authoritySource = kernel.establishAuthoritySource({
+    clientId: predecessor.client_id,
+    subject: predecessor.subject,
+    approver: input.approver,
+  });
+  kernel.assertAuthorityWithinSource(predecessor.client_id, authoritySet);
   // @spec expansion#successor-expiry — ONE creation instant for the successor:
   // the record's `created_at` and the instant every lifetime ceiling is
   // measured from are the same read.
@@ -176,6 +188,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     subject: predecessor.subject,
     approver: input.approver,
     approval_basis: approvalBasis,
+    authority_source: authoritySource,
     client_id: predecessor.client_id,
     policy_version: predecessor.policy_version,
     approval_event_id: input.approvalEventId,

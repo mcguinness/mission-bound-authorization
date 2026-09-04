@@ -13,6 +13,7 @@ import { MissionKernel, validateMissionIntent } from "@mission/authorization-ser
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type Receipt, signStatement, type SignedStatement, TransparencyService } from "@mission/transparency";
 import { AuthzError, ConsoleBff } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 
 const ISS = "https://as.test";
 
@@ -43,7 +44,7 @@ const approveMission = (n: number) =>
 
 beforeAll(async () => {
   const asKeys = await generateKeyPair("ES256", { extractable: true });
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: asKeys.privateKey, statusKid: "as-status" });
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]), statusKey: asKeys.privateKey, statusKid: "as-status" });
 
   const pdp = await generateKeyPair("ES256", { extractable: true });
   const pdpPub = { ...(await exportJWK(pdp.publicKey)), kid: "pdp-evidence", alg: "ES256" };

@@ -74,6 +74,16 @@ export const MISSION_ORIGIN_SUBJECT_TYP = "mission-origin-subject";
  */
 export const MISSION_INTENT_EVIDENCE_TYP = "mission-intent-evidence";
 
+/**
+ * @spec mission#authority-sources, mission#mission-record — the commitment an
+ * `organizational` Mission's `authority_source.policy.digest` carries: the
+ * family anchor idiom over a governed organizational policy document. The
+ * envelope's `iss` is the GOVERNANCE AUTHORITY that publishes the policy, not
+ * the Mission Issuer, so the same governed policy has the same digest at every
+ * AS that loads it and drift in the policy body refuses everywhere at once.
+ */
+export const GOVERNED_POLICY_TYP = "mission-governed-policy";
+
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };
   const canonical = canonicalize(envelope);

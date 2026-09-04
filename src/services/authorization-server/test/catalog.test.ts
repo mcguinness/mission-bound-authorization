@@ -9,6 +9,7 @@ import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CANONICAL_RESOURCE, CATALOG_SERVICES, DERIVATION_POLICY } from "@mission/demo-data";
 import { CatalogProvider, MissionKernel, validateMissionIntent } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const ARS_INTAKE = "https://ars.test/access-requests";
@@ -29,7 +30,7 @@ const approveForAlice = (n: number) =>
 
 beforeAll(async () => {
   const { privateKey } = await generateKeyPair("ES256", { extractable: true });
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: privateKey, statusKid: "as-status" });
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]), statusKey: privateKey, statusKid: "as-status" });
   catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: ARS_INTAKE, issuer: ISS });
 });
 

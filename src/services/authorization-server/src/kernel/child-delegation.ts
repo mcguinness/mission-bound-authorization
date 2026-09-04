@@ -300,6 +300,14 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     parentEffective,
   );
 
+  // @spec mission#authority-sources — a child drawdown draws on the PARENT's
+  // established source, so the child inherits `authority_source` verbatim: the
+  // record member is immutable, and re-establishing it at drawdown would let a
+  // child change provenance with no approval event. Only the source ceiling is
+  // re-asserted, against catalog state current at the moment authority is
+  // drawn, and it runs BEFORE the child's anchors are computed.
+  kernel.assertInheritedAuthoritySource(parent.authority_source, childAuthority);
+
   // The prospective child identity, computed BEFORE the fan-out gates so a deny
   // Child Evidence record carries a real `child` member (REQUIRED unconditionally,
   // @spec child-delegation#child-evidence-object). The same id and hash are then
@@ -501,6 +509,9 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     subject: parent.subject,
     approver: parent.approver,
     approval_basis: approvalBasis,
+    // @spec mission#authority-sources — inherited verbatim from the Parent
+    // Mission, like `subject` and `approver`.
+    authority_source: parent.authority_source,
     // @spec child-delegation#child-client-identity — client_id == child actor sub.
     client_id: clientId,
     policy_version: parent.policy_version,

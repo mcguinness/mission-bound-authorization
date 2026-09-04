@@ -16,6 +16,7 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -33,7 +34,10 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: key, statusKid: "as-status", now });
+  // Two Approvers, both real here: the templates this suite builds are
+  // consented by "human-approver", and the shipped demo descriptor it also
+  // exercises names "bob".
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["worker", "intruder", "subagent-invoice-extractor", "orchestrator"], ["human-approver", "bob"]), statusKey: key, statusKid: "as-status", now });
   store = new TemplateStore(now);
 });
 
@@ -61,7 +65,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     approval_event_id: `tmpl-ev-${tmplSeq++}`,
     expires_at: "2026-12-01T00:00:00Z",
     ...over,
-  });
+  }, kernel.authoritySourceOptions());
 
 /** An untrusted Intent proposing the given actions (default max_amount 500,
  *  which is exactly the policy ceiling, so any narrower final is attributable). */
@@ -122,7 +126,7 @@ describe("createTemplate (@spec mission-template)", () => {
       rate_per_min: 5,
       approval_event_id: "consent-1",
       expires_at: "2026-12-01T00:00:00Z",
-    });
+    }, kernel.authoritySourceOptions());
     expect(again.id).toBe(t.id);
     expect(again.template_hash).toBe(t.template_hash);
   });
@@ -414,7 +418,7 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
   it("createTemplate accepts the demo descriptor and it dispatches a read-only instance", () => {
     // The artifact the wire PR + demo consume: prove it both constructs AND
     // dispatches, against the same DERIVATION_POLICY the demo AS uses.
-    const t = createTemplate(store, demoReconciliationTemplate(ISS) as never);
+    const t = createTemplate(store, demoReconciliationTemplate(ISS) as never, kernel.authoritySourceOptions());
     const { mission } = dispatchFromTemplate(kernel, store, {
       templateId: t.id,
       dispatchEventId: "demo-dsp-1",

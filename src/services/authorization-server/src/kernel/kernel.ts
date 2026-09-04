@@ -5,7 +5,12 @@
  */
 
 import { randomBytes, randomInt } from "node:crypto";
-import { authorityHash, intentHash, proposalHash } from "@mission/core";
+import {
+  type ApprovalContextManifestInput,
+  authorityHash,
+  intentHash,
+  proposalHash,
+} from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
@@ -18,6 +23,19 @@ import {
   type ContainmentPolicy,
   UnknownProtectedEventError,
 } from "./containment.js";
+import {
+  assertApproverMayActivate,
+  assertPolicyDigestMatches,
+  assertSubjectDiscipline,
+  assertWithinSourceCeiling,
+  type AuthoritySourceCatalog,
+  type AuthoritySourceCatalogEntry,
+  authoritySourceOf,
+  parseAuthoritySource,
+  resolveDeclaredSource,
+  resolveSourceForClient,
+  validateAuthoritySourceCatalog,
+} from "./authority-source.js";
 import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
 import {
   deriveAuthoritySet,
@@ -63,6 +81,7 @@ import {
 import {
   type ApprovalBasis,
   type AuthorityEntry,
+  type AuthoritySource,
   type ContainmentEventRecord,
   type DischargedEntry,
   type IntentSubmissionEvidenceEntry,
@@ -100,6 +119,7 @@ CREATE TABLE IF NOT EXISTS missions (
   approver_iss TEXT NOT NULL,
   approver_sub TEXT NOT NULL,
   approval_basis_json TEXT NOT NULL,
+  authority_source_json TEXT NOT NULL,
   client_id TEXT NOT NULL,
   policy_version TEXT NOT NULL,
   approval_event_id TEXT NOT NULL UNIQUE,
@@ -241,6 +261,16 @@ export interface KernelOptions {
    * class for any actor, so only `{ "sub": ... }` matchers can admit a delegate.
    */
   actorProfiles?: Record<string, string>;
+  /**
+   * @spec mission#authority-sources, mission#approval-event — the deployment's
+   * TRUSTED authority-source catalog. The approval event establishes
+   * `authority_source` from this and from nothing else: never from
+   * {@link ApproveInput}, a submission envelope, or any other client
+   * assertion. REQUIRED: whose authority an approval draws on is a deployment
+   * declaration, and a kernel with no catalog would have to invent one, which
+   * is exactly the fail-open the five gates exist to prevent.
+   */
+  authoritySourceCatalog: AuthoritySourceCatalog;
 }
 
 export class MissionKernel {
@@ -269,6 +299,20 @@ export class MissionKernel {
   private readonly allocateStatusIndex: () => number;
 
   constructor(private readonly opts: KernelOptions) {
+    // @spec mission#authority-sources — the catalog's own invariants are
+    // enforced HERE, not only over the shipped file: two declarations sharing a
+    // source identity would make a drawdown's re-resolution ambiguous, and one
+    // client declared twice would make establishment ambiguous. Both refuse
+    // construction rather than letting a lookup silently pick a winner.
+    // A plain Error, not an IntentError: a missing catalog is deployment
+    // misconfiguration, never a request refusal, so it must not reach a client
+    // as `access_denied`. The five gates stay the only `access_denied` source.
+    if (!opts.authoritySourceCatalog) {
+      throw new Error(
+        "authoritySourceCatalog is required: an Authorization Server that declares no authority source has no authority for an approval to activate",
+      );
+    }
+    validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
     this.db = openStore(SCHEMA);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
@@ -389,6 +433,116 @@ export class MissionKernel {
   }
 
   /**
+   * @spec approval-governance#approval-context-manifest — the Approval Context
+   * Manifest input for a Mission, taken FROM THE RECORD. `authority_source` is
+   * a REQUIRED manifest input, so the manifest is computable only because the
+   * record carries the member: nothing here supplies a stand-in.
+   */
+  approvalContextInput(record: MissionRecord): ApprovalContextManifestInput {
+    const fresh = this.applyExpiry(record);
+    return {
+      issuer: fresh.issuer,
+      id: fresh.id,
+      intent_hash: fresh.intent_hash,
+      ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
+      authority_hash: fresh.authority_hash,
+      subject: fresh.subject,
+      approver: fresh.approver,
+      client_id: fresh.client_id,
+      created_at: fresh.created_at,
+      expires_at: fresh.expires_at,
+      approval_basis: fresh.approval_basis as never,
+      authority_source: fresh.authority_source as never,
+      policy_version: fresh.policy_version,
+      approval_event_id: fresh.approval_event_id,
+    };
+  }
+
+  /**
+   * @spec mission#authority-sources — the trusted catalog, for the one surface
+   * that establishes a source OUTSIDE a Mission Record: template consent
+   * ({@link createTemplate}). Exposed rather than duplicated as an adapter
+   * option so a deployment has exactly one catalog.
+   */
+  authoritySourceOptions(): { authoritySourceCatalog: AuthoritySourceCatalog } {
+    return { authoritySourceCatalog: this.opts.authoritySourceCatalog };
+  }
+
+  /**
+   * @spec mission#approval-event (step 3), mission#authority-sources — GATE 1:
+   * resolve the trusted authority-source declaration for an Agent. The catalog
+   * is deployment configuration; nothing a client sends reaches it.
+   */
+  authoritySourceEntry(clientId: string): AuthoritySourceCatalogEntry {
+    return resolveSourceForClient(this.opts.authoritySourceCatalog, clientId);
+  }
+
+  /**
+   * @spec mission#approval-event (step 3) — ESTABLISH the authority source for
+   * a FRESH approval event (direct approval and Expansion). Runs gates 1, 2, 4
+   * and 5; gate 3 is {@link assertAuthorityWithinSource}, kept separate so
+   * activation authority is never read as possession. Every refusal is
+   * `access_denied`, raised BEFORE any integrity anchor is computed and before
+   * the record is created.
+   */
+  establishAuthoritySource(input: {
+    clientId: string;
+    subject: { iss: string; sub: string };
+    approver: { iss: string; sub: string };
+  }): AuthoritySource {
+    const entry = this.authoritySourceEntry(input.clientId);
+    const source = authoritySourceOf(entry);
+    assertApproverMayActivate(entry, input.approver);
+    assertSubjectDiscipline(this.opts.authoritySourceCatalog, entry, input.subject);
+    assertPolicyDigestMatches(entry, source);
+    return source;
+  }
+
+  /**
+   * @spec mission#approval-event (step 3) — GATE 3: the derived Authority Set
+   * lies wholly within the source's own authority. An assertion that refuses,
+   * never a derivation input: intersecting the source ceiling into
+   * `deriveAuthoritySet` would silently narrow where the core says the AS MUST
+   * refuse.
+   */
+  assertAuthorityWithinSource(clientId: string, authoritySet: readonly AuthorityEntry[]): void {
+    assertWithinSourceCeiling(this.authoritySourceEntry(clientId), authoritySet);
+  }
+
+  /**
+   * @spec mission#authority-sources, mission#mission-record — the DRAWDOWN
+   * path (template dispatch, child creation): the successor INHERITS the
+   * source identity verbatim, and only the ceiling assertion re-runs against
+   * catalog state current at the moment authority is drawn. A source narrowed
+   * since the predecessor was approved therefore refuses `access_denied`
+   * without ever rewriting provenance.
+   */
+  /**
+   * @spec mission#authority-sources — GATE 4 against an ALREADY-ESTABLISHED
+   * source. A drawdown inherits the source but binds a fresh Subject (a
+   * template instance acts for its own Subject), so the subject discipline is
+   * re-run at that surface while the source identity is not.
+   */
+  assertSubjectDisciplineForSource(
+    source: AuthoritySource,
+    subject: { iss: string; sub: string },
+  ): void {
+    assertSubjectDiscipline(
+      this.opts.authoritySourceCatalog,
+      resolveDeclaredSource(this.opts.authoritySourceCatalog, source),
+      subject,
+    );
+  }
+
+  assertInheritedAuthoritySource(
+    inherited: AuthoritySource,
+    authoritySet: readonly AuthorityEntry[],
+  ): void {
+    const entry = resolveDeclaredSource(this.opts.authoritySourceCatalog, inherited);
+    assertWithinSourceCeiling(entry, authoritySet);
+  }
+
+  /**
    * @spec mission#integrity-anchors, mission-substrate#approved-context: the
    * approval event creates the record with both anchors (and, where a
    * proposal was submitted, the third); approval_event_id is the idempotency
@@ -409,6 +563,18 @@ export class MissionKernel {
       this.derive(input.intent, proposal),
       input.capabilityResolution,
     );
+    // @spec mission#approval-event (step 3) — establish the authority source
+    // BEFORE any anchor is computed and before the record exists: gates 1, 2,
+    // 4 and 5 here, then gate 3 (the source ceiling) as its own assertion.
+    // `ApproveInput` carries no source member by design; establishment is
+    // kernel-side from injected trusted configuration, which is what "never
+    // from client assertion" requires.
+    const authoritySource = this.establishAuthoritySource({
+      clientId: input.clientId,
+      subject: input.subject,
+      approver: input.approver,
+    });
+    this.assertAuthorityWithinSource(input.clientId, authoritySet);
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
     const id = newMissionId();
@@ -451,6 +617,9 @@ export class MissionKernel {
       subject: input.subject,
       approver: input.approver,
       approval_basis: approvalBasis,
+      // @spec mission#authority-sources: whose authority this approval draws
+      // on, established above from trusted configuration and immutable.
+      authority_source: authoritySource,
       // @spec mission-substrate#actor-binding: the Actor handle, bound to
       // the Mission Context at approval.
       client_id: input.clientId,
@@ -499,6 +668,14 @@ export class MissionKernel {
     // (derivation, a child's requested subset, a template's double
     // intersection), and refuses the creation when one maps to nothing.
     assertDischargePoliciesResolvable(record.authority_set, this.opts.dischargeAuthority);
+    // @spec mission#approval-event (step 3), mission#authority-sources — the
+    // single record-creation funnel re-asserts the source relationship for
+    // EVERY creating body (direct approval, Expansion, template dispatch,
+    // child creation): the declared source still agrees with the immutable
+    // member the record carries, and the set being committed still lies within
+    // that source's authority. A drawdown against a source narrowed since its
+    // predecessor was approved refuses here.
+    this.assertInheritedAuthoritySource(record.authority_source, record.authority_set);
     withTransaction(this.db, () => {
       // @spec mission#mission-record, mission#approval-event (step 4) — the
       // creation-transaction expiry invariant, checked INDEPENDENTLY of whatever
@@ -527,11 +704,11 @@ export class MissionKernel {
           `INSERT INTO missions (id, issuer, state, intent_json, proposed_authority_json,
            authority_set_json, intent_hash, proposal_hash,
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub,
-           approval_basis_json, client_id,
+           approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -552,6 +729,10 @@ export class MissionKernel {
           // @spec mission#approval-basis: fixed at creation, immutable (like
           // `parent`/`template`), so it is written only here.
           JSON.stringify(record.approval_basis),
+          // @spec mission#authority-sources: established at the approval event
+          // and immutable thereafter (the `approval_basis` treatment), so it is
+          // written only here.
+          JSON.stringify(record.authority_source),
           record.client_id,
           record.policy_version,
           record.approval_event_id,
@@ -1639,6 +1820,9 @@ export class MissionKernel {
       ...this.missionClaim(fresh),
       authority_hash: fresh.authority_hash,
       approval_basis: { type: fresh.approval_basis.type },
+      // @spec mission#authority-sources — an ungated issuer view withholds
+      // nothing: the source rides beside `approval_basis`.
+      authority_source: fresh.authority_source,
       state: fresh.state,
       version: fresh.version,
       // @spec mission#introspection — issuer-only, like `state`: when the
@@ -1695,7 +1879,27 @@ export class MissionKernel {
       // audit-and-correlation disclosure privilege, reusing the same
       // "provenance" grant `proposal_hash` above already gates on.
       ...(caller.disclose.has("provenance")
-        ? { authority_hash: fresh.authority_hash, approval_basis: { type: fresh.approval_basis.type } }
+        ? {
+            authority_hash: fresh.authority_hash,
+            approval_basis: { type: fresh.approval_basis.type },
+            // @spec mission#authority-sources, mission#introspection — the
+            // source rides the SAME audit-and-correlation privilege
+            // `approval_basis.type` already gates on: `type` always, plus the
+            // governed policy's `id` and `version` for `organizational`. The
+            // policy `digest` stays off introspection and belongs to record
+            // access.
+            authority_source: {
+              type: fresh.authority_source.type,
+              ...(fresh.authority_source.policy
+                ? {
+                    policy: {
+                      id: fresh.authority_source.policy.id,
+                      version: fresh.authority_source.policy.version,
+                    },
+                  }
+                : {}),
+            },
+          }
         : {}),
       ...(fresh.containment
         ? { containment_version: fresh.containment.containment_version }
@@ -1999,6 +2203,13 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approver: { iss: row.approver_iss as string, sub: row.approver_sub as string },
     approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
+    // @spec mission#mission-record, mission#lifecycle — fail closed on
+    // hydration: a stored row carrying an unrecognized `authority_source.type`
+    // is refused, never widened into the union.
+    authority_source: parseAuthoritySource(
+      JSON.parse(row.authority_source_json as string),
+      `mission ${String(row.id)}`,
+    ),
     client_id: row.client_id as string,
     policy_version: row.policy_version as string,
     approval_event_id: row.approval_event_id as string,

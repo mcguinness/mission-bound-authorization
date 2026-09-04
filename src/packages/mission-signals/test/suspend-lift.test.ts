@@ -21,6 +21,7 @@ import {
   validateMissionIntent,
   verifyStatusListToken,
 } from "@mission/authorization-server";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
@@ -99,6 +100,7 @@ describe("suspend->resume lift accepted by the Signal receiver (@spec child-dele
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["parent-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,

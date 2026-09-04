@@ -3,6 +3,7 @@
 import {
   INTROSPECTION_PRINCIPALS,
   ACTOR_PROFILES,
+  AUTHORITY_SOURCES,
   CANONICAL_RESOURCE,
   CONTAINMENT_POLICY,
   demoReconciliationTemplate,
@@ -294,6 +295,16 @@ export {
   type DispatchInput,
   type DispatchResult,
 } from "./kernel/template.js";
+export {
+  AUTHORITY_SOURCE_TYPES,
+  type AuthoritySourceCatalog,
+  type AuthoritySourceCatalogEntry,
+  authoritySourceOf,
+  isAuthoritySourceType,
+  parseAuthoritySource,
+  validateAuthoritySourceCatalog,
+} from "./kernel/authority-source.js";
+export type { AuthoritySource, AuthoritySourceType } from "./kernel/types.js";
 export {
   DeferralStore,
   DeferralError,
@@ -683,7 +694,13 @@ export async function buildAuthorizationServer(opts: {
   // read-only reconciliation template. Independent of the kernel (dispatch is a
   // pure function over both); the wire PR calls dispatchFromTemplate.
   const templateStore = new TemplateStore();
-  createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never);
+  // @spec mission#authority-sources — template consent establishes the
+  // template's authority source from the SAME trusted catalog the kernel uses,
+  // so a dispatched instance inherits a source this deployment actually
+  // declares.
+  createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never, {
+    authoritySourceCatalog: AUTHORITY_SOURCES as never,
+  });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
   // the fan-out so it can revoke per-delegation family grants; undefined until
@@ -706,6 +723,11 @@ export async function buildAuthorizationServer(opts: {
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS-asserted
     // actor-type registry, config-shipped and optionally extended by the caller.
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
+    // @spec mission#authority-sources, mission#approval-event — the deployment's
+    // TRUSTED authority-source catalog (config/authority-sources.json plus the
+    // governed policies it references). The approval event establishes
+    // `authority_source` from this and from nothing a client sends.
+    authoritySourceCatalog: AUTHORITY_SOURCES as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
     // Fan the committed transition out to the Status List republisher (PULL), the

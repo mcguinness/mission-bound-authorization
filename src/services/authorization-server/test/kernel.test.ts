@@ -18,6 +18,7 @@ import {
   validateMissionIntent,
   validateMissionIntentSubmission,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -36,6 +37,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey: privateKey,
     statusKid: "as-status",
   });
@@ -412,6 +414,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
     return new MissionKernel({
       issuer: ISS,
       policy: { ...DERIVATION_POLICY, max_mission_lifetime_s: maxMissionLifetimeS } as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: privateKey,
       statusKid: "as-status",
       now: clock,
@@ -763,6 +766,7 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     const localKernel = new MissionKernel({
       issuer: ISS,
       policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: 5 } as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: privateKey,
       statusKid: "as-status",
     });
@@ -794,6 +798,7 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     const localKernel = new MissionKernel({
       issuer: ISS,
       policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: privateKey,
       statusKid: "as-status",
       now: () => clock,

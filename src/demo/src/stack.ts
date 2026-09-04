@@ -19,7 +19,7 @@ import {
   OperationProfileRegistry,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
@@ -408,7 +408,10 @@ export async function composeStack(opts: {
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
-    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, containmentPolicy: CONTAINMENT_POLICY as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
+    // @spec mission#authority-sources — the same shipped catalog the wired AS
+    // runs with: the kernel takes one REQUIRED catalog on every path, so the
+    // no-AS-server composition cannot approve against an invented source.
+    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, containmentPolicy: CONTAINMENT_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
     issuer = ISS;
     serverJwks = { keys: [] };
   }

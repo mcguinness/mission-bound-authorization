@@ -3,6 +3,7 @@ export {
   AUTHORITY_SET_TYP,
   authorityHash,
   computeAnchor,
+  GOVERNED_POLICY_TYP,
   INTENT_TYP,
   intentHash,
   MISSION_CREATION_FINGERPRINT_TYP,

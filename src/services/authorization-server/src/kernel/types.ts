@@ -389,6 +389,37 @@ export type ApprovalBasis = ApprovalBasisDirect | ApprovalBasisTemplate | Approv
 export type ApprovalBasisType = ApprovalBasis["type"];
 
 /**
+ * @spec mission#authority-sources, mission#mission-record — the three sources
+ * a Mission may draw its authority from: a delegating person's own authority,
+ * a workload's own provisioned authority, or explicitly governed
+ * organizational policy. Subject to the forward-compatibility rule of
+ * mission#lifecycle, which admits no fail-open: an unrecognized value is
+ * refused at config load and at record hydration, never widened into the
+ * union.
+ */
+export type AuthoritySourceType = "user_delegated" | "service_owned" | "organizational";
+
+/**
+ * @spec mission#authority-sources, mission#mission-record — WHOSE authority the
+ * approval draws on, established at the approval event from trusted
+ * configuration or authenticated governance state (never from client
+ * assertion) and immutable thereafter, like `approver` and `approval_basis`.
+ *
+ * Provenance, exactly like `approval_basis`: folded into NEITHER `intent_hash`
+ * NOR `authority_hash`, and not carried on access tokens. Resource Servers
+ * enforce `authorization_details` and do not consult it.
+ */
+export interface AuthoritySource {
+  type: AuthoritySourceType;
+  /**
+   * REQUIRED for `organizational`, absent otherwise: the stable reference to,
+   * and commitment over, the governed organizational policy the Mission draws
+   * on.
+   */
+  policy?: { id: string; version: string; digest: string };
+}
+
+/**
  * @spec mission#approval-basis — the default and strongest basis: a human
  * approval event created this Mission directly. `approver`/`activation_actor`
  * are the SAME approving human; this is the pre-existing, unchanged behavior
@@ -517,6 +548,14 @@ export interface MissionRecord {
    * above IS `approval_basis.consent_principal`; see {@link ApprovalBasis}.
    */
   approval_basis: ApprovalBasis;
+  /**
+   * @spec mission#authority-sources — REQUIRED. Whose authority the approval
+   * draws on, established at the approval event and immutable thereafter. A
+   * drawdown (template dispatch, child creation) INHERITS its predecessor's
+   * value verbatim; only the source ceiling is re-asserted at the moment
+   * authority is drawn.
+   */
+  authority_source: AuthoritySource;
   client_id: string;
   policy_version: string;
   approval_event_id: string;

@@ -12,6 +12,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createExpansion, MissionKernel, validateMissionIntent } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -36,7 +37,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: key, statusKid: "as-status", now });
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]), statusKey: key, statusKid: "as-status", now });
 });
 
 const approve = (actions: string[]) =>

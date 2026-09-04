@@ -24,6 +24,7 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
@@ -74,6 +75,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: AS_ISS,
     policy: POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent", "delegate-svc"], ["bob"]),
     statusKey: asKeys.privateKey,
     statusKid: "as-status",
   });

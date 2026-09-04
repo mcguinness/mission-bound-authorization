@@ -690,7 +690,611 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type carries the same citation and is not touched here; scoped to the two fields the review named."
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type carries the same citation and is covered by core.mission-record.authority-source-type-enum, which enforces it fail-closed at trusted-configuration load and at record hydration; scoped to the two fields the review named."
+  },
+  {
+   "id": "core.authority-sources.accountable-principal-not-from-sub",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-sources",
+   "text": "The accountable principal is the record's `approver`, equal to `approval_basis.consent_principal`, in every source; it is never inferred from the token `sub`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every recorded Mission, in every authority source, carries `approver` equal to `approval_basis.consent_principal`; the token `sub` never supplies it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > admits an activator holding none of the ceiling's operational permissions (activation is not possession)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.authority-sources.subject-discipline",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-sources",
+   "text": "A service-owned or organizational Mission MUST record the workload or organizational principal as `subject` and MUST NOT record a human principal in its place",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval whose source is service-owned or organizational and whose Subject is a principal the deployment declares human is refused `access_denied`, before any integrity anchor is computed and before the record is created"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses a service_owned or organizational Mission that records a human Subject",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "core.authority-sources.subject-is-resource-owner",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-sources",
+   "text": "It MUST be an authorization subject the AS recognizes as a resource owner in its own right",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a service-owned or organizational Subject the deployment's trusted configuration does not declare a resource owner in its own right is refused `access_denied`, even when it is not a human principal"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses a Subject the deployment does not recognize as a resource owner in its own right",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-trusted-establishment",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The AS MUST establish it from trusted configuration or authenticated governance state, never from client assertion.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the recorded `authority_source` comes from the deployment's trusted catalog alone: a source member on the approval input is ignored, and one on the submission envelope or the Mission Intent is refused `invalid_request` at intake"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > establishes the source from configuration alone: ApproveInput carries no source member",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses kernel construction when the deployment declares no catalog",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source intake (@spec mission#submission-via-par, mission#authority-sources) > refuses a client-supplied authority_source in the submission envelope with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source intake (@spec mission#submission-via-par, mission#authority-sources) > refuses a client-supplied authority_source inside the Mission Intent with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > the real AS assembly runs with the shipped catalog and refuses an undeclared client",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-activation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The AS MUST verify the Approver is authorized under local policy to activate the established source",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approver outside the established source's declared activators is refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when the Approver may not activate the source",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > admits an activator holding none of the ceiling's operational permissions (activation is not possession)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > gates activation on the shared suite fixture: an Approver outside its activators is refused",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses a source that declares no activator, rather than admitting every Approver",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "authority-source config loader (@spec mission#authority-sources) > refuses a source whose activators list is empty",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "authority-source config loader (@spec mission#authority-sources) > refuses a source that declares no activators member at all",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > names an activator on every declared source",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-ceiling",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "MUST verify the derived Authority Set lies within that source's authority",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived Authority Set outside the established source's own authority is refused `access_denied`; the source ceiling is an assertion that refuses, never an input that silently narrows the derivation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when the derived Authority Set exceeds the source ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-organizational-policy",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "for `organizational`, within the governed policy identified by `authority_source.policy`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an organizational Mission's derived set is bounded by the governed policy its `authority_source.policy` resolves, and a policy whose digest has drifted from the committed reference refuses `access_denied`"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when the governed policy digest has drifted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > resolves the organizational source's ceiling and digest from the governed policy",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The AS MUST refuse when either relationship cannot be established.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "each of the five establishment gates refuses `access_denied` on its own, before any integrity anchor is computed and before the record is created, including when no trusted source resolves for the presenting Agent"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when no trusted source is declared for the client",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses every approval when the catalog declares no source at all",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The rendering MUST identify the authority source and, for `organizational`, the governed policy it draws on",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering names the established source's `type`, and for `organizational` the governed policy's identifier and version"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > renders the user-delegated source and approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > renders the organizational source with the governed policy it draws on",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "core.approval-event.authority-source-rerender",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "A change to the established source before the decision MUST force re-evaluation and re-rendering.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the decision re-establishes the source from catalog state current at that moment rather than reusing what was rendered, so a source changed between rendering and decision refuses rather than committing an unrendered source"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when the derived Authority Set exceeds the source ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision."
+  },
+  {
+   "id": "core.mission-record.authority-source-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "REQUIRED. An object. The source of the authority the approval draws on",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every created Mission carries `authority_source`, at every creating body (direct approval, Expansion, template dispatch, child creation), persisted NOT NULL and round-tripped through the record store"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > records the established source on the direct approval path",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a Child Mission carries the parent's source verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a template instance carries the template's source verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.mission-record.authority-source-immutable",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "and immutable thereafter, like `approver` and `approval_basis`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a drawdown inherits its predecessor's `authority_source` verbatim and never rewrites it from a fresh lookup; only the source ceiling is re-asserted, so a narrowed source refuses rather than changing recorded provenance"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a Child Mission carries the parent's source verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a template instance carries the template's source verbatim",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.mission-record.authority-source-type-enum",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`, subject to the forward-compatibility rule of {{lifecycle}}.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unrecognized `authority_source.type` is refused rather than widened into the union, at trusted-configuration load and at record hydration alike"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at hydration rather than widening the union",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at catalog load rather than widening the union",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-organizational",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "REQUIRED for `organizational`, absent otherwise. An object with `id`, `version`, and `digest`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an organizational Mission carries `policy` with all three members and every other source carries none; a stored record violating either half is refused at hydration"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > records the organizational policy reference with its digest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses a stored organizational source with no policy reference",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses a policy reference outside organizational",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "core.mission-record.authority-source-outside-anchors",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "folded into neither `intent_hash` nor `authority_hash`, and not carried on access tokens",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`authority_source` appears in no integrity-anchor input and on no access-token claim; introspection discloses it only to a caller holding the deployment's provenance disclosure privilege"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source disclosure (@spec mission#introspection, mission#authority-sources) > the baseline mission claim carries no source: it is not on access tokens",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source disclosure (@spec mission#introspection, mission#authority-sources) > discloses the source to a provenance caller and withholds it from a bare caller",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source in the Approval Context Manifest (@spec approval-governance#approval-context-manifest) > takes the REQUIRED manifest input from the Mission Record",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",

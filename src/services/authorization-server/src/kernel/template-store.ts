@@ -21,7 +21,8 @@
  */
 
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
-import type { AuthorityEntry } from "./types.js";
+import { parseAuthoritySource } from "./authority-source.js";
+import type { AuthorityEntry, AuthoritySource } from "./types.js";
 
 const SCHEMA = `
 CREATE TABLE templates (
@@ -30,6 +31,7 @@ CREATE TABLE templates (
   issuer TEXT NOT NULL,
   approver_iss TEXT NOT NULL,
   approver_sub TEXT NOT NULL,
+  authority_source_json TEXT NOT NULL,
   ceiling_json TEXT NOT NULL,
   dispatch_policy TEXT NOT NULL,
   dispatchers_json TEXT NOT NULL,
@@ -67,6 +69,13 @@ export interface MissionTemplate {
   issuer: string;
   /** The HUMAN of record: every instance carries this approver, not the dispatcher. */
   approver: { iss: string; sub: string };
+  /**
+   * @spec mission#authority-sources — the source the template's standing
+   * consent draws on, established at template consent from trusted
+   * configuration. Every dispatched instance inherits it VERBATIM; provenance
+   * like `approval_basis`, so it is outside `template_hash`.
+   */
+  authority_source: AuthoritySource;
   /** The template ceiling: one side of the double intersection at dispatch. */
   ceiling: AuthorityEntry[];
   /** Opaque dispatch policy identifier (audit / lineage only). */
@@ -95,6 +104,7 @@ export interface TemplateCreate {
   template_version: string;
   issuer: string;
   approver: { iss: string; sub: string };
+  authority_source: AuthoritySource;
   ceiling: AuthorityEntry[];
   dispatch_policy: string;
   dispatchers: string[];
@@ -113,6 +123,7 @@ interface TemplateRow {
   issuer: string;
   approver_iss: string;
   approver_sub: string;
+  authority_source_json: string;
   ceiling_json: string;
   dispatch_policy: string;
   dispatchers_json: string;
@@ -133,6 +144,12 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
     template_version: row.template_version,
     issuer: row.issuer,
     approver: { iss: row.approver_iss, sub: row.approver_sub },
+    // @spec mission#mission-record, mission#lifecycle — fail closed on
+    // hydration, exactly as a Mission Record's own member does.
+    authority_source: parseAuthoritySource(
+      JSON.parse(row.authority_source_json),
+      `template ${row.id}`,
+    ),
     ceiling: JSON.parse(row.ceiling_json) as AuthorityEntry[],
     dispatch_policy: row.dispatch_policy,
     dispatchers: JSON.parse(row.dispatchers_json) as string[],
@@ -173,10 +190,10 @@ export class TemplateStore {
         this.db
           .prepare(
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
-             ceiling_json, dispatch_policy, dispatchers_json, recipients_json,
-             per_instance_lifetime_s, max_active, rate_per_min, template_hash,
+             authority_source_json, ceiling_json, dispatch_policy, dispatchers_json,
+             recipients_json, per_instance_lifetime_s, max_active, rate_per_min, template_hash,
              approval_event_id, expires_at, state, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
           )
           .run(
             input.id,
@@ -184,6 +201,7 @@ export class TemplateStore {
             input.issuer,
             input.approver.iss,
             input.approver.sub,
+            JSON.stringify(input.authority_source),
             JSON.stringify(input.ceiling),
             input.dispatch_policy,
             JSON.stringify(input.dispatchers),

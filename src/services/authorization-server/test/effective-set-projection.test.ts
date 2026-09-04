@@ -27,6 +27,7 @@ import {
   projectThroughEffective,
   validateMissionIntent,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.projection.test";
 const RES = "https://payments.test/mcp";
@@ -211,6 +212,7 @@ describe("gateDerivation refuses an empty effective set BY CAUSE (@spec issuance
         policy_version: "projection-v1",
         ceiling: [{ type: "mission_resource_access", resource: RES, actions: [READ, PAY] }],
       } as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog([{ type: "mission_resource_access", resource: RES, actions: [READ, PAY] }], ["ap-agent"], ["bob"]),
       statusKey,
       statusKid: "as-status",
       now: () => NOW,

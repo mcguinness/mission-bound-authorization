@@ -15,6 +15,7 @@ import {
   type LifecycleCommit,
   MissionKernel,
 } from "@mission/authorization-server";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import { type EvaluationRequest, evaluate, type Fga, type MissionView } from "@mission/pdp";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
@@ -80,6 +81,7 @@ async function bootstrap() {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey: statusKeys.privateKey,
     statusKid: "as-status",
     now: () => NOW,

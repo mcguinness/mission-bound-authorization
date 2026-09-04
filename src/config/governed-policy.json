@@ -1,0 +1,34 @@
+[
+  {
+    "id": "acme-accounts-payable-controls",
+    "version": "2026-09-01",
+    "authority": "https://acme.example/governance",
+    "ceiling": [
+      {
+        "type": "mission_resource_access",
+        "resource": "http://localhost:4403/mcp",
+        "actions": ["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"],
+        "constraints": {
+          "vendors": ["acme"]
+        },
+        "delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [{ "sub_profile": "ai_agent" }],
+          "children": {
+            "max_children": 5,
+            "max_child_depth": 2,
+            "allowed_child_actors": [{ "sub_profile": "ai_agent" }]
+          }
+        }
+      },
+      {
+        "type": "mission_resource_access",
+        "resource": "http://localhost:4406/mcp",
+        "actions": ["ledger:vendor.read"],
+        "constraints": {
+          "vendors": ["acme"]
+        }
+      }
+    ]
+  }
+]
