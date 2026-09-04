@@ -768,8 +768,14 @@ A Consent Evidence object has these members:
 
   - When `decision` is `approved`, it contains `id`, `issuer`,
     `intent_hash`, `authority_hash`, `proposal_hash` when the Mission
-    records an authority proposal, and, when this profile records
-    it on the Mission, `consent_rendering_hash`.
+    records an authority proposal, when this profile records
+    it on the Mission, `consent_rendering_hash`, and, where the
+    deployment computes it, `approval_context_commitment`
+    ({{I-D.draft-mcguinness-mission-approval-governance}}): OPTIONAL,
+    a string, the commitment over the created Mission's immutable
+    creation facts, carried so this object and another authenticated
+    artifact disclosing the same commitment match to one approval
+    transaction.
   - When `decision` is `declined`, no Mission was created
     ({{declined-events}}), so there is no `id`. It instead contains
     `issuer` and the `intent_hash` and `authority_hash` (with
@@ -783,6 +789,11 @@ A Consent Evidence object has these members:
     present), matching that disclosure's
     `source_hashes`, and MUST NOT contain `id`.
 
+  `approval_context_commitment` appears on the `approved` branch
+  only. A `declined` or `narrowed` descriptor MUST NOT contain it:
+  no Mission was created, so the Mission creation facts it commits do
+  not exist, exactly the reason both branches also lack `id`.
+
   This descriptor follows the evidence-descriptor convention of the
   issuance profile ({{I-D.draft-mcguinness-oauth-mission}}): it is the
   `mission` claim shape (`id` and `issuer`) extended with the
@@ -790,8 +801,8 @@ A Consent Evidence object has these members:
   reintroduced here as this document's own audit anchor since a
   Consent Evidence object is retained and correlated independently of
   any token, `intent_hash`, `consent_rendering_hash`, and, where
-  present, `proposal_hash`, and it is not authority-bearing on its
-  own.
+  present, `proposal_hash` and `approval_context_commitment`, and it
+  is not authority-bearing on its own.
 
 `approver`:
 : REQUIRED. An object identifying the authenticated Approver. It MUST

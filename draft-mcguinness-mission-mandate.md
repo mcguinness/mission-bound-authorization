@@ -82,6 +82,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -379,6 +387,17 @@ The protected header MUST carry:
   auditor can correlate the Mandate to the approval-event evidence
   ({{I-D.draft-mcguinness-mission-audit}}). RECOMMENDED alongside
   `created_at` for audit reliance.
+
+`approval_context_commitment`:
+: OPTIONAL. A string. The Approval Context Commitment over the
+  Mission's immutable creation facts, in the form the Approval
+  Context Commitment profile fixes
+  ({{I-D.draft-mcguinness-mission-approval-governance}}). It is
+  correlation material: it matches this Mandate to another
+  authenticated artifact that discloses the same commitment for the
+  same Mission, without either artifact re-deriving the other's
+  fields. It carries no authority and is never an enforcement input
+  ({{verification}}).
 
 `authority_set`:
 : OPTIONAL. An array. The full consented Authority Set, exactly as
@@ -754,6 +773,19 @@ Mandate:
 8. **Hash agility.** Reject any integrity anchor whose algorithm
    prefix the verifier does not recognize, and never treat an
    unrecognized prefix as `sha-256`, per the issuance profile.
+
+Where `approval_context_commitment` ({{claims}}) is present, a
+verifier that holds the Mission's immutable creation facts MAY
+recompute it and MUST reject the Mandate on a mismatch, the recompute
+rule the Approval Context Commitment profile fixes
+({{I-D.draft-mcguinness-mission-approval-governance}}). A Mandate
+usually travels to a verifier with no channel back to the Mission
+Issuer, so those facts are usually not held and no recompute is
+possible. There the value is correlation material only: it matches
+this Mandate to another authenticated artifact disclosing the same
+commitment, and proves nothing further about the approval beyond what
+this Mandate's own signature already authenticates. Its absence is
+never a verification failure.
 
 Where the deployment runs the audit transparency profile, a verifier
 MAY additionally confirm an audit-registration Receipt

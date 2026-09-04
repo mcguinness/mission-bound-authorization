@@ -267,6 +267,25 @@ plus the integrity `envelope` {{envelope}} defines.
   name. A record whose binding does not match the Mission record it
   is retained with is invalid.
 
+`approval_context_commitment`:
+: OPTIONAL. A string. The Approval Context Commitment over the
+  governed Mission's immutable creation facts
+  ({{approval-context-commitment}}), in the encoded form
+  {{conventions-and-definitions}} fixes. It is a member of this
+  record, never of the Mission record: the profile adds no Mission
+  record member ({{approval-context-computation}}). An issuer that
+  records it computes it in the same commit that creates the Mission
+  and persists this record, before the record is signed
+  ({{atomic-commitment}}), so the signed payload commits to it. The
+  `mission` member above carries no Mission `id`, so a verifier
+  recomputes this value from the Mission record this record is
+  retained with, the record the mission binding check already
+  resolves ({{envelope}}, step 5), and rejects the reference on a
+  mismatch ({{approval-context-computation}}). Its presence is what
+  lets this record and another authenticated artifact disclosing the
+  same commitment be matched to one approval transaction without
+  either re-deriving the other's fields.
+
 `approval_policy`:
 : REQUIRED. An object identifying the governing
   delegation-of-authority policy: `id` (an identifier), `version` (a
@@ -453,6 +472,12 @@ exists without a Mission record. The issuer signs
 the evaluated record ({{envelope}}) and persists the signed form in
 the same commit as the Mission's creation; signing follows
 evaluation and precedes persistence, never the reverse.
+
+Where the record carries `approval_context_commitment` ({{record}}),
+the issuer computes it in this same commit, from the Mission record
+being created, and before signing. A value computed after the commit
+is not covered by the record's signature and MUST NOT be added to a
+committed record.
 
 A committed record is immutable. A subsequent governance action, a
 re-review or an incident finding, is a new record about a new event,
@@ -735,7 +760,10 @@ canonical element order ({{I-D.draft-mcguinness-oauth-mission}}).
 An issuer computes `approval_context_commitment` on demand from the
 Mission's immutable creation facts, fixed at the approval event
 ({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
-Mission Record member for it. A deployment MAY cache the computed
+Mission Record member for it; an Approval Governance Record MAY carry
+it as a member of its own signed record ({{record}}), which is a
+disclosure of the computed value, not a second place the Mission
+record holds it. A deployment MAY cache the computed
 value; a cached value is derived state and MUST NOT be treated as
 authoritative where it disagrees with a fresh computation from the
 record.
@@ -779,7 +807,8 @@ supplies nothing else:
 
 `approval_context_commitment` MAY appear as a signed member of an
 artifact that already authenticates a reference to the Mission, for
-example a Consent Evidence object
+example this document's own Approval Governance Record
+({{record}}) or a Consent Evidence object
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), or under
 an introspection caller's member-scoped disclosure privilege, the
 same privilege that already gates `proposal_hash`
