@@ -9,8 +9,10 @@
  */
 
 import {
+  type EntitlementAuthorityEntry,
   type EntitlementResolver,
   type LocalMappingPolicy,
+  narrowToEntitledAuthority,
   type OriginPrincipal,
   resolveCoResolvedLocalPrincipal,
 } from "@mission/core";
@@ -67,10 +69,12 @@ export interface RasConfig {
    * @spec cross-domain#dual-axis (#539) — current entitlement of the
    * destination-local principal, the profile's second axis. Runs on EVERY
    * redemption (base and continuation grant alike), against whichever local
-   * `sub` that grant resolves to. Audience-wide, all-or-none: a positive
-   * result authorizes the complete `authorization_details` the grant
-   * already carries, unmodified; it does not narrow individual entries by
-   * action or resource (see `EntitlementResolver`'s own doc).
+   * `sub` that grant resolves to. An audience-scoped observation authorizes
+   * the complete `authorization_details` the grant already carries,
+   * unmodified. An observation carrying `authority` (#744) narrows that set
+   * per action to the entitled `(resource, action)` pairs, and the minted
+   * token carries only the surviving subset (see `EntitlementResolver`'s
+   * own doc).
    */
   entitlement: EntitlementResolver;
   /** Independent freshness bound for the entitlement observation, seconds. */
@@ -264,6 +268,7 @@ export class ResourceAuthorizationServer {
     // bound. Runs for EVERY redemption; a resolver exception is a failed
     // result, not a distinct outcome or an unclassified transport failure.
     let entitlementObservedMs: number | undefined;
+    let entitledAuthority: EntitlementAuthorityEntry[] | undefined;
     try {
       const entitlement = await this.cfg.entitlement.resolve({ local: { iss: this.cfg.issuer, sub: localSub }, audience });
       const observedMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
@@ -275,9 +280,29 @@ export class ResourceAuthorizationServer {
         ageMs <= this.cfg.entitlementStalenessBoundSeconds * 1000;
       if (!current) throw new RasError("invalid_grant", "entitlement check failed");
       entitlementObservedMs = observedMs;
+      entitledAuthority = entitlement?.authority;
     } catch (e) {
       if (e instanceof RasError) throw e;
       throw new RasError("invalid_grant", "entitlement check failed");
+    }
+
+    // @spec cross-domain#dual-axis (#744): the effective authority is the
+    // intersection of the verified delegated `authorization_details` and the
+    // mapped principal's current entitlement. An audience-scoped
+    // observation (no `authority`) mints the grant's set verbatim, as
+    // before. An action- and resource-scoped one narrows it per action and
+    // mints the surviving subset; only an empty intersection refuses, with
+    // the same non-oracular `invalid_grant` an unentitled principal already
+    // gets. Computed before the one-time jti is consumed, for the same
+    // reason the expiry clamp is.
+    let mintedAuthority: unknown = payload.authorization_details;
+    if (entitledAuthority !== undefined) {
+      const delegated = Array.isArray(payload.authorization_details)
+        ? (payload.authorization_details as Array<{ resource: string; actions: string[] }>)
+        : [];
+      const narrowed = narrowToEntitledAuthority(delegated, entitledAuthority);
+      if (narrowed.length === 0) throw new RasError("invalid_grant", "entitlement check failed");
+      mintedAuthority = narrowed;
     }
 
     // Compute the minted token's clamped expiry BEFORE consuming the
@@ -313,7 +338,7 @@ export class ResourceAuthorizationServer {
     // RAS; mission.issuer remains the originating AS.
     const token = await new SignJWT({
       mission,
-      authorization_details: payload.authorization_details,
+      authorization_details: mintedAuthority,
       cnf: { jkt: presenterJkt },
       // @spec cross-domain#validation-at-resource-as (S-12): client_id names
       // the client identity the registration lookup above authenticated,

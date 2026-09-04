@@ -9,8 +9,10 @@
 import {
   chainDigest,
   ChainPresentationError,
+  type EntitlementAuthorityEntry,
   type EntitlementResolver,
   type LocalMappingPolicy,
+  narrowToEntitledAuthority,
   parseChainPresentation,
   resolveLocalPrincipal,
 } from "@mission/core";
@@ -66,10 +68,12 @@ export interface CrossOrgOptions {
    * Principal profile (there is no unclaimed-profile case to fall back to),
    * so this is a REQUIRED construction-time dependency rather than an
    * optional, fail-closed-on-absence one: a deployment cannot forget to
-   * wire it and still exchange chains. Audience-wide, all-or-none: a
-   * positive result authorizes the complete set below (the verified
-   * delegated authority intersected with localCeiling), unmodified; it does
-   * not narrow individual entries by action or resource (see
+   * wire it and still exchange chains. An audience-scoped observation
+   * authorizes the complete set below (the verified delegated authority
+   * intersected with localCeiling), unmodified. An observation carrying
+   * `authority` (#744) narrows that set per action to the entitled
+   * `(resource, action)` pairs, and the minted token and the recorded
+   * `output_authority` both carry only the surviving subset (see
    * `EntitlementResolver`'s own doc).
    */
   entitlement: EntitlementResolver;
@@ -221,6 +225,7 @@ export async function handleCrossOrgChainExchange(
   // observation, or a throwing resolver are all a failed result here, never
   // a distinct outcome or an unclassified transport exception.
   let entitlementObservedMs: number;
+  let entitledAuthority: EntitlementAuthorityEntry[] | undefined;
   try {
     const entitlement = await crossOrg.entitlement.resolve({
       local: { iss: opts.issuer, sub: mapping.local_sub },
@@ -238,6 +243,7 @@ export async function handleCrossOrgChainExchange(
       return;
     }
     entitlementObservedMs = observedMs;
+    entitledAuthority = entitlement?.authority;
   } catch {
     fail(ctx, "invalid_grant", "chain verification failed");
     return;
@@ -246,9 +252,20 @@ export async function handleCrossOrgChainExchange(
   // Dual-axis: the verified delegated authority intersected with the local
   // ceiling; entries the destination does not permit are narrowed out.
   const inputAuthority = mapToolsToAuthority(verified.leaf.tools);
-  const outputAuthority = inputAuthority.filter((e) =>
+  let outputAuthority = inputAuthority.filter((e) =>
     isSubsetSet([e], crossOrg.localCeiling as AuthorityEntry[]),
   );
+  // @spec cross-domain#dual-axis (#744): the third bound of the same
+  // intersection, when the entitlement observation carries the action- and
+  // resource-scoped grain. An audience-scoped observation leaves the
+  // ceiling-intersected set untouched. Narrowing runs before the
+  // empty-set refusal below, so a partial entitlement mints the surviving
+  // subset and only a wholly empty intersection refuses; it also runs
+  // before the derivation-evidence push, so `output_authority` records the
+  // narrowed set with no schema change.
+  if (entitledAuthority !== undefined) {
+    outputAuthority = narrowToEntitledAuthority(outputAuthority, entitledAuthority);
+  }
   if (outputAuthority.length === 0) {
     fail(ctx, "invalid_grant", "chain verification failed");
     return;

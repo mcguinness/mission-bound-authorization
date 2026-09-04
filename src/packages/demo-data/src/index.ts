@@ -403,6 +403,101 @@ export interface CeilingEntry {
   } & { [k: string]: JsonValue | undefined };
 }
 
+/**
+ * One catalog-declared action of a catalog service (config/catalog.json,
+ * `actions`). `amount_bearing` records what the deployment's own tool for the
+ * action does: every request for an amount-bearing action carries an `amount`
+ * the PDP can compare against a bound `max_amount`. An action marked
+ * `false` never supplies one, so a `max_amount` bound to it is a constraint
+ * nothing can satisfy.
+ */
+export interface CatalogActionSeed {
+  id: string;
+  amount_bearing: boolean;
+}
+
+/** Validate one catalog service's OPTIONAL `actions` member (shared by the action schema and the catalog loader). */
+function parseCatalogActions(
+  file: string,
+  svc: Record<string, unknown>,
+  ctx: string,
+): CatalogActionSeed[] | undefined {
+  if (svc.actions === undefined) return undefined;
+  const seen = new Set<string>();
+  return asArray(file, svc.actions, `${ctx}.actions`).map((raw, j) => {
+    const a = asObject(file, raw, `${ctx}.actions[${j}]`);
+    const id = reqString(file, a, "id", `${ctx}.actions[${j}]`);
+    if (typeof a.amount_bearing !== "boolean") {
+      throw new ConfigError(file, `${ctx}.actions[${j}].amount_bearing must be a boolean`);
+    }
+    if (seen.has(id)) throw new ConfigError(file, `${ctx}.actions declares ${id} twice`);
+    seen.add(id);
+    return { id, amount_bearing: a.amount_bearing };
+  });
+}
+
+function loadActionSchema(): Map<string, boolean> {
+  const file = "catalog.json";
+  const out = new Map<string, boolean>();
+  asArray(file, readJson(file), "catalog").forEach((raw, i) => {
+    const svc = asObject(file, raw, `catalog[${i}]`);
+    for (const action of parseCatalogActions(file, svc, `catalog[${i}]`) ?? []) {
+      const prior = out.get(action.id);
+      if (prior !== undefined && prior !== action.amount_bearing) {
+        throw new ConfigError(file, `catalog declares conflicting amount_bearing for ${action.id}`);
+      }
+      out.set(action.id, action.amount_bearing);
+    }
+  });
+  return out;
+}
+
+/**
+ * The deployment's action schema: the SINGLE source of truth for which actions
+ * are amount-bearing. Keyed by the namespaced action string (`payments:`,
+ * `ledger:`), so it is independent of the resource URI remapping
+ * `CATALOG_SERVICES` applies. An action absent from this map carries no claim
+ * either way and is not constrained by {@link amountBearingBindingError}: the
+ * catalog refuses a binding it MARKS unsatisfiable, never one it has never
+ * heard of.
+ */
+export const ACTION_AMOUNT_BEARING: ReadonlyMap<string, boolean> = loadActionSchema();
+
+/** The catalog's claim for one action: `true`, `false`, or `undefined` (no claim). */
+export function isAmountBearingAction(action: string): boolean | undefined {
+  return ACTION_AMOUNT_BEARING.get(action);
+}
+
+/** The members {@link amountBearingBindingError} reads: an entry's actions and any bound `max_amount`. */
+export interface AmountBindingCandidate {
+  actions?: readonly string[];
+  constraints?: { max_amount?: unknown };
+}
+
+/**
+ * The shared admission rule for a `max_amount` binding, applied to a
+ * configured ceiling entry (load time) and to a client-submitted
+ * `authorization_details` entry (PAR intake) alike, so the two gates cannot
+ * drift. An entry's constraints bind EVERY action in that entry, so binding
+ * `max_amount` alongside an action the catalog marks not amount-bearing
+ * declares a cap no request for that action can ever satisfy: the PDP refuses
+ * it at every call (fail closed on an unevaluable constraint), which is a
+ * modeling fault, not a runtime one. Returns the fault text, or null when the
+ * entry is admissible.
+ */
+export function amountBearingBindingError(
+  entry: AmountBindingCandidate,
+  lookup: (action: string) => boolean | undefined = isAmountBearingAction,
+): string | null {
+  if (entry.constraints?.max_amount === undefined) return null;
+  for (const action of entry.actions ?? []) {
+    if (lookup(action) === false) {
+      return `binds max_amount to ${action}, an action the deployment catalog marks not amount-bearing`;
+    }
+  }
+  return null;
+}
+
 /** Non-empty tuple keeps `ceiling[0]` defined under noUncheckedIndexedAccess. */
 export interface DerivationPolicy {
   policy_version: string;
@@ -451,6 +546,13 @@ function loadPolicy(): LoadedPolicy {
         e.delegation,
         `policy.ceiling[${i}].delegation`,
       ) as NonNullable<CeilingEntry["delegation"]>;
+    }
+    // #743 — a configured ceiling entry MUST NOT bind `max_amount` to an
+    // action the catalog marks not amount-bearing. Same rule, same function,
+    // as PAR intake applies to a client-submitted proposal entry.
+    const bindingError = amountBearingBindingError(entry);
+    if (bindingError) {
+      throw new ConfigError(file, `policy.ceiling[${i}] ${bindingError}`);
     }
     return entry;
   });
@@ -774,6 +876,16 @@ export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
       if (e.constraints) entry.constraints = e.constraints;
       // delegation deliberately dropped: a read-only reconciliation template
       // never re-delegates, and dropping it keeps the entry within policy.
+      // #743 — the constraints carry verbatim onto a NARROWED action list, so
+      // the same admission rule applies to what this projection produces: a
+      // template entry never binds `max_amount` to an action the catalog marks
+      // not amount-bearing, whatever the source entry looked like.
+      if (entry.actions.length > 0) {
+        const bindingError = amountBearingBindingError(entry);
+        if (bindingError) {
+          throw new ConfigError("policy.json", `demoReconciliationTemplate ${bindingError}`);
+        }
+      }
       return entry;
     })
     .filter((e) => e.actions.length > 0);
@@ -980,6 +1092,8 @@ export interface CatalogServiceSeed {
   resource: string;
   connection: { profile: "oauth"; type: "authorization_code" | "token_exchange" | "id_jag" };
   approvable: boolean;
+  /** @see CatalogActionSeed — the service's declared actions (source of {@link ACTION_AMOUNT_BEARING}). */
+  actions?: CatalogActionSeed[];
 }
 
 function loadCatalog(): CatalogServiceSeed[] {
@@ -1006,6 +1120,9 @@ function loadCatalog(): CatalogServiceSeed[] {
     if (s.categories !== undefined) reqStringArray(file, s, "categories", ctx);
     if (s.tags !== undefined) reqStringArray(file, s, "tags", ctx);
     if (s.server_card_uri !== undefined) reqString(file, s, "server_card_uri", ctx);
+    // Same parser {@link ACTION_AMOUNT_BEARING} is built from: one validator
+    // for the `actions` member, so the seed and the action schema agree.
+    parseCatalogActions(file, s, ctx);
     return s as unknown as CatalogServiceSeed;
   });
 }
