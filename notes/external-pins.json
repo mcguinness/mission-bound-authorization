@@ -5,14 +5,14 @@
       "id": "AAUTH",
       "kind": "git",
       "repo": "dickhardt/AAuth",
-      "ref": "PR #73 merged",
-      "commit": "f1569261d0b9d179324f1665db1597f81cd0a851",
+      "ref": "dickhardt/AAuth draft-hardt-oauth-aauth-protocol.md, content verified at the 2026-09-03 editor's-copy head 055b7a47a3f00b6b0dcf24fd06fefbe4aa76d1dd; registry commit pinned to fc5e972c58d42a4f899d43acba39995081b87712 (2026-08-14), the last commit touching the pinned path; refreshed at #445 (A19)",
+      "commit": "fc5e972c58d42a4f899d43acba39995081b87712",
       "path": "draft-hardt-oauth-aauth-protocol.md",
-      "sha256": "041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6",
+      "sha256": "c984278f21e3931f0cc272d6768b84bcc471f8ab4a1a1922dd92940a91df7e19",
       "status": "established",
-      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin",
+      "note": "Refreshes the family's AAuth pin from f1569261d0b9d179324f1665db1597f81cd0a851 (\"PR #73 merged\") for issue #445 (A19). Two commits are distinguished on purpose: 055b7a47 is the 2026-09-03 editor's-copy head whose tree was verified (it is a publishing-workflow commit and did not touch this file), and fc5e972c (2026-08-14, the August issue batch that carried the presented_jti rename) is the last commit touching the pinned path and is the value stored in commit, per this registry's convention against naming a commit that never touched the file. The digest is identical at both. The datatracker's latest published revision is -10 (2026-08-06), divergent (pre-person-token); disclosed, not the pin.",
       "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
-      "pin_id": "AAUTH@041f6a1f0ece"
+      "pin_id": "AAUTH@c984278f21e3"
     },
     {
       "id": "ARAP",

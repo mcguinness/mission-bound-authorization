@@ -30,6 +30,7 @@ normative:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
     target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
+    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
@@ -175,6 +176,10 @@ Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: The substrate is AAuth: Mission context on its native propose/approve flow.
 Requires: Mission Substrate Requirements.
 <!-- family-status: END -->
+
+This binding is written against the AAuth editor's copy at commit
+`fc5e972c` (2026-08-14); the latest published revision is -10
+(2026-08-06).
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -553,10 +558,10 @@ is on path, the PS's current contextual governance decision.
 
 AAuth no longer treats a stripped mission as permitted downgrade: a
 resource MUST NOT omit `mission_s256` from a resource token when the
-person token it verified carried one, and a PS MUST resolve the
-resource token's identified person token by `person_token_jti` and
-reject any mismatch or omission against that person token's
-`mission_s256`.  That base rule is what makes stripping detectable;
+person token it verified carried one, and a PS MUST resolve
+`presented_jti` against its retained records of the person tokens it
+issued and reject any mismatch or omission against the resolved person
+token's `mission_s256`.  That base rule is what makes stripping detectable;
 comparing claims by agent and resource alone cannot, because an agent
 running concurrent missions holds more than one person token for the
 same resource, and only the named person token resolves to one.
