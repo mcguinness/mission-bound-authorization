@@ -46,6 +46,20 @@ normative:
 
 informative:
   RFC8725:
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -675,7 +689,10 @@ later companions and not specified here:
 - quarantine of a work product with blocking of its consumers when the
   Producing Mission is compromised.
 
-This document specifies none of them now.
+This document specifies none of those mechanisms now. The informative
+pattern in {{lineage-labels}} describes deployment-assigned
+classification and lineage inputs to aggregate bounds; it does not
+standardize those mechanisms or quarantine with consumer blocking.
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -735,3 +752,104 @@ set and defines the artifact-plane complement to the credential-plane
 invariants: information may propagate, and authority may not.
 
 --- back
+
+# Artifact-Lineage Label Persistence {#lineage-labels}
+
+This appendix is informative. Lineage here is the artifact provenance
+chain of {{provenance}}, including the derivation recorded by
+`parent_artifact`, not the Mission lineage of child delegation.
+
+A deployment can persist classification labels on artifacts in a
+governed catalog, so moving work to a new session does not shed the
+classification of its inputs. The pattern has five steps:
+
+1. The catalog records labels at the artifact grain it already supports.
+2. A derived artifact receives the deployment-defined join of its
+   inputs' labels under the declared classification order. The result
+   is at least as restrictive as every input; adding an input never
+   lowers it. Copying, summarizing, or rewriting an artifact therefore
+   does not clear its label when the derivation is recorded.
+3. Session taint is a label component carried by the artifacts the
+   session produces, rather than being lost when the session ends.
+4. Before relying on an artifact, the consumer obtains its label from
+   the governed catalog, not from a label supplied alongside the data
+   by the producing agent.
+5. An artifact the catalog cannot answer for receives the conservative
+   top value, never the least restrictive value, and is tainted in its
+   taint component.
+
+This pattern uses a label domain with a defined join and conservative
+top, for example a bounded join-semilattice. Merely declaring a partial
+order does not establish that either exists, and a monotone function
+alone need not preserve its inputs' restrictions. The deployment
+describes the domain and order alongside the taint policy in the
+harness's execution-environment scope statement
+({{I-D.draft-mcguinness-mission-harness}}). Where a richer join cannot
+be defined, the pattern falls back to the two-point order, untainted
+below tainted, with tainted as the conservative top.
+
+For ordered classifications such as public, internal, and confidential,
+the join is the maximum. For sets of compartments it is set union.
+For a level paired with compartments, it is componentwise maximum and
+union. Taint joins independently as another component: any tainted
+input produces a tainted result. These are examples of deployment
+semantics, not a classification vocabulary defined by this document.
+
+Label-write custody belongs to the trusted mediator that attaches
+Work Product Provenance, the execution environment or Mission Issuer
+described in {{provenance}}. A producing agent can write an artifact
+but cannot write or clear its catalog label. Any governed clear is a
+separate trusted operation, not a consequence of copying or resetting
+a session. A catalog answer reaches the consumer through the trusted
+channel the discovery profile's adjudication rule already requires
+({{I-D.draft-mcguinness-mission-discovery}}).
+
+Labels live in the catalog, not in the policy-free provenance object.
+That object retains its five members and carries no classification.
+An OPTIONAL Work Product Binding can tighten the catalog join by
+binding an artifact digest to provenance; absence of that binding
+remains no signal, and the catalog otherwise uses its established
+artifact identity. A label is only a narrowing input: it can lead to
+fresh approval, downgrade, or refusal, never widen the Receiving
+Mission's Authority Set or make the artifact an authorization grant.
+
+| Existing floor | Pattern input |
+| --- | --- |
+| Harness store inheritance for a vouched Mission-writable store | Artifact labels and persistent taint, steps 1 and 3 |
+| Harness parameter provenance at the data plane | Recorded input-to-output derivation, step 2 |
+| Harness taint across session boundaries | Join preserving each input's restrictions, step 2 |
+| Harness session-level fallback | Session taint as a persistent component, step 3 |
+| Harness default-taint polarity | Conservative top for unknown lineage, step 5 |
+| Discovery egress-capable binding under taint | Trusted consumer label read, step 4 |
+
+These mappings refer to the harness's Session Taint rules
+({{I-D.draft-mcguinness-mission-harness}}) and discovery's
+Injection-Driven Discovery rules
+({{I-D.draft-mcguinness-mission-discovery}}). The pattern supplies
+their input; their existing approval and downgrade responses are
+unchanged. A deployment already using the resource-access profile's
+`data_classification` constraint can compare its catalog classification
+there under its declared label semantics
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}); this does
+not make arbitrary taint labels `data_classification` values.
+
+The pattern does not supply authority or complete information-flow
+control. Every proposed action is still evaluated under the Receiving
+Mission ({{handoff}}). Propagation is only as complete as the recorded
+flow: compute that reads, transforms, and emits without recording the
+derivation leaves no computable join, so its output takes the unknown
+default. That arbitrary-compute boundary is bounded, not closed. The
+pattern provides no stronger guarantee than its trusted label writer;
+without isolation, compromise of the agent can also compromise the
+writer. Nor does it quarantine artifacts or block their consumers,
+which remains deferred in {{binding-guardrails}}.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Added the informative Artifact-Lineage Label Persistence appendix
+  and clarified the deferred-mechanism list. Labels use a declared
+  conservative join, remain outside policy-free provenance, and stay
+  under trusted-mediator custody. No normative requirement changed
+  (#757).

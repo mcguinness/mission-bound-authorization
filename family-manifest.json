@@ -653,7 +653,8 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-progressive"
+    "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-work-products"
    ]
   },
   {
@@ -2184,12 +2185,14 @@
    "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
+    "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-continuation",
-    "draft-mcguinness-oauth-mission-cross-domain"
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-resource-access"
    ]
   },
   {
