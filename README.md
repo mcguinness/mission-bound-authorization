@@ -94,6 +94,10 @@ and claim their capabilities through a Mission Substrate Statement.
 
 ### 3. See the minimum package
 
+For issuer replication and recovery, the optional
+[Control-Plane Consistency profile](draft-mcguinness-mission-control-plane.md)
+states topology-neutral invariants and fault-conformance cases.
+
 Each binding's minimum package is its adoption closure: itself plus
 every document the manifest's `adoption_requires` edges say it
 cannot be deployed without, generated here so the count can never

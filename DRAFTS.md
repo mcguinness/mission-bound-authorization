@@ -46,9 +46,9 @@ everything outside their markers is hand-authored.
 
 <!-- generated:family-counts:start -->
 
-46 documents: 1 core, 5 adapter-binding, 37 companion, 3 guide.
-Spec maturity: 1 candidate, 38 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
-Conformance ledger (`conformance-manifest.json`): 644 requirement rows across 20 audited specs (181 tested, 71 partial, 389 todo, 3 blocked); 26 documents carry no rows in the audited set yet.
+47 documents: 1 core, 5 adapter-binding, 38 companion, 3 guide.
+Spec maturity: 1 candidate, 39 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
+Conformance ledger (`conformance-manifest.json`): 656 requirement rows across 21 audited specs (181 tested, 71 partial, 401 todo, 3 blocked); 26 documents carry no rows in the audited set yet.
 
 <!-- generated:family-counts:end -->
 
@@ -56,6 +56,7 @@ Conformance ledger (`conformance-manifest.json`): 644 requirement rows across 20
 
 | Document | Role | Spec maturity | Verbs | Group | Summary | Pull this in when |
 |---|---|---|---|---|---|---|
+| [Mission Control-Plane Consistency](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-control-plane.html) | companion | experimental | govern | Lifecycle | Topology-neutral issuer serialization, authoritative observation, rollback resistance, durable fan-out, and emergency-authority separation. | A deployment claims testable control-plane consistency across replication, partition, and recovery. |
 | [AAuth Mission Expiry](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html) | companion | experimental | govern | Lifecycle | Profiles AAuth's `expires_at` mission-blob member: an immutable, consent-bound lifetime the base protocol enforces on every Person Server decision path, with lifetime caps on every token carrying `mission_s256`. | A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL). |
 | [Mission-Bound Authorization for the Agent Access Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aam.html) | companion | sketch | analyze | Architecture | Maps Cloudflare's Agent Access Model onto the family, realizing each of its six components with an existing mechanism and declining the grant review loop because Missions are not standing grants. | Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms. |
 | [Mission Context Binding for AAuth](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | adapter-binding | experimental | approve | The substrate and the bindings | The thin AAuth-native binding: it uses AAuth's existing mission blob, `{approver, s256}` reference, propose/clarify/approve flow, and active and terminated states unchanged, and defines no new wire members. | The substrate is AAuth: Mission context on its native propose/approve flow. |
@@ -269,6 +270,14 @@ stay on a fresh human decision.
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html)
 
 ### Lifecycle
+
+#### Mission Control-Plane Consistency
+
+Topology-neutral serialization, trustworthy state observations, rollback
+resistance, and repairable fan-out. An optional experimental profile with
+unimplemented fault-conformance cases; it does not waive existing binding MUSTs.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-control-plane.html)
 
 #### Mission Status and Lifecycle for OAuth 2.0
 
