@@ -1292,7 +1292,9 @@ also carries, MUST include:
   unmediated paths explicitly excluded from the claim (the harness
   profile's execution-environment scope statement supplies these for a
   harness-run deployment, {{I-D.draft-mcguinness-mission-harness}}),
-  and the Mission-establishment mode each enforcement scope uses;
+  and the Mission-establishment mode each enforcement scope uses,
+  including the perimeter dispositions defined below inside this same
+  mediated-scope declaration;
 - the supported authority-entry types, action identifiers, and
   constraint vocabularies, and the evaluator for each supported type
   ({{input-authority}});
@@ -1309,6 +1311,59 @@ also carries, MUST include:
   equivalent), which every record MUST have regardless of which
   evidence extension, if any, the deployment also claims
   ({{record-integrity}}).
+
+Each declared resource and excluded path MUST have exactly one
+perimeter disposition: `mediated`, `reconstructed`, or `unrecorded`.
+`mediated` means every consequential effect on the entry crosses a
+PEP before the effect. `reconstructed` means no per-action gate is in
+the path, but the executing system records how outputs derive from
+inputs. `unrecorded` means neither holds. These are per-entry fields
+inside the existing `mediated_scope` member, not a seventh baseline
+member. The Security Model describes their limits informatively
+({{I-D.draft-mcguinness-mission-security-model}}).
+
+The nested declaration has this shape:
+
+~~~ json
+"mediated_scope": {
+  "resources": [
+    { "resource": "https://erp.example.com", "disposition": "mediated" },
+    { "resource": "https://warehouse.example.com/sales",
+      "disposition": "reconstructed" }
+  ],
+  "excluded_paths": [
+    { "path": "notebook_interpreter", "disposition": "unrecorded" }
+  ],
+  "action_classes": ["irreversible_action"],
+  "execution_paths": ["tool-gateway"],
+  "pep_locations": ["tool-gateway"],
+  "mission_establishment_mode": "mission_claim"
+}
+~~~
+
+Resource identifiers and path names are non-empty strings. Resource
+entries take any of the three dispositions; excluded paths take only
+`reconstructed` or `unrecorded`. For compatibility, a resource entry
+written as a bare string denotes `mediated`, its existing meaning.
+An excluded-path string has no implicit disposition and requires
+migration to an object. A validator MUST reject a missing or unknown
+disposition, an excluded path marked `mediated`, or duplicate keys
+with conflicting dispositions. Identical repeated keys can be
+normalized to one entry.
+
+A deployment MUST NOT represent reconstructed or unrecorded entries
+as mediation. A runtime-enforcement claim is in scope only when its
+resource is mediated and its named execution path is not excluded,
+even if that path also appears in `execution_paths`. The existing
+resource, action-class, authority-entry-type, and execution-path
+scope checks still apply. Reconstruction supplies provenance, never
+authorization after the effect. Declaring a reconstructed or
+unrecorded entry is a stated posture, not itself nonconformance.
+This declaration qualifies the entries already enumerated; it does
+not require enumeration or closure of all arbitrary computation.
+It is distinct from the harness's per-channel disposition, whose
+not-covered value disclaims that channel rather than reconstructing
+its flow.
 
 A named assurance extension or enforcement claim attaches its own
 declaration requirement to the baseline statement, rather than adding a
@@ -2800,6 +2855,7 @@ demonstrate that the boundary fails closed:
 | Bypass attempt | Required outcome |
 |---|---|
 | An Enforcement Scope Statement omits a required baseline declaration | The statement fails validation |
+| A declared resource or excluded path lacks its required perimeter disposition | The statement fails validation; a legacy resource string has the defined mediated shorthand ({{runtime-conformance}}) |
 | An Enforcement Scope Statement claims a named assurance extension with no attached declaration | The statement fails validation |
 | A claim names a resource, action class, authority-entry type, or execution path outside the declared scope | The claim is rejected as out of scope |
 
@@ -3338,6 +3394,14 @@ Refusal Record, carrying both the authorized digest and the differing
 effective digest it recomputed. The companion's parameter-deviation
 worked example shows the concrete record
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Added per-entry perimeter dispositions inside the existing
+  mediated-scope declaration, its compatibility rule, and the
+  prohibition on claiming reconstruction as mediation (#758).
 
 # Acknowledgments
 {:numbered="false"}

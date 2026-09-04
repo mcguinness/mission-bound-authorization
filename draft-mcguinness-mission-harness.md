@@ -1620,6 +1620,11 @@ for one Mission from becoming ambient authority for another.
 
 ## Limits of the Taint Control {#sec-taint-limits}
 
+In the Security Model's Enforcement Perimeter, this provenance-backed
+taint control is an instrument of the reconstructed-effects ring;
+unrecorded arbitrary computation remains bounded, not closed
+({{I-D.draft-mcguinness-mission-security-model}}).
+
 The taint rule of {{session-taint}} remains a coarse control, not
 information-flow control, though source classing and parameter
 provenance give it discriminating power: it gates the egress whose
@@ -1709,6 +1714,13 @@ An integration is complete when each obligation is discharged at the
 named boundary. Nothing here requires the engine to persist Mission
 state beyond the binding, or the Mission Issuer to know the engine
 exists.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Linked the limits of provenance-backed taint control to the Security
+  Model's Enforcement Perimeter; no taint requirement changed (#758).
 
 # Acknowledgments
 {:numbered="false"}
