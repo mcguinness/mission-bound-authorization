@@ -79,8 +79,8 @@
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "0fe668db9531ad3cd28021e972d738fc420c1930",
-    "content_sha256": "e4246cdcb23be68bfddd1df355fe0ec445bf1fe246bc3909326e5098a422bbf1"
+    "revision": "fffa419c72a629491f83a2cb83d3f28a829be588",
+    "content_sha256": "39500f65856a5a98aad55444c2326bd0d1fced3773ad19fa0cc2913535ae79a0"
    }
   }
  },
@@ -17300,7 +17300,7 @@
     "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
@@ -17308,7 +17308,8 @@
      "level": "unit",
      "surface": "commitment"
     }
-   ]
+   ],
+   "notes": "#699 asserts the AS kernel's committed MissionRecord, and the ungated issuer introspection view over it, carry no approval_context_commitment. That record type does not yet implement every core Mission Record member (authority_source is absent), so absence there is weaker than the row's own observation about the Mission Record, and coverage stays partial until the record type is complete."
   },
   {
    "id": "approval-context.computation.cache-is-derived-state",
