@@ -737,3 +737,109 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 });
+
+
+/**
+ * @spec mission#approval-event (steps 3 and 5), mission#authority-sources —
+ * the wire contract: the approval rendering identifies the established source,
+ * and an establishment refusal completes through the pending front-channel
+ * authorization request as `access_denied`.
+ */
+describe("authority source on the approval surface (@spec mission#authority-sources)", () => {
+  const SOURCE_PROPOSAL: AuthorityEntry[] = [
+    { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+  ];
+
+  async function renderApproval(args: {
+    clientId: string;
+    kid: string;
+    key: () => CryptoKey;
+  }): Promise<{ uid: string; html: string }> {
+    const par = await pushPar(args.clientId, args.kid, args.key(), {
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      authorization_details: JSON.stringify(SOURCE_PROPOSAL),
+    });
+    expect(par.status, await par.clone().text()).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+    const authUrl = `${ISSUER}/auth?${new URLSearchParams({
+      client_id: args.clientId,
+      request_uri,
+    })}`;
+    let res = await fetch(authUrl, { redirect: "manual" });
+    storeCookies(res);
+    let location = res.headers.get("location") as string;
+    const uid = location.split("/interaction/")[1] as string;
+
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, {
+      headers: { cookie: cookieHeader() },
+    });
+    return { uid, html: await page.text() };
+  }
+
+  async function decideAt(uid: string, approver: string, subject: string): Promise<URL> {
+    let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve", approver, subject }),
+    });
+    storeCookies(res);
+    let location = res.headers.get("location") as string;
+    while (location?.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+      storeCookies(res);
+      location = res.headers.get("location") as string;
+    }
+    return new URL(location);
+  }
+
+  it("renders the user-delegated source and approves", async () => {
+    const { uid, html } = await renderApproval({
+      clientId: "ap-agent",
+      kid: "ap-agent-auth",
+      key: () => agentKey,
+    });
+    expect(html).toContain("Authority source (whose authority this draws on)");
+    expect(html).toContain("user_delegated");
+    const redirect = await decideAt(uid, "bob", "alice");
+    expect(redirect.searchParams.get("code")).toBeTruthy();
+  });
+
+  it("renders the organizational source with the governed policy it draws on", async () => {
+    const { html } = await renderApproval({
+      clientId: "governed-agent",
+      kid: "governed-agent-auth",
+      key: () => governedKey,
+    });
+    expect(html).toContain("organizational");
+    expect(html).toContain("acme-accounts-payable-controls");
+    expect(html).toContain("2026-09-01");
+    // The policy digest is record detail, never consent context.
+    expect(html).not.toContain("digest");
+  });
+
+  it("refuses access_denied at the decision when the subject discipline fails", async () => {
+    // An organizational Mission MUST NOT record a human principal as its
+    // Subject: the gate refuses before any anchor is computed, and the refusal
+    // completes through the pending authorization request.
+    const { uid } = await renderApproval({
+      clientId: "governed-agent",
+      kid: "governed-agent-auth",
+      key: () => governedKey,
+    });
+    const redirect = await decideAt(uid, "bob", "alice");
+    expect(redirect.searchParams.get("error")).toBe("access_denied");
+    expect(redirect.searchParams.get("code")).toBeNull();
+  });
+
+  it("refuses access_denied when the Approver may not activate the source", async () => {
+    // `alice` holds no activation authority over the organizational source.
+    const { uid } = await renderApproval({
+      clientId: "governed-agent",
+      kid: "governed-agent-auth",
+      key: () => governedKey,
+    });
+    const redirect = await decideAt(uid, "alice", "acme-accounts-payable");
+    expect(redirect.searchParams.get("error")).toBe("access_denied");
+  });
+});

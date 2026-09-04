@@ -5,7 +5,12 @@
  */
 
 import { randomBytes, randomInt } from "node:crypto";
-import { authorityHash, intentHash, proposalHash } from "@mission/core";
+import {
+  type ApprovalContextManifestInput,
+  authorityHash,
+  intentHash,
+  proposalHash,
+} from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
@@ -369,6 +374,32 @@ export class MissionKernel {
    */
   actorProfile(sub: string): string | undefined {
     return this.opts.actorProfiles?.[sub];
+  }
+
+  /**
+   * @spec approval-governance#approval-context-manifest — the Approval Context
+   * Manifest input for a Mission, taken FROM THE RECORD. `authority_source` is
+   * a REQUIRED manifest input, so the manifest is computable only because the
+   * record carries the member: nothing here supplies a stand-in.
+   */
+  approvalContextInput(record: MissionRecord): ApprovalContextManifestInput {
+    const fresh = this.applyExpiry(record);
+    return {
+      issuer: fresh.issuer,
+      id: fresh.id,
+      intent_hash: fresh.intent_hash,
+      ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
+      authority_hash: fresh.authority_hash,
+      subject: fresh.subject,
+      approver: fresh.approver,
+      client_id: fresh.client_id,
+      created_at: fresh.created_at,
+      expires_at: fresh.expires_at,
+      approval_basis: fresh.approval_basis as never,
+      authority_source: fresh.authority_source as never,
+      policy_version: fresh.policy_version,
+      approval_event_id: fresh.approval_event_id,
+    };
   }
 
   /**

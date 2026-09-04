@@ -25,9 +25,21 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY } from "@mission/demo-data";
+import {
+  AUTHORITY_SOURCES,
+  CANONICAL_RESOURCE,
+  DEMO_AGENT_PROPOSAL,
+  DERIVATION_POLICY,
+  GOVERNED_POLICIES,
+} from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
-import { deriveAuthoritySet, validateAuthorityProposal, validateMissionIntent } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  deriveAuthoritySet,
+  validateAuthorityProposal,
+  validateAuthoritySourceCatalog,
+  validateMissionIntent,
+} from "../src/index.js";
 
 const ISS = "https://as.test";
 const MISSION_ID = "msn_shipped_config_test";
@@ -128,5 +140,52 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     );
     expect(decision.decision).toBe(false);
     expect(decision.context.denial_reason).toBe("constraint_exceeded");
+  });
+});
+
+
+/**
+ * @spec mission#authority-sources, mission#approval-event — the SHIPPED
+ * `config/authority-sources.json` and `config/governed-policy.json`, and the
+ * fact that the real AS assembly is wired with them. A deployment that omitted
+ * the catalog would still populate the REQUIRED record member (the implicit
+ * user-delegated source), so nothing but this assertion catches a shipped AS
+ * running with no declared sources at all.
+ */
+describe("shipped authority-source catalog (@spec mission#authority-sources)", () => {
+  it("declares a trusted source for every shipped client, with no duplicate identity", () => {
+    validateAuthoritySourceCatalog(AUTHORITY_SOURCES as never);
+    const declared = new Set(AUTHORITY_SOURCES.entries.flatMap((e) => e.clients));
+    for (const client of ["ap-agent", "subagent-invoice-extractor", "governed-agent"]) {
+      expect(declared.has(client)).toBe(true);
+    }
+  });
+
+  it("resolves the organizational source's ceiling and digest from the governed policy", () => {
+    const organizational = AUTHORITY_SOURCES.entries.find((e) => e.type === "organizational");
+    expect(organizational).toBeDefined();
+    const governed = GOVERNED_POLICIES.find(
+      (g) =>
+        g.id === organizational?.policy?.id && g.version === organizational?.policy?.version,
+    );
+    expect(governed).toBeDefined();
+    // The ceiling is the governed policy's own, never a second copy, and the
+    // digest is computed at load, never read from the wire.
+    expect(organizational?.ceiling).toEqual(governed?.ceiling);
+    expect(organizational?.policy?.digest).toBe(governed?.digest);
+    expect(organizational?.policy?.digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
+  });
+
+  it("the real AS assembly runs with the shipped catalog, not the implicit source", async () => {
+    const as = await buildAuthorizationServer({
+      issuer: "http://localhost:14599",
+      allowHeadlessAdjudication: true,
+    });
+    // Gate 1 fail-closed: a client the catalog does not declare resolves no
+    // source at all, which only a wired catalog can produce.
+    expect(() => as.kernel.authoritySourceEntry("no-such-agent")).toThrow(
+      /no trusted authority source is declared/,
+    );
+    expect(as.kernel.authoritySourceEntry("governed-agent").type).toBe("organizational");
   });
 });

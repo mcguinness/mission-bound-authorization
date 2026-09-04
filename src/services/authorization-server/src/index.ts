@@ -290,6 +290,16 @@ export {
   type DispatchResult,
 } from "./kernel/template.js";
 export {
+  AUTHORITY_SOURCE_TYPES,
+  type AuthoritySourceCatalog,
+  type AuthoritySourceCatalogEntry,
+  authoritySourceOf,
+  isAuthoritySourceType,
+  parseAuthoritySource,
+  validateAuthoritySourceCatalog,
+} from "./kernel/authority-source.js";
+export type { AuthoritySource, AuthoritySourceType } from "./kernel/types.js";
+export {
   DeferralStore,
   DeferralError,
   DEFERRED_GRANT_TYPE,
