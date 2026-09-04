@@ -199,9 +199,16 @@ describe("the typed config loader refuses such a ceiling entry at load (#743)", 
     expect(error?.message).toMatch(/^\[config:policy\.json\]/);
   });
 
-  it("loads the shipped config unchanged (positive control: the fixture dir itself is sound)", async () => {
-    configDirWith(() => {});
+  it("loads the fixture dir, not a cached module (positive control for the two negatives above)", async () => {
+    // The marker makes the fixture observably different from the shipped
+    // config: reading it back proves the loader really re-ran against
+    // MISSION_CONFIG_DIR, so the refusals above are this rule firing and not
+    // a stale module resolving.
+    configDirWith((policy) => {
+      policy.policy_version = "amount-bearing-fixture-743";
+    });
     const mod = await import("@mission/demo-data");
+    expect(mod.DERIVATION_POLICY.policy_version).toBe("amount-bearing-fixture-743");
     expect(mod.DERIVATION_POLICY.ceiling.length).toBeGreaterThan(1);
   });
 });
