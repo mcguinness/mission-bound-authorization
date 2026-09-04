@@ -805,6 +805,14 @@ PEP. This procedure applies wherever verification of the
 `evidence_envelope` is described in this document, including for
 Execution Evidence and Refusal Records.
 
+The emitter constructs the record on its own emission path, from the
+state it holds, and signs it there. A component that reconstructs a
+record for a decision or an outcome it did not itself reach is not
+the emitter, whatever signing key it holds: such a record attests the
+reconstructing component's view under another component's identity. A
+component that receives a record it did not emit verifies it and
+retains it as received.
+
 A verifier MUST confirm that the signing key selected by the JWS `kid`
 is the published key of the component named in the record's `emitter`
 member, and that this key is bound to the enforcement scope and
