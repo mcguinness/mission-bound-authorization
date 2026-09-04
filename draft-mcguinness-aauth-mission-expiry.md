@@ -30,11 +30,12 @@ normative:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
     target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
+    refcontent: "Editor's copy, commit 055b7a4"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-03
 
 informative:
   I-D.draft-mcguinness-mission-aauth:
