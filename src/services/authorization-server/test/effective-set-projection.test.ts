@@ -212,7 +212,7 @@ describe("gateDerivation refuses an empty effective set BY CAUSE (@spec issuance
         policy_version: "projection-v1",
         ceiling: [{ type: "mission_resource_access", resource: RES, actions: [READ, PAY] }],
       } as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog([{ type: "mission_resource_access", resource: RES, actions: [READ, PAY] }], ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog([{ type: "mission_resource_access", resource: RES, actions: [READ, PAY] }], ["ap-agent"], ["bob"]),
       statusKey,
       statusKid: "as-status",
       now: () => NOW,

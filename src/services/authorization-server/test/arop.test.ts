@@ -108,7 +108,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: NARROW_POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(NARROW_POLICY.ceiling, ["ap-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(NARROW_POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey,
     statusKid: "as-status",
   });

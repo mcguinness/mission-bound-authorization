@@ -86,7 +86,7 @@ describe("authority_changed — builder emission (@spec signals#lifecycle-event)
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
@@ -117,7 +117,7 @@ describe("authority_changed — builder emission (@spec signals#lifecycle-event)
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
@@ -151,7 +151,7 @@ describe("authority_changed — builder emission (@spec signals#lifecycle-event)
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
@@ -204,7 +204,7 @@ describe("authority_changed — builder emission (@spec signals#lifecycle-event)
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
@@ -628,7 +628,7 @@ describe("authority_changed / containment_version — receiver rematerialization
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,

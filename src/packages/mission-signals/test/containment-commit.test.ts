@@ -84,7 +84,7 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
@@ -178,7 +178,7 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,

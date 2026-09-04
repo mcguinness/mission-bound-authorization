@@ -100,7 +100,7 @@ describe("suspend->resume lift accepted by the Signal receiver (@spec child-dele
     const kernel = new MissionKernel({
       issuer: ISS,
       policy: POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["parent-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["parent-agent"], ["bob"]),
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,

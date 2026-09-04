@@ -16,7 +16,7 @@ const ISS = "https://as.test";
 
 async function kernel() {
   const { privateKey } = await generateKeyPair("ES256", { extractable: true });
-  return new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]), statusKey: privateKey, statusKid: "as-status" });
+  return new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]), statusKey: privateKey, statusKid: "as-status" });
 }
 
 describe("M12 scenario 14: 02:00 resume (harness stop-on-non-active)", () => {

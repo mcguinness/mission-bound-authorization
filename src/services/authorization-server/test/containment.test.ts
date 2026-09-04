@@ -113,7 +113,7 @@ function makeHarness(containmentPolicy?: ContainmentPolicy): Harness {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
     ...(containmentPolicy ? { containmentPolicy } : {}),
     actorProfiles: aiAgents(
       "child-agent",

@@ -81,7 +81,7 @@ beforeEach(() => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"], ["bob"]),
     statusKey: key,
     statusKid: "as-status",
     now,
@@ -416,7 +416,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     const k = new MissionKernel({
       issuer: ISS,
       policy: openPolicy as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(openPolicy.ceiling, ["parent-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(openPolicy.ceiling, ["parent-agent"], ["bob"]),
       statusKey: key,
       statusKid: "as-status",
       now,
@@ -535,7 +535,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
             id: "d-people",
             type: "user_delegated",
             clients: [],
-            activators: [],
+            activators: ["bob"],
             ceiling: [
               {
                 type: "mission_resource_access",
@@ -834,7 +834,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     const basisKernel = new MissionKernel({
       issuer: ISS,
       policy: policy as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["parent-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["parent-agent"], ["bob"]),
       statusKey: key,
       statusKid: "as-status",
       now,

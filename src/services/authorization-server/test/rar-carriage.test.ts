@@ -112,7 +112,7 @@ describe("record + introspection vs claim (@spec mission#mission-record, #intros
     kernel = new MissionKernel({
       issuer: ISSUER,
       policy: DERIVATION_POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: key,
       statusKid: "as-status",
     });

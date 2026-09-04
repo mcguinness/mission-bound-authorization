@@ -121,7 +121,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: AS_ISS,
     policy: POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey: asKeys.privateKey,
     statusKid: "as-status",
   });

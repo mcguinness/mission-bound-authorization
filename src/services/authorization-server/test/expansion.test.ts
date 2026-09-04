@@ -37,7 +37,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]), statusKey: key, statusKid: "as-status", now });
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]), statusKey: key, statusKid: "as-status", now });
 });
 
 const approve = (actions: string[]) =>

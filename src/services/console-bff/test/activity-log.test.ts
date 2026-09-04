@@ -408,7 +408,7 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     const kernel = new MissionKernel({
       issuer: "https://as.test",
       policy: DERIVATION_POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: keys.privateKey,
       statusKid: "as-status",
     });

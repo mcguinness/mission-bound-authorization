@@ -35,7 +35,10 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["worker", "intruder", "subagent-invoice-extractor", "orchestrator"]), statusKey: key, statusKid: "as-status", now });
+  // Two Approvers, both real here: the templates this suite builds are
+  // consented by "human-approver", and the shipped demo descriptor it also
+  // exercises names "bob".
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["worker", "intruder", "subagent-invoice-extractor", "orchestrator"], ["human-approver", "bob"]), statusKey: key, statusKid: "as-status", now });
   store = new TemplateStore(now);
 });
 

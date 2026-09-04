@@ -30,7 +30,7 @@ const approveForAlice = (n: number) =>
 
 beforeAll(async () => {
   const { privateKey } = await generateKeyPair("ES256", { extractable: true });
-  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]), statusKey: privateKey, statusKid: "as-status" });
+  kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]), statusKey: privateKey, statusKid: "as-status" });
   catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: ARS_INTAKE, issuer: ISS });
 });
 

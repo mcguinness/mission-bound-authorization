@@ -139,7 +139,7 @@ async function wire(): Promise<Wired> {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
     dischargeAuthority: DISCHARGE_AUTHORITY,
     statusKey: statusKeys.privateKey,
     statusKid: "as-status",

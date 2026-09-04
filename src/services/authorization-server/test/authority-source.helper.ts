@@ -19,16 +19,19 @@
 
 import type { AuthoritySourceCatalog } from "../src/index.js";
 
-/** A single user-delegated source over `ceiling`, declaring `clients`. */
+/**
+ * A single user-delegated source over `ceiling`, declaring `clients` and the
+ * `activators` permitted to activate it.
+ *
+ * `activators` is a required argument, not a defaulted one: an empty list is
+ * refused at catalog load, so a suite names the Approver it actually approves
+ * with and gate 2 stays a live check rather than a vacuous one.
+ */
 export function testAuthoritySourceCatalog(
   ceiling: unknown,
   clients: readonly string[],
-  over: {
-    /** Approvers permitted to activate. Empty (the default) places no
-     *  activation restriction, matching a deployment that does not gate it. */
-    activators?: readonly string[];
-    humanPrincipals?: readonly string[];
-  } = {},
+  activators: readonly string[],
+  over: { humanPrincipals?: readonly string[] } = {},
 ): AuthoritySourceCatalog {
   return {
     humanPrincipals: over.humanPrincipals ?? [],
@@ -37,7 +40,7 @@ export function testAuthoritySourceCatalog(
         id: "test-user-delegated",
         type: "user_delegated",
         clients,
-        activators: over.activators ?? [],
+        activators,
         ceiling: ceiling as never,
       },
     ],

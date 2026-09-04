@@ -81,7 +81,7 @@ async function bootstrap() {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey: statusKeys.privateKey,
     statusKid: "as-status",
     now: () => NOW,

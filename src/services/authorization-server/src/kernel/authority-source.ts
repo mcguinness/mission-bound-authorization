@@ -59,7 +59,11 @@ export interface AuthoritySourceCatalogEntry {
   type: AuthoritySourceType;
   /** The Agents (OAuth clients) whose Missions draw on this source. */
   clients: readonly string[];
-  /** Approver subjects authorized under local policy to ACTIVATE this source. */
+  /**
+   * Approver subjects authorized under local policy to ACTIVATE this source.
+   * REQUIRED and non-empty: a source nobody may activate is a configuration
+   * error, refused at load, never a source every Approver may activate.
+   */
   activators: readonly string[];
   /**
    * The source's own authority: the ceiling the derived Authority Set MUST lie
@@ -121,6 +125,12 @@ export function validateAuthoritySourceCatalog(catalog: AuthoritySourceCatalog):
   for (const entry of catalog.entries) {
     if (!isAuthoritySourceType(entry.type)) {
       throw new Error(`authority source '${entry.id}': unrecognized type '${String(entry.type)}'`);
+    }
+    // @spec mission#approval-event (step 3) — gate 2 has no vacuous form: a
+    // source naming no Approver who may activate it is a source nobody may
+    // activate, so it is refused at load rather than admitting every Approver.
+    if (!Array.isArray(entry.activators) || entry.activators.length === 0) {
+      throw new Error(`authority source '${entry.id}': activators must be non-empty`);
     }
     if (entry.type === "organizational" && !entry.policy) {
       throw new Error(`authority source '${entry.id}': organizational requires a policy reference`);
@@ -206,15 +216,14 @@ export function authoritySourceOf(entry: AuthoritySourceCatalogEntry): Authority
  * never reads the Authority Set, so an activator holding none of the
  * ceiling's operational permissions still activates.
  *
- * An entry with an EMPTY `activators` list places no activation restriction, so
- * a deployment that does not gate activation declares one deliberately; a
- * non-empty list is exhaustive.
+ * The `activators` list is EXHAUSTIVE and never empty: an empty list is
+ * refused at catalog load, so this check has no vacuous form and every source
+ * names the Approvers who may activate it.
  */
 export function assertApproverMayActivate(
   entry: AuthoritySourceCatalogEntry,
   approver: { iss: string; sub: string },
 ): void {
-  if (entry.activators.length === 0) return;
   if (!entry.activators.includes(approver.sub)) {
     throw new IntentError(
       "access_denied",

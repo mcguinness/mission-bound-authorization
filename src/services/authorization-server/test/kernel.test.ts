@@ -37,7 +37,7 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
     statusKey: privateKey,
     statusKid: "as-status",
   });
@@ -633,7 +633,7 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     const localKernel = new MissionKernel({
       issuer: ISS,
       policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: 5 } as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"]),
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
       statusKey: privateKey,
       statusKid: "as-status",
     });

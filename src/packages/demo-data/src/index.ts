@@ -949,6 +949,7 @@ export interface AuthoritySourceSeed {
   id: string;
   type: "user_delegated" | "service_owned" | "organizational";
   clients: string[];
+  /** REQUIRED and non-empty: gate 2 has no vacuous form (@see loadAuthoritySources). */
   activators: string[];
   ceiling: CeilingEntry[];
   principals?: string[];
@@ -965,7 +966,8 @@ const AUTHORITY_SOURCE_TYPES = ["user_delegated", "service_owned", "organization
 /**
  * Load + validate config/authority-sources.json. FAIL CLOSED on the
  * discriminator (@spec mission#lifecycle forward compatibility): an
- * unrecognized `type` is refused at load, never widened. `ceiling` accepts the
+ * unrecognized `type` is refused at load, never widened, and `activators` is
+ * REQUIRED and non-empty, so gate 2 has no vacuous form. `ceiling` accepts the
  * literal string "deployment" to mean the deployment's own derivation ceiling
  * (the user-delegated case, where the source's authority is the deployment's);
  * an `organizational` source takes its ceiling from the governed policy it
@@ -985,6 +987,12 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
     }
     const clients = reqStringArray(file, e, "clients", ctx);
     const activators = reqStringArray(file, e, "activators", ctx);
+    if (activators.length === 0) {
+      throw new ConfigError(
+        file,
+        `${ctx}.activators is empty for source '${id}': a source naming no Approver who may activate it is a source nobody may activate`,
+      );
+    }
     const principals =
       e.principals === undefined ? undefined : reqStringArray(file, e, "principals", ctx);
     if (type !== "user_delegated" && (!principals || principals.length === 0)) {
