@@ -41,6 +41,7 @@ normative:
         ins: D. Hardt
         name: Dick Hardt
     date: 2026
+    refcontent: "Editor's copy, commit fc5e972c"
 
 informative:
   I-D.draft-mcguinness-aauth-mission-expiry:
@@ -80,9 +81,11 @@ An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
 tree recorded for it.  An immutable expiry, AAuth's `expires_at`,
 ends a mission automatically.  Termination
-reasons are audit facts and never protocol states.  The operations extend the existing AAuth `mission_endpoint`,
-use AAuth HTTP Message Signatures for agent calls, preserve the privacy
-of the mission blob, and record their results in the mission log.
+reasons are audit facts and never protocol states.  The operations are
+actions on AAuth's `mission_control_endpoint`, authenticate their
+callers with mechanisms the base protocol and the Person Server
+already have, preserve the privacy of the mission blob, and record
+their results in the mission log.
 
 Termination immediately closes Person Server decision and issuance
 paths, but it cannot by itself retract every credential already accepted
@@ -124,19 +127,18 @@ companions ({{I-D.draft-mcguinness-mission-architecture}}), and the
 family security model's analysis applies to it
 ({{I-D.draft-mcguinness-mission-security-model}}).
 
-This specification extends the existing `mission_endpoint` with an
-`operation` member, unambiguous against base requests, which carry
-none at that URL.  The base protocol splits the surfaces:
-`mission_endpoint` is the owning agent's, and parties other than the
-owning agent read and manage missions at the
-`mission_control_endpoint`, whose operations AAuth charters to a
-companion specification with exactly this document's scope.
+The base protocol splits the surfaces: `mission_endpoint` is the
+owning agent's, and parties other than the owning agent read and
+manage missions at the `mission_control_endpoint`, whose
+authentication model, operations, and responses AAuth charters to a
+companion specification with exactly this document's scope.  This
+document defines them there.
 
-A future revision relocates these operations to that endpoint and
-adopts the base protocol's per-mission URL and `action` discriminator
-conventions.  The operation semantics defined here are
-endpoint-independent, and the approving PS remains the only server
-that can interpret the reference and change its state.
+Each operation is an `action` on a mission's own control-plane URL,
+adopting the per-mission URL convention and the `action` discriminator
+the base protocol defines at `mission_endpoint`.  The approving PS
+remains the only server that can interpret the reference and change
+its state.
 
 # Conventions and Terminology {#conventions}
 
@@ -178,22 +180,19 @@ Residual Window:
 
 The Mission Reference `{approver, s256}` remains the management key
 for every mission this specification governs.  On the wire, a request
-identifies its target with the flat `mission_s256` member, matching
-the base protocol's own parameter convention at PS endpoints:
-
-~~~ json
-{
-  "operation": "status",
-  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-}
-~~~
+identifies its target with the `{mission_s256}` path segment of the
+mission's own control-plane URL,
+`{mission_control_endpoint}/{mission_s256}`, following the per-mission
+URL convention the base protocol defines at `mission_endpoint`.
 
 The syntax, comparison, and digest rules are those of the AAuth Mission
-Reference.  `approver` is not a request member: it is fixed to the
-identity of the PS endpoint that receives the request.  A PS MUST
-resolve `mission_s256` only among the missions it itself approved,
-MUST NOT forward a management operation to another approver, and MUST
-NOT accept an alias for either half of the reference.
+Reference.  `approver` is neither a request member nor a path segment:
+it is fixed to the identity of the PS endpoint that receives the
+request, so no part of the request can name another approver.  A PS
+MUST resolve the `{mission_s256}` segment only among the missions it
+itself approved, MUST NOT forward a management operation to another
+approver, and MUST NOT accept an alias for either half of the
+reference.
 
 The pair is the sole protocol key.  Implementations MAY use internal
 database keys, but those keys MUST NOT appear in this protocol.  The PS
@@ -255,93 +254,95 @@ idempotent outcome.
 
 # Endpoint and Discovery {#endpoint}
 
-## Extending the Mission Endpoint
+## The Mission Control Plane
 
-All operations below use an HTTP `POST` {{RFC9110}} with a JSON body
-{{RFC8259}} to the `mission_endpoint` in the PS metadata.  Management
-requests have this common shape:
+Every operation below is an action on one mission's control-plane URL.
+A caller makes an HTTP `POST` {{RFC9110}} with a JSON body
+{{RFC8259}} to `{mission_control_endpoint}/{mission_s256}`, where
+`mission_control_endpoint` is the PS metadata member ({{metadata}})
+and `{mission_s256}` is the target mission's digest:
 
 ~~~ json
 {
-  "operation": "status",
-  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  "action": "status"
 }
 ~~~
 
+`action` is REQUIRED, and its value is `status` ({{status}}),
+`terminate` ({{terminate}}), or `delegation_tree`
+({{delegation-tree}}).  A PS MUST reject a request with a missing or
+unrecognized `action` with `invalid_request`, the same response the
+base protocol requires of a missing or unrecognized `action` at
+`mission_endpoint`.  A caller SHOULD confirm that an action appears
+in `mission_control_actions_supported` ({{metadata}}) before sending
+it.
+
+The mission's identity comes from the path and from nowhere else.  A
+request body MUST NOT carry a `mission_s256` member, and a PS MUST
+reject a body that does with `invalid_request`.  Response bodies
+continue to report `mission_s256`, and the `replacement_s256` member
+of a `superseded` termination ({{terminate}}) names a different
+mission as related evidence.
+
 The request MUST use `Content-Type: application/json`.  The PS MUST
 reject duplicate JSON member names.  Unknown members MUST be ignored
-unless they prevent safe processing.  Unknown operations fail with
-`unsupported_operation`.
+unless they prevent safe processing.
 
-An Agent request MUST be signed using the AAuth HTTP Message Signatures
-profile {{RFC9421}} and MUST present its Agent Token in `Signature-Key`.  The
-covered components and content integrity requirements are those of the
-base AAuth profile.  A management request is never authorized from the
-Mission Reference alone.
+Every request MUST be authenticated as {{authorization}} requires for
+the caller's class.  A request signed with the AAuth HTTP Message
+Signatures profile {{RFC9421}} uses the covered components and content
+integrity requirements of the base AAuth profile.  A management
+operation is never authorized from the Mission Reference alone.
 
-The base protocol defines its own discrimination (a REQUIRED `action`
-member at per-mission URLs) and assigns operations for parties other
-than the owning agent to the `mission_control_endpoint` control
-plane.  This profile aligns by relocation in a future revision, as
-the Introduction describes.
-Until then, a native request at the bare `mission_endpoint` carries no
-`operation` member, so the discrimination here remains unambiguous,
-and a caller SHOULD confirm that an operation appears in
-`mission_management_operations_supported` ({{metadata}}) before
-sending it.
+This document defines no action at the bare
+`{mission_control_endpoint}` URL.  A PS MAY serve a deployment's
+human-facing administrative interface there, as the base protocol
+permits.
+
+## What Stays at the Mission Endpoint
+
+`mission_endpoint` remains the owning agent's surface, carrying only
+the base protocol's three operations: proposing a mission at the bare
+URL, and the `update` and `completion` actions at a mission's own URL.
+This document defines no member and no `action` value at
+`mission_endpoint`.
 
 ## Metadata {#metadata}
 
-A PS supporting this specification adds the following member to its
+A PS supporting this specification publishes the base protocol's
+`mission_control_endpoint` and adds the following member to its
 `/.well-known/aauth-person.json` metadata:
 
 ~~~ json
 {
   "issuer": "https://ps.example",
-  "mission_endpoint": "https://ps.example/mission",
-  "mission_management_operations_supported": [
+  "mission_control_endpoint": "https://ps.example/mission-control",
+  "mission_control_actions_supported": [
     "status", "terminate", "delegation_tree"
   ]
 }
 ~~~
 
-`mission_management_operations_supported` is an array of case-sensitive
-operation strings.  The array MUST contain `status` and `terminate` for
+`mission_control_actions_supported` is an array of case-sensitive
+action strings.  The array MUST contain `status` and `terminate` for
 conformance to this specification.  It contains `delegation_tree` when
 the PS implements {{delegation-tree}}.  Unknown values MUST be ignored.
 
-The base protocol defines `mission_control_endpoint` as the PS's
-mission control plane for parties other than the owning agent and
-leaves its operations to a companion specification.  Pending the
-relocation described in the Introduction, this profile advertises its
-operations at the existing `mission_endpoint`; a PS MAY additionally
-use `mission_control_endpoint` for a deployment's human-facing
-administrative interface, as the base protocol permits.
+`mission_control_endpoint` is OPTIONAL in the base protocol.  A PS
+that does not publish it implements no operation of this
+specification, whatever `mission_control_actions_supported` would
+advertise.  A caller MUST resolve the endpoint from the metadata and
+MUST NOT construct it from `mission_endpoint`.
 
 # Authentication and Authorization {#authorization}
 
 The PS MUST authenticate every caller before disclosing status or tree
-data or changing state.  It MUST authorize the operation against the
+data or changing state.  It MUST authorize the action against the
 target mission after authentication and before existence is disclosed.
 
-## Owning Agent
-
-The Owning Agent is authenticated exactly as at other AAuth PS
-endpoints.  The `sub` of the verified Agent Token MUST exactly match the
-`agent` member of the mission blob, and the request signature MUST
-verify with the token-bound key.
-
-The Owning Agent MAY:
-
-* read status for its mission;
-* request its delegation tree if the PS exposes that operation to
-  agents; and
-* terminate its mission with reason `revoked`.
-
-An Agent does not directly assert `completed`.  It uses AAuth's
-`completion` interaction, after which the Person's acceptance causes the
-PS to terminate with reason `completed`.  A sub-agent MUST NOT call this
-endpoint: AAuth requires its parent to mediate PS operations.
+This document defines no new token type and no new credential.  Each
+caller class authenticates with a mechanism the base protocol or the
+PS already has.
 
 ## Person
 
@@ -356,17 +357,16 @@ reason `completed`, `revoked`, or `superseded`.  For `superseded`,
 `replacement_s256` is REQUIRED, and the PS SHOULD verify that the
 same Person authorized both missions before recording the relationship.
 
-## Administrator and Management Service
+## Administrator
 
-The PS MAY authorize an administrator or management service.  Such a
-principal MUST be authenticated using a phishing-resistant,
-sender-constrained mechanism appropriate to the deployment.  A remote
-machine caller using AAuth HTTP Message Signatures MUST present a token
-or key reference the PS recognizes as a management identity; an Agent
+The PS MAY authorize a human administrator, authenticated through the
+PS's own administrative channel with a phishing-resistant,
+sender-constrained mechanism appropriate to the deployment, bound to
+the tenant or person population the administrator governs.  An Agent
 Token alone MUST NOT confer administrative privilege.
 
 Administrative authorization MUST be least-privilege and scoped at
-least by tenant or person population and operation.  Access to
+least by tenant or person population and action.  Access to
 delegation data SHOULD be a separate privilege from termination.
 Administrative reason `administrative` MUST be limited to this role.
 
@@ -376,23 +376,77 @@ administrative request.  It SHOULD require step-up authentication or
 dual control for high-blast-radius automation.  This profile does not
 define fleet enumeration or bulk termination.
 
+## Management Service
+
+A management service authenticates with the AAuth HTTP Message
+Signatures profile {{RFC9421}}, presenting its key with
+`Signature-Key: sig=jwks_uri`, the scheme the base protocol uses for
+PS-to-AS token requests.  The PS resolves the key as the
+`Signature-Key` profile specifies and MUST hold a deployment-local
+registration of that `jwks_uri` as a management identity; this
+specification adds no discovery surface for management identities.  An
+Agent MUST NOT use this scheme; the base protocol already forbids it
+to agents.
+
+A management service is subject to the administrative rules above:
+least-privilege scoping, a separate privilege for delegation data,
+`administrative` limited to the administrator role, and the recorded
+principal, role, decision, and purpose on every successful request.
+
+## Owning Agent
+
+Whether the control plane admits the Owning Agent is a PS decision.
+The base protocol describes the control plane as the surface for
+parties other than the owning agent, and gives the owning agent no
+base operation that terminates a mission.
+
+Where a PS admits the Owning Agent at the control plane, that agent
+MAY read status for its own mission and MAY terminate its own mission
+with reason `revoked`, and the PS MAY expose the delegation tree for
+that mission to it.  The agent authenticates exactly as at other AAuth
+PS endpoints: it presents its Agent Token with `Signature-Key:
+sig=jwt`, the signature MUST verify with the token-bound key, and the
+`sub` of the verified Agent Token MUST exactly match the `agent`
+member of the mission blob.
+
+Where a PS does not admit the Owning Agent, that agent is an
+authenticated caller without authorization for the mission, and
+{{errors}} applies to it unchanged: it receives `mission_not_found`.
+Its path to ending the work is the base protocol's completion, and
+this document defines no `action` at `mission_endpoint`.
+
+An Agent does not directly assert `completed`.  It uses AAuth's
+`completion` operation, after which the Person's acceptance causes the
+PS to terminate with reason `completed`.  A sub-agent MUST NOT call
+this endpoint: AAuth requires its parent to mediate PS operations.
+
+## Ambient Credentials
+
+Every action defined here is a JSON `POST` authenticated as this
+section requires.  A PS that serves a human-facing interface at the
+same origin MUST NOT let an ambient credential, such as a cookie or
+session a browser attaches automatically, satisfy that
+authentication.
+
 # Status Operation {#status}
 
-A caller reads one mission by sending `operation` equal to `status`.
+A caller reads one mission by sending `action` equal to `status` to
+the mission's control-plane URL.
 
 ~~~ http
-POST /mission HTTP/1.1
+POST /mission-control/dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk \
+    HTTP/1.1
 Host: ps.example
 Content-Type: application/json
 Signature-Input: sig=("@method" "@authority" "@path" \
     "content-type" "content-digest" "signature-key");created=1775581200
 Signature: sig=:...signature bytes...:
-Signature-Key: sig=jwt;jwt="eyJhbGc..."
+Signature-Key: sig=jwks_uri; \
+    jwks_uri="https://mgmt.example/.well-known/jwks.json"
 Content-Digest: sha-256=:...:
 
 {
-  "operation": "status",
-  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  "action": "status"
 }
 ~~~
 
@@ -431,8 +485,8 @@ The response reports state as of `observed_at` and is reliable until
 A consumer MUST NOT rely on a response after its `fresh_until`, and a
 failed, invalid, unrecognized, or stale response establishes nothing:
 the consumer MUST fail closed and MUST NOT treat the mission as
-`active` on its basis.  An Agent MUST
-stop initiating work when it receives `terminated`.  Polling is a
+`active` on its basis.  An Agent that reads status here MUST stop
+initiating work when it receives `terminated`.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
 enforces mission state itself.
 
@@ -447,24 +501,23 @@ Requires: nothing beyond its listed references.
 
 ## Request
 
-Termination uses `operation` equal to `terminate`.  It requires a
+Termination uses `action` equal to `terminate`.  It requires a
 `request_id` carrying at least 128 bits of unpredictable or
 collision-resistant entropy encoded as a string.
 
 ~~~ json
 {
-  "operation": "terminate",
-  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "action": "terminate",
   "reason": "revoked",
   "request_id": "t-4f52f8d70a514703b54ca0c677f82d67",
   "purpose": "User withdrew authorization"
 }
 ~~~
 
-`reason` and `request_id` are REQUIRED.  `purpose` is OPTIONAL for an
-Owning Agent or Person and REQUIRED for an administrator.  `purpose` is
-an audit string, not executable policy, and MUST be rendered as
-untrusted text.
+`reason` and `request_id` are REQUIRED.  `purpose` is OPTIONAL for a
+Person or an admitted Owning Agent and REQUIRED for an administrator
+or a management service.  `purpose` is an audit string, not
+executable policy, and MUST be rendered as untrusted text.
 
 For `superseded`, the request MUST include the replacement:
 
@@ -564,8 +617,7 @@ An authorized caller sends:
 
 ~~~ json
 {
-  "operation": "delegation_tree",
-  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "action": "delegation_tree",
   "max_results": 100,
   "cursor": "opaque-next-page-value"
 }
@@ -608,8 +660,8 @@ A node contains an `agent` and one of `root`, `sub_agent`, or
 `call_chain` as `relationship`.  A non-root node contains
 `parent_agent`.  `tokens` MAY
 be returned to a Person or authorized administrator and SHOULD be
-omitted from an Agent response unless required for that Agent's own
-revocation accounting.
+omitted from a response to an admitted Owning Agent unless required
+for that Agent's own revocation accounting.
 
 The result is observational, not exhaustive proof.  Identity-based
 calls and resource-managed access can occur without a PS token request.
@@ -626,34 +678,43 @@ log that does not create a false mission record.
 
 # Error Responses and Anti-Oracle Behavior {#errors}
 
-Errors use `application/problem+json` {{RFC9457}} as profiled by AAuth.  The
-following error strings are defined:
+Errors use `application/problem+json` {{RFC9457}} as profiled by AAuth.
+`invalid_request` and `mission_not_found` carry the same strings and
+statuses as the base protocol's mission-endpoint errors, so one
+vocabulary spans the agent's surface and the control plane; the
+remaining errors below are defined by this document.
 
 | Error | HTTP status | Meaning |
 | --- | --- | --- |
-| `invalid_request` | 400 | The JSON or required members are invalid. |
-| `invalid_mission_reference` | 400 | The reference syntax or local approver check failed. |
-| `unsupported_operation` | 400 | The PS does not support the requested operation. |
-| `invalid_termination_reason` | 400 | The reason is unknown or not permitted for the operation. |
-| `idempotency_conflict` | 409 | The request identifier was reused with different content. |
+| `invalid_request` | 400 | The `{mission_s256}` path segment is malformed, `action` is missing or unrecognized, the body carries `mission_s256`, or a required member is invalid. |
+| `invalid_termination_reason` | 400 | The reason is unknown or not permitted for the caller. |
 | `mission_not_found` | 404 | The mission does not exist or the caller is not authorized to know it exists. |
+| `idempotency_conflict` | 409 | The request identifier was reused with different content. |
 | `rate_limited` | 429 | The caller exceeded a PS policy limit. |
 
-For a syntactically valid reference, a PS MUST return the same status,
-error, body shape, header set, and observably equivalent timing whether
-the mission is absent or the authenticated caller lacks authorization.
-The PS MUST use `mission_not_found` for both.  It MUST NOT disclose the
-state, Agent identifier, timestamps, expiry, reason, or tenant before
-authorization succeeds.
+For a syntactically valid `{mission_s256}` segment, a PS MUST return
+the same status, error, body shape, header set, and observably
+equivalent timing whether the mission is absent or the authenticated
+caller lacks authorization for it, and MUST answer both identically
+within each caller class.  The PS MUST use `mission_not_found` for
+both.  It MUST NOT disclose the state, Agent identifier, timestamps,
+expiry, reason, or tenant before authorization succeeds.
 
-Malformed references can fail before lookup.  Repeated failures MUST be
-rate limited and security logged.  Logs for probes MUST avoid storing
-raw references longer than needed; a keyed digest can support abuse
-correlation without building a reusable existence index.
+The base protocol makes a terminated mission deliberately
+distinguishable to the agent that owns it, at that agent's own
+`mission_endpoint`, because that agent already knows the mission
+exists.  That carve-out does not extend to a caller unauthorized for
+the mission here: `mission_not_found` covers absent and unauthorized
+alike, and terminal status is returned only to an authorized caller.
+
+A malformed path segment MAY fail before lookup.  Repeated failures
+MUST be rate limited and security logged.  Logs for probes MUST avoid
+storing raw references longer than needed; a keyed digest can support
+abuse correlation without building a reusable existence index.
 
 The base `mission_terminated` error remains the response when an Agent
 attempts another PS operation under a terminated mission.  The
-authenticated `status` and `terminate` operations defined here instead
+authenticated `status` and `terminate` actions defined here instead
 return terminal status so an authorized caller can learn the result.
 
 # Mission Log and Retention {#logging}
@@ -795,19 +856,23 @@ documented.  A PS SHOULD support data-subject access and deletion where
 applicable without deleting the minimum tombstone needed to keep a
 terminated mission terminated.
 
-Polling exposes access patterns to the PS and network observers.  Agents
-SHOULD use a cadence proportionate to risk and SHOULD stop polling after
-terminal status.  The management surface defines no push channel.
+Polling exposes access patterns to the PS and network observers.  A
+caller SHOULD use a cadence proportionate to risk and SHOULD stop
+polling after terminal status.  The management surface defines no push
+channel.
 
 # Security Considerations {#security}
 
 ## Reference Substitution and Cross-PS Confusion
 
-An attacker can substitute a known `mission_s256` value, including one
-issued by a different PS.  Exact digest comparison, resolving
-`mission_s256` only within this PS's own approved-mission store,
-signature verification, and authorization against the resolved mission
-are all mandatory.  `mission_s256` is not interpreted as a fetch URL.
+An attacker can substitute a known `mission_s256` value in the request
+path, including one issued by a different PS.  Exact digest comparison,
+resolving `mission_s256` only within this PS's own approved-mission
+store, signature verification, and authorization against the resolved
+mission are all mandatory.  Because the target is a path segment, the
+`@path` covered component of the base signature profile binds it to the
+signature, so a captured signature cannot be redirected at another
+mission.  `mission_s256` is not interpreted as a fetch URL.
 The PS never retrieves a mission from a caller-selected location.
 
 ## Request Replay
@@ -822,8 +887,9 @@ reason or create a false second transition.
 
 ## Compromised Agents
 
-A compromised Owning Agent can terminate its own mission, causing
-denial of service.  It cannot gain authority by doing so and cannot
+Where a PS admits the Owning Agent at the control plane, a compromised
+Owning Agent can terminate its own mission, causing denial of service.
+It cannot gain authority by doing so and cannot
 reactivate the mission, choose administrative reasons, or manage another
 mission.  The Person can create a newly approved mission after recovery.
 Because an Agent request for completion still requires Person
@@ -887,9 +953,9 @@ This document requests no IANA registrations.
 
 This specification does define new wire elements:
 
-* the `mission_management_operations_supported` Person Server metadata
+* the `mission_control_actions_supported` Person Server metadata
   member;
-* the `status`, `terminate`, and `delegation_tree` operation values;
+* the `status`, `terminate`, and `delegation_tree` `action` values;
 * the JSON request and response members defined by {{endpoint}},
   {{status}}, {{terminate}}, and {{delegation-tree}}, including the
   token-residual and pagination members;
@@ -898,7 +964,7 @@ This specification does define new wire elements:
 * the error values in {{errors}}.
 
 The AAuth Protocol does not currently establish an IANA registry for
-Person Server metadata members, mission-endpoint operations or JSON
+Person Server metadata members, mission control plane actions or JSON
 members, termination reasons, delegation relationships, or AAuth error
 values.  Consequently, there is no
 applicable registry in which to register any of the wire elements above.
@@ -917,11 +983,12 @@ privacy semantics.
 An **AAuth Mission Management PS** conforms to this specification when
 it:
 
-1. implements `status` and `terminate` at the existing
-   `mission_endpoint` and advertises both operations;
-2. keys every operation solely by the flat `mission_s256` member,
-   resolving it only among missions for which it is itself the
-   `approver`;
+1. publishes `mission_control_endpoint`, implements the `status` and
+   `terminate` actions there, and advertises both in
+   `mission_control_actions_supported`;
+2. keys every action solely by the `{mission_s256}` path segment of
+   the mission's control-plane URL, resolving it only among missions
+   for which it is itself the `approver`;
 3. preserves exactly the `active` and `terminated` states, makes
    termination permanent, and records reasons separately;
 4. authenticates and authorizes every request according to caller role,

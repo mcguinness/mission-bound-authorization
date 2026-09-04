@@ -181,7 +181,7 @@
    "verbs": [
     "govern"
    ],
-   "summary": "The AAuth-native companion promised by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the existing Person Server `mission_endpoint`.",
+   "summary": "The AAuth-native companion promised by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the Person Server `mission_control_endpoint`.",
    "pull_when": "Alongside the AAuth binding: status, termination, delegation-tree queries.",
    "normative_references": [],
    "adoption_requires": [],
