@@ -88,6 +88,7 @@ Table of Contents
    5.  The Untrusted Agent
    6.  The Trusted Base
    7.  Cross-Cutting Assumptions
+     7.1.  Failure Taxonomy Crosswalk (Informative)
    8.  What the Model Does and Does Not Guarantee
    9.  Adversary Model and Coverage
    10. Revocation-to-Action Latency
@@ -463,7 +464,8 @@ Table of Contents
       feed, a Mandate) is recorded and is never by itself grounds for
       refusal ([I-D.draft-mcguinness-mission-audit]); tampered inert
       evidence is an integrity failure, handled by the profile that
-      defines the artifact.
+      defines the artifact.  Each profile names its failure classes in
+      its own terms; Section 7.1 maps those terms onto this axis.
 
    *  *Role-scoped trust anchors.* A party trusted in one role (Mission
       issuer, evidence producer for one evidence type, SET transmitter,
@@ -484,6 +486,149 @@ Table of Contents
       only through the pre-approval derivation whose result the Approver
       reads and consents to, and is inert once the Mission is approved
       ([I-D.draft-mcguinness-oauth-mission]).
+
+7.1.  Failure Taxonomy Crosswalk (Informative)
+
+   This section is informative.  Four profiles name verification and
+   failure classes in their own terms: the Mandate's Failure Taxonomy
+   ([I-D.draft-mcguinness-mission-mandate], Section "Failure Taxonomy"),
+   the audit profile's integrity-versus-audit split
+   ([I-D.draft-mcguinness-mission-audit], Section "Verification
+   Failures"), that same split as consent evidence applies it
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
+   Section "Integrity and Verification"), and Transaction
+   Authorization's failure semantics
+   ([I-D.draft-mcguinness-oauth-mission-transaction-authorization],
+   Section "Failure Semantics").  The table maps those terms onto the
+   fail-closed/fail-safe axis above, one column per source in that
+   order.  It renames nothing, and it adds no requirement to any of
+   them: each column states the classes as its source section states
+   them, and that section governs.
+
+   The axis depends on how the artifact is used, not on the failure-
+   class label alone.  One class resolves two ways according to the role
+   the artifact plays in the reliance at hand: an unverifiable
+   authority-bearing artifact fails closed, while unverifiable inert
+   audit evidence may fail safe, recorded as not established without
+   being treated as refuted.  A verifier reads each row together with
+   that role.  No row makes Unverifiable, or an audit failure, a
+   universal operational verdict.
+
+   +=============+=============+=============+==============+=============+
+   |Condition    |Mandate class|Audit and    |Transaction   |On the axis  |
+   |             |             |Consent      |Authorization |             |
+   |             |             |Evidence     |outcome       |             |
+   |             |             |class        |              |             |
+   +=============+=============+=============+==============+=============+
+   |The artifact |Invalid      |integrity    |Terminal      |Fail closed. |
+   |fails as an  |             |failure      |refusal on a  |The artifact |
+   |artifact:    |             |             |parameter,    |is rejected  |
+   |signature,   |             |             |resource,     |and is relied|
+   |typ, claim   |             |             |Mission,      |on for       |
+   |structure,   |             |             |principal,    |nothing.     |
+   |issuer or    |             |             |presenter, or |             |
+   |anchor       |             |             |audience      |             |
+   |mismatch, or |             |             |mismatch      |             |
+   |a committed  |             |             |              |             |
+   |hash that    |             |             |              |             |
+   |does not     |             |             |              |             |
+   |match what   |             |             |              |             |
+   |was          |             |             |              |             |
+   |retrieved; or|             |             |              |             |
+   |the artifact |             |             |              |             |
+   |verifies but |             |             |              |             |
+   |does not     |             |             |              |             |
+   |match the    |             |             |              |             |
+   |request's    |             |             |              |             |
+   |bound context|             |             |              |             |
+   +-------------+-------------+-------------+--------------+-------------+
+   |Verification |Unverifiable |audit failure|no            |Fail closed  |
+   |cannot       |             |(an          |corresponding |for an       |
+   |complete: the|             |unresolvable |class         |authority-   |
+   |issuer's key |             |producer or  |              |bearing      |
+   |material is  |             |Transparency |              |artifact.    |
+   |unreachable, |             |Service key) |              |Fail safe for|
+   |the kid does |             |             |              |inert        |
+   |not resolve, |             |             |              |evidence: not|
+   |or no trust  |             |             |              |established, |
+   |anchor covers|             |             |              |never        |
+   |the issuer   |             |             |              |refuted.     |
+   +-------------+-------------+-------------+--------------+-------------+
+   |Referenced   |no           |audit failure|no            |Fail safe.   |
+   |evidence     |corresponding|             |corresponding |Recorded, not|
+   |cannot be    |class        |             |class         |treated as   |
+   |retrieved    |             |             |              |content-     |
+   |within the   |             |             |              |verified, and|
+   |retention    |             |             |              |not treated  |
+   |window       |             |             |              |as tampering.|
+   +-------------+-------------+-------------+--------------+-------------+
+   |The artifact |Partial, not |no           |no            |Neither, for |
+   |verifies, but|the invalid  |corresponding|corresponding |the disclosed|
+   |an SD-JWT    |class        |class        |class         |claims: the  |
+   |presentation |             |             |              |artifact is  |
+   |discloses    |             |             |              |authentic and|
+   |only some    |             |             |              |every        |
+   |authority_set|             |             |              |plaintext    |
+   |entries      |             |             |              |claim is     |
+   |             |             |             |              |relied on    |
+   |             |             |             |              |normally.    |
+   |             |             |             |              |Reliance that|
+   |             |             |             |              |needs the    |
+   |             |             |             |              |undisclosed  |
+   |             |             |             |              |entries waits|
+   |             |             |             |              |for a fuller |
+   |             |             |             |              |presentation,|
+   |             |             |             |              |and the      |
+   |             |             |             |              |anchor       |
+   |             |             |             |              |mismatch is  |
+   |             |             |             |              |never read as|
+   |             |             |             |              |tampering.   |
+   +-------------+-------------+-------------+--------------+-------------+
+   |Reliance     |Stale        |no           |Fail closed on|Fail closed. |
+   |requires     |             |corresponding|stale or      |Reliance     |
+   |current state|             |class        |unavailable   |waits for    |
+   |and none was |             |             |required state|current      |
+   |obtained     |             |             |              |state; retry |
+   |within the   |             |             |              |follows the  |
+   |freshness    |             |             |              |declared     |
+   |bound        |             |             |              |state-       |
+   |             |             |             |              |recovery     |
+   |             |             |             |              |policy.      |
+   +-------------+-------------+-------------+--------------+-------------+
+   |The artifact |Expired      |no           |expired_token,|Fail closed. |
+   |verifies, but|             |corresponding|the upstream  |Not relied on|
+   |its evidence |             |class        |challenge     |as evidence, |
+   |lifetime has |             |             |vocabulary    |though expiry|
+   |passed       |             |             |applied       |is not       |
+   |             |             |             |unchanged     |evidence     |
+   |             |             |             |              |against the  |
+   |             |             |             |              |facts the    |
+   |             |             |             |              |artifact     |
+   |             |             |             |              |states.      |
+   +-------------+-------------+-------------+--------------+-------------+
+   |The Effective|no           |no           |Terminal      |Fail closed. |
+   |Authority Set|corresponding|corresponding|refusal at    |A containment|
+   |narrowed     |class        |class        |offline       |or discharge |
+   |since the    |             |             |verification  |narrowing is |
+   |checked basis|             |             |              |an authority |
+   |             |             |             |              |change, never|
+   |             |             |             |              |lifecycle    |
+   |             |             |             |              |noise.       |
+   +-------------+-------------+-------------+--------------+-------------+
+
+                                  Table 1
+
+   "No corresponding class" means the source section defines no class at
+   that condition, not that the condition cannot arise there.
+
+   The axis governs outcomes where a needed fact cannot be established.
+   It does not govern negative decisions or idempotency: Transaction
+   Authorization denies where there is no action approval, where the
+   approval has expired, or where current policy or entitlement denies,
+   and those are decisions on established facts; its
+   duplicate_suppressed result is idempotent replay handling, not a
+   verification failure
+   ([I-D.draft-mcguinness-oauth-mission-transaction-authorization]).
 
 8.  What the Model Does and Does Not Guarantee
 
@@ -1000,7 +1145,7 @@ Table of Contents
    |               |                         | execution bound         |
    +---------------+-------------------------+-------------------------+
 
-                                  Table 1
+                                  Table 2
 
    The token lifetime and introspection layers are the issuance
    profile's ([I-D.draft-mcguinness-oauth-mission]); Mission Status
@@ -1044,7 +1189,7 @@ Table of Contents
    |                 |        |custody)   |execution bounds |          |
    +-----------------+--------+-----------+-----------------+----------+
 
-                                  Table 2
+                                  Table 3
 
    Background work is bounded only where the harness re-checks Mission
    state on resume, retry, and dispatch
@@ -1322,6 +1467,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
+              McGuinness, K., "Mission Transaction Authorization Profile
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-transaction-authorization.html>.
+
    [I-D.draft-mcguinness-oauth-mission-work-products]
               McGuinness, K., "Mission Work Products", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1451,7 +1602,7 @@ Appendix A.  OWASP Agentic Threat Coverage
    |              |decision, and the record says so                        |          |
    +--------------+--------------------------------------------------------+----------+
 
-                                  Table 3
+                                  Table 4
 
    The threats that attack authority (tools, privilege, goals,
    attribution, identity, rogue delegates) land on machinery built for
@@ -1513,11 +1664,19 @@ Appendix A.  OWASP Agentic Threat Coverage
     | Consumption    |                                   |           |
     +----------------+-----------------------------------+-----------+
 
-                                 Table 4
+                                 Table 5
 
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure taxonomy crosswalk (#671): an informative subsection added
+      to Section 7, mapping the Mandate, Audit, Consent Evidence, and
+      Transaction Authorization failure classes onto the fail-closed/
+      fail-safe axis, and stating that the axis depends on how the
+      artifact is used rather than on the class label alone.  Every
+      source document's terms are preserved.  No normative content,
+      guarantee, adversary-model row, mitigation, or residual changed.
 
    *  Controls taxonomy retirement (#636): the Approver-compromise row's
       controls.acr reference updated to the standard acr_values/max_age

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-04T16:55:15Z
-Source repository commit: 116bffb41566049e91a7de390881d1b35e2f5590
+Generated: 2026-09-04T20:14:12Z
+Source repository commit: 1bef1ba8c8c51d4be65077804495113a732a7360
 Member count: 9
 
 Reading order:
@@ -7619,7 +7619,10 @@ Table of Contents
    At the approval event the AS MUST, in order:
 
    1.  Authenticate the Approver, subject to the approval-authentication
-       floor and any client-requested strength (Section 6.1).
+       floor and any client-requested strength (Section 6.1).  The AS
+       MUST NOT take the Approver's identity or achieved authentication
+       context from unauthenticated client input; the authenticated
+       surface that resolved the approval establishes both.
 
    2.  Establish the Subject: the principal the task is for, recorded as
        the Mission's subject and mapped to the sub of every derived
@@ -9872,12 +9875,15 @@ Table of Contents
    (Section 10), so a harness can plan refreshes against the budget;
    when the Mission records an authority proposal, proposal_hash
    (string): the Mission's proposal_hash (Section 8), surfaced for
-   audit; and authority_hash (string) and approval_basis (an object
-   carrying type only): the Mission's own Authority Set commitment and
-   provenance signal (Section 8), surfaced the same way for an audit or
+   audit; and authority_hash (string), approval_basis (an object
+   carrying type only), and authority_source (an object carrying type
+   and, for organizational, policy with id and version only, never the
+   policy digest): the Mission's own Authority Set commitment and
+   provenance signals (Section 8), surfaced the same way for an audit or
    correlation consumer, never as an enforcement input (Section 9.3).
    Like state, only the issuer reports derivations_remaining,
-   proposal_hash, authority_hash, and approval_basis (Section 11.3).
+   proposal_hash, authority_hash, approval_basis, and authority_source
+   (Section 11.3).
 
    The core states are active, revoked, and expired (Section 10); a
    deployment that runs a companion profile defining an additional state
@@ -9929,13 +9935,13 @@ Table of Contents
    caller.
 
    Disclosure is member-scoped as well as caller-scoped:
-   derivations_remaining, proposal_hash, authority_hash, and
-   approval_basis serve the issuance-budget, audit, and correlation
-   consumers, not Resource Server enforcement, and the AS MUST disclose
-   each only to a caller the deployment has granted that member's
-   disclosure privilege; an audience-authorized Resource Server receives
-   the ordinary audience-filtered enforcement projection defined above,
-   without them, by default.
+   derivations_remaining, proposal_hash, authority_hash, approval_basis,
+   and authority_source serve the issuance-budget, audit, and
+   correlation consumers, not Resource Server enforcement, and the AS
+   MUST disclose each only to a caller the deployment has granted that
+   member's disclosure privilege; an audience-authorized Resource Server
+   receives the ordinary audience-filtered enforcement projection
+   defined above, without them, by default.
 
    The same member-scoped rule governs any further mission member a
    companion profile defines for disclosure here.  Such a member is
@@ -10599,6 +10605,10 @@ Table of Contents
    projection for it (Section 9.1).  This note names a starting point
    and creates no new conformance class.
 
+   A Mission Issuer MAY instead reach that starting point through
+   configured-mapping mode, the low-integration on-ramp (Section 5),
+   which is equally conforming and adds no conformance class.
+
    An implementation conforms in one of three roles.
 
    A *Mission Issuer* (the Authorization Server) implements the core
@@ -10611,8 +10621,8 @@ Table of Contents
    *  derivation of authorization_details entries of its supported types
       (Section 5, Section 5.2);
 
-   *  the approval event with its integrity anchors and recorded
-      approval_basis (Section 6, Section 8);
+   *  the approval event with its integrity anchors and its recorded
+      approval_basis and authority_source (Section 6, Section 8);
 
    *  issuance of Mission-bound access tokens carrying the mission claim
       (Section 9), as the RFC 9068 JWT or as an opaque reference token
@@ -11485,8 +11495,8 @@ Table of Contents
       current lifecycle state, and, to a caller holding the disclosure
       privilege for the member, derivations_remaining where a derivation
       cap is in force, proposal_hash where the Mission records an
-      authority proposal, and authority_hash and approval_basis
-      (Section 11).
+      authority proposal, and authority_hash, approval_basis, and
+      authority_source (Section 11).
 
    *  Change Controller: IESG
 

@@ -1200,6 +1200,11 @@ considerations of each profile rather than restating them.<a href="#section-abst
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-cross-cutting-assumptions" class="internal xref">Cross-Cutting Assumptions</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-failure-taxonomy-crosswalk-" class="internal xref">Failure Taxonomy Crosswalk (Informative)</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-what-the-model-does-and-doe" class="internal xref">What the Model Does and Does Not Guarantee</a></p>
@@ -1681,7 +1686,8 @@ retrieval, the transparency feed, a Mandate) is recorded and is
 never by itself grounds for refusal
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>); tampered inert evidence
 is an integrity failure, handled by the profile that defines the
-artifact.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+artifact. Each profile names its failure classes in its own terms;
+<a href="#failure-crosswalk" class="auto internal xref">Section 7.1</a> maps those terms onto this axis.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.3">
           <p id="section-7-2.3.1"><strong>Role-scoped trust anchors.</strong> A party trusted in one role (Mission
@@ -1706,6 +1712,110 @@ Approver reads and consents to, and is inert once the Mission is
 approved (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<div id="failure-crosswalk">
+<section id="section-7.1">
+        <h3 id="name-failure-taxonomy-crosswalk-">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-failure-taxonomy-crosswalk-" class="section-name selfRef">Failure Taxonomy Crosswalk (Informative)</a>
+        </h3>
+<p id="section-7.1-1">This section is informative. Four profiles name verification and
+failure classes in their own terms: the Mandate's Failure Taxonomy
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>, Section "Failure
+Taxonomy"), the audit profile's integrity-versus-audit split
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>, Section "Verification
+Failures"), that same split as consent evidence applies it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>, Section
+"Integrity and Verification"), and Transaction Authorization's failure
+semantics
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span>,
+Section "Failure Semantics"). The table maps those terms onto the
+fail-closed/fail-safe axis above, one column per source in that order.
+It renames nothing, and it adds no requirement to any of them: each
+column states the classes as its source section states them, and that
+section governs.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">The axis depends on how the artifact is used, not on the
+failure-class label alone. One class resolves two ways according to
+the role the artifact plays in the reliance at hand: an unverifiable
+authority-bearing artifact fails closed, while unverifiable inert
+audit evidence may fail safe, recorded as not established without
+being treated as refuted. A verifier reads each row together with
+that role. No row makes Unverifiable, or an audit failure, a
+universal operational verdict.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Condition</th>
+              <th class="text-left" rowspan="1" colspan="1">Mandate class</th>
+              <th class="text-left" rowspan="1" colspan="1">Audit and Consent Evidence class</th>
+              <th class="text-left" rowspan="1" colspan="1">Transaction Authorization outcome</th>
+              <th class="text-left" rowspan="1" colspan="1">On the axis</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">The artifact fails as an artifact: signature, <code>typ</code>, claim structure, issuer or anchor mismatch, or a committed hash that does not match what was retrieved; or the artifact verifies but does not match the request's bound context</td>
+              <td class="text-left" rowspan="1" colspan="1">Invalid</td>
+              <td class="text-left" rowspan="1" colspan="1">integrity failure</td>
+              <td class="text-left" rowspan="1" colspan="1">Terminal refusal on a parameter, resource, Mission, principal, presenter, or audience mismatch</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed. The artifact is rejected and is relied on for nothing.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Verification cannot complete: the issuer's key material is unreachable, the <code>kid</code> does not resolve, or no trust anchor covers the issuer</td>
+              <td class="text-left" rowspan="1" colspan="1">Unverifiable</td>
+              <td class="text-left" rowspan="1" colspan="1">audit failure (an unresolvable producer or Transparency Service key)</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed for an authority-bearing artifact. Fail safe for inert evidence: not established, never refuted.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Referenced evidence cannot be retrieved within the retention window</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">audit failure</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail safe. Recorded, not treated as content-verified, and not treated as tampering.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">The artifact verifies, but an SD-JWT presentation discloses only some <code>authority_set</code> entries</td>
+              <td class="text-left" rowspan="1" colspan="1">Partial, not the invalid class</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">Neither, for the disclosed claims: the artifact is authentic and every plaintext claim is relied on normally. Reliance that needs the undisclosed entries waits for a fuller presentation, and the anchor mismatch is never read as tampering.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Reliance requires current state and none was obtained within the freshness bound</td>
+              <td class="text-left" rowspan="1" colspan="1">Stale</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed on stale or unavailable required state</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed. Reliance waits for current state; retry follows the declared state-recovery policy.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">The artifact verifies, but its evidence lifetime has passed</td>
+              <td class="text-left" rowspan="1" colspan="1">Expired</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired_token</code>, the upstream challenge vocabulary applied unchanged</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed. Not relied on as evidence, though expiry is not evidence against the facts the artifact states.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">The Effective Authority Set narrowed since the checked basis</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">no corresponding class</td>
+              <td class="text-left" rowspan="1" colspan="1">Terminal refusal at offline verification</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed. A containment or discharge narrowing is an authority change, never lifecycle noise.</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-7.1-4">"No corresponding class" means the source section defines no class at
+that condition, not that the condition cannot arise there.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">The axis governs outcomes where a needed fact cannot be established.
+It does not govern negative decisions or idempotency: Transaction
+Authorization denies where there is no action approval, where the
+approval has expired, or where current policy or entitlement denies,
+and those are decisions on established facts; its
+<code>duplicate_suppressed</code> result is idempotent replay handling, not a
+verification failure
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span>).<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="guarantees">
@@ -2285,8 +2395,8 @@ join is deployed
 further-issuance column returns for consuming Authorization
 Servers: new grants stop at the MAS commit, and refresh is gated
 within each server's published staleness bound.<a href="#section-10-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Configuration</th>
@@ -2336,8 +2446,8 @@ parent's terminal state cascades to its Child Missions
 child's own window then runs under the same table.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <p id="section-10-4">The same window, read per Mission Assurance Level
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) and per what it stops:<a href="#section-10-4" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-3">
+        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Level</th>
@@ -2643,6 +2753,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transaction Authorization Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
@@ -2705,8 +2819,8 @@ parameter check. Threats that attack other layers are delegated by
 name. The adversary model (<a href="#adversary-model" class="auto internal xref">Section 9</a>) owns coverage and
 residuals; this appendix maps its rows onto OWASP vocabulary, and
 where the two could be read to differ, the adversary model governs.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
-<table class="center" id="table-3">
-        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<table class="center" id="table-4">
+        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Threat</th>
@@ -2800,8 +2914,8 @@ rather than cured, because capping is what a deterministic gate can
 truthfully offer. No agentic threat lands delegated; that verdict is
 exercised by the LLM Top 10, where half the list belongs to the
 model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" class="pilcrow">¶</a></p>
-<table class="center" id="table-4">
-        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<table class="center" id="table-5">
+        <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Entry</th>
@@ -2872,14 +2986,23 @@ model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" cl
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Controls taxonomy retirement (#636): the Approver-compromise row's
+          <p id="appendix-B-2.1.1">Failure taxonomy crosswalk (#671): an informative subsection added
+to <a href="#cross-cutting" class="auto internal xref">Section 7</a>, mapping the Mandate, Audit, Consent Evidence,
+and Transaction Authorization failure classes onto the
+fail-closed/fail-safe axis, and stating that the axis depends on how
+the artifact is used rather than on the class label alone. Every
+source document's terms are preserved. No normative content,
+guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Controls taxonomy retirement (#636): the Approver-compromise row's
 <code>controls.acr</code> reference updated to the standard <code>acr_values</code>/<code>max_age</code>
 step-up request carriage; the effective-ceiling-composition row's
 <code>max_derivations</code> renamed <code>derivation_limit</code>. No adversary-model
-change.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+change.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Editorial density pass on this Informational document: the
 Transparency Service entry of <a href="#trusted-base" class="auto internal xref">Section 6</a> kept as the one
 full statement of the single-service-equivocation point, with the
 Ten Residuals restatement compressed to a pointer at it; the
@@ -2890,7 +3013,7 @@ explicit citation to the Mission Mandate document it shares the
 issuer-key-compromise concern with. Several over-long paragraphs in
 <a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
 content, anchor, or adversary-model row, mitigation, or residual
-changed.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
