@@ -314,8 +314,8 @@ export async function composeStack(opts: {
       // demo's ID-JAG grants are all base grants over the mission subject
       // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
       // grant's own (iss, sub) and mission.subject co-resolve via this one
-      // entry). Entitlement is this deployment's own always-true source
-      // (the demo runs no separate entitlement service).
+      // entry). Entitlement is this deployment's own local source (the demo
+      // runs no separate entitlement service).
       mapping: {
         id: "demo-ras-mapping",
         version: "v1",
@@ -328,7 +328,21 @@ export async function composeStack(opts: {
           },
         ],
       },
-      entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
+      // @spec cross-domain#dual-axis (#744): the action- and resource-scoped
+      // grain of the same observation. Alice is a currently entitled
+      // LedgerCloud account, entitled to read vendors but NOT to write the
+      // journal, mirroring the draft's own worked example (invoices.read
+      // entitled, journal-entries.write not). The delegated grant carries
+      // both actions, so redemption narrows to the entitled subset rather
+      // than refusing: the minted local token carries ledger:vendor.read
+      // alone, and the SaaS PEP refuses a journal write presented with it.
+      entitlement: {
+        resolve: async () => ({
+          entitled: true,
+          observed_at: new Date().toISOString(),
+          authority: [{ resource: saasResource, actions: ["ledger:vendor.read"] }],
+        }),
+      },
       entitlementStalenessBoundSeconds: 86_400,
     });
     const saas = new SaasMcpServer({
