@@ -690,11 +690,55 @@ function intersectForProjection(
     return null;
   }
   if (conditions) constraints.terminal_when = conditions;
+  // @spec capability-binding#capability-source-binding — the fragment must
+  // satisfy `isSubsetEntry` against BOTH sides, and a recorded binding is
+  // monotonic in both directions there (it must be retained for a retained
+  // action, and may not be introduced). A fragment can therefore carry only
+  // bindings both sides recorded byte-identically for the retained actions;
+  // where the two sides disagree, no fragment is a subset of both and the
+  // pairing drops, exactly as an unprojectable constraint does.
+  const sources = projectCapabilitySources(candidate, effective, actions);
+  if (sources === null) return null;
   const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
+  if (sources) entry.capability_sources = sources;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);
   if (delegation) entry.delegation = delegation;
   return entry;
+}
+
+/**
+ * The retained-action bindings both sides agree on: `undefined` where neither
+ * side records any, `null` where the pairing is unprovable (the two sides
+ * disagree, or a binding cannot be canonicalized). Total, like the rest of
+ * this projection, which is fail-closed-by-DROPPING rather than throwing.
+ */
+function projectCapabilitySources(
+  candidate: AuthorityEntry,
+  effective: AuthorityEntry,
+  actions: string[],
+): CapabilitySourceBinding[] | null | undefined {
+  const retained = new Set(actions);
+  const forRetained = (e: AuthorityEntry) =>
+    (e.capability_sources ?? []).filter((b) => retained.has(b.action));
+  const cSources = forRetained(candidate);
+  const eSources = forRetained(effective);
+  if (cSources.length === 0 && eSources.length === 0) return undefined;
+  const byKey = new Map<string, CapabilitySourceBinding>();
+  for (const b of cSources) {
+    const key = bindingKey(b);
+    if (key === null) return null;
+    byKey.set(key, b);
+  }
+  const eKeys = new Set<string>();
+  for (const b of eSources) {
+    const key = bindingKey(b);
+    if (key === null) return null;
+    eKeys.add(key);
+  }
+  if (byKey.size !== eKeys.size) return null;
+  for (const key of byKey.keys()) if (!eKeys.has(key)) return null;
+  return [...byKey.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, b]) => b);
 }
 
 /**
