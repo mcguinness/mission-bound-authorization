@@ -8,8 +8,8 @@
  * they propose can widen past the ceiling (the compromised-shaper property).
  */
 
-import { compareAmounts, isValidAmount } from "@mission/core";
-import type { JsonValue } from "@mission/core";
+import { capabilitySourceIdentity, compareAmounts, isValidAmount } from "@mission/core";
+import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 import { conditionsNoBroader, unionConditions } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
@@ -184,7 +184,17 @@ export function deriveAuthoritySet(
   return derived;
 }
 
-/** Narrow proposal by ceiling; the result is a subset of both. */
+/**
+ * Narrow proposal by ceiling; the result is a subset of both.
+ *
+ * @spec capability-binding#capability-source-binding — `capability_sources` is
+ * NEVER read from either operand here. The derived entry is built member by
+ * member below, so a proposal carrying the member cannot inject a binding (the
+ * compromised-shaper property this function already applies to `delegation`),
+ * and a ceiling entry cannot pre-seed one either: bindings originate only in
+ * the validating server's trusted catalog resolution and are attached in
+ * `approve`, before `authority_hash`.
+ */
 function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): AuthorityEntry | null {
   const actions = proposal.actions.filter((a) => ceiling.actions.includes(a));
   if (actions.length === 0) return null;
@@ -426,6 +436,12 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   if (!conditionsNoBroader(candidate.constraints?.terminal_when, granted.constraints?.terminal_when)) {
     return false;
   }
+  // @spec capability-binding#capability-source-binding — MONOTONIC derivation:
+  // a candidate retaining a catalog-sourced action carries every binding the
+  // grantor recorded for that action, byte-identical, and introduces none the
+  // grantor lacks. Dropping the action entirely is narrower and already passes
+  // through the actions-subset test above.
+  if (!capabilitySourcesNoBroader(candidate, granted)) return false;
   // @spec attenuation#delegation, child-delegation#attenuation — delegation is a
   // GRANT and NARROWS: the direction is the OPPOSITE of the constraint rules
   // above. A candidate that OMITS delegation the grantor has is strictly
@@ -442,6 +458,49 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   }
   // gDel present, cDel absent -> PASS: the child does not re-delegate.
   return true;
+}
+
+/**
+ * @spec capability-binding#capability-source-binding — the capability clause of
+ * the subset rule, in BOTH directions.
+ *
+ * A binding is a recorded FACT about a catalog-sourced action, not a
+ * restriction, so neither the constraint direction nor the delegation
+ * direction alone is right:
+ *   - every binding the grantor recorded for an action the candidate RETAINS
+ *     appears byte-identical in the candidate; retaining a catalog-sourced
+ *     action with a dropped or altered binding widens (the candidate would be
+ *     bound to a capability the grantor never recorded), so it fails;
+ *   - every binding the candidate carries appears byte-identical among the
+ *     grantor's; introducing one the grantor lacks is the GRANT direction and
+ *     fails, exactly as introducing `delegation` does.
+ *
+ * Total and non-throwing, like the rest of {@link isSubsetEntry}: comparison
+ * is over canonical bytes, with a value that cannot be canonicalized treated
+ * as matching nothing (fail closed) rather than throwing.
+ */
+function capabilitySourcesNoBroader(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
+  const cSources = candidate.capability_sources ?? [];
+  const gSources = granted.capability_sources ?? [];
+  if (cSources.length === 0 && gSources.length === 0) return true;
+  const cKeys = cSources.map(bindingKey);
+  const gKeys = gSources.map(bindingKey);
+  if (cKeys.includes(null) || gKeys.includes(null)) return false;
+  const gSet = new Set(gKeys);
+  if (!cKeys.every((k) => gSet.has(k))) return false; // introduces an unrecorded binding
+  const cSet = new Set(cKeys);
+  return gSources.every(
+    (g, i) => !candidate.actions.includes(g.action) || cSet.has(gKeys[i] as string),
+  );
+}
+
+/** Canonical bytes of one binding, or null when it cannot be canonicalized. */
+function bindingKey(binding: CapabilitySourceBinding): string | null {
+  try {
+    return capabilitySourceIdentity(binding);
+  } catch {
+    return null;
+  }
 }
 
 /** A restriction-list subset test mirroring the vendors rule: grantor-absent is

@@ -9,7 +9,9 @@
     "server_card_uri": "http://localhost:4403/.well-known/mcp",
     "resource": "http://localhost:4403/mcp",
     "connection": { "profile": "oauth", "type": "authorization_code" },
-    "approvable": true
+    "approvable": true,
+    "trusted": true,
+    "tool_catalog": "tool-catalogs/payments.json"
   },
   {
     "id": "ledgercloud",
@@ -20,7 +22,8 @@
     "tags": ["saas"],
     "resource": "http://localhost:4406/mcp",
     "connection": { "profile": "oauth", "type": "id_jag" },
-    "approvable": true
+    "approvable": true,
+    "trusted": false
   },
   {
     "id": "hr-files",
@@ -31,6 +34,7 @@
     "tags": ["hr"],
     "resource": "http://localhost:4499/mcp",
     "connection": { "profile": "oauth", "type": "authorization_code" },
-    "approvable": false
+    "approvable": false,
+    "trusted": false
   }
 ]

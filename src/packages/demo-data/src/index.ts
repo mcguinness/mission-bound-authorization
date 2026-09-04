@@ -59,6 +59,21 @@ function readJson(file: string): unknown {
   }
 }
 
+/**
+ * The EXACT octets of a config file, as a UTF-8 string. Distinct from
+ * {@link readJson}: a caller that commits to a retrieved representation
+ * (@spec capability-binding#capability-source-binding, `catalog_digest`) must
+ * hash the bytes it was served, not a re-serialization of a parse of them.
+ */
+function readText(file: string): string {
+  const path = join(CONFIG_DIR, file);
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    throw new ConfigError(file, `missing config file at ${path}`);
+  }
+}
+
 function asArray(file: string, v: unknown, ctx: string): unknown[] {
   if (!Array.isArray(v)) throw new ConfigError(file, `${ctx} must be an array`);
   return v;
@@ -980,6 +995,21 @@ export interface CatalogServiceSeed {
   resource: string;
   connection: { profile: "oauth"; type: "authorization_code" | "token_exchange" | "id_jag" };
   approvable: boolean;
+  /**
+   * @spec capability-binding#capability-source-binding — whether this
+   * deployment TRUSTS this service's catalog as a capability source. A
+   * capability is resolved only through a trusted catalog, never through a
+   * client-controlled `source_uri`; an untrusted service carries no bindings.
+   */
+  trusted: boolean;
+  /**
+   * @spec capability-binding#capability-extraction — config-relative path to
+   * the retrieved tool-catalog representation for this service, present only
+   * for a trusted one. Read as EXACT OCTETS ({@link TRUSTED_TOOL_CATALOGS}):
+   * `catalog_digest` is over the retrieved bytes, never a parse and
+   * reserialize round trip.
+   */
+  tool_catalog?: string;
 }
 
 function loadCatalog(): CatalogServiceSeed[] {
@@ -1003,9 +1033,19 @@ function loadCatalog(): CatalogServiceSeed[] {
     if (typeof s.approvable !== "boolean") {
       throw new ConfigError(file, `${ctx}.approvable must be a boolean`);
     }
+    reqBoolean(file, s, "trusted", ctx);
     if (s.categories !== undefined) reqStringArray(file, s, "categories", ctx);
     if (s.tags !== undefined) reqStringArray(file, s, "tags", ctx);
     if (s.server_card_uri !== undefined) reqString(file, s, "server_card_uri", ctx);
+    if (s.tool_catalog !== undefined) {
+      reqString(file, s, "tool_catalog", ctx);
+      if (s.trusted !== true) {
+        throw new ConfigError(file, `${ctx}.tool_catalog requires ${ctx}.trusted true`);
+      }
+      if (s.server_card_uri === undefined) {
+        throw new ConfigError(file, `${ctx}.tool_catalog requires ${ctx}.server_card_uri`);
+      }
+    }
     return s as unknown as CatalogServiceSeed;
   });
 }
@@ -1027,3 +1067,77 @@ export const CATALOG_SERVICES: CatalogServiceSeed[] = loadCatalog().map((svc) =>
   }
   return resolved;
 });
+
+/**
+ * @spec capability-binding#capability-source-binding — one deployment-trusted
+ * capability source: the discovery URI a binding records as `source_uri`, and
+ * the EXACT octets retrieved from it.
+ *
+ * The octets are carried verbatim, never re-serialized: `catalog_digest` is a
+ * raw-octet digest, and the per-capability `source_digest` is extracted from
+ * these same bytes, so a parse and reserialize round trip anywhere in this
+ * path would commit to a representation the deployment never served.
+ */
+export interface TrustedToolCatalog {
+  /** The `catalog.json` service this catalog belongs to. */
+  service_id: string;
+  /** The resource the service's actions name (an entry's `resource`). */
+  resource: string;
+  /** The discovery source, recorded as a binding's `source_uri`. */
+  source_uri: string;
+  /** The exact retrieved octets, as a UTF-8 string. */
+  text: string;
+  /** The tool names this catalog serves, for a configuration-time check. */
+  tool_names: string[];
+}
+
+/**
+ * @spec capability-binding#capability-extraction — the static tool-catalog
+ * fixtures standing in for a live retrieval, loaded through the same typed,
+ * validated loader as every other config file (D-config). Only a service
+ * marked `trusted` with a `tool_catalog` path contributes one, so an
+ * untrusted catalog is not resolvable by construction.
+ *
+ * The RESOLVER that turns these into recorded bindings at approval is
+ * declared but not wired (`CapabilitySourceResolver`, authorization-server):
+ * this ships the trusted-catalog configuration and the exact bytes a resolver
+ * will read, not a retrieval path.
+ */
+export const TRUSTED_TOOL_CATALOGS: TrustedToolCatalog[] = loadToolCatalogs();
+
+function loadToolCatalogs(): TrustedToolCatalog[] {
+  const out: TrustedToolCatalog[] = [];
+  for (const svc of CATALOG_SERVICES) {
+    if (!svc.trusted || svc.tool_catalog === undefined) continue;
+    const file = svc.tool_catalog;
+    const text = readText(file);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
+    }
+    const doc = asObject(file, parsed, "catalog");
+    const tools = asArray(file, doc.tools, "catalog.tools");
+    const names = tools.map((raw, i) => {
+      const ctx = `catalog.tools[${i}]`;
+      const tool = asObject(file, raw, ctx);
+      reqString(file, tool, "name", ctx);
+      reqString(file, tool, "description", ctx);
+      asObject(file, tool.inputSchema, `${ctx}.inputSchema`);
+      return tool.name as string;
+    });
+    const duplicate = names.find((n, i) => names.indexOf(n) !== i);
+    if (duplicate !== undefined) {
+      throw new ConfigError(file, `duplicate tool name '${duplicate}'`);
+    }
+    out.push({
+      service_id: svc.id,
+      resource: svc.resource,
+      source_uri: svc.server_card_uri as string,
+      text,
+      tool_names: names,
+    });
+  }
+  return out;
+}

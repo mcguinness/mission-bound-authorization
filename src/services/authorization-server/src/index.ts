@@ -45,6 +45,11 @@ import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
+  attachCapabilitySources,
+  type CapabilitySourceResolution,
+  type CapabilitySourceResolver,
+} from "./kernel/capability-binding.js";
+export {
   buildContainmentEvidence,
   containmentEvidenceBytes,
   CONTAINMENT_EVIDENCE_MEDIA_TYPE,
