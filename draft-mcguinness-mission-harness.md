@@ -71,6 +71,13 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission-Bound Authorization: Security Model and Trusted Base"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
