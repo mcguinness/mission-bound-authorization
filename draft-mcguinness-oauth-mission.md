@@ -1751,6 +1751,9 @@ At the approval event the AS MUST, in order:
 
 1. Authenticate the Approver, subject to the approval-authentication
    floor and any client-requested strength ({{approval-authentication}}).
+   The AS MUST NOT take the Approver's identity or achieved
+   authentication context from unauthenticated client input; the
+   authenticated surface that resolved the approval establishes both.
 2. Establish the Subject: the principal the task is for, recorded as
    the Mission's `subject` and mapped to the `sub` of every derived
    token ({{mission-bound-tokens}}).
@@ -3878,13 +3881,15 @@ response, counting committed issuances ({{lifecycle}}), so a harness
 can plan refreshes against the budget; when the Mission records an
 authority proposal, `proposal_hash` (string): the Mission's
 `proposal_hash` ({{mission-record}}), surfaced for audit; and
-`authority_hash` (string) and `approval_basis` (an object carrying
-`type` only): the Mission's own Authority Set commitment and
-provenance signal ({{mission-record}}), surfaced the same way for an
+`authority_hash` (string), `approval_basis` (an object carrying
+`type` only), and `authority_source` (an object carrying `type` and,
+for `organizational`, `policy` with `id` and `version` only, never the
+policy `digest`): the Mission's own Authority Set commitment and
+provenance signals ({{mission-record}}), surfaced the same way for an
 audit or correlation consumer, never as an enforcement input
 ({{rs-enforcement}}). Like `state`, only the issuer reports
-`derivations_remaining`, `proposal_hash`, `authority_hash`, and
-`approval_basis`
+`derivations_remaining`, `proposal_hash`, `authority_hash`,
+`approval_basis`, and `authority_source`
 ({{only-issuer-reports-state}}).
 
 The core states are `active`, `revoked`,
@@ -3936,13 +3941,13 @@ authorization and minimization to that data and MUST NOT reveal
 Mission detail to an unauthorized introspection caller.
 
 Disclosure is member-scoped as well as caller-scoped:
-`derivations_remaining`, `proposal_hash`, `authority_hash`, and
-`approval_basis` serve the issuance-budget, audit, and correlation
-consumers, not Resource Server enforcement, and the AS MUST disclose
-each only to a caller the deployment has granted that member's
-disclosure privilege; an audience-authorized Resource Server receives
-the ordinary audience-filtered enforcement projection defined above,
-without them, by default.
+`derivations_remaining`, `proposal_hash`, `authority_hash`,
+`approval_basis`, and `authority_source` serve the issuance-budget,
+audit, and correlation consumers, not Resource Server enforcement, and
+the AS MUST disclose each only to a caller the deployment has granted
+that member's disclosure privilege; an audience-authorized Resource
+Server receives the ordinary audience-filtered enforcement projection
+defined above, without them, by default.
 
 The same member-scoped rule governs any further `mission` member a
 companion profile defines for disclosure here. Such a member is
@@ -4611,6 +4616,11 @@ where the AS established a safe scope projection for it
 ({{scope-projection}}). This note names a starting point and creates
 no new conformance class.
 
+A Mission Issuer MAY instead reach that starting point through
+configured-mapping mode, the low-integration on-ramp
+({{authorization-derivation}}), which is equally conforming and adds
+no conformance class.
+
 An implementation conforms in one of three roles.
 
 A **Mission Issuer** (the Authorization Server) implements the core
@@ -4621,8 +4631,9 @@ issuance surfaces:
   dispatch and refusal rules ({{intent-submission-evidence}});
 - derivation of `authorization_details` entries of its supported
   types ({{authorization-derivation}}, {{other-types}});
-- the approval event with its integrity anchors and recorded
-  `approval_basis` ({{approval-event}}, {{mission-record}});
+- the approval event with its integrity anchors and its recorded
+  `approval_basis` and `authority_source` ({{approval-event}},
+  {{mission-record}});
 - issuance of Mission-bound access tokens carrying the `mission` claim
   ({{mission-bound-tokens}}), as the RFC 9068 JWT or as an opaque
   reference token under the introspected consumption mode, whose
@@ -5485,8 +5496,8 @@ Introspection Response" registry ({{RFC7662}}):
   current lifecycle state, and, to a caller holding the disclosure
   privilege for the member, `derivations_remaining` where a derivation
   cap is in force, `proposal_hash` where the Mission records an
-  authority proposal, and `authority_hash` and `approval_basis`
-  ({{introspection}}).
+  authority proposal, and `authority_hash`, `approval_basis`, and
+  `authority_source` ({{introspection}}).
 - Change Controller: IESG
 - Specification Document(s): this document, {{introspection}}
 

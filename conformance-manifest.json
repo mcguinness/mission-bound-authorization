@@ -55,8 +55,8 @@
     "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "9a38e3c25dda9947383f4f26f2c1989a3f880c75",
-    "content_sha256": "9c0c14b5fc68d95ca49e1442bd6c448be9d571cf4cf95bdb8e7828becc6a59cb"
+    "revision": "3b0de2648fbc2153d05e0606d7847255ae1457c8",
+    "content_sha256": "9c3d3d9fa4ddb9d5c4f74db9da28e592f5517e28183812e8bd2b7b971466f2a0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -786,6 +786,29 @@
    ]
   },
   {
+   "id": "core.approval-event.approver-establishment-not-from-client-input",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The AS MUST NOT take the Approver's identity or achieved authentication context from unauthenticated client input",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Approver's identity and achieved authentication context come from the authenticated surface that resolved the approval; a client-supplied approver, acr, or auth_time establishes neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "todo, not blocked: the headless decide path still takes `approver`, `approver_acr`, and `approver_auth_time` from the request body. Coverage lands with #759, which sources them from the authenticated interaction session and removes the caller-controlled path."
+  },
+  {
    "id": "core.approval-event.authority-source-trusted-establishment",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
@@ -1271,7 +1294,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "`authority_source` appears in no integrity-anchor input and on no access-token claim; introspection discloses it only to a caller holding the deployment's provenance disclosure privilege"
+    "normative": "`authority_source` appears in no integrity-anchor input and on no access-token claim; introspection discloses it only to a caller holding the deployment's provenance disclosure privilege, as `type` plus, for `organizational`, the governed policy's `id` and `version`, never the policy `digest`"
    },
    "level": "unit",
    "coverage": "tested",
@@ -1294,7 +1317,8 @@
      "level": "unit",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
   },
   {
    "id": "core.lifecycle.derivation-cap-exhaustion",
@@ -2274,7 +2298,7 @@
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
-    "normative": "derivations_remaining and proposal_hash are member-gated (budget and provenance privileges); an audience-authorized RS without them receives the enforcement projection alone"
+    "normative": "derivations_remaining, proposal_hash, authority_hash, approval_basis, and authority_source are member-gated (budget and provenance privileges); an audience-authorized RS without them receives the enforcement projection alone"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -2296,9 +2320,15 @@
      "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > the inactive response is member-scoped too: a privilege-less principal sees no budget or provenance metadata",
      "level": "endpoint",
      "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source disclosure (@spec mission#introspection, mission#authority-sources) > discloses the source to a provenance caller and withholds it from a bare caller",
+     "level": "unit",
+     "surface": "introspection"
     }
    ],
-   "notes": "Draft rule and budget-privilege gating landed together (tri-doc review round 2)."
+   "notes": "Draft rule and budget-privilege gating landed together (tri-doc review round 2). #760 names `authority_source` in this section's enumeration beside `approval_basis`; the added mapping is the disclosure test asserting its provenance-gated shape."
   },
   {
    "id": "core.introspection.caller-authorization",
