@@ -65,6 +65,8 @@ interface GrantOverrides {
   missionAuthorityHash?: string | null; // null = omit entirely, "" = present but empty (malformed)
   identityContinuationHandle?: string;
   exp?: number; // absolute epoch seconds
+  /** The delegated set the grant carries; defaults to the empty array. */
+  authorizationDetails?: unknown;
 }
 
 async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
@@ -77,7 +79,7 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
   }
   const payload: Record<string, unknown> = {
     mission,
-    authorization_details: [],
+    authorization_details: overrides.authorizationDetails ?? [],
     cnf: { jkt: clientJkt },
     ...(overrides.sub !== null ? { sub: overrides.sub ?? GRANT_SUB } : {}),
     client_id: "ap-agent",
@@ -294,6 +296,100 @@ describe("RAS entitlement (@spec cross-domain#dual-axis)", () => {
     });
     const grant = await mintGrant();
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+});
+
+/**
+ * @spec cross-domain#dual-axis (#744) — the OPTIONAL action- and
+ * resource-scoped grain of the entitlement observation. The RAS mints the
+ * intersection of the grant's delegated set and this authority, refusing
+ * only when nothing survives.
+ */
+describe("RAS entitlement authority narrowing (@spec cross-domain#dual-axis, #744)", () => {
+  const DELEGATED = [
+    {
+      type: "mission_resource_access",
+      resource: AUDIENCE,
+      actions: ["invoices.read", "journal-entries.write"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+    },
+    { type: "mission_resource_access", resource: "https://other.example.test/mcp", actions: ["reports.read"] },
+  ];
+
+  /** An entitlement observation carrying the action- and resource-scoped grain. */
+  function entitledTo(authority: Array<{ resource: string; actions: string[] }>) {
+    return { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString(), authority }) };
+  }
+
+  /** The minted token's authorization_details claim. */
+  function mintedDetails(accessToken: string): Array<Record<string, unknown>> {
+    const claims = JSON.parse(Buffer.from(accessToken.split(".")[1] as string, "base64url").toString());
+    return claims.authorization_details;
+  }
+
+  it("mints the delegated set verbatim when the observation carries no authority (audience-scoped grain)", async () => {
+    const server = await ras();
+    const { access_token } = await server.redeem(await mintGrant({ authorizationDetails: DELEGATED }), clientJkt);
+    expect(mintedDetails(access_token)).toEqual(DELEGATED);
+  });
+
+  it("mints the delegated set unchanged when the entitlement authority covers every delegated action", async () => {
+    const server = await ras({
+      entitlement: entitledTo([
+        { resource: AUDIENCE, actions: ["invoices.read", "journal-entries.write"] },
+        { resource: "https://other.example.test/mcp", actions: ["reports.read"] },
+      ]),
+    });
+    const { access_token } = await server.redeem(await mintGrant({ authorizationDetails: DELEGATED }), clientJkt);
+    expect(mintedDetails(access_token)).toEqual(DELEGATED);
+  });
+
+  it("narrows the minted authorization_details to the entitled actions, keeping every other entry member", async () => {
+    const server = await ras({ entitlement: entitledTo([{ resource: AUDIENCE, actions: ["invoices.read"] }]) });
+    const { access_token } = await server.redeem(await mintGrant({ authorizationDetails: DELEGATED }), clientJkt);
+    // The unentitled action is dropped from its entry, the unentitled
+    // resource's entry disappears, and the constraints entitlement does not
+    // own survive untouched.
+    expect(mintedDetails(access_token)).toEqual([
+      {
+        type: "mission_resource_access",
+        resource: AUDIENCE,
+        actions: ["invoices.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+      },
+    ]);
+  });
+
+  it("denies invalid_grant when the entitlement authority covers none of the delegated resources", async () => {
+    const server = await ras({
+      entitlement: entitledTo([{ resource: "https://unrelated.example.test/mcp", actions: ["invoices.read"] }]),
+    });
+    await expect(
+      server.redeem(await mintGrant({ authorizationDetails: DELEGATED }), clientJkt),
+    ).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("denies invalid_grant when the entitlement authority names the resource but no delegated action", async () => {
+    const server = await ras({ entitlement: entitledTo([{ resource: AUDIENCE, actions: ["ledger:vendor.read"] }]) });
+    await expect(
+      server.redeem(await mintGrant({ authorizationDetails: DELEGATED }), clientJkt),
+    ).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("matches the resource exactly: a prefix of the delegated resource entitles nothing (invalid_grant)", async () => {
+    const server = await ras({
+      entitlement: entitledTo([{ resource: "https://saas.example.test", actions: ["invoices.read"] }]),
+    });
+    await expect(
+      server.redeem(await mintGrant({ authorizationDetails: DELEGATED }), clientJkt),
+    ).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("narrows a continuation grant's delegated set the same way, since entitlement runs on every redemption", async () => {
+    const server = await ras({ entitlement: entitledTo([{ resource: AUDIENCE, actions: ["invoices.read"] }]) });
+    const grant = await mintGrant({ authorizationDetails: DELEGATED, identityContinuationHandle: "ich-1", sub: "aud-local-sub" });
+    const { access_token } = await server.redeem(grant, clientJkt);
+    expect(mintedDetails(access_token).map((e) => e.actions)).toEqual([["invoices.read"]]);
   });
 });
 

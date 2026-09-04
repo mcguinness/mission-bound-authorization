@@ -578,3 +578,77 @@ describe("origin-principal entitlement (@spec cross-domain#dual-axis, #539)", ()
     }
   });
 });
+
+/**
+ * @spec cross-domain#dual-axis (#744) — the OPTIONAL action- and
+ * resource-scoped grain of the entitlement observation. The chain delegates
+ * READ + SCHEDULE and the local ceiling admits both, so every outcome below
+ * is decided by the entitlement axis alone.
+ */
+describe("origin-principal entitlement authority narrowing (@spec cross-domain#dual-axis, #744)", () => {
+  /** Run one exchange with `authority` on the entitlement observation. */
+  async function exchangeWithAuthority(
+    authority: Array<{ resource: string; actions: string[] }> | undefined,
+  ): Promise<{ res: Response; body: { error?: string; authorization_details?: AuthorityEntry[] } }> {
+    const saved = crossOrgOptions.entitlement;
+    crossOrgOptions.entitlement = {
+      resolve: async () => ({
+        entitled: true,
+        observed_at: new Date().toISOString(),
+        ...(authority !== undefined ? { authority } : {}),
+      }),
+    };
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      return { res, body: await res.json() };
+    } finally {
+      crossOrgOptions.entitlement = saved;
+    }
+  }
+
+  it("mints the ceiling-intersected set unchanged when the observation carries no authority (audience-scoped grain)", async () => {
+    const { res, body } = await exchangeWithAuthority(undefined);
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details?.flatMap((e) => e.actions)).toEqual([READ, SCHEDULE]);
+  });
+
+  it("mints the ceiling-intersected set unchanged when the entitlement authority covers every delegated action", async () => {
+    const { res, body } = await exchangeWithAuthority([{ resource: RESOURCE, actions: [READ, SCHEDULE] }]);
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details?.flatMap((e) => e.actions)).toEqual([READ, SCHEDULE]);
+  });
+
+  it("narrows the minted set to the entitled actions, keeps the entry's constraints, and records the narrowed set as output_authority", async () => {
+    const before = evidence.length;
+    const { res, body } = await exchangeWithAuthority([{ resource: RESOURCE, actions: [READ] }]);
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toHaveLength(1);
+    expect(body.authorization_details?.[0]?.actions).toEqual([READ]);
+    // Entitlement narrows actions only: the ceiling's own constraints survive
+    // (the amount as the projection normalizes it).
+    expect(body.authorization_details?.[0]?.constraints?.max_amount).toEqual({ amount: "500", currency: "USD" });
+    const record = evidence[evidence.length - 1] as CrossOrgDerivationRecord;
+    expect(evidence.length).toBe(before + 1);
+    expect(record.input_authority.flatMap((e) => e.actions)).toEqual(expect.arrayContaining([READ, SCHEDULE]));
+    expect(record.output_authority).toEqual(body.authorization_details);
+  });
+
+  it("refuses when the entitlement authority covers none of the delegated resources (invalid_grant)", async () => {
+    const { res, body } = await exchangeWithAuthority([{ resource: "https://unrelated.test", actions: [READ] }]);
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+
+  it("refuses when the entitlement authority names the resource but no delegated action (invalid_grant)", async () => {
+    const { res, body } = await exchangeWithAuthority([{ resource: RESOURCE, actions: ["storage:object.read"] }]);
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+
+  it("matches the resource exactly: a prefix of the delegated resource entitles nothing (invalid_grant)", async () => {
+    const { res, body } = await exchangeWithAuthority([{ resource: "https://api.org3.test/", actions: [READ, SCHEDULE] }]);
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+});
