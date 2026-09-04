@@ -84,6 +84,13 @@ export interface DerivationPolicy {
    * if the client requested nothing either). See {@link resolveDerivationLimit}.
    */
   derivation_limit_ceiling?: number | null;
+  /**
+   * @spec mission#mission-record — the deployment's own ceiling on a Mission's
+   * granted lifetime, in seconds from the creation instant, independent of any
+   * requested `intent.expires_at`. `null`/absent means the deployment imposes
+   * no ceiling of its own. See {@link resolveEffectiveExpiry}.
+   */
+  max_mission_lifetime_s?: number | null;
 }
 
 /**
@@ -103,6 +110,97 @@ export function resolveDerivationLimit(
   if (req === null) return ceil;
   if (ceil === null) return req;
   return Math.min(req, ceil);
+}
+
+/**
+ * @spec mission#mission-record — the ceilings a Mission-creating surface
+ * contributes beyond the requested `intent.expires_at` and this deployment's
+ * own policy ceiling. Every member is a bound, never a grant: an absent member
+ * contributes nothing, and no member can move the effective value later than
+ * the requested ceiling.
+ */
+export interface ExpiryCeilings {
+  /** @spec child-delegation#attenuation — child creation: the parent's `expires_at`. */
+  parent?: string;
+  /** @spec expansion#successor-expiry — expansion: the predecessor's `expires_at`. */
+  predecessor?: string;
+  /**
+   * @spec expansion#successor-expiry — the exact extension ceiling recorded at
+   * the expansion consent event. Present ONLY where the Mission Issuer's policy
+   * explicitly permits extension AND the extension was disclosed to the
+   * Approver, which is what allows a successor to outlive its predecessor. It
+   * REPLACES `predecessor` as the lineage bound and is itself a bound: the
+   * requested ceiling, the approval expiry, and the deployment ceiling all
+   * still apply.
+   */
+  approvedExtensionUntil?: string;
+  /** @spec expansion#successor-expiry — the recorded approval expiry (`approved_until`). */
+  approvedUntil?: string;
+  /** @spec mission-template#dispatch — the template's own expiry and per-instance lifetime. */
+  template?: { expiresAt: string; instanceLifetimeS: number };
+}
+
+/** The earliest of several {ms, iso} candidates, returning the winner's iso
+ *  VERBATIM (never re-serialized, so a clamp preserves the exact input string). */
+function earliestIso(candidates: Array<{ ms: number; iso: string }>): string {
+  return candidates.reduce((a, b) => (b.ms < a.ms ? b : a)).iso;
+}
+
+/**
+ * @spec mission#mission-record, mission#approval-event (step 4) — establish the
+ * effective Mission `expires_at` every Mission-creating surface commits: the
+ * earliest applicable bound, never the requested value copied verbatim.
+ *
+ * The requested `intent.expires_at` is always a candidate, so the result is
+ * never later than the requested ceiling; extension beyond the submitted
+ * request is not expressible here. Every other candidate is a ceiling an
+ * applicable policy or an already-approved parent, predecessor, template, or
+ * approval contributes, which is ordinary narrowing of the granted lifetime,
+ * not Authority Set derivation.
+ *
+ * `createdAt` is SUPPLIED, never read from a clock inside this function: the
+ * caller passes the exact instant it commits as `created_at`, so a lifetime
+ * addend (the deployment ceiling, a template's `per_instance_lifetime_s`) is
+ * measured from the committed creation instant rather than from a second,
+ * later clock read.
+ */
+export function resolveEffectiveExpiry(input: {
+  /** The requested ceiling: `intent.expires_at`. */
+  requested: string;
+  /** The instant the record commits, as its `created_at`. */
+  createdAt: string;
+  /** This deployment's own ceiling, in seconds; `null`/absent imposes none. */
+  policyMaxLifetimeS: number | null | undefined;
+  /** The creating surface's own ceilings, where it has any. */
+  ceilings?: ExpiryCeilings;
+}): string {
+  const createdMs = Date.parse(input.createdAt);
+  const candidates: Array<{ ms: number; iso: string }> = [
+    { ms: Date.parse(input.requested), iso: input.requested },
+  ];
+  const addIso = (iso: string | undefined): void => {
+    if (iso !== undefined) candidates.push({ ms: Date.parse(iso), iso });
+  };
+  const addLifetime = (seconds: number): void => {
+    const ms = createdMs + seconds * 1000;
+    candidates.push({ ms, iso: new Date(ms).toISOString() });
+  };
+  if (input.policyMaxLifetimeS != null) addLifetime(input.policyMaxLifetimeS);
+  const c = input.ceilings;
+  if (c) {
+    addIso(c.parent);
+    // @spec expansion#successor-expiry — the disclosed, policy-permitted
+    // extension ceiling REPLACES the predecessor bound; absent one the
+    // predecessor's own expiry binds, so a successor never silently outlives
+    // the Mission it replaced.
+    addIso(c.approvedExtensionUntil ?? c.predecessor);
+    addIso(c.approvedUntil);
+    if (c.template) {
+      addIso(c.template.expiresAt);
+      addLifetime(c.template.instanceLifetimeS);
+    }
+  }
+  return earliestIso(candidates);
 }
 
 /**

@@ -1239,6 +1239,13 @@ async function mintMissionAccessToken(
     token_type: "DPoP",
     expires_in: (at as unknown as { expiration: number }).expiration,
     scope: "payments",
+    // @spec mission#grant-binding, expansion#successor-expiry — expansion
+    // COMPLETES a Mission creation, so the completing body carries the
+    // successor's identifier and its committed effective expiry, verbatim from
+    // the record. `expires_in` describes this access token; `mission_expires_at`
+    // describes the Mission, which may be shorter than the requested ceiling.
+    mission_id: mission.id,
+    mission_expires_at: mission.expires_at,
     authorization_details: tokenRar,
   };
   ctx.set("cache-control", "no-store");
@@ -1507,6 +1514,10 @@ export async function handleChildCreationExchange(
     issued_token_type: JWT_TOKEN_TYPE,
     token_type: "N_A",
     mission_id: child.id,
+    // @spec mission#grant-binding — the child's COMMITTED effective expiry,
+    // verbatim from the record (the recovery body returns the same stored
+    // value, since recovery is delivery and never re-creation).
+    mission_expires_at: child.expires_at,
     parent: child.parent,
   };
 }
@@ -1597,6 +1608,10 @@ async function recoverChildCreation(
     issued_token_type: JWT_TOKEN_TYPE,
     token_type: "N_A",
     mission_id: child.id,
+    // @spec mission#grant-binding — the child's COMMITTED effective expiry,
+    // verbatim from the record (the recovery body returns the same stored
+    // value, since recovery is delivery and never re-creation).
+    mission_expires_at: child.expires_at,
     parent: child.parent,
   };
 }
@@ -2007,6 +2022,11 @@ async function recoverExpansion(
       token_type: "DPoP",
       expires_in: stored.exp - nowS,
       scope: "payments",
+      // @spec mission#grant-binding — a creation replay returns the COMMITTED
+      // effective value unchanged: read back off the successor record, never
+      // recomputed for this response.
+      mission_id: successor.id,
+      mission_expires_at: successor.expires_at,
       authorization_details: opts.kernel.effectiveAuthoritySet(successor),
     };
     ctx.set("cache-control", "no-store");

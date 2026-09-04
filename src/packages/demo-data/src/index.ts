@@ -409,6 +409,8 @@ export interface DerivationPolicy {
   ceiling: [CeilingEntry, ...CeilingEntry[]];
   /** @spec mission#derivation-issuance-policy — see {@link LoadedPolicy}. */
   derivation_limit_ceiling: number | null;
+  /** @spec mission#mission-record — see {@link LoadedPolicy}. */
+  max_mission_lifetime_s: number | null;
 }
 
 interface LoadedPolicy {
@@ -423,6 +425,18 @@ interface LoadedPolicy {
    * deployment imposes none (`null`).
    */
   derivation_limit_ceiling: number | null;
+  /**
+   * @spec mission#mission-record — the deployment's own ceiling on a Mission's
+   * granted lifetime, in seconds measured from the creation instant,
+   * independent of any requested `intent.expires_at`. OPTIONAL in policy.json;
+   * absent or `null` means this deployment imposes none, so the effective
+   * expiry is bounded only by the requested ceiling and by whatever ceiling the
+   * creating surface itself contributes. The reference deployment ships `null`
+   * (mirroring `derivation_limit_ceiling`): the demo declares no lifetime
+   * ceiling of its own, and the narrowing arm is exercised with an injected
+   * ceiling in the kernel tests.
+   */
+  max_mission_lifetime_s: number | null;
 }
 
 function loadPolicy(): LoadedPolicy {
@@ -468,6 +482,16 @@ function loadPolicy(): LoadedPolicy {
     }
     derivationLimitCeiling = rawCeiling;
   }
+  // @spec mission#mission-record — OPTIONAL; absent or explicit null means this
+  // deployment imposes no lifetime ceiling of its own.
+  const rawLifetime = root.max_mission_lifetime_s;
+  let maxMissionLifetimeS: number | null = null;
+  if (rawLifetime !== undefined && rawLifetime !== null) {
+    if (typeof rawLifetime !== "number" || !Number.isInteger(rawLifetime) || rawLifetime < 1) {
+      throw new ConfigError(file, "policy.max_mission_lifetime_s must be an integer >= 1, or null");
+    }
+    maxMissionLifetimeS = rawLifetime;
+  }
   return {
     policy_version: reqString(file, root, "policy_version", "policy"),
     ceiling,
@@ -479,6 +503,7 @@ function loadPolicy(): LoadedPolicy {
       "policy",
     ),
     derivation_limit_ceiling: derivationLimitCeiling,
+    max_mission_lifetime_s: maxMissionLifetimeS,
   };
 }
 
@@ -536,6 +561,7 @@ export const DERIVATION_POLICY: DerivationPolicy = {
     e.resource === DEFAULT_PAYMENTS_RESOURCE ? { ...e, resource: CANONICAL_RESOURCE } : e,
   ) as [CeilingEntry, ...CeilingEntry[]],
   derivation_limit_ceiling: POLICY.derivation_limit_ceiling,
+  max_mission_lifetime_s: POLICY.max_mission_lifetime_s,
 };
 
 /**

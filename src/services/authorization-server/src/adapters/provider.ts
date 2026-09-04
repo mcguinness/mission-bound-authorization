@@ -1083,6 +1083,38 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
   });
 
+  // @spec mission#grant-binding — `mission_expires_at` (and `mission_id`) on the
+  // DIRECT-creation success response. Direct creation completes as the native
+  // `authorization_code` token response, which oidc-provider renders internally,
+  // so the members are stamped here: Provider#use splices this middleware BEFORE
+  // the internal route dispatcher, so it observes the rendered token body (the
+  // seam the Retry-After wrapper above already relies on) with
+  // `ctx.oidc.entities.AccessToken` populated and its `grantId` bound.
+  //
+  // Gated on `authorization_code` deliberately. That single-use redemption IS
+  // the creation-completing body, where the member is a MUST. Every custom grant
+  // (dispatch, the token exchanges, DTR) rides the same route and stamps its own
+  // body at its own handler, and a `refresh_token` redemption is an ordinary
+  // Mission-bound token response, where the member is a SHOULD this deployment
+  // does not take up. A grant with no Mission (an ordinary OAuth grant) is left
+  // untouched.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.oidc?.route !== "token") return;
+    if (ctx.oidc.params?.grant_type !== "authorization_code") return;
+    const body = ctx.body as Record<string, unknown> | undefined;
+    if (ctx.status !== 200 || !body || typeof body.access_token !== "string") return;
+    const grantId = (ctx.oidc.entities?.AccessToken as { grantId?: string } | undefined)?.grantId;
+    if (!grantId) return;
+    const record = opts.kernel.findByGrant(grantId);
+    if (!record) return;
+    body.mission_id = record.id;
+    // @spec mission#grant-binding — the COMMITTED record value, verbatim: the
+    // effective expiry is read back from the record, never recomputed while
+    // rendering, so a replayed or recovered completion returns the same string.
+    body.mission_expires_at = record.expires_at;
+  });
+
   provider.use(makeRoutes(provider, opts));
   return provider;
 }
@@ -2749,6 +2781,9 @@ async function handleMissionDispatchGrant(
     token_type: "DPoP",
     expires_in: at.expiration,
     mission_id: record.id,
+    // @spec mission#grant-binding — the dispatched instance's COMMITTED
+    // effective expiry, verbatim from the record, never recomputed here.
+    mission_expires_at: record.expires_at,
     authorization_details: effective,
   };
   ctx.set("cache-control", "no-store");
@@ -2919,18 +2954,35 @@ async function decide(
     return;
   }
 
-  const record = opts.kernel.approve({
-    intent: intent as MissionIntent,
-    ...(proposedAuthority ? { proposedAuthority } : {}),
-    // @spec mission#intent-submission-evidence — the verified facts land on
-    // the Mission Record (outside all anchors), request-derived, never
-    // fabricated downstream.
-    ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-    subject: { iss: opts.issuer, sub: subject },
-    approver: { iss: opts.issuer, sub: approver },
-    clientId: String(params.client_id),
-    approvalEventId: `apev_${details.uid}`,
-  });
+  // @spec mission#approval-event (step 4) — the creation commit re-checks the
+  // effective expiry atomically. Submission acceptance did not freeze time, so a
+  // requested ceiling that passes while the approval is pending refuses HERE and
+  // creates no Mission. Mapped like the derivation refusal above: the
+  // interaction finishes with the error, never a 500.
+  let record: MissionRecord;
+  try {
+    record = opts.kernel.approve({
+      intent: intent as MissionIntent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
+      // @spec mission#intent-submission-evidence — the verified facts land on
+      // the Mission Record (outside all anchors), request-derived, never
+      // fabricated downstream.
+      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+      subject: { iss: opts.issuer, sub: subject },
+      approver: { iss: opts.issuer, sub: approver },
+      clientId: String(params.client_id),
+      approvalEventId: `apev_${details.uid}`,
+    });
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await provider.interactionFinished(ctx.req, ctx.res, {
+        error: e.code,
+        error_description: e.message,
+      });
+      return;
+    }
+    throw e;
+  }
 
   const grant = new provider.Grant({ accountId: subject, clientId: String(params.client_id) });
   // Grant exactly the requested scopes (openid enables an id_token when asked).

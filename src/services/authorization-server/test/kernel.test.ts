@@ -651,10 +651,32 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     expect(localApprove({}, 3).derivation_limit).toBe(5);
   });
 
-  it("expiry clock: past expires_at the mission is expired and non-deriving", () => {
-    const r = approve(intent({ expires_at: "2020-01-01T00:00:00Z" }), 5);
-    expect(() => kernel.gateDerivation(r.id)).toThrow(GateError);
-    expect(kernel.get(r.id)?.state).toBe("expired");
+  it("expiry clock: past expires_at the mission is expired and non-deriving", async () => {
+    // A Mission can no longer be CREATED already expired: intake refuses an
+    // already-past requested ceiling, and insertRecord refuses a record whose
+    // effective expiry is not later than its creation instant. So the expiry
+    // clock is exercised the way it actually runs, by advancing an injected
+    // clock past a Mission that was live when it committed.
+    const { privateKey } = await generateKeyPair("ES256");
+    let clock = new Date("2026-07-01T00:00:00Z");
+    const localKernel = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      statusKey: privateKey,
+      statusKid: "as-status",
+      now: () => clock,
+    });
+    const r = localKernel.approve({
+      intent: localKernel.validateIntent(intent({ expires_at: "2026-07-01T01:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-expiry-clock",
+    });
+    expect(localKernel.gateDerivation(r.id).state).toBe("active");
+    clock = new Date("2026-07-01T02:00:00Z");
+    expect(() => localKernel.gateDerivation(r.id)).toThrow(GateError);
+    expect(localKernel.get(r.id)?.state).toBe("expired");
   });
 });
 

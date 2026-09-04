@@ -196,12 +196,6 @@ export interface DispatchResult {
   template: MissionTemplate;
 }
 
-/** The earliest of several {ms, iso} candidates, returning the winner's iso
- *  VERBATIM (never re-serialized, so a clamp preserves the exact input string). */
-function earliestIso(candidates: Array<{ ms: number; iso: string }>): string {
-  return candidates.reduce((a, b) => (b.ms < a.ms ? b : a)).iso;
-}
-
 /**
  * @spec mission-template#dispatch — instantiate an ordinary Mission from a
  * template. Structure mirrors {@link createChildMission}: resolve the template,
@@ -238,7 +232,13 @@ export function dispatchFromTemplate(
     return { mission: existing, template };
   }
 
-  const nowMs = kernel.nowDate().getTime();
+  // @spec mission#approval-event (step 4) — ONE clock read for the whole
+  // dispatch: the gates below, the instance's `created_at`, and the
+  // `per_instance_lifetime_s` addend are all measured from this instant, so the
+  // lifetime a dispatched instance gets is exactly the lifetime its record
+  // records.
+  const nowIso = kernel.nowDate().toISOString();
+  const nowMs = Date.parse(nowIso);
 
   // b. Template gate.
   if (template.state !== "active") {
@@ -327,15 +327,21 @@ export function dispatchFromTemplate(
   // e. Build a NORMAL MissionRecord (as expansion.ts does). Anchors are over
   // the INSTANCE's own intent and `final` set (never the template body). The
   // approver is the TEMPLATE's approver: the human of record, not the
-  // dispatcher. expires_at is the earliest of the intent's, now+lifetime, and
-  // the template's expiry (verbatim strings; only now+lifetime is synthesized).
-  const nowIso = kernel.nowDate().toISOString();
-  const lifetimeMs = nowMs + template.per_instance_lifetime_s * 1000;
-  const expiresAt = earliestIso([
-    { ms: Date.parse(input.intent.expires_at), iso: input.intent.expires_at },
-    { ms: lifetimeMs, iso: new Date(lifetimeMs).toISOString() },
-    { ms: Date.parse(template.expires_at), iso: template.expires_at },
-  ]);
+  // dispatcher. expires_at is established through the single effective-expiry
+  // hook: the earliest of the requested ceiling, this deployment's
+  // `max_mission_lifetime_s`, the template's own expiry, and
+  // `created_at + per_instance_lifetime_s`, the addend measured from the exact
+  // instant the instance commits.
+  const expiresAt = kernel.resolveEffectiveExpiry({
+    requested: input.intent.expires_at,
+    createdAt: nowIso,
+    ceilings: {
+      template: {
+        expiresAt: template.expires_at,
+        instanceLifetimeS: template.per_instance_lifetime_s,
+      },
+    },
+  });
   const id = newMissionId();
   const templateRef: TemplateRef = {
     id: template.id,

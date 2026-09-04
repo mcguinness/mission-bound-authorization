@@ -14,13 +14,15 @@ import {
   createChildMission,
   GateError,
   MissionKernel,
-  validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
-const now = () => new Date("2026-07-01T00:00:00Z");
+// A mutable clock: a Mission can no longer be created already expired, so the
+// expired-gate arm advances this past a Mission that was live when it committed.
+let clock = new Date("2026-07-01T00:00:00Z");
+const now = () => clock;
 const PARENT_EXP = "2027-01-01T00:00:00Z";
 
 /** Restates the ceiling's Common Constraints so a subset probe is attributable. */
@@ -42,6 +44,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  clock = new Date("2026-07-01T00:00:00Z");
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
@@ -54,7 +57,7 @@ beforeEach(() => {
 
 const approve = (over: Record<string, unknown> = {}) =>
   kernel.approve({
-    intent: validateMissionIntent(
+    intent: kernel.validateIntent(
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
         target_resources: [RESOURCE],
@@ -89,7 +92,9 @@ describe("kernel.gateActive (@spec mission#lifecycle)", () => {
   });
 
   it("an expired mission throws GateError (mission_expired)", () => {
-    const r = approve({ expires_at: "2020-01-01T00:00:00Z" });
+    const r = approve({ expires_at: "2026-07-01T01:00:00Z" });
+    expect(kernel.gateActive(r.id).state).toBe("active");
+    clock = new Date("2026-07-01T02:00:00Z");
     expect(() => kernel.gateActive(r.id)).toThrow(GateError);
     expect(() => kernel.gateActive(r.id)).toThrow(/expired/);
   });
@@ -98,7 +103,7 @@ describe("kernel.gateActive (@spec mission#lifecycle)", () => {
     const parent = approve();
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
-      intent: validateMissionIntent(
+      intent: kernel.validateIntent(
         JSON.stringify({
           goal: "Read Acme invoices",
           target_resources: [RESOURCE],

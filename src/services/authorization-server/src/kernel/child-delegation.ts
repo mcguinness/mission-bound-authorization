@@ -418,11 +418,15 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   }
 
   // @spec child-delegation#attenuation — the child's expires_at MUST NOT be later
-  // than the parent's (clamp; mirrors createExpansion's approved_until clamp).
-  const expiresAt =
-    Date.parse(input.intent.expires_at) <= Date.parse(parent.expires_at)
-      ? input.intent.expires_at
-      : parent.expires_at;
+  // than the parent's. Established through the single effective-expiry hook, so
+  // the parent bound composes with this deployment's own `max_mission_lifetime_s`
+  // and with the requested ceiling, all measured from the ONE creation instant
+  // (`nowIso`) the child record commits as its `created_at`.
+  const expiresAt = kernel.resolveEffectiveExpiry({
+    requested: input.intent.expires_at,
+    createdAt: nowIso,
+    ceilings: { parent: parent.expires_at },
+  });
 
   const parentRef: ParentRef = {
     id: parent.id,
