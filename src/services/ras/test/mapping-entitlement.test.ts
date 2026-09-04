@@ -14,13 +14,17 @@
 
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
-import { type LocalMappingPolicy, type LocalPrincipalMapping } from "@mission/core";
+import { type AuthorityEntry, type LocalMappingPolicy, type LocalPrincipalMapping } from "@mission/core";
 import { ID_JAG_TYP, ResourceAuthorizationServer, type RasConfig } from "../src/index.js";
 
 const AS_ISS = "https://as.example.test";
 const RAS_ISS = "https://ras.example.test";
 const IDP_ISS = "https://idp.example.test"; // mission.subject's own issuer, distinct from AS_ISS
 const AUDIENCE = "https://saas.example.test/mcp";
+const DEFAULT_CEILING: AuthorityEntry[] = [
+  { type: "mission_resource_access", resource: AUDIENCE, actions: ["invoices.read", "journal-entries.write"] },
+  { type: "mission_resource_access", resource: "https://other.example.test/mcp", actions: ["reports.read"] },
+];
 const GRANT_SUB = "svc-acct-42"; // the grant's own top-level `sub`
 const IDP_SUB = "alice"; // mission.subject.sub
 const LOCAL_SUB = "local-alice";
@@ -65,7 +69,7 @@ interface GrantOverrides {
   missionAuthorityHash?: string | null; // null = omit entirely, "" = present but empty (malformed)
   identityContinuationHandle?: string;
   exp?: number; // absolute epoch seconds
-  /** The delegated set the grant carries; defaults to the empty array. */
+  /** The delegated set the grant carries; defaults to one covered entry. */
   authorizationDetails?: unknown;
 }
 
@@ -79,7 +83,7 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
   }
   const payload: Record<string, unknown> = {
     mission,
-    authorization_details: overrides.authorizationDetails ?? [],
+    authorization_details: overrides.authorizationDetails ?? [DEFAULT_CEILING[0]],
     cnf: { jkt: clientJkt },
     ...(overrides.sub !== null ? { sub: overrides.sub ?? GRANT_SUB } : {}),
     client_id: "ap-agent",
@@ -107,6 +111,8 @@ beforeAll(async () => {
 async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizationServer> {
   const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
   return new ResourceAuthorizationServer({
+    localCeiling: DEFAULT_CEILING,
+    localPolicyVersion: "test-local-policy-1",
     issuer: RAS_ISS,
     trustedIssuers: { [AS_ISS]: { keys: [asPub as never] } },
     signKey: rasKeys.privateKey,
@@ -119,6 +125,91 @@ async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizati
     ...config,
   });
 }
+
+describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)", () => {
+  const delegated: AuthorityEntry = {
+    type: "mission_resource_access", resource: AUDIENCE,
+    actions: ["invoices.read", "journal-entries.write"],
+    constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+  };
+  const details = (token: string) => JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString()).authorization_details;
+
+  it("a covering ceiling preserves the delegated entry byte-identically", async () => {
+    const server = await ras();
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [delegated] }), clientJkt);
+    expect(details(result.access_token)).toEqual([delegated]);
+  });
+
+  it("a local resource ceiling drops the other resource", async () => {
+    const server = await ras({ localCeiling: [DEFAULT_CEILING[0]!] });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: DEFAULT_CEILING }), clientJkt);
+    expect(details(result.access_token)).toEqual([DEFAULT_CEILING[0]]);
+  });
+
+  it("narrows one multi-action entry to the surviving action without dropping its constraints", async () => {
+    const server = await ras({ localCeiling: [{ ...delegated, actions: ["invoices.read"] }] });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [delegated] }), clientJkt);
+    expect(details(result.access_token)).toEqual([{ ...delegated, actions: ["invoices.read"] }]);
+  });
+
+  it("a split ceiling covers each retained action without requiring one entry to cover both", async () => {
+    const server = await ras({ localCeiling: delegated.actions.map(action => ({ ...delegated, actions: [action] })) });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [delegated] }), clientJkt);
+    expect(details(result.access_token)).toEqual([delegated]);
+  });
+
+  it("a lower amount ceiling drops the too-broad entry rather than removing its restriction", async () => {
+    const server = await ras({ localCeiling: [{ ...delegated, constraints: { max_amount: { amount: "100.00", currency: "USD" } } }, DEFAULT_CEILING[1]!] });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [delegated, DEFAULT_CEILING[1]] }), clientJkt);
+    expect(details(result.access_token)).toEqual([DEFAULT_CEILING[1]]);
+  });
+
+  it("an empty intersection refuses without consuming the grant, which remains redeemable after a policy change", async () => {
+    const ceiling = [DEFAULT_CEILING[1]!];
+    const server = await ras({ localCeiling: ceiling });
+    const grant = await mintGrant({ authorizationDetails: [delegated] });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    ceiling.splice(0, ceiling.length, DEFAULT_CEILING[0]!);
+    const result = await server.redeem(grant, clientJkt);
+    expect(details(result.access_token)).toEqual([delegated]);
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("a binding-free ceiling preserves issuer bindings only for retained actions", async () => {
+    const bindings = delegated.actions.map(action => ({ action, tool_id: action, source_uri: "https://catalog.test", source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"), operation_ref: action }));
+    const server = await ras({ localCeiling: [{ ...delegated, actions: ["invoices.read"] }] });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [{ ...delegated, capability_sources: bindings }] }), clientJkt);
+    expect(details(result.access_token)).toEqual([{ ...delegated, actions: ["invoices.read"], capability_sources: [bindings[0]] }]);
+  });
+
+  it("a continuation grant is narrowed by the same destination policy", async () => {
+    const server = await ras({ localCeiling: [{ ...delegated, actions: ["invoices.read"] }] });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [delegated], identityContinuationHandle: "ich-762", sub: "aud-local-sub" }), clientJkt);
+    expect(details(result.access_token)).toEqual([{ ...delegated, actions: ["invoices.read"] }]);
+  });
+
+  it("entitlement then ceiling compose to an empty-set refusal", async () => {
+    const server = await ras({
+      localCeiling: [{ ...delegated, actions: ["journal-entries.write"] }],
+      entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString(), authority: [{ resource: AUDIENCE, actions: ["invoices.read"] }] }) },
+    });
+    await expect(server.redeem(await mintGrant({ authorizationDetails: [delegated] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("malformed or unsupported grant authority refuses rather than minting verbatim", async () => {
+    const server = await ras();
+    for (const authority of [{}, [], [{ ...delegated, actions: "invoices.read" }], [{ ...delegated, constraints: { tenant: "unknown-constraint" } }]]) {
+      await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    }
+  });
+
+  it("absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup", async () => {
+    for (const localCeiling of [undefined, [], [{}], [{ ...delegated, capability_sources: [] }]]) {
+      await expect(ras({ localCeiling } as unknown as Partial<RasConfig>)).rejects.toThrow("RAS local policy");
+    }
+    await expect(ras({ localPolicyVersion: "" })).rejects.toThrow("RAS local policy");
+  });
+});
 
 describe("RAS co-resolution: base grant (@spec cross-domain#origin-principal-mapping)", () => {
   it("co-resolves the grant's own (iss, sub) and mission.subject to one local principal, mints it as sub, and preserves mission.subject unchanged", async () => {

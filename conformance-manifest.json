@@ -17370,6 +17370,120 @@
    "notes": "#539 stage 2. The quoted clause's tenant/audience-scope disjunct is NOT exercised: this codebase has no tenant dimension, and while LocalPrincipalMapping.audience exists and is consulted by resolveLocalPrincipal, no test here specifically proves an audience-scoped mismatch is refused (kept partial for that reason). Missing/ambiguous/disabled/stale/future-dated are each covered at both entry points (cross-org endpoint, cross-component; RAS, unit)."
   },
   {
+   "id": "cross-domain.resource-as.local-policy-bound",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST bound the issued `authorization_details` by what the cross-domain grant conveyed. It MUST apply its own local authorization policy in addition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > .",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a covering ceiling preserves the delegated entry byte-identically",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a local resource ceiling drops the other resource",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > narrows one multi-action entry to the surviving action without dropping its constraints",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a split ceiling covers each retained action without requiring one entry to cover both",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a lower amount ceiling drops the too-broad entry rather than removing its restriction",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > an empty intersection refuses without consuming the grant, which remains redeemable after a policy change",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a binding-free ceiling preserves issuer bindings only for retained actions",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a continuation grant is narrowed by the same destination policy",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > entitlement then ceiling compose to an empty-set refusal",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > malformed or unsupported grant authority refuses rather than minting verbatim",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "cross-domain.resource-as.derivation-record",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "SHOULD record, per minted local token, both sides of the derivation: the consumed grant's `jti` and conveyed `authorization_details`, and the local token's own identifier or digest (`jti`), `iss`, `aud`, `iat`, `exp`, and issued `authorization_details`.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Each minted local token has an input/output derivation record with consumed grant and local-token identifiers and authority."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#762 deliberately separates this from the ceiling fix: the mint currently supplies neither a local JTI nor this evidence record."
+  },
+  {
    "id": "cross-domain.dual-axis.entitlement-consulted",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "dual-axis",
@@ -17384,10 +17498,10 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance"
+    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance. RAS minting additionally intersects the result per action with its REQUIRED configured ceiling, preserves constraints and retained-action provenance, and refuses an empty result before consuming the grant."
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
@@ -17520,9 +17634,63 @@
      "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > an entitlement entitled to the read alone narrows the local token, so the read permits and the delegated journal write is refused",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > .",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a covering ceiling preserves the delegated entry byte-identically",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a local resource ceiling drops the other resource",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > narrows one multi-action entry to the surviving action without dropping its constraints",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a split ceiling covers each retained action without requiring one entry to cover both",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a lower amount ceiling drops the too-broad entry rather than removing its restriction",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > an empty intersection refuses without consuming the grant, which remains redeemable after a policy change",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a binding-free ceiling preserves issuer bindings only for retained actions",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a continuation grant is narrowed by the same destination policy",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#539 stage 2: closes the confirmed \"no entitlement lookup at all\" gap in cross-org-grant.ts and adds the same check to the RAS (previously absent at both entry points). entitlement and entitlementStalenessBoundSeconds are now REQUIRED CrossOrgOptions/RasConfig fields (a compile-time fail-closed guarantee, not a runtime fail-closed-on-unconfigured default): the only construction sites are this test file, services/ras/test/mapping-entitlement.test.ts, src/services/mcp-saas/test/cross-domain.test.ts, src/services/authorization-server/test/continuation-grant.test.ts, and src/demo/src/stack.ts (the live demo wiring), all updated. #744 adds the action- and resource-scoped grain: an OPTIONAL, additive `authority` member on EntitlementObservation carrying the mapped principal's currently entitled (resource, actions) set. Absent, every deployment and every pre-existing row behaves exactly as before (regression-guarded at each consumer). Present, mission-core's shared narrowToEntitledAuthority intersects it with the delegated set per action on exact resource matching (no wildcard or prefix form), and all three consumers carry the surviving subset forward: the Cross-Org adapter mints it and records it as output_authority (no evidence schema change), the RAS mints it on base and continuation grants alike, and the PDP folds the (audience, action) check into entitlementCurrent. Only an empty intersection refuses, with the same non-oracular errors as before (invalid_grant at the RAS and Cross-Org, principal_mapping_failed at the PDP); no new denial reason. Kept partial for one narrower remaining reason: the RAS mints from the grant with no local-ceiling or deployment-policy intersection at all, so the quoted clause's third bound is demonstrated at the Cross-Org adapter (localCeiling) and the PDP (policy view and FGA) but not at that entry point. The audience-wide caveat that previously held this row partial no longer applies."
+   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The existing SaaS cross-component read-permits/write-refuses test below demonstrates the resource-policy term at this lifetime-bounded token-only estate. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. Per-token derivation evidence remains separately tracked as SHOULD/todo."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
