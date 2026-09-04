@@ -4616,6 +4616,11 @@ where the AS established a safe scope projection for it
 ({{scope-projection}}). This note names a starting point and creates
 no new conformance class.
 
+A Mission Issuer MAY instead reach that starting point through
+configured-mapping mode, the low-integration on-ramp
+({{authorization-derivation}}), which is equally conforming and adds
+no conformance class.
+
 An implementation conforms in one of three roles.
 
 A **Mission Issuer** (the Authorization Server) implements the core
