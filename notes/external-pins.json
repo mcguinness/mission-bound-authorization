@@ -5,14 +5,14 @@
       "id": "AAUTH",
       "kind": "git",
       "repo": "dickhardt/AAuth",
-      "ref": "PR #73 merged",
-      "commit": "f1569261d0b9d179324f1665db1597f81cd0a851",
+      "ref": "dickhardt/AAuth editor's copy at commit 055b7a47a3f00b6b0dcf24fd06fefbe4aa76d1dd (2026-09-03), refreshed at #445 (A19)",
+      "commit": "055b7a47a3f00b6b0dcf24fd06fefbe4aa76d1dd",
       "path": "draft-hardt-oauth-aauth-protocol.md",
-      "sha256": "041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6",
+      "sha256": "c984278f21e3931f0cc272d6768b84bcc471f8ab4a1a1922dd92940a91df7e19",
       "status": "established",
-      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin",
+      "note": "Refreshes the family's AAuth pin from f1569261d0b9d179324f1665db1597f81cd0a851 (\"PR #73 merged\") to the editor's-copy head at 2026-09-03, for issue #445 (A19). Verification performed: the raw file at this commit was fetched via the repository contents API (path=draft-hardt-oauth-aauth-protocol.md, blob sha af6e554fa680e1576e98e6831e04d3fa6f75e318, 316302 bytes) and hashed locally to the sha256 recorded here; before the bump, the prior entry's digest (041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6) was reproduced by the identical procedure at f1569261 as a control, so both digests come from one method. Commit disclosure: 055b7a47a3f00b6b0dcf24fd06fefbe4aa76d1dd is the editor's-copy head whose tree carries the pinned blob, not a commit that touched the pinned path (its own subject is the upstream's issue-archive publishing workflow). The last commit touching draft-hardt-oauth-aauth-protocol.md at or before this head is fc5e972c58d42a4f899d43acba39995081b87712 (\"August issue batch: #87, #92, #94, #95, #97 (#99)\", 2026-08-14), confirmed via the commits API (path=draft-hardt-oauth-aauth-protocol.md, sha=055b7a47, per_page=1) and preserved here as supplementary detail; the head is what the family cites, the content digest is what binds, and pin_id is the same under either commit. Deltas since f1569261, with family impact: the resource token claim person_token_jti is renamed presented_jti (upstream issue #95), the only delta reaching family text, applied in draft-mcguinness-mission-aauth's stripping-detection clause; a PS MUST retain a record of each person token it issues, which is the obligation that clause's resolve-and-compare rule rests on; unknown_person_token is the rejection for a presented_jti the PS cannot resolve; the mission endpoint gains defined error responses (#mission-endpoint-errors) answering identically for a mission that does not exist and one the agent does not own; a resource MAY deliver requirement=auth-token as a 202 Accepted deferred response; accept_signature_algs is added as an OPTIONAL common metadata field; and the AAuth Access Mode Value Registry is established. None contradicts a family draft: the expires_at text is byte-identical across the two commits, so draft-mcguinness-aauth-mission-expiry carries the pin without a substantive change, and the Access Mode Value Registry covers access_mode values only, so draft-mcguinness-mission-aauth-management's no-new-registry statement survives. Retained disclosure: datatracker -10 is divergent (pre-person-token); disclosed, not the pin. -10 (2026-08-06) is still the latest published revision at this pin, confirmed via the datatracker document API, so the binding's \"-11 revision in preparation\" sentence remains accurate. notes/bundle-manifest.v0-preview.1.json does not consume AAUTH (its own external_pins_note records why), so no bundle copy changes.",
       "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
-      "pin_id": "AAUTH@041f6a1f0ece"
+      "pin_id": "AAUTH@c984278f21e3"
     },
     {
       "id": "ARAP",
