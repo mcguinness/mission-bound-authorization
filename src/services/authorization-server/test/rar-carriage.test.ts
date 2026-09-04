@@ -471,6 +471,7 @@ describe("end-to-end issuance under the new carriage", () => {
       access_token: string;
       authorization_details: AuthorityEntry[];
       mission_id?: string;
+      mission_expires_at?: string;
     };
 
     // The granted echo is the ISSUER-DERIVED set (a same-type subset of the
@@ -502,6 +503,16 @@ describe("end-to-end issuance under the new carriage", () => {
     // surface) reports proposal_hash beside state.
     const missionId = claims.mission.id as string;
     const record = as.kernel.get(missionId);
+    // @spec mission#grant-binding (issue #647) — the DIRECT-creation success
+    // response, the body that first delivers the new Mission's credential,
+    // carries both common members: the identifier, and the COMMITTED effective
+    // expiry verbatim off the record (not `expires_in`, which is the access
+    // token's own lifetime).
+    expect(body.mission_id).toBe(missionId);
+    expect(body.mission_expires_at).toBe(record?.expires_at);
+    expect(Date.parse(body.mission_expires_at as string)).toBeLessThanOrEqual(
+      Date.parse(TASK_INTENT.expires_at),
+    );
     expect(record?.proposed_authority).toEqual(OVER_ASK);
     expect(record?.proposal_hash).toBe(proposalHash(ISSUER, OVER_ASK as never));
     const introspection = await fetch(`${ISSUER}/introspect`, {

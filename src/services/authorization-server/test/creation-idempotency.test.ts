@@ -249,17 +249,31 @@ describe("child-creation idempotency (@spec child-delegation#creation-request-id
     const crid = crypto.randomUUID();
 
     const first = await tokenRequest(childParams(parent.accessToken, crid));
-    const b1 = (await first.json()) as { access_token: string; mission_id: string };
+    const b1 = (await first.json()) as {
+      access_token: string;
+      mission_id: string;
+      mission_expires_at: string;
+    };
     expect(first.status, JSON.stringify(b1)).toBe(200);
 
     // The lost-response retry: identical request, same creation_request_id.
     const retry = await tokenRequest(childParams(parent.accessToken, crid));
-    const b2 = (await retry.json()) as { access_token: string; mission_id: string };
+    const b2 = (await retry.json()) as {
+      access_token: string;
+      mission_id: string;
+      mission_expires_at: string;
+    };
     expect(retry.status, JSON.stringify(b2)).toBe(200);
 
     // The SAME child, and (the artifact still being valid) the SAME grant.
     expect(b2.mission_id).toBe(b1.mission_id);
     expect(b2.access_token).toBe(b1.access_token);
+    // @spec mission#grant-binding (issue #647) — a creation replay returns the
+    // COMMITTED effective value unchanged: recovery is DELIVERY, so the
+    // recovered body re-reads the stored record rather than recomputing an
+    // expiry from the retry's own, later clock.
+    expect(b1.mission_expires_at).toBe(as.kernel.get(b1.mission_id)?.expires_at);
+    expect(b2.mission_expires_at).toBe(b1.mission_expires_at);
 
     // Creation-side effects happened ONCE: one child under the parent (fan-out
     // accounting counts non-terminal children), one activating commit (Child
@@ -469,20 +483,38 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       deferral_code: ob.deferral_code as string,
     });
-    const polled = (await poll.json()) as { access_token: string };
+    const polled = (await poll.json()) as {
+      access_token: string;
+      mission_id?: string;
+      mission_expires_at?: string;
+    };
     expect(poll.status, JSON.stringify(polled)).toBe(200);
     const successorId = (decodeJwt(polled.access_token) as { mission: { id: string } }).mission.id;
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    // @spec mission#grant-binding, expansion#successor-expiry (issue #647) —
+    // expansion COMPLETES a creation, so the resolving poll carries the
+    // successor's identifier and its committed effective expiry.
+    expect(polled.mission_id).toBe(successorId);
+    expect(polled.mission_expires_at).toBe(as.kernel.get(successorId)?.expires_at);
 
     // THE LOOKUP-ORDER RULE: the retry recovered here is exactly the one whose
     // predecessor moved to `superseded` when the first attempt succeeded; the
     // idempotency lookup runs BEFORE the predecessor lifecycle gate, so the
     // completed operation is recovered instead of "predecessor is superseded".
     const retry = await tokenRequest(expansionParams(pred.accessToken, crid, widened));
-    const rb = (await retry.json()) as { access_token?: string; error?: string };
+    const rb = (await retry.json()) as {
+      access_token?: string;
+      error?: string;
+      mission_id?: string;
+      mission_expires_at?: string;
+    };
     expect(retry.status, JSON.stringify(rb)).toBe(200);
     // The stored delivery artifact is still valid: the SAME successor token.
     expect(rb.access_token).toBe(polled.access_token);
+    // @spec mission#grant-binding — and the recovery body returns the SAME
+    // committed effective value the completing body carried.
+    expect(rb.mission_id).toBe(successorId);
+    expect(rb.mission_expires_at).toBe(polled.mission_expires_at);
     expect((decodeJwt(rb.access_token as string) as { mission: { id: string } }).mission.id).toBe(successorId);
 
     // Recovery never re-created: exactly one activating commit for the successor.

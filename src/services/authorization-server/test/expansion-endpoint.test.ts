@@ -153,8 +153,8 @@ const authority = (actions: string[]) => [
 ];
 
 // @spec mission#submission-via-par — the wire value is the Submission envelope.
-const intentJson = (goal: string, _actions: string[]): string =>
-  JSON.stringify({ intent: { goal, target_resources: [RESOURCE], expires_at: FAR_EXP } });
+const intentJson = (goal: string, _actions: string[], expiresAt: string = FAR_EXP): string =>
+  JSON.stringify({ intent: { goal, target_resources: [RESOURCE], expires_at: expiresAt } });
 
 /**
  * Full PAR -> interactive approval -> code -> token dance yielding an ACTIVE
@@ -228,13 +228,15 @@ async function expandViaExchange(
   goal: string,
   actions: string[],
   creationRequestId?: string,
+  /** The widening submission's requested ceiling; FAR_EXP unless overridden. */
+  expiresAt?: string,
 ): Promise<Response> {
   return tokenRequest({
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
     subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    mission_intent: intentJson(goal, actions),
+    mission_intent: intentJson(goal, actions, expiresAt),
     authorization_details: JSON.stringify(authority(actions)),
     // @spec expansion#creation-request-id — REQUIRED on every initiation.
     creation_request_id: creationRequestId ?? crypto.randomUUID(),
@@ -450,6 +452,8 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
       access_token?: string;
       token_type?: string;
       authorization_details?: Array<{ actions: string[] }>;
+      mission_id?: string;
+      mission_expires_at?: string;
       error?: string;
     };
     expect(poll.status, JSON.stringify(pb)).toBe(200);
@@ -470,6 +474,40 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(as.kernel.get(successorId)?.predecessor).toBe(pred.missionId);
     // The predecessor is superseded on the successor's first redemption.
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    // @spec mission#grant-binding, expansion#successor-expiry (issue #647) —
+    // the resolving poll IS the creation-completing body, so it carries the
+    // successor's identifier and its committed effective expiry, verbatim.
+    expect(pb.mission_id).toBe(successorId);
+    expect(pb.mission_expires_at).toBe(as.kernel.get(successorId)?.expires_at);
+  });
+
+  it("@spec expansion#successor-expiry: the successor is never later than the predecessor absent a recorded extension", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const predRecord = as.kernel.get(pred.missionId);
+    // The widening submission asks for a ceiling well BEYOND the predecessor's
+    // own expiry. Expansion adds authority; it is not a lifetime-extension
+    // mechanism, so the predecessor's expiry binds and the successor cannot
+    // outlive the Mission it replaces.
+    const opened = await expandViaExchange(
+      pred.accessToken,
+      "Widen and ask for a longer horizon",
+      ["payments:invoice.read", "payments:remittance.send"],
+      undefined,
+      "2030-01-01T00:00:00Z",
+    );
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    approveDeferral(ob.deferral_code as string);
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { mission_id?: string; mission_expires_at?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    const successor = as.kernel.get(pb.mission_id as string);
+    expect(successor?.predecessor).toBe(pred.missionId);
+    expect(successor?.expires_at).toBe(predRecord?.expires_at);
+    expect(Date.parse(successor!.expires_at)).toBeLessThan(Date.parse("2030-01-01T00:00:00Z"));
+    // The completing body reports exactly that committed value.
+    expect(pb.mission_expires_at).toBe(successor?.expires_at);
   });
 
   it("check (a): a predecessor REVOKED during the deferred window fails completion (access_denied) — a deferred approval MUST NOT bypass termination", async () => {

@@ -24,13 +24,26 @@
  * test's input too, instead of leaving a stale copy green.
  */
 
-import { describe, expect, it } from "vitest";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it, vi } from "vitest";
 import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, DERIVATION_POLICY } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
 import { deriveAuthoritySet, validateAuthorityProposal, validateMissionIntent } from "../src/index.js";
 
 const ISS = "https://as.test";
 const MISSION_ID = "msn_shipped_config_test";
+
+/** The repo-root `config/` directory the reference deployment ships. */
+const SHIPPED_CONFIG_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "config",
+);
 
 /** The demo's own PAR proposal (@mission/demo-data's DEMO_AGENT_PROPOSAL, agent-run.ts's single source), validated. */
 const DEMO_PROPOSAL = validateAuthorityProposal(JSON.stringify(DEMO_AGENT_PROPOSAL), [CANONICAL_RESOURCE]);
@@ -130,3 +143,58 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     expect(decision.context.denial_reason).toBe("constraint_exceeded");
   });
 });
+
+/**
+ * @spec mission#mission-record (issue #647) — the shipped deployment ceiling on
+ * a Mission's granted lifetime, and the loader that validates it. The reference
+ * deployment declares NO ceiling of its own (`null`, mirroring
+ * `derivation_limit_ceiling`), so the demo's observable Mission lifetimes are
+ * exactly the requested ones; the narrowing arm is proven with an injected
+ * ceiling in `kernel.test.ts`. What must not regress is the VALIDATION: a
+ * lifetime that is not a positive integer is a fail-fast configuration error,
+ * never a silently-ignored member.
+ */
+describe("config/policy.json max_mission_lifetime_s (@spec mission#mission-record)", () => {
+  /** Load demo-data afresh against a copy of the shipped config whose
+   *  policy.json carries `value` for max_mission_lifetime_s. */
+  async function loadWith(value: unknown): Promise<{ max_mission_lifetime_s: number | null }> {
+    const dir = mkdtempSync(join(tmpdir(), "mission-policy-"));
+    cpSync(SHIPPED_CONFIG_DIR, dir, { recursive: true });
+    const policy = JSON.parse(readFileSync(join(dir, "policy.json"), "utf8")) as Record<string, unknown>;
+    if (value === undefined) delete policy.max_mission_lifetime_s;
+    else policy.max_mission_lifetime_s = value;
+    writeFileSync(join(dir, "policy.json"), JSON.stringify(policy));
+    const previous = process.env.MISSION_CONFIG_DIR;
+    process.env.MISSION_CONFIG_DIR = dir;
+    vi.resetModules();
+    try {
+      const mod = (await import("@mission/demo-data")) as typeof import("@mission/demo-data");
+      return mod.DERIVATION_POLICY;
+    } finally {
+      if (previous === undefined) delete process.env.MISSION_CONFIG_DIR;
+      else process.env.MISSION_CONFIG_DIR = previous;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("the shipped value loads: this deployment declares no lifetime ceiling", () => {
+    expect(DERIVATION_POLICY.max_mission_lifetime_s).toBeNull();
+  });
+
+  it("an absent member means the same thing as an explicit null", async () => {
+    expect((await loadWith(undefined)).max_mission_lifetime_s).toBeNull();
+  });
+
+  it("a positive integer loads as this deployment's ceiling, in seconds", async () => {
+    expect((await loadWith(2_592_000)).max_mission_lifetime_s).toBe(2_592_000);
+  });
+
+  it("zero, a negative, a non-integer, or a non-number is a ConfigError", async () => {
+    for (const bad of [0, -1, 1.5, "3600"]) {
+      await expect(loadWith(bad)).rejects.toThrow(
+        /policy.max_mission_lifetime_s must be an integer >= 1, or null/,
+      );
+    }
+  });
+});
+
