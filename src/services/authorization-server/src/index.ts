@@ -619,6 +619,17 @@ export async function buildAuthorizationServer(opts: {
   // @spec mission#downgrade-by-omission — the Mission-governed demo client:
   // registered so the AS-side anti-downgrade hook is exercisable end to end.
   const governed = await seedGovernedClient();
+  // @spec async-delegation (issue #651) — TEST-ONLY registrations compose ONTO
+  // the shipped registry. A duplicate `client_id` would SHADOW a shipped
+  // registration rather than add to it (silently widening what the demo
+  // ships), so it is refused outright.
+  const shippedClientIds = new Set([agent, child, governed].map((c) => c.metadata.client_id));
+  for (const testClient of opts.testClients ?? []) {
+    const id = String(testClient.client_id);
+    if (shippedClientIds.has(id)) {
+      throw new Error(`testClients MUST NOT redefine the config-shipped client ${id}`);
+    }
+  }
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`

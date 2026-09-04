@@ -1442,6 +1442,17 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("not allowed for this client");
   });
+
+  it("the TEST-ONLY testClients seam refuses to redefine a config-shipped client", async () => {
+    // The seam ADDS registrations; a duplicate client_id would silently widen
+    // what config/clients.json ships, which is the block the negative above pins.
+    await expect(
+      buildAuthorizationServer({
+        issuer: `http://localhost:${PORT + 1}`,
+        testClients: [{ client_id: "subagent-invoice-extractor", grant_types: [TOKEN_EXCHANGE_GRANT_TYPE] }],
+      }),
+    ).rejects.toThrow(/MUST NOT redefine the config-shipped client subagent-invoice-extractor/);
+  });
 });
 
 describe("async-delegation discovery (@spec async-delegation#discovery)", () => {
