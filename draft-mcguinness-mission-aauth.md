@@ -30,12 +30,12 @@ normative:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
     target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
-    refcontent: "Editor's copy, commit 055b7a4"
+    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026-09-03
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -178,7 +178,7 @@ Requires: Mission Substrate Requirements.
 <!-- family-status: END -->
 
 This binding is written against the AAuth editor's copy at commit
-`055b7a4` (2026-09-03); the latest published revision is -10
+`fc5e972c` (2026-08-14); the latest published revision is -10
 (2026-08-06).
 
 # Conventions and Terminology {#conventions-and-terminology}
