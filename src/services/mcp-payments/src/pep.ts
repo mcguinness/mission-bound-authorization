@@ -422,9 +422,15 @@ export interface PepDeps {
      * Mission, "evaluated from the deployment's actor records rather than
      * from a Mission-bound token's `act` chain": resolved FRESH per
      * request (never a token's own `act` chain) and carried onto the PDP
-     * request as `context.mission_join.delegate_depth`. Absent (including
-     * an absent hook): the PDP treats depth as unbounded, so a
-     * `max_depth`-bearing delegate policy or entry denies closed.
+     * request as `context.mission_join.delegate_depth`. `ActorRecords`
+     * (`actor-records.ts`) is this deployment's own record store and
+     * satisfies this hook; its `resolveDepth` is keyed on the canonical
+     * (issuer, id) pair and takes the Mission's own `client_id` as depth 0.
+     * Absent (including an absent hook): the delegate has no actor record
+     * under the Mission, so the PDP denies `mission_mismatch` whether or
+     * not any `max_depth` is declared. An unconfigured deployment therefore
+     * fails closed on the delegate disposition; the direct-client
+     * disposition consults no depth at all.
      */
     resolveDelegateDepth?: (clientId: string, missionId: string) => number | undefined;
   };

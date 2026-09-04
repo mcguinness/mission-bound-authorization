@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 import type { AuthorityEntry, Fga, MissionView } from "@mission/pdp";
 import {
+  ActorRecords,
   CANONICAL_RESOURCE,
   createEphemeralEvidenceKeys,
   EvidenceStore,
@@ -127,11 +128,19 @@ describe("baseline MAS Join: successful join (@spec authority-server#mission-joi
 
   it("permits an authorized delegate and narrows the effective authority to the delegable subset", async () => {
     const delegateView: MissionView = { ...view, authority_set: [DIRECT_ENTRY, DELEGABLE_ENTRY] };
+    // @spec authority-server#mission-join rule 5 — depth comes from the
+    // deployment's own actor records, and the delegate must have one: the
+    // entry here declares no max_depth, so before the absent-record rule
+    // this joined with no depth check at all.
+    const records = new ActorRecords();
+    records.record({ mission: REFERENCE, clientId: "delegate-client", delegatedBy: view.client_id });
     const pep = build(
       {
         masJoin: {
           delegatePolicy: { delegates: { "delegate-client": {} } },
           resolveOrdinaryAuthority: FULL_AUTHORITY,
+          resolveDelegateDepth: (clientId, mid) =>
+            records.resolveDepth({ issuer: ISSUER, id: mid }, clientId, view.client_id),
         },
       },
       delegateView,
@@ -189,7 +198,7 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
     expect(res.denial_reason).toBe("mission_mismatch");
   });
 
-  it("treats an unconfigured resolveDelegateDepth as unbounded depth, denying closed against a max_depth-bearing entry", async () => {
+  it("denies mission_mismatch with an unconfigured resolveDelegateDepth: a delegate with no actor record is not recorded as acting under the Mission", async () => {
     const pep = build(
       {
         masJoin: {
