@@ -105,6 +105,9 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       subject: SUBJECT,
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": {} } },
+      // A recorded depth, so this denies for the entry's own missing
+      // delegation member rather than for an absent actor record.
+      delegateDepth: 1,
     });
     expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
   });
@@ -121,6 +124,8 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       subject: SUBJECT,
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": {} } },
+      // Recorded, so the denial is allowed_delegates', not an absent record's.
+      delegateDepth: 1,
     });
     expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
   });
@@ -147,7 +152,7 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
     expect(result.ok).toBe(true);
   });
 
-  it("denies mission_mismatch when delegateDepth is absent and DelegatePolicy declares a maxDepth (#557 review point 1: absent depth is unbounded, not shallow)", () => {
+  it("denies mission_mismatch when delegateDepth is absent and DelegatePolicy declares a maxDepth (an absent actor record denies, it is not an unbounded depth)", () => {
     const result = resolveBaselineJoin({
       view: view({ authority_set: [DELEGABLE_ENTRY] }),
       subject: SUBJECT,
@@ -155,6 +160,41 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } },
     });
     expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+  });
+
+  it("denies mission_mismatch when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission", () => {
+    // No max_depth on the entry and none in the delegate policy: before the
+    // absent-record rule this delegate joined with no depth check at all.
+    const unboundedEntry: AuthorityEntry = {
+      type: MISSION_RESOURCE_ACCESS_TYPE,
+      resource: RESOURCE,
+      actions: [READ],
+      join_delegation: { allowed_delegates: ["delegate-a"] },
+    };
+    const result = resolveBaselineJoin({
+      view: view({ authority_set: [unboundedEntry] }),
+      subject: SUBJECT,
+      clientId: "delegate-a",
+      delegatePolicy: { delegates: { "delegate-a": {} } },
+    });
+    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+  });
+
+  it("joins that same no-max_depth delegable entry once an actor record supplies a depth", () => {
+    const unboundedEntry: AuthorityEntry = {
+      type: MISSION_RESOURCE_ACCESS_TYPE,
+      resource: RESOURCE,
+      actions: [READ],
+      join_delegation: { allowed_delegates: ["delegate-a"] },
+    };
+    const result = resolveBaselineJoin({
+      view: view({ authority_set: [unboundedEntry] }),
+      subject: SUBJECT,
+      clientId: "delegate-a",
+      delegatePolicy: { delegates: { "delegate-a": {} } },
+      delegateDepth: 4,
+    });
+    expect(result).toEqual({ ok: true, disposition: "delegate", authoritySet: [unboundedEntry] });
   });
 });
 
@@ -191,7 +231,7 @@ describe("resolveBaselineJoin: per-entry join_delegation.max_depth (@spec author
     expect(result).toEqual({ ok: true, disposition: "delegate", authoritySet: [SHALLOW_ENTRY] });
   });
 
-  it("excludes an entry with a finite max_depth when delegateDepth is absent (unbounded, not assumed shallow)", () => {
+  it("excludes an entry with a finite max_depth when delegateDepth is absent (an absent actor record denies)", () => {
     const result = resolveBaselineJoin({
       view: view({ authority_set: [SHALLOW_ENTRY] }),
       subject: SUBJECT,
@@ -255,11 +295,10 @@ describe("deriveJoinDelegation + resolveBaselineJoin: canonical loader compositi
   // call site lives in `src/demo/*`, outside vitest's `include` pattern, so
   // this is the only automated check of the composition. It matters here
   // specifically: a kernel `delegation` member is always concrete
-  // (`max_depth` is required, never optional), so every delegate entry
-  // populated this way now denies unless the caller also supplies
-  // `delegateDepth` -- a coupling introduced by wiring the adapter's output
-  // into the resolver, not by either the adapter or the per-entry check
-  // alone (#557 review point 3's "absent is unbounded" fail-closed rule).
+  // (`max_depth` is required, never optional). Every delegate entry denies
+  // unless the caller supplies `delegateDepth`, since rule 5 reads depth
+  // from the deployment's actor records and an absent record is not a
+  // record of this delegate acting under the Mission.
   const kernelEntry: AuthorityEntry = {
     type: MISSION_RESOURCE_ACCESS_TYPE,
     resource: RESOURCE,

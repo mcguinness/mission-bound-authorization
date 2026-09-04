@@ -337,6 +337,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       issued_token_type?: string;
       token_type?: string;
       mission_id?: string;
+      mission_expires_at?: string;
       parent?: { id: string; depth: number };
     };
     expect(res.status, JSON.stringify(body)).toBe(200);
@@ -352,6 +353,15 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     const child = as.kernel.get(body.mission_id as string);
     expect(child?.state).toBe("active");
     expect(child?.parent?.id).toBe(parent.missionId);
+    // @spec mission#grant-binding (issue #647) — the child-creation body, the
+    // response that first delivers the new Mission's credential, carries the
+    // COMMITTED effective expiry verbatim off the child record.
+    expect(body.mission_expires_at).toBe(child?.expires_at);
+    // @spec child-delegation#attenuation — and that value is never later than
+    // the parent's own expiry.
+    expect(Date.parse(child!.expires_at)).toBeLessThanOrEqual(
+      Date.parse(as.kernel.get(parent.missionId)!.expires_at),
+    );
     // @spec #child-client-identity — client_id == the child actor's sub.
     expect(child?.client_id).toBe("subagent-extractor");
 

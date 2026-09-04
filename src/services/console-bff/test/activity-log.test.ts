@@ -15,7 +15,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { MissionKernel, validateMissionIntent } from "@mission/authorization-server";
 import type { ContainmentEvidence } from "@mission/authorization-server";
 import type { DecisionEvidenceObject, EvidenceEnvelope, Evidence, ExecutionEvidenceObject, RefusalRecordObject } from "@mission/mcp-payments";
-import { EvidenceStore } from "@mission/mcp-payments";
+import { createDecisionEvidenceEmitter } from "@mission/pdp";
+import { buildEvidenceKeyResolver, EvidenceStore } from "@mission/mcp-payments";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { activityByTrace, AuthzError, buildActivityLog, ConsoleBff } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
@@ -429,23 +430,42 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
 
     // Two producer-retained stores, read in place (D32): a PEP store and an
     // egress store. The gate/PEP stay the sole writers; the BFF only reads.
+    // @spec runtime-evidence#decision-evidence-object (#741): the PDP emits
+    // and signs Decision Evidence; the PEP store verifies and retains it. The
+    // BFF reads the retained rows either way.
     const pdpKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
-    const pepStore = new EvidenceStore({ pdp: { kid: "pdp-test", key: pdpKeys.privateKey } });
-    const egressStore = new EvidenceStore();
-    await pepStore.recordDecision("pep", {
-      mission: {
-        id: missionId,
-        issuer: "https://as.test",
-        policy_view_id: "pv-1",
-        authority_hash: mission.authority_hash,
-      },
-      subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1" },
-      action: { name: "payments:invoice.read" },
-      audience: "https://payments.example",
-      evaluation_id: "dec_activity",
-      decision: "permit",
+    const AUDIENCE = "https://payments.example";
+    const EMITTER = "https://payments.example/mcp";
+    const emitter = createDecisionEvidenceEmitter({
+      signer: { kid: "pdp-test", key: pdpKeys.privateKey },
+      emitterId: EMITTER,
+      audience: AUDIENCE,
     });
+    const pepStore = new EvidenceStore(
+      undefined,
+      buildEvidenceKeyResolver([
+        { kid: "pdp-test", publicKey: pdpKeys.publicKey, role: "pdp", emitterId: EMITTER, audience: AUDIENCE },
+      ]),
+    );
+    const egressStore = new EvidenceStore();
+    const retained = await pepStore.retainDecision(
+      await emitter.emit({
+        mission: {
+          id: missionId,
+          issuer: "https://as.test",
+          policy_view_id: "pv-1",
+          authority_hash: mission.authority_hash,
+        },
+        subject: { id: "alice" },
+        resource: { type: "invoice", id: "inv-1" },
+        action: { name: "payments:invoice.read" },
+        audience: AUDIENCE,
+        evaluation_id: "dec_activity",
+        decision: "permit",
+        evaluated_at: new Date().toISOString(),
+      }),
+    );
+    expect(retained.retained).toBe(true);
     egressStore.record({
       kind: "egress",
       channel_class: "inference_api",

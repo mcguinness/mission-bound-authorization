@@ -14,14 +14,23 @@ import {
   compareAmounts,
   computeAnchor,
   type EntitlementObservation,
+  entitlementPermits,
   type EntitlementResolver,
   isValidAmount,
+  MISSION_ORIGIN_SUBJECT_TYP,
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
+import type {
+  DecisionEvidenceEmitter,
+  DecisionEvidenceObject,
+  RuntimeActionClass,
+  RuntimeConditions,
+  RuntimePrincipalMapping,
+} from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
 import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
 import {
@@ -227,6 +236,21 @@ export interface EvaluateOptions {
   /** For requestable denials: sign the PDP denial binding + the ARS endpoint. */
   requestable?: { sign: CryptoKey; kid: string; endpoint: string };
   /**
+   * @spec runtime-evidence#decision-evidence-object,
+   * runtime#agent-isolated-evidence-emission (#741) — the PDP's own Decision
+   * Evidence emission path: {@link evaluate} builds the record from the
+   * decision it just reached and signs it here, then returns the complete
+   * signed object at `context.decision_evidence`. Injected once at wiring,
+   * the same way `requestable` carries the PDP's denial-binding signer.
+   *
+   * There is deliberately no seam here for a caller to supply the record,
+   * the emitter identity, the decision, or the sequence position: the
+   * emitter owns all four. Absent, no Decision Evidence is emitted and a
+   * PEP that requires it refuses the action rather than executing an
+   * unevidenced decision.
+   */
+  evidence?: DecisionEvidenceEmitter;
+  /**
    * @spec runtime#state-freshness: "A runtime deployment MUST define the
    * Mission state source it trusts for each enforcement scope." A presented
    * `context.freshness.source` outside this set is untrusted, denied the
@@ -279,6 +303,34 @@ export interface EvaluateOptions {
   delegatePolicy?: DelegatePolicy;
 }
 
+/**
+ * @spec runtime-evidence#decision-evidence-object,
+ * runtime#agent-isolated-evidence-emission (#741, PR #753 review) — the
+ * decision options a component OUTSIDE the PDP's emission boundary supplies:
+ * everything {@link evaluate} needs except {@link EvaluateOptions.evidence}.
+ * The emission path is bound at PDP construction
+ * (`createDecisionPoint`, {@link ./decision-point.js}) and never travels
+ * through a caller's options object: an enforcement component that could put
+ * an emitter there holds the capability to have an arbitrary record signed
+ * under the decision point's identity, which is the defect this split closes.
+ */
+export type DecisionOptions = Omit<EvaluateOptions, "evidence">;
+
+/**
+ * The PDP's decision entry point as an enforcement component sees it: submit
+ * the evaluation request, receive the decision, with the PDP-built, PDP-signed
+ * record at `context.decision_evidence` when the decision point behind it
+ * emits one. This is the ONLY decision-side capability a PEP holds; it can ask
+ * for a decision, and it can verify and retain what comes back, but it cannot
+ * emit.
+ *
+ * The in-process implementation applies the caller's {@link DecisionOptions}
+ * (the Mission view, the FGA client, the deployment's policy hooks) to
+ * {@link evaluate}. A remote wrapper ignores them: the PDP server resolves its
+ * own options on its side of the channel.
+ */
+export type DecisionFn = (req: EvaluationRequest, opts: DecisionOptions) => Promise<Decision>;
+
 let decisionCounter = 0;
 function newDecisionId(): string {
   decisionCounter += 1;
@@ -294,10 +346,91 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (decision.context.denial_reason) {
         span.setAttribute("mission.denial_reason", String(decision.context.denial_reason));
       }
+      if (opts.evidence) {
+        decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision);
+      }
       return decision;
     } finally {
       span.end();
     }
+  });
+}
+
+/**
+ * @spec runtime-evidence#decision-evidence-object, #decision-evidence-integrity;
+ * runtime#agent-isolated-evidence-emission (#741) — build and sign the
+ * Decision Evidence for the decision just reached, and return the complete
+ * signed object for carriage at `context.decision_evidence`.
+ *
+ * Every member comes from this evaluation's own state: the request envelope
+ * the PDP validated, the Mission view it decided against, and the decision
+ * context it just produced. Carriage does not change treatment: the record
+ * is retrospective evidence of what the PDP decided, never authorization to
+ * act (@spec authzen#permit-binding-split).
+ */
+async function emitDecisionEvidence(
+  req: EvaluationRequest,
+  opts: EvaluateOptions,
+  emitter: DecisionEvidenceEmitter,
+  decision: Decision,
+): Promise<DecisionEvidenceObject> {
+  const { view } = opts;
+  // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
+  // runtime-evidence#evidence-pii — the decision context carries the RAW
+  // origin/local {iss, sub} pairs (an ephemeral, in-process decision
+  // contract); the SIGNED record must not. The PDP composed those pairs, so
+  // the PDP is what anchors them (the family anchor idiom, typ
+  // mission-origin-subject) before they are signed into a retained record.
+  const raw = decision.context.principal_mapping as
+    | {
+        origin: OriginPrincipal;
+        local: OriginPrincipal;
+        policy: { id: string; version: string };
+        observed_at: string;
+        valid_until: string;
+      }
+    | undefined;
+  const principal_mapping: RuntimePrincipalMapping | undefined = raw
+    ? {
+        origin: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, raw.origin as never),
+        local: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, raw.local as never),
+        policy: raw.policy,
+        observed_at: raw.observed_at,
+        valid_until: raw.valid_until,
+      }
+    : undefined;
+  return emitter.emit({
+    mission: {
+      id: view.id,
+      issuer: view.issuer,
+      policy_view_id: decision.context.policy_view_id as string,
+      authority_hash: view.authority_hash,
+    },
+    subject: {
+      id: req.subject.id,
+      ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
+    },
+    resource: { type: req.resource.type, id: req.resource.id },
+    action: { name: req.action.name },
+    audience: req.context.audience,
+    evaluation_id: decision.context.evaluation_id as string,
+    decision: decision.decision ? "permit" : "deny",
+    evaluated_at: opts.now().toISOString(),
+    ...(req.context.action_class !== undefined
+      ? { action_class: req.context.action_class as RuntimeActionClass }
+      : {}),
+    ...(req.context.actor !== undefined ? { actor: req.context.actor } : {}),
+    ...(principal_mapping !== undefined ? { principal_mapping } : {}),
+    ...(req.context.parameter_digest !== undefined ? { parameter_digest: req.context.parameter_digest } : {}),
+    ...(decision.context.conditions !== undefined
+      ? { conditions: decision.context.conditions as RuntimeConditions }
+      : {}),
+    ...(decision.context.denial_reason !== undefined
+      ? { denial_reason: decision.context.denial_reason as string }
+      : {}),
+    ...(decision.context.entry_digest !== undefined
+      ? { entry_digest: decision.context.entry_digest as string }
+      : {}),
   });
 }
 
@@ -492,13 +625,25 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     }
     const observedAtMs = entitlement ? Date.parse(entitlement.observed_at) : NaN;
     const entitlementAgeMs = now().getTime() - observedAtMs;
+    // @spec cross-domain#dual-axis (#744) -- the OPTIONAL action- and
+    // resource-scoped grain of the same observation. Absent `authority`
+    // keeps the audience-scoped grain exactly as before. Present, it is
+    // intersected with this request's own (resource, action) pair, so an
+    // entitlement gap on one action denies that action alone and leaves the
+    // rest of the delegated set evaluable. The resource matched here is
+    // `context.audience`, the same member step 5 below matches an authority
+    // entry's `resource` against; the AuthZEN `resource.id` names the
+    // object instance, a different namespace the delegated set is not keyed
+    // by.
     const entitlementCurrent =
       entitlementBoundS !== undefined &&
       entitlement !== undefined &&
       entitlement.entitled === true &&
       Number.isFinite(observedAtMs) &&
       entitlementAgeMs >= -skewToleranceMs &&
-      entitlementAgeMs <= entitlementBoundS * 1000;
+      entitlementAgeMs <= entitlementBoundS * 1000 &&
+      (entitlement.authority === undefined ||
+        entitlementPermits(entitlement.authority, req.context.audience, req.action.name));
     if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 

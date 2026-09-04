@@ -35,6 +35,11 @@ import {
   TransactionEngine,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 const CA = process.env.OPENFGA_CA_CERT;
@@ -136,7 +141,7 @@ async function build(): Promise<{
       { id: "inv-3", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
     ],
   );
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
@@ -153,6 +158,7 @@ async function build(): Promise<{
       ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
       : undefined;
   const pep = new Pep({
+    decide: EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,
@@ -409,5 +415,33 @@ d("MCP _meta Mission reference propagation", () => {
     );
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("an ORDINARY credential with a well-formed _meta reference is refused: this transport stays Mission-bound-only", async () => {
+    // @spec authority-server#mission-join (#557) — the MAS Join is a property
+    // of a CONFIGURED route, not of the reference. This mediated channel
+    // validates through validateCredential and admits no ordinary credential,
+    // so a perfectly good _meta reference joins nothing here: the reference
+    // never becomes an admission path of its own.
+    const { client, evidence } = await build();
+    const ordinary = await new SignJWT({ client_id: "ap-agent", scope: "payments.read", cnf: { jkt: CNF_JKT } })
+      .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+      .setIssuer(ISSUER)
+      .setAudience(CANONICAL_RESOURCE)
+      .setSubject("alice")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(signKey);
+    // Least exposure: an unadmitted credential sees no tools at all.
+    expect(await client.listTools(ordinary)).toEqual([]);
+    const res = await client.callTool(
+      "get_invoice",
+      { invoice_id: "inv-1" },
+      ordinary,
+      { mission_id: VIEW.id, issuer: ISSUER },
+    );
+    expect(res.ok).toBe(false);
+    // The PEP was never reached, so nothing was decided or refused there.
+    expect(evidence.all()).toHaveLength(0);
   });
 });

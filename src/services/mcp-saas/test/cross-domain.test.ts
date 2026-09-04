@@ -327,4 +327,59 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     expect(res.ok).toBe(false);
     expect(res.error).toBe("out_of_authority");
   });
+
+  /**
+   * @spec cross-domain#dual-axis (#744) — the live demo's own seed: the
+   * mission delegates both SaaS actions, but the mapped local principal is
+   * currently entitled to the read alone. The redemption narrows rather
+   * than refuses, and the SaaS PEP then permits the entitled action and
+   * refuses the delegated but unentitled one from the same local token.
+   */
+  it("an entitlement entitled to the read alone narrows the local token, so the read permits and the delegated journal write is refused", async () => {
+    const mission = approve(9);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: mission.id,
+      targetAs: RAS_ISS,
+      clientId: "ap-agent",
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+    const narrowingRas = new ResourceAuthorizationServer({
+      issuer: RAS_ISS,
+      trustedIssuers: { [AS_ISS]: { keys: [{ ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" } as never] } },
+      signKey: rasKeys.privateKey,
+      signKid: "ras-token",
+      registeredClients: { [agentJkt]: RAS_LOCAL_CLIENT_ID },
+      mapping: {
+        id: "ras-test-map",
+        version: "v1",
+        entries: [
+          {
+            origin: { iss: AS_ISS, sub: "alice" },
+            local_sub: "alice-ledgercloud",
+            observed_at: "2020-01-01T00:00:00Z",
+            valid_until: "2099-01-01T00:00:00Z",
+          },
+        ],
+      },
+      entitlement: {
+        resolve: async () => ({
+          entitled: true,
+          observed_at: new Date().toISOString(),
+          authority: [{ resource: SAAS_RESOURCE, actions: ["ledger:vendor.read"] }],
+        }),
+      },
+      entitlementStalenessBoundSeconds: 86_400,
+    });
+    const { access_token } = await narrowingRas.redeem(grant, agentJkt);
+    const local = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+    expect(local.authorization_details).toEqual([
+      { type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read"] },
+    ]);
+    const read = await saas.callTool("get_vendor_bank_details", { vendor_id: "acme" }, access_token, await dpopProof(SAAS_RESOURCE));
+    expect(read.ok, JSON.stringify(read)).toBe(true);
+    const write = await saas.callTool("post_journal_entry", { vendor_id: "acme", amount: "1" }, access_token, await dpopProof(SAAS_RESOURCE));
+    expect(write.ok).toBe(false);
+    expect(write.error).toBe("out_of_authority");
+  });
 });

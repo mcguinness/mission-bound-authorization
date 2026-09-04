@@ -19,9 +19,18 @@ import {
   OperationProfileRegistry,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
-import { deriveJoinDelegation, Fga, type MissionView, relationForAction } from "@mission/pdp";
+import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
+  type AuthorityEntry as PdpAuthorityEntry,
+  createDecisionPoint,
+  deriveJoinDelegation,
+  Fga,
+  type MissionView,
+  relationForAction,
+} from "@mission/pdp";
+import {
+  ActorRecords,
+  buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
@@ -29,6 +38,7 @@ import {
   createHttpMediatedClient,
   type DpopKeys,
   EvidenceStore,
+  type HttpMcpChannel,
   type LoadedView,
   McpPaymentsServer,
   type MediatedToolResult,
@@ -39,6 +49,7 @@ import {
   type ResourceMetadataServer,
   sourceDigestOf,
   startResourceMetadataServer,
+  type TokenFacts,
 } from "@mission/mcp-payments";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
@@ -100,6 +111,23 @@ export interface DemoStack {
   bff: ConsoleBff;
   ars: AccessRequestService;
   revokedInstances: Set<string>;
+  /**
+   * @spec authority-server#mission-join rule 5 (#557) — this deployment's
+   * actor records: the delegation edges rule 5 resolves a delegate's current
+   * depth from. Deployment STATE, appended at runtime; exposed so an exhibit
+   * can record an edge before a delegate joins. Empty, so every delegate join
+   * denies until something records one.
+   */
+  actorRecords: ActorRecords;
+  /**
+   * @spec authority-server#mission-join (#557) — the MAS-governed HTTP MCP
+   * channel: the one route that admits an ORDINARY OAuth credential (no
+   * `mission` claim) and joins it against the propagated Mission Reference.
+   * Started only when `MAS_JOIN.governed_resources` names this resource, so a
+   * deployment governing nothing starts no such listener. The Mission-bound
+   * channels are untouched. Close it with `masGovernedChannel.close()`.
+   */
+  masGovernedChannel?: HttpMcpChannel;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -210,6 +238,11 @@ export async function composeStack(opts: {
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
+      // @spec authority-server#mission-join (#557) — the demo's MAS-governed
+      // route acts under an ORDINARY OAuth credential, and no other path in
+      // this deployment mints one. The AS itself is unchanged by the Join;
+      // this only gives the demo a plain token to present.
+      devOrdinaryIssuance: true,
       transactionAuthorization: {
         challengeIssuers,
         ars,
@@ -314,8 +347,8 @@ export async function composeStack(opts: {
       // demo's ID-JAG grants are all base grants over the mission subject
       // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
       // grant's own (iss, sub) and mission.subject co-resolve via this one
-      // entry). Entitlement is this deployment's own always-true source
-      // (the demo runs no separate entitlement service).
+      // entry). Entitlement is this deployment's own local source (the demo
+      // runs no separate entitlement service).
       mapping: {
         id: "demo-ras-mapping",
         version: "v1",
@@ -328,7 +361,21 @@ export async function composeStack(opts: {
           },
         ],
       },
-      entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
+      // @spec cross-domain#dual-axis (#744): the action- and resource-scoped
+      // grain of the same observation. Alice is a currently entitled
+      // LedgerCloud account, entitled to read vendors but NOT to write the
+      // journal, mirroring the draft's own worked example (invoices.read
+      // entitled, journal-entries.write not). The delegated grant carries
+      // both actions, so redemption narrows to the entitled subset rather
+      // than refusing: the minted local token carries ledger:vendor.read
+      // alone, and the SaaS PEP refuses a journal write presented with it.
+      entitlement: {
+        resolve: async () => ({
+          entitled: true,
+          observed_at: new Date().toISOString(),
+          authority: [{ resource: saasResource, actions: ["ledger:vendor.read"] }],
+        }),
+      },
       entitlementStalenessBoundSeconds: 86_400,
     });
     const saas = new SaasMcpServer({
@@ -383,16 +430,52 @@ export async function composeStack(opts: {
     ],
   );
 
-  // @spec runtime-evidence#decision-evidence-integrity (issue #649): a fresh,
-  // per-process ES256 signer: fine for this demo stack (nothing outside this
-  // process ever needs to verify a record it signs), NOT a substitute for a
-  // deployment's own published, durable JWKS.
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  // @spec runtime-evidence#decision-evidence-integrity (issue #649, #741): a
+  // fresh, per-process ES256 signer per emitter role: fine for this demo
+  // stack (nothing outside this process ever needs to verify a record it
+  // signs), NOT a substitute for a deployment's own published, durable JWKS.
+  //
+  // The PDP's Decision Evidence key is its OWN (#741): a distinct kid, static
+  // in config with the key generated per boot (D25), never the `pdpEvidence`
+  // kid the transparency producer Statements already spend. The runtime
+  // profile forbids inferring one key plane's isolation from custody of
+  // another, so the two planes do not share a kid. `emitterId`/`audience` are
+  // this deployment's real values, so the verifier's key-to-emitter and
+  // key-to-audience binding is checked against what the records actually
+  // carry rather than a placeholder.
+  const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
+  const decisionEvidenceKeys = await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
+  // The decision point owns the emission path (#741, PR #753 review): the
+  // emitter is constructed inside `createDecisionPoint` and closed over by
+  // `decide`. This wiring, and the PEP it wires, hold the decision function
+  // and the published verification material, and nothing that can emit.
+  const decisionPoint = createDecisionPoint({
+    evidence: {
+      signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
+      verificationKey: decisionEvidenceKeys.publicKey,
+      emitterId: CANONICAL_RESOURCE,
+      audience: CANONICAL_RESOURCE,
+    },
+  });
+  const evidenceKeys = createEphemeralEvidenceKeys();
+  const evidence = new EvidenceStore(
+    evidenceKeys.signing,
+    buildEvidenceKeyResolver([
+      ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
+      // Exactly what the decision point publishes for the records it emits.
+      { ...decisionPoint.evidenceVerification, role: "pdp" },
+    ]),
+  );
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
   // Egress stays on the pre-existing unsigned path (issue #649's deferred slice B).
   const egressEvidence = new EvidenceStore();
   const connectors = new Connectors();
   const revokedInstances = new Set<string>();
+  // @spec authority-server#mission-join rule 5 (#557) — the deployment's own
+  // actor records. Nothing seeds it: a delegate joins only once this
+  // deployment has recorded the edge, which is what makes an unrecorded
+  // delegate fail closed rather than join on a declared ceiling alone.
+  const actorRecords = new ActorRecords();
 
   // The PDP's view of a mission (in a real deployment fetched from AS/Status).
   // Exposed on ComposedStack for inspection (agent-run.ts's kill-switch poll);
@@ -452,10 +535,31 @@ export async function composeStack(opts: {
     return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
   };
 
+  /**
+   * @spec authority-server#mission-join rule 8, bound 1 (#557) — the acting
+   * credential's OWN authority, read from the token AS ISSUED: its verified
+   * `scope` claim, mapped through the deployment's `scope_actions` to entries
+   * on this resource. Client registration is deliberately not consulted; the
+   * bound is what the presented credential carries, so a narrower token
+   * yields a narrower permit even for the same client. A credential with no
+   * scope, or a scope this deployment maps to nothing, resolves to no
+   * authority, and the joined route then refuses `out_of_authority` rather
+   * than treating an unmapped scope as unbounded.
+   */
+  const resolveOrdinaryAuthority = (token: TokenFacts): PdpAuthorityEntry[] | undefined => {
+    if (token.mission || !token.scope) return undefined;
+    const actions = [
+      ...new Set(token.scope.split(/\s+/).flatMap((value) => MAS_JOIN.scope_actions[value] ?? [])),
+    ];
+    if (actions.length === 0) return undefined;
+    return [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions }];
+  };
+
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
     evidence,
+    decide: decisionPoint.decide,
     fga,
     modelId,
     loadView,
@@ -471,6 +575,24 @@ export async function composeStack(opts: {
     requiresActionApproval: (action) => action === "payments:remittance.send",
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     allowedFreshnessSources: ALLOWED_FRESHNESS_SOURCES,
+    // @spec authority-server#mission-join (#557) — this deployment's Join
+    // configuration, from config/mas-join.json. It is one of the two keys the
+    // joined path needs; the other is a route that validates an ordinary
+    // credential (the MAS-governed channel below). Configured here even when
+    // no such route runs, so a credential with no `mission` claim arriving on
+    // a Mission-bound route is still refused by that route's validator rather
+    // than by a missing config.
+    masJoin: {
+      delegatePolicy: {
+        delegates: Object.fromEntries(
+          Object.entries(MAS_JOIN.delegates).map(([clientId, d]) => [clientId, { maxDepth: d.max_depth }]),
+        ),
+      },
+      resolveOrdinaryAuthority,
+      // Rule 5's depth source. The hook takes the canonical (issuer, id) pair
+      // and the Mission's own client, so the ledger satisfies it directly.
+      resolveDelegateDepth: actorRecords.resolveDepth.bind(actorRecords),
+    },
     ...(challengeSigner ? { challengeSigner } : {}),
   });
 
@@ -490,6 +612,15 @@ export async function composeStack(opts: {
     ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
   paymentsServerRef = server;
+
+  // @spec authority-server#mission-join (#557) — the MAS-governed route, on
+  // its own listener, started only for a resource this deployment declares
+  // governed. It is a SECOND channel: the Mission-bound channels keep
+  // `validateCredential` and keep rejecting a credential with no `mission`
+  // claim, so turning the Join on never loosens an existing route.
+  const masGovernedChannel = MAS_JOIN.governed_resources.includes(CANONICAL_RESOURCE)
+    ? await createHttpMcpChannel(server, { masGoverned: true })
+    : undefined;
 
   // Transparency + producers.
   const transparencyKey = TOPOLOGY.keys.transparency;
@@ -545,6 +676,8 @@ export async function composeStack(opts: {
     ars,
     issuer,
     revokedInstances,
+    actorRecords,
+    ...(masGovernedChannel ? { masGovernedChannel } : {}),
     viewFor,
     publishEvidence,
     onEnforce: (fn) => {

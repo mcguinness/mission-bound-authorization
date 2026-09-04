@@ -1600,6 +1600,11 @@ This profile defines the following AuthZEN response `context` members:
       does not compare against a PDP-returned class label; none is
       echoed on this response.
 
+      The PDP is stateless with respect to consumption: it declares
+      `use_limit` on the decision, and the PEP owns the
+      consumed-identifier store and refuses a re-presented consumed
+      `evaluation_id`.
+
   The PEP MUST honor every condition present, at every use of the
   permit. A permit carrying a condition member the PEP does not
   recognize is invalid: the PEP MUST NOT release the action's effect
@@ -1641,6 +1646,17 @@ This profile defines the following AuthZEN response `context` members:
 `retry_after`:
 : OPTIONAL, only with `next_action: retry`. An integer: seconds the
   PEP waits before re-evaluating ({{ARAP}}).
+
+`decision_evidence`:
+: OPTIONAL. An object: the complete signed Decision Evidence Object
+  the PDP emitted for this evaluation, envelope included
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The PDP
+  constructs and signs it on its own emission path; a requesting PEP
+  verifies it and retains it as received, byte for byte. Carrying it
+  on the response does not change its treatment: it is retrospective
+  evidence of what the PDP decided, and MUST NOT be accepted as
+  authorization to act ({{permit-binding-split}}). The permit is the
+  decision itself.
 
 ## Obligations {#obligations}
 

@@ -91,7 +91,10 @@ const createChild = (
 ) =>
   createChildMission(kernel, {
     parentId,
-    intent: validateMissionIntent(
+    // kernel.validateIntent judges the requested ceiling against the INJECTED
+    // clock, so a child whose expiry is future at creation and past after the
+    // clock advances is expressible (@spec mission#mission-intent).
+    intent: kernel.validateIntent(
       JSON.stringify({
         goal: "Extract Acme invoices",
         target_resources: [RESOURCE],

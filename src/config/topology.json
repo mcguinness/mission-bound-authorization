@@ -41,6 +41,7 @@
     "rsTxn": { "kid": "rs-txn", "alg": "ES256" },
     "pdpDenial": { "kid": "pdp-denial", "alg": "ES256" },
     "pdpEvidence": { "kid": "pdp-evidence", "alg": "ES256" },
+    "pdpDecisionEvidence": { "kid": "pdp-decision-evidence", "alg": "ES256" },
     "transparency": { "kid": "transparency", "alg": "ES256" },
     "rasToken": { "kid": "ras-token", "alg": "ES256" },
     "crossDomain": { "kid": "as-crossdomain", "alg": "ES256" },

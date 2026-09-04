@@ -1,0 +1,9 @@
+{
+  "governed_resources": ["http://localhost:4403/mcp"],
+  "delegates": {
+    "subagent-invoice-extractor": { "max_depth": 1 }
+  },
+  "scope_actions": {
+    "payments.read": ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"]
+  }
+}

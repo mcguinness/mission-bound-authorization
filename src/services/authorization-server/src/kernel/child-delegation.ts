@@ -29,6 +29,7 @@
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
+import { inheritCapabilitySources } from "./capability-binding.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
@@ -283,9 +284,20 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // constraint the parent narrowed (max_amount / vendors) is refused, so a child
   // MUST restate constraints at or below the parent's.
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  const childAuthority = inheritActionApprovalRequirement(
-    kernel.derive(input.intent, proposal),
-    kernel.effectiveAuthoritySet(parent),
+  // The parent's EFFECTIVE set (approved minus the containment overlay) is the
+  // grantor for both inheritance steps and for the strict-subset proof below.
+  const parentEffective = kernel.effectiveAuthoritySet(parent);
+  // @spec capability-binding#capability-source-binding — carry the parent's
+  // recorded bindings for every retained catalog-sourced action, BEFORE the
+  // child `authority_hash` below and before the strict-subset proof: a child
+  // that dropped a parent binding is correctly refused by isSubsetEntry, so
+  // the derived path inherits rather than leaving the member bare. The grantor
+  // is the EFFECTIVE set, unlike createExpansion's approved-set grantor: a
+  // contained capability MUST NOT re-derive into a child, while an Expansion
+  // successor's own approval MAY restore one.
+  const childAuthority = inheritCapabilitySources(
+    inheritActionApprovalRequirement(kernel.derive(input.intent, proposal), parentEffective),
+    parentEffective,
   );
 
   // @spec mission#authority-sources — a child drawdown draws on the PARENT's
@@ -330,7 +342,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // child. The justifying-index attribution below still runs over the approved
   // set: a subset of an effective entry is a subset of its approved entry, so
   // every index resolves, and fan-out controls live on the approved entries.
-  if (!isSubsetSet(childAuthority, kernel.effectiveAuthoritySet(parent))) {
+  if (!isSubsetSet(childAuthority, parentEffective)) {
     throw new ChildDelegationError(
       "not_strict_subset",
       "child Authority Set is not a strict subset of the parent",
@@ -426,11 +438,15 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   }
 
   // @spec child-delegation#attenuation — the child's expires_at MUST NOT be later
-  // than the parent's (clamp; mirrors createExpansion's approved_until clamp).
-  const expiresAt =
-    Date.parse(input.intent.expires_at) <= Date.parse(parent.expires_at)
-      ? input.intent.expires_at
-      : parent.expires_at;
+  // than the parent's. Established through the single effective-expiry hook, so
+  // the parent bound composes with this deployment's own `max_mission_lifetime_s`
+  // and with the requested ceiling, all measured from the ONE creation instant
+  // (`nowIso`) the child record commits as its `created_at`.
+  const expiresAt = kernel.resolveEffectiveExpiry({
+    requested: input.intent.expires_at,
+    createdAt: nowIso,
+    ceilings: { parent: parent.expires_at },
+  });
 
   const parentRef: ParentRef = {
     id: parent.id,

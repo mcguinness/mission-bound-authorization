@@ -29,6 +29,11 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
@@ -52,8 +57,9 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
         },
       ],
     );
-    const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
       evidence,
       // reverify()/recordRefusal() never touch deps.fga or deps.loadView.

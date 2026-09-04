@@ -231,3 +231,78 @@ describe("expansion: derivation_limit establishment (@spec mission#derivation-is
     expect(omitted.successor.derivation_limit).toBeNull();
   });
 });
+
+describe("expansion: successor expiry (@spec expansion#successor-expiry)", () => {
+  /** A predecessor expiring EARLIER than the widening submission asks for. */
+  const shortPredecessor = () =>
+    kernel.approve({
+      intent: kernel.validateIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3",
+          target_resources: [RESOURCE],
+          expires_at: "2026-08-01T00:00:00Z",
+        }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-short-${seq++}`,
+    });
+
+  const expand = (predecessorId: string, over: Record<string, unknown> = {}) =>
+    createExpansion(kernel, {
+      predecessorId,
+      intent: kernel.validateIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3 (widened)",
+          target_resources: [RESOURCE],
+          expires_at: EXP,
+        }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `apev-succ-exp-${seq++}`,
+      approvedUntil: EXP,
+      ...over,
+    });
+
+  it("is bounded by the predecessor's expires_at absent a recorded extension", () => {
+    const pred = shortPredecessor();
+    const { successor } = expand(pred.id);
+    // The submission asked for 2027-01-01 and the approval permits it, but the
+    // predecessor expires 2026-08-01: expansion adds authority, never lifetime.
+    expect(successor.expires_at).toBe(pred.expires_at);
+    expect(Date.parse(successor.expires_at)).toBeLessThan(Date.parse(EXP));
+  });
+
+  it("a recorded, disclosed extension ceiling replaces the predecessor bound, up to that exact value", () => {
+    const pred = shortPredecessor();
+    const { successor } = expand(pred.id, {
+      approvedExtensionUntil: "2026-09-01T00:00:00Z",
+    });
+    // The extension ceiling recorded at the expansion consent event is exactly
+    // what the successor gets: later than the predecessor's expiry, and no
+    // later than the value the Approver was shown.
+    expect(successor.expires_at).toBe("2026-09-01T00:00:00Z");
+    expect(Date.parse(successor.expires_at)).toBeGreaterThan(Date.parse(pred.expires_at));
+  });
+
+  it("an extension ceiling never widens past the requested ceiling or the approval expiry", () => {
+    const pred = shortPredecessor();
+    // Approved extension beyond BOTH the requested ceiling and approved_until:
+    // each still binds, so the earliest of them wins.
+    const beyond = { approvedExtensionUntil: "2030-01-01T00:00:00Z" };
+    expect(expand(pred.id, beyond).successor.expires_at).toBe(EXP);
+    expect(
+      expand(pred.id, { ...beyond, approvedUntil: "2026-10-01T00:00:00Z" }).successor.expires_at,
+    ).toBe("2026-10-01T00:00:00Z");
+  });
+
+  it("the recorded approval expiry still bounds the successor", () => {
+    const pred = approve(["payments:invoice.read"]);
+    const { successor } = expand(pred.id, { approvedUntil: "2026-10-01T00:00:00Z" });
+    expect(successor.expires_at).toBe("2026-10-01T00:00:00Z");
+  });
+});
+

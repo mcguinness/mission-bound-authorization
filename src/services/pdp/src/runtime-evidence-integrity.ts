@@ -13,16 +13,21 @@
  * Evidence, or Approval Governance (issue #649 thread). This module
  * implements runtime-evidence.md's OWN algorithm only.
  *
- * Lives beside `evidence.ts` (not in `@mission/core`) because `@mission/core`
+ * Lives in `@mission/pdp` (not in `@mission/core`) because `@mission/core`
  * is deliberately dependency-free: canonicalization (`canonicalize`,
  * `canonicalDigest`) lives there and is reused here, but the actual JOSE
- * signing/verification mechanics live at the leaf that already depends on
- * `jose` (this package), the same split `packages/orchestration/src/evidence.ts`
- * already uses (an injected signer callback, never a jose import in the
- * dependency-free orchestration package). If a second producer (Harness
- * Egress, Protected Event Receipt, issue #649's deferred slices B/C) comes
- * to need this exact algorithm, promoting this module to a shared package is
- * the right move then; not done here ahead of an actual second consumer.
+ * signing/verification mechanics live at a leaf that already depends on
+ * `jose`, the same split `packages/orchestration/src/evidence.ts` already
+ * uses (an injected signer callback, never a jose import in the
+ * dependency-free orchestration package).
+ *
+ * The second producer this module's own promotion rule waited for is here
+ * (#741): the PDP builds and signs the Decision Evidence it emits, on its
+ * own emission path, and the PEP verifies and retains what it receives. The
+ * module therefore sits with the Decision Evidence producer, and
+ * `@mission/mcp-payments` (which already depends on this package) imports it
+ * for the records the PEP still emits itself: Execution Evidence, Refusal
+ * Records, and the Mission Receipt.
  */
 
 import { canonicalize, type JsonValue } from "@mission/core";

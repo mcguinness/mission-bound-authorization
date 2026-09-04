@@ -42,7 +42,10 @@ import {
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 
 /** Fail-closed EvidenceStore (issue #649): every `evidence:` fixture below needs a signer. */
-const evidenceSigner = createEphemeralEvidenceKeys().signing;
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per test
+// module. `signing`/`resolver` wire the PEP's store; `decide` is the decision
+// point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
 
 const AS_ISS = "https://as.test";
 const READ_ACTION = "payments:invoice.read";
@@ -177,8 +180,9 @@ beforeAll(async () => {
 
   server = new McpPaymentsServer({
     pep: new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments: new PaymentsStore(),
-      evidence: new EvidenceStore(evidenceSigner),
+      evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
       fga: {} as unknown as Fga,
       modelId: "m",
       loadView,
@@ -224,8 +228,9 @@ describe("attenuation chain: verify + leaf enforcement", () => {
 
   it("denies an in-Mission-but-outside-leaf action out_of_authority (no OpenFGA needed)", async () => {
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments: new PaymentsStore(),
-      evidence: new EvidenceStore(evidenceSigner),
+      evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
       fga: {} as unknown as Fga, // never reached: the leaf guard precedes the PDP
       modelId: "m",
       loadView,
@@ -278,8 +283,9 @@ d("attenuation chain: PEP permits an in-leaf action (OpenFGA)", () => {
     );
     const card = { name: "payments", tools: ["get_invoice"] };
     const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
-      evidence: new EvidenceStore(evidenceSigner),
+      evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
       fga,
       modelId,
       loadView,

@@ -20,6 +20,7 @@ import {
   decodeJwt,
   decodeProtectedHeader,
   jwtVerify,
+  SignJWT,
   type CryptoKey,
   type JWK,
 } from "jose";
@@ -350,6 +351,18 @@ export interface AdapterOptions {
   childGrantKey?: CryptoKey;
   childGrantKid?: string;
   childGrantAlg?: string;
+  /**
+   * @spec authority-server#mission-join (#557) — DEV ONLY. When set, this AS
+   * serves `POST /dev/ordinary-token`, minting an ORDINARY DPoP-bound access
+   * token: a `scope`, the configured audience, and NO `mission` claim. The
+   * MAS Join's premise is an UNCHANGED authorization server issuing ordinary
+   * tokens, and no other path in this deployment mints one, so a MAS-governed
+   * route would have no credential to be presented with. This is not an OAuth
+   * grant: it mints on a registered service token's authority, with no client
+   * authentication, no user interaction, and no Mission. Unset (the default,
+   * and any deployment that is not the demo): the route does not exist.
+   */
+  devOrdinaryIssuance?: { key: CryptoKey; kid: string; alg: string; audience: string };
   /**
    * @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
    * grant wiring. All are composed in src/index.ts; when any is unset the grant
@@ -835,12 +848,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
           // (handleAsyncDelegationExchange step 4), so re-gating here checks
           // live state without recounting.
           kernel.gateActive(famRecord.id);
-          // The base claim, unchanged from the family fallback's existing
-          // behavior: the lineage members of the approval branch below are
-          // deliberately not introduced onto this path by #617 review 3, which
-          // is about failing closed, not about reshaping a claim that already
-          // ships.
-          return { mission: kernel.missionClaim(famRecord) };
+          // @spec child-delegation#parent-member + expansion#predecessor-member —
+          // the family fallback mirrors the gateDerivation dispatch below: a
+          // family rooted at a Child or Successor Mission's own access token
+          // (async-delegation `subject_token`) still projects that Mission's
+          // lineage member on every token the family issues, initial mint and
+          // refresh alike, not just the base claim (#651).
+          const claim = famRecord.parent
+            ? childMissionClaim(kernel, famRecord)
+            : famRecord.predecessor
+              ? successorMissionClaim(kernel, famRecord)
+              : kernel.missionClaim(famRecord);
+          return { mission: claim };
         } catch (e) {
           if (e instanceof GateError) {
             throw new MissionGrantError(
@@ -1088,6 +1107,38 @@ export function buildProvider(opts: AdapterOptions): Provider {
     if (body?.error === "temporarily_unavailable" && !ctx.response.get("Retry-After")) {
       ctx.set("Retry-After", String(opts.stateRecoveryRetryAfter ?? 5));
     }
+  });
+
+  // @spec mission#grant-binding — `mission_expires_at` (and `mission_id`) on the
+  // DIRECT-creation success response. Direct creation completes as the native
+  // `authorization_code` token response, which oidc-provider renders internally,
+  // so the members are stamped here: Provider#use splices this middleware BEFORE
+  // the internal route dispatcher, so it observes the rendered token body (the
+  // seam the Retry-After wrapper above already relies on) with
+  // `ctx.oidc.entities.AccessToken` populated and its `grantId` bound.
+  //
+  // Gated on `authorization_code` deliberately. That single-use redemption IS
+  // the creation-completing body, where the member is a MUST. Every custom grant
+  // (dispatch, the token exchanges, DTR) rides the same route and stamps its own
+  // body at its own handler, and a `refresh_token` redemption is an ordinary
+  // Mission-bound token response, where the member is a SHOULD this deployment
+  // does not take up. A grant with no Mission (an ordinary OAuth grant) is left
+  // untouched.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.oidc?.route !== "token") return;
+    if (ctx.oidc.params?.grant_type !== "authorization_code") return;
+    const body = ctx.body as Record<string, unknown> | undefined;
+    if (ctx.status !== 200 || !body || typeof body.access_token !== "string") return;
+    const grantId = (ctx.oidc.entities?.AccessToken as { grantId?: string } | undefined)?.grantId;
+    if (!grantId) return;
+    const record = opts.kernel.findByGrant(grantId);
+    if (!record) return;
+    body.mission_id = record.id;
+    // @spec mission#grant-binding — the COMMITTED record value, verbatim: the
+    // effective expiry is read back from the record, never recomputed while
+    // rendering, so a replayed or recovered completion returns the same string.
+    body.mission_expires_at = record.expires_at;
   });
 
   provider.use(makeRoutes(provider, opts));
@@ -2467,6 +2518,50 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
+    // --- Ordinary (non-Mission) token issuance, DEV ONLY ---
+    // @spec authority-server#mission-join (#557) — the credential a MAS Join
+    // acts under: an ordinary DPoP-bound OAuth access token with a `scope`
+    // and NO `mission` claim. The Join's whole premise is that this AS is
+    // unchanged, so the token is deliberately plain; every Mission control
+    // lives on the resource side, where the reference is joined.
+    if (ctx.path === "/dev/ordinary-token" && ctx.method === "POST") {
+      if (!requireServiceToken(ctx)) return;
+      const dev = opts.devOrdinaryIssuance;
+      if (!dev) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const body = await readJsonBody(ctx.req);
+      const str = (k: string): string | undefined =>
+        typeof body[k] === "string" && (body[k] as string).length > 0 ? (body[k] as string) : undefined;
+      const sub = str("sub");
+      const clientId = str("client_id");
+      const scope = str("scope");
+      const jkt = str("jkt");
+      if (!sub || !clientId || !scope || !jkt) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "invalid_request",
+          error_description: "sub, client_id, scope and jkt are all required",
+        };
+        return;
+      }
+      const ttl = opts.accessTokenTTL ?? 300;
+      const accessToken = await new SignJWT({ client_id: clientId, scope, cnf: { jkt } })
+        .setProtectedHeader({ alg: dev.alg, kid: dev.kid })
+        .setIssuer(opts.issuer)
+        .setAudience(dev.audience)
+        .setSubject(sub)
+        .setIssuedAt()
+        .setExpirationTime(`${ttl}s`)
+        .sign(dev.key);
+      ctx.status = 200;
+      ctx.set("content-type", "application/json");
+      ctx.body = { access_token: accessToken, token_type: "DPoP", expires_in: ttl, scope };
+      return;
+    }
+
     await next();
 
     // --- AS metadata flags (@spec mission#as-metadata) ---
@@ -2788,6 +2883,9 @@ async function handleMissionDispatchGrant(
     token_type: "DPoP",
     expires_in: at.expiration,
     mission_id: record.id,
+    // @spec mission#grant-binding — the dispatched instance's COMMITTED
+    // effective expiry, verbatim from the record, never recomputed here.
+    mission_expires_at: record.expires_at,
     authorization_details: effective,
   };
   ctx.set("cache-control", "no-store");
@@ -2964,19 +3062,24 @@ async function decide(
   // authorization-decision outcome, so it completes through the pending
   // front-channel authorization request as `access_denied`, exactly like the
   // "approver declined" and derivation-refusal branches above.
+  // @spec mission#approval-event (step 4) — the creation commit re-checks the
+  // effective expiry atomically. Submission acceptance did not freeze time, so a
+  // requested ceiling that passes while the approval is pending refuses HERE and
+  // creates no Mission. Mapped like the derivation refusal above: the
+  // interaction finishes with the error, never a 500.
   let record: MissionRecord;
   try {
     record = opts.kernel.approve({
-    intent: intent as MissionIntent,
-    ...(proposedAuthority ? { proposedAuthority } : {}),
-    // @spec mission#intent-submission-evidence — the verified facts land on
-    // the Mission Record (outside all anchors), request-derived, never
-    // fabricated downstream.
-    ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-    subject: { iss: opts.issuer, sub: subject },
-    approver: { iss: opts.issuer, sub: approver },
-    clientId: String(params.client_id),
-    approvalEventId: `apev_${details.uid}`,
+      intent: intent as MissionIntent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
+      // @spec mission#intent-submission-evidence — the verified facts land on
+      // the Mission Record (outside all anchors), request-derived, never
+      // fabricated downstream.
+      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+      subject: { iss: opts.issuer, sub: subject },
+      approver: { iss: opts.issuer, sub: approver },
+      clientId: String(params.client_id),
+      approvalEventId: `apev_${details.uid}`,
     });
   } catch (e) {
     if (e instanceof IntentError) {

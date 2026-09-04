@@ -23,6 +23,11 @@ import {
 } from "@mission/mcp-payments";
 import { AccessRequestService } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 const CA = process.env.OPENFGA_CA_CERT;
@@ -89,8 +94,9 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
     );
     pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
       payments,
-      evidence: new EvidenceStore(createEphemeralEvidenceKeys().signing),
+      evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
       fga,
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
