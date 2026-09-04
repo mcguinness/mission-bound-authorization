@@ -1253,7 +1253,9 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    ({{I-D.draft-mcguinness-oauth-mission}}): entries without a
    `delegation` member are excluded, `allowed_delegates` is applied,
    and `max_depth` is evaluated from the deployment's actor records
-   rather than from a Mission-bound token's `act` chain.
+   rather than from a Mission-bound token's `act` chain. A delegate
+   with no actor record under the Mission is not recorded as acting
+   under it, and the join fails `mission_mismatch`.
 6. **Join failure is a deny.** A failure of the subject or client join
    MUST be denied with the `mission_mismatch` denial reason: the
    presented credential does not join to the referenced Mission

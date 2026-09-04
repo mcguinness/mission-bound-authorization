@@ -152,3 +152,4 @@ export {
   serveResourceMetadata,
   startResourceMetadataServer,
 } from "./resource-metadata.js";
+export { ActorRecords, type ActorRecord, type MissionRef } from "./actor-records.js";
