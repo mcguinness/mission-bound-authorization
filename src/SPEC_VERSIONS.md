@@ -442,3 +442,29 @@ this matrix and the `@spec` tags to the affected code and tests.
   Mission-credential carriage against the new required per-request fields,
   which is implementation work, not a documentation/pin refresh. Tracked as
   follow-up; not yet filed as its own issue.
+- Family fallback lineage dispatch (2026-09-03, issue #651): the async-delegation
+  family fallback in `provider.ts`'s `extraTokenClaims` projected the bare
+  `{id, issuer}` baseline claim (`kernel.missionClaim`) for EVERY token a
+  family ever issues, including the initial mint, whenever the family rooted
+  at a Child or Successor Mission's own access token (a Child/Successor
+  Mission's own client may present its OWN Mission-bound access token as the
+  async-delegation `subject_token`; the per-delegation family Grant is never
+  bound via `bindGrant`, so `findByGrant` misses and every family token takes
+  the fallback). Both drafts make the dropped members REQUIRED on every
+  derived token, not just at creation
+  (`draft-mcguinness-oauth-mission-child-delegation#parent-member`,
+  `draft-mcguinness-oauth-mission-expansion#predecessor-member`). The fallback
+  now mirrors the `gateDerivation` dispatch already used two branches below
+  it: `parent` present -> `childMissionClaim`; else `predecessor` present ->
+  `successorMissionClaim`; else the baseline `missionClaim`. A successor-rooted
+  family is proven end-to-end at `/token` (initial mint and refresh both
+  carry `predecessor`); a child-rooted family cannot be driven end-to-end
+  over real HTTP with the shipped client registry (`config/clients.json`'s
+  `subagent-invoice-extractor` is granted only the jwt-bearer grant type, and
+  the async-delegation exchange requires the authenticated client to equal
+  the presented `subject_token`'s `client_id`), so the child-rooted case is
+  covered by a test pinning that config-level block plus a seam-level test
+  (a direct `delegation_families` row update) that drives the SAME fallback
+  code path and proves `parent` is preserved on refresh.
+  (`services/authorization-server/src/adapters/provider.ts`,
+  `services/authorization-server/test/async-delegation.test.ts`.)
