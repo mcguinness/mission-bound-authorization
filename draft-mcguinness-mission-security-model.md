@@ -265,6 +265,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-transaction-authorization:
+    title: "Mission Transaction Authorization Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   OWASP-AGENTIC:
     title: "Agentic AI - Threats and Mitigations, Version 1.0"
     target: https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/
@@ -675,7 +683,8 @@ Four assumptions hold across the whole model:
   never by itself grounds for refusal
   ({{I-D.draft-mcguinness-mission-audit}}); tampered inert evidence
   is an integrity failure, handled by the profile that defines the
-  artifact.
+  artifact. Each profile names its failure classes in its own terms;
+  {{failure-crosswalk}} maps those terms onto this axis.
 - **Role-scoped trust anchors.** A party trusted in one role (Mission
   issuer, evidence producer for one evidence type, SET transmitter,
   Transparency Service) is not thereby trusted in any other, and
@@ -694,6 +703,55 @@ Four assumptions hold across the whole model:
   authority only through the pre-approval derivation whose result the
   Approver reads and consents to, and is inert once the Mission is
   approved ({{I-D.draft-mcguinness-oauth-mission}}).
+
+## Failure Taxonomy Crosswalk (Informative) {#failure-crosswalk}
+
+This section is informative. Four profiles name verification and
+failure classes in their own terms: the Mandate's Failure Taxonomy
+({{I-D.draft-mcguinness-mission-mandate}}, Section "Failure
+Taxonomy"), the audit profile's integrity-versus-audit split
+({{I-D.draft-mcguinness-mission-audit}}, Section "Verification
+Failures"), that same split as consent evidence applies it
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}, Section
+"Integrity and Verification"), and Transaction Authorization's failure
+semantics
+({{I-D.draft-mcguinness-oauth-mission-transaction-authorization}},
+Section "Failure Semantics"). The table maps those terms onto the
+fail-closed/fail-safe axis above, one column per source in that order.
+It renames nothing, and it adds no requirement to any of them: each
+column states the classes as its source section states them, and that
+section governs.
+
+The axis depends on how the artifact is used, not on the
+failure-class label alone. One class resolves two ways according to
+the role the artifact plays in the reliance at hand: an unverifiable
+authority-bearing artifact fails closed, while unverifiable inert
+audit evidence may fail safe, recorded as not established without
+being treated as refuted. A verifier reads each row together with
+that role. No row makes Unverifiable, or an audit failure, a
+universal operational verdict.
+
+| Condition | Mandate class | Audit and Consent Evidence class | Transaction Authorization outcome | On the axis |
+|---|---|---|---|---|
+| The artifact fails as an artifact: signature, `typ`, claim structure, issuer or anchor mismatch, or a committed hash that does not match what was retrieved; or the artifact verifies but does not match the request's bound context | Invalid | integrity failure | Terminal refusal on a parameter, resource, Mission, principal, presenter, or audience mismatch | Fail closed. The artifact is rejected and is relied on for nothing. |
+| Verification cannot complete: the issuer's key material is unreachable, the `kid` does not resolve, or no trust anchor covers the issuer | Unverifiable | audit failure (an unresolvable producer or Transparency Service key) | no corresponding class | Fail closed for an authority-bearing artifact. Fail safe for inert evidence: not established, never refuted. |
+| Referenced evidence cannot be retrieved within the retention window | no corresponding class | audit failure | no corresponding class | Fail safe. Recorded, not treated as content-verified, and not treated as tampering. |
+| The artifact verifies, but an SD-JWT presentation discloses only some `authority_set` entries | Partial, not the invalid class | no corresponding class | no corresponding class | Neither, for the disclosed claims: the artifact is authentic and every plaintext claim is relied on normally. Reliance that needs the undisclosed entries waits for a fuller presentation, and the anchor mismatch is never read as tampering. |
+| Reliance requires current state and none was obtained within the freshness bound | Stale | no corresponding class | Fail closed on stale or unavailable required state | Fail closed. Reliance waits for current state; retry follows the declared state-recovery policy. |
+| The artifact verifies, but its evidence lifetime has passed | Expired | no corresponding class | `expired_token`, the upstream challenge vocabulary applied unchanged | Fail closed. Not relied on as evidence, though expiry is not evidence against the facts the artifact states. |
+| The Effective Authority Set narrowed since the checked basis | no corresponding class | no corresponding class | Terminal refusal at offline verification | Fail closed. A containment or discharge narrowing is an authority change, never lifecycle noise. |
+
+"No corresponding class" means the source section defines no class at
+that condition, not that the condition cannot arise there.
+
+The axis governs outcomes where a needed fact cannot be established.
+It does not govern negative decisions or idempotency: Transaction
+Authorization denies where there is no action approval, where the
+approval has expired, or where current policy or entitlement denies,
+and those are decisions on established facts; its
+`duplicate_suppressed` result is idempotent replay handling, not a
+verification failure
+({{I-D.draft-mcguinness-oauth-mission-transaction-authorization}}).
 
 # What the Model Does and Does Not Guarantee {#guarantees}
 
@@ -1374,6 +1432,14 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Failure taxonomy crosswalk (#671): an informative subsection added
+  to {{cross-cutting}}, mapping the Mandate, Audit, Consent Evidence,
+  and Transaction Authorization failure classes onto the
+  fail-closed/fail-safe axis, and stating that the axis depends on how
+  the artifact is used rather than on the class label alone. Every
+  source document's terms are preserved. No normative content,
+  guarantee, adversary-model row, mitigation, or residual changed.
 
 - Controls taxonomy retirement (#636): the Approver-compromise row's
   `controls.acr` reference updated to the standard `acr_values`/`max_age`
