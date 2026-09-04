@@ -828,12 +828,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
           // (handleAsyncDelegationExchange step 4), so re-gating here checks
           // live state without recounting.
           kernel.gateActive(famRecord.id);
-          // The base claim, unchanged from the family fallback's existing
-          // behavior: the lineage members of the approval branch below are
-          // deliberately not introduced onto this path by #617 review 3, which
-          // is about failing closed, not about reshaping a claim that already
-          // ships.
-          return { mission: kernel.missionClaim(famRecord) };
+          // @spec child-delegation#parent-member + expansion#predecessor-member —
+          // the family fallback mirrors the gateDerivation dispatch below: a
+          // family rooted at a Child or Successor Mission's own access token
+          // (async-delegation `subject_token`) still projects that Mission's
+          // lineage member on every token the family issues, initial mint and
+          // refresh alike, not just the base claim (#651).
+          const claim = famRecord.parent
+            ? childMissionClaim(kernel, famRecord)
+            : famRecord.predecessor
+              ? successorMissionClaim(kernel, famRecord)
+              : kernel.missionClaim(famRecord);
+          return { mission: claim };
         } catch (e) {
           if (e instanceof GateError) {
             throw new MissionGrantError(
