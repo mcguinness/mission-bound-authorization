@@ -10,6 +10,8 @@ export {
 export {
   evaluate,
   type Decision,
+  type DecisionFn,
+  type DecisionOptions,
   type DenialReason,
   type EntitlementObservation,
   type EntitlementResolver,
@@ -22,6 +24,14 @@ export {
   type PrincipalMappingResolver,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";
+export {
+  createDecisionPoint,
+  createEphemeralDecisionPoint,
+  type DecisionEvidenceVerification,
+  type DecisionPoint,
+  type DecisionPointConfig,
+  type EphemeralDecisionPoint,
+} from "./decision-point.js";
 export {
   createDecisionEvidenceEmitter,
   newRecordId,

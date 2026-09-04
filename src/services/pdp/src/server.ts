@@ -29,7 +29,8 @@
 
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
 import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
-import { evaluate, type Decision, type EvaluateOptions, type EvaluationRequest } from "./evaluate.js";
+import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
+import { evaluate, type Decision, type DecisionOptions, type EvaluateOptions, type EvaluationRequest } from "./evaluate.js";
 
 /**
  * One PEP the PDP recognizes: its shared authentication secret and the
@@ -48,9 +49,21 @@ export interface PdpRemoteServerConfig {
   /**
    * Resolves the decision options (Mission view, FGA client, policy) for a
    * given request. A reference server serves one or many Missions through
-   * this indirection; tests fix it to a constant.
+   * this indirection; tests fix it to a constant. It carries no emission
+   * path: {@link PdpRemoteServerConfig.evidence} is bound once, at server
+   * construction, on this side of the channel.
    */
-  getOptions: (req: EvaluationRequest) => EvaluateOptions | Promise<EvaluateOptions>;
+  getOptions: (req: EvaluationRequest) => DecisionOptions | Promise<DecisionOptions>;
+  /**
+   * @spec runtime-evidence#decision-evidence-object,
+   * runtime#agent-isolated-evidence-emission (#741, PR #753 review) — this
+   * PDP's Decision Evidence emission path, held on the PDP side of the
+   * network hop. The PEP across the channel receives the signed record on
+   * the decision response and the verification material for it, never the
+   * emitter: it submits requests and verifies answers, and holds no way to
+   * mint a record under this PDP's identity.
+   */
+  evidence?: DecisionEvidenceEmitter;
   /** Replay/freshness window for X-Pdp-Issued-At, seconds. Default 30. */
   replayWindowSeconds?: number;
   /** Maximum accepted request body size, bytes. Default 65536 (64 KiB); a larger body is refused before being buffered. */
@@ -194,7 +207,9 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
       return;
     }
 
-    const opts = await config.getOptions(evalRequest);
+    const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;
+    delete opts.evidence;
+    if (config.evidence) opts.evidence = config.evidence;
     const decision: Decision = await evaluateImpl(evalRequest, opts);
     const body = JSON.stringify(decision);
     const status = 200;

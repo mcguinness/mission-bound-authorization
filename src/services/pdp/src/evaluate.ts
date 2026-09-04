@@ -302,6 +302,34 @@ export interface EvaluateOptions {
   delegatePolicy?: DelegatePolicy;
 }
 
+/**
+ * @spec runtime-evidence#decision-evidence-object,
+ * runtime#agent-isolated-evidence-emission (#741, PR #753 review) — the
+ * decision options a component OUTSIDE the PDP's emission boundary supplies:
+ * everything {@link evaluate} needs except {@link EvaluateOptions.evidence}.
+ * The emission path is bound at PDP construction
+ * (`createDecisionPoint`, {@link ./decision-point.js}) and never travels
+ * through a caller's options object: an enforcement component that could put
+ * an emitter there holds the capability to have an arbitrary record signed
+ * under the decision point's identity, which is the defect this split closes.
+ */
+export type DecisionOptions = Omit<EvaluateOptions, "evidence">;
+
+/**
+ * The PDP's decision entry point as an enforcement component sees it: submit
+ * the evaluation request, receive the decision, with the PDP-built, PDP-signed
+ * record at `context.decision_evidence` when the decision point behind it
+ * emits one. This is the ONLY decision-side capability a PEP holds; it can ask
+ * for a decision, and it can verify and retain what comes back, but it cannot
+ * emit.
+ *
+ * The in-process implementation applies the caller's {@link DecisionOptions}
+ * (the Mission view, the FGA client, the deployment's policy hooks) to
+ * {@link evaluate}. A remote wrapper ignores them: the PDP server resolves its
+ * own options on its side of the channel.
+ */
+export type DecisionFn = (req: EvaluationRequest, opts: DecisionOptions) => Promise<Decision>;
+
 let decisionCounter = 0;
 function newDecisionId(): string {
   decisionCounter += 1;
