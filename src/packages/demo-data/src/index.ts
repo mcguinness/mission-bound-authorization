@@ -198,6 +198,7 @@ export interface Topology {
     rsTxn: TopologyKey;
     pdpDenial: TopologyKey;
     pdpEvidence: TopologyKey;
+    pdpDecisionEvidence: TopologyKey;
     transparency: TopologyKey;
     rasToken: TopologyKey;
     crossDomain: TopologyKey;
@@ -283,6 +284,7 @@ function loadTopology(): Topology {
       rsTxn: reqKey(file, keys, "rsTxn", "keys"),
       pdpDenial: reqKey(file, keys, "pdpDenial", "keys"),
       pdpEvidence: reqKey(file, keys, "pdpEvidence", "keys"),
+      pdpDecisionEvidence: reqKey(file, keys, "pdpDecisionEvidence", "keys"),
       transparency: reqKey(file, keys, "transparency", "keys"),
       rasToken: reqKey(file, keys, "rasToken", "keys"),
       crossDomain: reqKey(file, keys, "crossDomain", "keys"),

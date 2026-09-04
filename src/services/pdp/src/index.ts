@@ -23,6 +23,42 @@ export {
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";
 export {
+  createDecisionEvidenceEmitter,
+  newRecordId,
+  requestDigestFallback,
+  type DecisionEvidenceEmissionInput,
+  type DecisionEvidenceEmitter,
+  type DecisionEvidenceEmitterConfig,
+  type DecisionEvidenceObject,
+  type RuntimeActionClass,
+  type RuntimeActionRef,
+  type RuntimeCapabilitySource,
+  type RuntimeClassSource,
+  type RuntimeConditions,
+  type RuntimeHopReference,
+  type RuntimeMissionRef,
+  type RuntimePrincipalMapping,
+  type RuntimeResourceRef,
+  type RuntimeSubjectRef,
+} from "./decision-evidence.js";
+export {
+  DECISION_EVIDENCE_MEDIA_TYPE,
+  EXECUTION_EVIDENCE_MEDIA_TYPE,
+  MISSION_RECEIPT_MEDIA_TYPE,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  RUNTIME_EVIDENCE_JWS_TYP,
+  signEvidenceEnvelope,
+  verifyEvidenceEnvelope,
+  type EvidenceEmitterRef,
+  type EvidenceEnvelope,
+  type EvidenceKeyLike,
+  type EvidenceKeyResolution,
+  type EvidenceKeyResolver,
+  type EvidenceSigningKey,
+  type EvidenceVerifyFailure,
+  type EvidenceVerifyResult,
+} from "./runtime-evidence-integrity.js";
+export {
   createPdpHttpServer,
   type AuthorizedPep,
   type PdpHttpServerHandle,

@@ -27,6 +27,11 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decisionEvidence`
+// is the PDP's own emission path, which the PEP forwards and never invokes.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const ISSUER = "https://as.test";
 const RESOURCE = "vendor.example";
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
@@ -64,11 +69,12 @@ const FULL_AUTHORITY: () => AuthorityEntry[] | undefined = () => [
 
 function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = view): Pep {
   return new Pep({
+    decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
     payments: new PaymentsStore(),
     // @spec runtime-evidence#decision-evidence-integrity (issue #649):
     // EvidenceStore fails closed without a signer configured for the
     // emitter role a call needs; every enforce() path here goes through it.
-    evidence: new EvidenceStore(createEphemeralEvidenceKeys().signing),
+    evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView: loadViewFor(viewOverride),

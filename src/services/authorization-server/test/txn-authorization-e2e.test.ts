@@ -48,6 +48,11 @@ import {
   type ChallengeIssuers,
 } from "../src/index.js";
 
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decisionEvidence`
+// is the PDP's own emission path, which the PEP forwards and never invokes.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const FGA_KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 const CA = process.env.OPENFGA_CA_CERT;
@@ -321,9 +326,10 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       };
       return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
     };
-    evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+    evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const card = { name: "payments" };
     const pep = new Pep({
+      decisionEvidence: EVIDENCE_KEYS.decisionEvidence,
       payments,
       evidence,
       fga: conn.fga,

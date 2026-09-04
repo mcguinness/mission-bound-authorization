@@ -14,9 +14,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
-  computeAnchor,
   type JsonValue,
-  MISSION_ORIGIN_SUBJECT_TYP,
   type PropagatedMissionReference,
   TXN_AUTHORIZATION_REQUIRED,
   type TxnMissionClaim,
@@ -24,6 +22,8 @@ import {
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
+  type DecisionEvidenceEmitter,
+  type DecisionEvidenceObject,
   type DelegatePolicy,
   type Decision,
   type EntitlementResolver,
@@ -44,19 +44,13 @@ import {
   type ListEffectiveParams,
   parameterDigest,
 } from "./effective-params.js";
-import type { EvidenceStore, RuntimeActionClass, RuntimeConditions } from "./evidence.js";
+import type { EvidenceStore } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 export const TOOL_BASE = "mcp://payments.demo/tools";
-// @spec runtime-evidence#evidence-extensions (issue #649): still needed for
-// the retained Decision Evidence's `capability_source.source_uri` (below),
-// even though `context.capability_source` no longer presents it to the PDP
-// (#657/#730; see `sourceDigestOf`).
-const SERVER_CARD_URI = `${CANONICAL_RESOURCE.replace(/\/mcp$/, "")}/.well-known/mcp`;
-
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
  * credential presented on THIS request was a transaction token. The retry of a
@@ -430,6 +424,17 @@ export interface PepDeps {
   };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
+  /**
+   * @spec runtime-evidence#decision-evidence-object,
+   * runtime#agent-isolated-evidence-emission (#741) — the PDP's Decision
+   * Evidence emission path, constructed once at wiring and forwarded to
+   * `EvaluateOptions.evidence` unchanged, exactly as `requestable` forwards
+   * the PDP's denial-binding signer. This PEP never invokes it: it verifies
+   * and retains what comes back on the decision context. Absent, the PDP
+   * emits no Decision Evidence and this PEP refuses to release a permitted
+   * action rather than executing an unevidenced decision.
+   */
+  decisionEvidence?: DecisionEvidenceEmitter;
   /**
    * @spec txn-authorization#resource-challenge — this resource's txn-challenge
    * signing key (the key published at its `txn_challenge_jwks_uri`). When
@@ -829,28 +834,20 @@ export class Pep {
       }
     }
 
-    // @spec runtime-evidence#decision-evidence-object (issue #649): captured
-    // ahead of `req` so the retained Decision Evidence's `actor`/
-    // `capability_source` coordinated-extension members (below) reuse the
-    // EXACT same values the PDP evaluated, rather than a second derivation.
+    // @spec authzen#context-actor: the actor chain this request presents,
+    // built once and evaluated by the PDP, which is also what carries onto
+    // the Decision Evidence the PDP emits (#741). `capability_source` is not
+    // built here at all: the member left the decision request envelope with
+    // #657/#730, so no validated PDP-side input carries it, and a PEP-supplied
+    // copy would be caller-asserted record content (@spec
+    // runtime#agent-isolated-evidence-emission). It is OPTIONAL, so the record
+    // omits it until #657's per-action capability-binding resolver supplies it
+    // from the PDP's own verified inputs.
     const contextActor = buildContextActor({
       ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
       ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
       ...(token.act !== undefined ? { act: token.act } : {}),
     });
-    // `capability_source` is itself an OPTIONAL coordinated extension member
-    // (@spec runtime-evidence#evidence-extensions): absent whenever this
-    // deployment has no `sourceDigest` configured (#657/#730 made the
-    // PepDeps field optional), never synthesized with a placeholder value.
-    const capabilitySource =
-      this.deps.sourceDigest !== undefined
-        ? {
-            tool_id: `${TOOL_BASE}/${tool}`,
-            source_uri: SERVER_CARD_URI,
-            source_digest: this.deps.sourceDigest,
-            operation_ref: `tools/${tool}`,
-          }
-        : undefined;
 
     const req: EvaluationRequest = {
       // @spec authzen#pdp-request rule 10 — `subject.properties.iss` is this
@@ -932,6 +929,9 @@ export class Pep {
       ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
+      // @spec runtime-evidence#decision-evidence-object (#741): the PDP
+      // signs the record it emits; this PEP holds no key that could.
+      ...(this.deps.decisionEvidence ? { evidence: this.deps.decisionEvidence } : {}),
       ...(this.deps.allowedFreshnessSources ? { allowedFreshnessSources: this.deps.allowedFreshnessSources } : {}),
       ...(this.deps.principalMapping ? { principalMapping: this.deps.principalMapping } : {}),
       ...(this.deps.entitlement ? { entitlement: this.deps.entitlement } : {}),
@@ -946,69 +946,30 @@ export class Pep {
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
 
-    // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
-    // runtime-evidence#evidence-pii (#686 review) — the PDP's decision context
-    // carries the RAW origin/local {iss, sub} pairs (an ephemeral, in-process
-    // decision contract); the RETAINED Decision Evidence below must not. Every
-    // decision that reached step 4a's mapping success (permit or a later-step
-    // denial, e.g. entitlement-caused principal_mapping_failed) carries this
-    // member, replacing the raw identities with protected references (the
-    // family anchor idiom, typ mission-origin-subject) before persisting.
-    const rawPrincipalMapping = decision.context.principal_mapping as
-      | {
-          origin: OriginPrincipal;
-          local: OriginPrincipal;
-          policy: { id: string; version: string };
-          observed_at: string;
-          valid_until: string;
-        }
-      | undefined;
-    const protectedPrincipalMapping = rawPrincipalMapping
-      ? {
-          origin: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, rawPrincipalMapping.origin as unknown as JsonValue),
-          local: computeAnchor(MISSION_ORIGIN_SUBJECT_TYP, view.issuer, rawPrincipalMapping.local as unknown as JsonValue),
-          policy: rawPrincipalMapping.policy,
-          observed_at: rawPrincipalMapping.observed_at,
-          valid_until: rawPrincipalMapping.valid_until,
-        }
-      : undefined;
-
-    // @spec runtime-evidence#decision-evidence-object (issue #649): this
-    // deployment co-locates the PDP and PEP in one process/component
-    // (`evaluate()` is called in-process, never over a wire hop), so the
-    // Decision Evidence emitter is `role: "pdp"` under the SAME component id
-    // as the PEP's own `role: "pep"` records, signed with a distinct
-    // `pdp`-role key (see `EvidenceSigningConfig`) so a verifier's
-    // key-to-role binding still distinguishes the two.
-    await this.deps.evidence.recordDecision(CANONICAL_RESOURCE, {
-      mission: {
-        id: view.id,
-        issuer: view.issuer,
-        policy_view_id: decision.context.policy_view_id as string,
-        authority_hash: view.authority_hash,
-      },
-      subject: {
-        id: req.subject.id,
-        ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
-      },
-      resource: { type: req.resource.type, id: req.resource.id },
-      action: { name: mapping.action },
-      audience: req.context.audience,
-      evaluation_id: decision.context.evaluation_id as string,
-      decision: decision.decision ? "permit" : "deny",
-      ...(req.context.action_class !== undefined
-        ? { action_class: req.context.action_class as RuntimeActionClass }
-        : {}),
-      actor: contextActor,
-      ...(capabilitySource !== undefined ? { capability_source: capabilitySource } : {}),
-      ...(protectedPrincipalMapping ? { principal_mapping: protectedPrincipalMapping } : {}),
-      ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
-      ...(decision.context.conditions
-        ? { conditions: decision.context.conditions as RuntimeConditions }
-        : {}),
-      ...(decision.context.denial_reason ? { denial_reason: decision.context.denial_reason as string } : {}),
-      ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
-    });
+    // @spec runtime-evidence#decision-evidence-object, #decision-evidence-integrity;
+    // runtime#agent-isolated-evidence-emission (#741) — the PDP built and
+    // signed this record on its own emission path, from the decision it
+    // reached. This PEP verifies it (byte equality, signature, protected
+    // header, and the key-to-emitter and key-to-audience binding) and
+    // retains it VERBATIM. It reconstructs nothing: a record assembled here
+    // would authenticate this PEP's reading of a decision under the decision
+    // point's identity, which is the defect this path exists to close, and
+    // the enforcement path holds no PDP evidence key to sign one with.
+    //
+    // The record is retrospective evidence of what the PDP decided, never
+    // authorization to act (@spec authzen#permit-binding-split): the permit
+    // this PEP acts on is `decision` itself, and the retention below changes
+    // nothing about that.
+    const emitted = decision.context.decision_evidence as DecisionEvidenceObject | undefined;
+    const retention = emitted
+      ? await this.deps.evidence.retainDecision(emitted)
+      : ({ retained: false, reason: "absent" } as const);
+    if (!retention.retained && decision.decision) {
+      // Fail closed on a permit: an action whose decision left no verifiable
+      // Decision Evidence is refused rather than executed. A denial keeps its
+      // own denial reason, which is the more useful one, and denies either way.
+      return this.refuse(token, "decision_evidence_unverifiable", mapping.action, view);
+    }
 
     if (!decision.decision) {
       const ar = decision.context.access_request as EnforceResult["access_request"] | undefined;

@@ -15,7 +15,7 @@ import {
   REFUSAL_RECORD_MEDIA_TYPE,
   type EvidenceSigningKey,
   signEvidenceEnvelope,
-} from "../src/runtime-evidence-integrity.js";
+} from "@mission/pdp";
 import type { DecisionEvidenceObject, ExecutionEvidenceObject, RefusalRecordObject } from "../src/evidence.js";
 import {
   buildAndSignMissionReceipt,

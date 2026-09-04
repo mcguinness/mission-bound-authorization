@@ -93,12 +93,17 @@ function loadHarnessView(view: MissionView, ref: MissionReference) {
 /** Run one case against a fresh composed stack; measure side effects + evidence. */
 export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResult> {
   const payments = deps.seedStore();
-  const evidence = new EvidenceStore(createEphemeralEvidenceKeys().signing);
+  // @spec runtime-evidence#decision-evidence-object (#741): `signing`/`resolver`
+  // wire the PEP's own records and its verification of what the PDP emitted;
+  // `decisionEvidence` is the PDP's emission path, forwarded unchanged.
+  const evidenceKeys = createEphemeralEvidenceKeys();
+  const evidence = new EvidenceStore(evidenceKeys.signing, evidenceKeys.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-eval");
   const pep = new Pep({
     payments,
     evidence,
+    decisionEvidence: evidenceKeys.decisionEvidence,
     fga: deps.fga,
     modelId: deps.modelId,
     loadView: (ref) => loadHarnessView(deps.view, ref),

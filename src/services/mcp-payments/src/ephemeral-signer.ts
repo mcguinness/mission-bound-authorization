@@ -1,9 +1,14 @@
 /**
  * @spec draft-mcguinness-mission-runtime-evidence.md#decision-evidence-integrity
- * (issue #649): a fresh, per-process ES256 signing identity for every
- * `EvidenceStore` emitter role (`pdp`, `pep`, `executor`, `receipt_issuer`),
- * for a demo, eval, or test process with no persistent, published key
- * infrastructure of its own.
+ * (issue #649, #741): a fresh, per-process ES256 signing identity for every
+ * runtime-evidence emitter this deployment operates: the PEP's own roles
+ * (`pep`, `executor`, `receipt_issuer`) and the PDP's Decision Evidence
+ * emitter, for a demo, eval, or test process with no persistent, published
+ * key infrastructure of its own.
+ *
+ * The `pdp` key is deliberately NOT part of {@link EphemeralEvidenceKeys.signing}
+ * (#741): it backs {@link EphemeralEvidenceKeys.decisionEvidence}, the PDP's
+ * own emission path, and never reaches the PEP's `EvidenceStore`.
  *
  * NOT a substitute for real key management: a production deployment
  * publishes a durable JWKS per role and supplies its own
@@ -15,60 +20,66 @@
  */
 
 import { generateKeyPairSync } from "node:crypto";
-import type { EvidenceSigningConfig, EvidenceVerificationKey } from "./evidence.js";
+import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter, type EvidenceKeyResolver } from "@mission/pdp";
+import {
+  buildEvidenceKeyResolver,
+  type EvidenceSigningConfig,
+  type EvidenceVerificationKey,
+} from "./evidence.js";
+import { CANONICAL_RESOURCE } from "./pep.js";
 
-const ALL_ROLES = ["pdp", "pep", "executor", "receipt_issuer"] as const;
-type EvidenceRole = (typeof ALL_ROLES)[number];
+const STORE_ROLES = ["pep", "executor", "receipt_issuer"] as const;
+type StoreRole = (typeof STORE_ROLES)[number];
 
 export interface EphemeralEvidenceKeys {
-  /** Pass directly to `new EvidenceStore(signing)`. */
+  /** Pass directly to `new EvidenceStore(signing, resolver)`: the roles this PEP emits under. */
   signing: EvidenceSigningConfig;
-  /** One entry per role, bound to `emitterId` (and, for every role but `receipt_issuer`, `audience`) per {@link createEphemeralEvidenceKeys}'s options. */
+  /** One entry per role (the PDP's included), bound to `emitterId` and, for every role but `receipt_issuer`, `audience`. */
   verification: EvidenceVerificationKey[];
+  /** The resolver over {@link verification}: `new EvidenceStore(signing, resolver)`. */
+  resolver: EvidenceKeyResolver;
+  /**
+   * The PDP's Decision Evidence emission path (#741): pass to
+   * `PepDeps.decisionEvidence`, which forwards it to `EvaluateOptions.evidence`.
+   * Holds the only `pdp`-role signing key in this bundle.
+   */
+  decisionEvidence: DecisionEvidenceEmitter;
 }
 
 export interface CreateEphemeralEvidenceKeysOptions {
-  roles?: readonly EvidenceRole[];
+  roles?: readonly StoreRole[];
   /**
    * The exact `emitter.id` registered for every generated key
    * ({{decision-evidence-integrity}}, #739 review point 1: a verifier MUST
-   * bind the key to the component named in the record's `emitter` member).
-   * Callers exercising `buildEvidenceKeyResolver` against records a real
-   * PEP/PDP signed MUST pass the same id that emitted those records (this
-   * deployment's convention is `CANONICAL_RESOURCE`); the default here is
-   * an arbitrary placeholder, adequate only when nothing checks it.
+   * bind the key to the component named in the record's `emitter` member),
+   * and the id the Decision Evidence emitter names. Defaults to this
+   * deployment's canonical resource, which is what its PEP and PDP actually
+   * emit under, so a resolver built from `verification` verifies genuinely
+   * signed records rather than a placeholder.
    */
   emitterId?: string;
   /**
-   * The audience registered for `pdp`/`pep`/`executor` keys (REQUIRED
-   * there per {@link EvidenceVerificationKey}; `receipt_issuer` stays
-   * audience-unbound regardless of this option, matching its own key's
-   * type). Same caveat as `emitterId`: pass the real request audience when
-   * verifying genuinely signed records.
+   * The audience registered for `pep`/`executor` and for the PDP's key
+   * (REQUIRED there per {@link EvidenceVerificationKey}; `receipt_issuer`
+   * stays audience-unbound regardless of this option, matching its own key's
+   * type). Defaults, like `emitterId`, to this deployment's canonical
+   * resource: the audience its decision requests actually carry.
    */
   audience?: string;
 }
 
 /**
- * Generate one ES256 keypair per role (default: all four). Each role gets
- * its OWN keypair and `kid`, so a verifier's key-to-role binding
- * ({{decision-evidence-integrity}}) is genuinely exercised rather than
- * trivially satisfied by one key reused everywhere. `emitterId`/`audience`
- * default to fixed placeholders: fine for a caller that only ever uses the
- * `signing` half (most callers, which never build a resolver at all), but a
- * caller that DOES build a {@link buildEvidenceKeyResolver} from
- * `verification` and checks it against real signed records MUST supply the
- * values that match what those records actually carry (#739 review point
- * 1's whole point is that a resolver no longer wildcards these).
+ * Generate one ES256 keypair per role. Each role gets its OWN keypair and
+ * `kid`, so a verifier's key-to-role binding ({{decision-evidence-integrity}})
+ * is genuinely exercised rather than trivially satisfied by one key reused
+ * everywhere. The `pdp` keypair backs the returned Decision Evidence
+ * emitter and appears in `verification` (so the PEP can verify what the PDP
+ * emitted) but never in `signing`.
  */
 export function createEphemeralEvidenceKeys(
   options: CreateEphemeralEvidenceKeysOptions = {},
 ): EphemeralEvidenceKeys {
-  const {
-    roles = ALL_ROLES,
-    emitterId = "ephemeral-emitter.example.com",
-    audience = "https://ephemeral-audience.example.com",
-  } = options;
+  const { roles = STORE_ROLES, emitterId = CANONICAL_RESOURCE, audience = CANONICAL_RESOURCE } = options;
   const signing: EvidenceSigningConfig = {};
   const verification: EvidenceVerificationKey[] = [];
   for (const role of roles) {
@@ -81,5 +92,17 @@ export function createEphemeralEvidenceKeys(
         : { kid, publicKey, role, emitterId, audience },
     );
   }
-  return { signing, verification };
+  const pdpKeys = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const pdpKid = "ephemeral-pdp";
+  verification.push({ kid: pdpKid, publicKey: pdpKeys.publicKey, role: "pdp", emitterId, audience });
+  return {
+    signing,
+    verification,
+    resolver: buildEvidenceKeyResolver(verification),
+    decisionEvidence: createDecisionEvidenceEmitter({
+      signer: { kid: pdpKid, key: pdpKeys.privateKey },
+      emitterId,
+      audience,
+    }),
+  };
 }
