@@ -41,6 +41,7 @@ normative:
         ins: D. Hardt
         name: Dick Hardt
     date: 2026
+    refcontent: "Editor's copy, commit fc5e972c"
 
 informative:
   I-D.draft-mcguinness-aauth-mission-expiry:
