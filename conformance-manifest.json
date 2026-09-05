@@ -15,8 +15,8 @@
     "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "546645dbdaa2c3901bc0f700bd3cec2c994b753b",
-    "content_sha256": "45becc7b62ff4012d68d130a98b9dd52475b08d90e8fcd39be13e23dc4f500dd"
+    "revision": "4d435fca44070a971fa883a47efe95d57c285272",
+    "content_sha256": "8110f7b3c13a33091f4719355bf6d88ad96288f5d7e98808b7051d87d6ebed6b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -51,8 +51,8 @@
     "content_sha256": "c46703c3740d19dcaa21aa1f348708da36729f6cac54626874b29ef3851763d9"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "fbed64bed5224daa7ff42dec42b9866f6a690e9d",
-    "content_sha256": "0f30b727ab177312962bef21135a05a6bd2b69dd7c09895190e3f557a2b75059"
+    "revision": "4d435fca44070a971fa883a47efe95d57c285272",
+    "content_sha256": "58fe82b35e8de7df774c9eb8e183b8a14dd8724a8c4fca7793f1b72f925ffce1"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "3b0de2648fbc2153d05e0606d7847255ae1457c8",
@@ -208,8 +208,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "Every consequential phase MUST obtain its own Decision.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "a consequential phase never proceeds on another phase's Decision: each obtains its own"
    },
    "level": "unit",
    "coverage": "todo",
@@ -231,8 +230,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A permit MUST NOT authorize more than one phase.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "one permit authorizes exactly one phase, never a second phase of the same compound action"
    },
    "level": "unit",
    "coverage": "todo",
@@ -254,8 +252,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A preflight Decision MUST NOT satisfy the gate for a consequential phase.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "a preflight Decision never stands as the gate for a consequential phase"
    },
    "level": "unit",
    "coverage": "todo",
@@ -265,7 +262,7 @@
    "id": "runtime.compound-actions.commit-reevaluates-state",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "compound-actions",
-   "text": "The commit phase MUST obtain its own Decision against the Mission's effective authority and active state under the existing state-freshness bounds.",
+   "text": "The commit phase MUST obtain its own Decision against the Mission's effective authority ({{input-authority}}) and `active` state ({{state-freshness}}), under the existing freshness bounds.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -277,8 +274,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The commit phase MUST obtain its own Decision against the Mission's effective authority and active state under the existing state-freshness bounds.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "the commit phase runs on its own Decision, taken against effective authority and active state within the existing freshness bounds, never on prepare's Decision or state observation"
    },
    "level": "unit",
    "coverage": "todo",
@@ -288,7 +284,7 @@
    "id": "runtime.compound-actions.phase-on-evidence",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "compound-actions",
-   "text": "Decision Evidence for a phase MUST record its action_phase.",
+   "text": "Decision Evidence for a phase MUST record its `action_phase`.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -300,8 +296,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Decision Evidence for a phase MUST record its action_phase.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "Decision Evidence for a phase records the phase; the member is retrospective only and never substitutes for the permit's phase condition"
    },
    "level": "unit",
    "coverage": "todo",
@@ -311,7 +306,7 @@
    "id": "runtime.compound-actions.compensate-link-required",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "compound-actions",
-   "text": "A compensate-phase Decision MUST carry compensates_evaluation_id identifying the evaluation whose committed effect it offsets.",
+   "text": "A compensate-phase Decision MUST carry `compensates_evaluation_id` identifying the evaluation whose committed effect it offsets.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -323,8 +318,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A compensate-phase Decision MUST carry compensates_evaluation_id identifying the evaluation whose committed effect it offsets.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "a compensate-phase Decision carries the evaluation identifier of the committed effect it offsets"
    },
    "level": "unit",
    "coverage": "todo",
@@ -346,8 +340,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A compensation MUST NOT be authorized by the compensated action's permit.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "a compensation is separately authorized, never authorized by the permit of the action it offsets, and its correlation link supplies no authority"
    },
    "level": "unit",
    "coverage": "todo",
@@ -369,8 +362,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A permit for a phase MUST bind that phase.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "a permit issued for a phase binds that phase, alongside the action, resource, and parameter digest it already binds"
    },
    "level": "unit",
    "coverage": "todo",
@@ -392,8 +384,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The PEP MUST NOT derive the phase from an agent-supplied argument.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "the phase of a crossing comes from the PEP's own Operation Profile, never from a request argument the agent supplies"
    },
    "level": "unit",
    "coverage": "todo",
@@ -415,8 +406,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The executing PEP MUST compare the permit's bound phase with the phase of the crossing before releasing an effect.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "the executing PEP compares the permit's bound phase against the crossing's phase and refuses, fail closed, before any effect is released"
    },
    "level": "unit",
    "coverage": "todo",
@@ -438,8 +428,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A PEP that does not recognize the phase condition MUST treat the permit as invalid.",
-    "local": "PR A defines the phase rule; AuthZEN/evidence carriers follow in PR B and executing-path tests in PR C. Applies when the operation is a compound-action phase."
+    "normative": "a PEP that does not recognize the phase condition treats the permit as invalid rather than executing it"
    },
    "level": "unit",
    "coverage": "todo",
@@ -461,8 +450,8 @@
    "surface": "resource-operation",
    "assertion": "replay",
    "observation": {
-    "normative": "Shared-identifier phases use phase-scoped idempotency.",
-    "local": "Conditional clause applies to shared-identifier phases; implementation follows in #252 PR C."
+    "normative": "where a compound action's phases share one action identifier, the idempotency scope includes the phase",
+    "local": "applies only where a compound action's phases share one action identifier; deployments giving each phase its own action identifier already separate the keys"
    },
    "level": "unit",
    "coverage": "todo",
