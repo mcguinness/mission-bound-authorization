@@ -2,6 +2,14 @@
  "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.specs names, for every spec file a row references, the revision (the commit whose text that spec's rows were validated against) and content_sha256 (a mechanical gate recomputed from the working-tree file's current bytes, which must match, or the entry needs deliberate re-review and a bump before CI passes again); the stale-text check catches an edited or relocated clause inside an anchored section, source.specs catches any other edit to a spec whose rows were not re-reviewed. Completeness provenance per spec lives in the tracking issues, not in this manifest. Each row's profiles array (enumerated at the top level in profiles) names which published baseline profile(s) this requirement belongs to: a floor document beyond core typically carries only runtime-enforced, core typically carries both, and an empty array means this requirement belongs to no published baseline profile, whether because its document sits outside every baseline or because a baseline document's own row is scoped to an optional capability no published baseline selects; profiles and applicability are orthogonal, since applicability already encodes election of an OPTIONAL capability.",
  "source": {
   "specs": {
+   "draft-mcguinness-oauth-mission-expansion.md": {
+    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
+    "content_sha256": "9cca446bd5ba68b7a5a2fa96660db3a7e75907a0ece6f6d5734d41cd302ecce0"
+   },
+   "draft-mcguinness-oauth-mission-child-delegation.md": {
+    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
+    "content_sha256": "869ec957caa243303360ea7f96663dff2312d5161879f40a74ac2d6e5095c81d"
+   },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "16cd23afa44c7bbe9a8813e4dc5d739e2697f047",
     "content_sha256": "bb32eb7c901f567a68dd8ae90e769da72408061ff3925aa1a6862679d254d82a"
@@ -35,16 +43,16 @@
     "content_sha256": "9ffee3c2139259552755eb526894e90d58969dbe3db807fe42a485677ab76a3e"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
-    "content_sha256": "1722dd6c39d6e5fc39db0b5f0bf8797363cfe631ab7e342b4cf4f86a45d17a02"
+    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
+    "content_sha256": "1d14809cb2c138a090186a64a5a33432519d88766ab0abb3908dca185cf099cd"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "172fb46606ec02b2942cac492b28c181c60bae2f",
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "49fc10f054ae34b36db4b931801c2b7b9db746c8",
-    "content_sha256": "a8212952fbe9fd97ce345b648d596f041f081941b31e5e7ff96018477c4dc542"
+    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
+    "content_sha256": "58f3382954eb7ab0c44133c57d978fe53e35250a154ea64d86df1b118ee4e4a7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
