@@ -1153,11 +1153,11 @@ A trusted-base component is compromised:
   Residual: not prevented; degrades the specific guarantee per
   {{trusted-base}}.
 
-Arbitrary code runs inside the agent's boundary (an interpreter,
-  a spawned process, or a generated script):
-: Addressed by the mediated boundary an effect crosses, parameter-bound
-  permits, mediated credential custody, and the harness's isolation and
-  channel enumeration. Residual: unrecorded computation and channels
+Arbitrary code runs inside the agent's boundary:
+: Addressed by the mediated boundary an effect crosses (an interpreter,
+  a spawned process, or a generated script), parameter-bound permits,
+  mediated credential custody, and the harness's isolation and channel
+  enumeration. Residual: unrecorded computation and channels
   outside that perimeter ({{perimeter}}); sandboxing owns execution.
 
 Eleven residuals are worth stating on their own, because they are the
