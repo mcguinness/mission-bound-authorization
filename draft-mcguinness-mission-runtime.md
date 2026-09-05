@@ -49,6 +49,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-control-plane:
+    title: "Mission Control-Plane Consistency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC9700:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -1078,7 +1086,7 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 123 conformance rows in conformance-manifest.json (32 tested, 21 partial, 67 todo, 3 blocked).
+Implementation: 126 conformance rows in conformance-manifest.json (32 tested, 21 partial, 70 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
@@ -2875,6 +2883,95 @@ deployment prices this deliberately: colocate a Mission's domain
 with the PEPs that act under it, or accept the hop for the classes
 that require it.
 
+# Operational Considerations {#runtime-operational}
+
+Deployment Considerations ({{runtime-deployment}}) describes sizing and
+placement. This section describes dependency outages and the operator's
+declared response. It composes with the Shared Consistency and
+Availability Rule section of
+{{I-D.draft-mcguinness-mission-control-plane}}:
+operational guidance does not manufacture freshness or add emergency
+authority to an ordinary Mission permit.
+
+## Outage Blast Radius {#outage-radius}
+
+The primary axis is action class, as in {{classification}} and
+{{failure-modes}}. The security model's Revocation-to-Action Latency table
+describes a different axis: what a committed revocation stops
+({{I-D.draft-mcguinness-mission-security-model}}).
+
+| Action class / reliance | Issuer or state-source outage | PDP outage | Signals outage |
+|---|---|---|---|
+| Local computation with no governed resource effect | No new authority is needed; other dependencies can still halt it | No permit dependency | No state-delivery dependency |
+| Governed low-consequence action using credential-lifetime freshness | Existing credential and every other applicable bound remain authoritative; renewal stops if its issuer is unavailable | Follow the declared gate, if any; an unavailable gate is not permission | Credential expiry still bounds reliance |
+| Consequential action requiring a permit | Continue only if the required state and other inputs remain valid or can be obtained from an independently available authoritative source | No new permit; an already-issued permit may be used only within all of its bounds and the declared posture | Use an available authorized fallback within the existing state horizon, or stop |
+| High-consequence action | The active-freshness requirement still applies; no downgrade to credential-lifetime-only reliance | Same permit rule, including single-use consumption and required online controls | Fallback must still satisfy the class's active-freshness requirement |
+
+Every cell is conditional on dependency topology. An issuer outage does not
+imply that an independently operated authoritative state source is down.
+Conversely, a PDP or a fallback state source may depend on the failed issuer.
+New issuance or mutation stops when its required authoritative control-plane
+dependency is unavailable, not merely when a component with a particular
+name fails.
+
+Continued execution requires the credential, state observation, permit,
+parameter binding, use limit, metering/latch state, and every other applicable
+input to remain valid. A fallback cannot re-stamp an older observation.
+Paths outside the enforcement claim remain outside it: continued effects
+or reconstructed provenance on such a path do not demonstrate available
+Mission enforcement. Per-entry perimeter dispositions can refine the table
+when that declaration shape is adopted; they do not change the action-class
+requirements.
+
+## The Remaining Window Is the Ride-Through {#ride-through}
+
+A deployment SHOULD publish, for each action class, the availability
+consequence of its declared staleness bound and the recovery objective
+considered when choosing it.
+
+The ride-through is the minimum remaining applicable credential, state,
+permit, and other validity window at the point of use, subject to prior
+consumption and all non-temporal checks. It is not a new window that begins
+when an outage is detected. A bound shorter than the dependency's recovery
+objective describes a designed halt. Recovery objectives can inform a bound
+within the security ceiling; they cannot justify extending that ceiling
+during an incident or resetting a permit's validity.
+
+The PDP-unavailability posture already declared in the Enforcement Scope
+Statement can choose a stricter immediate stop or bounded use of existing
+permits. It cannot authorize a missing decision, reuse a consumed permit,
+or skip parameter, action, state, and other permit conditions.
+
+## Positive Break-Glass Is a Declared Separate Mode {#break-glass}
+
+A deployment providing positive emergency authority SHOULD declare the mode
+in its Enforcement Scope Statement, require dual control and automatic
+expiry, retain truthful activation and action evidence, and identify the
+affected actions as excluded from its Mission enforcement claim.
+
+Evidence identifies the independent authority, activation, scope, expiry,
+and excluded claim. It does not fabricate a PDP Decision or Mission permit
+when the ordinary path could not produce one. Activations are counted and
+reviewable. The ordinary Mission path continues to fail closed; emergency
+authority is a separate mode, not a successful result of that path. The
+Positive emergency authority is separate section of
+{{I-D.draft-mcguinness-mission-control-plane}} states that separation.
+
+## Replication Is a Declared Deployment Property {#runtime-replication}
+
+A deployment using replica-served state sources SHOULD disclose, in its
+Enforcement Scope Statement, the replication model and lag counted inside
+each published staleness bound.
+
+This recommends no consensus protocol or leader architecture. The
+observation must be justified by the deployment's consistency mechanism;
+a signature or new signing key does not turn a lagging value into a fresh
+one, per the Fresh observations, not fresh signatures section of
+{{I-D.draft-mcguinness-mission-control-plane}}.
+Operators watch observation age, available fallback sources, propagation
+gaps, permit refusals, and recovery progress. Metrics targets and fleet
+benchmarks are separate deployment work.
+
 # Decision API Binding {#authzen}
 
 The decision contract of {{decision}} is abstract: it fixes the inputs,
@@ -3182,6 +3279,16 @@ any decision-API wire members are defined by the decision-API binding
 ({{authzen}}, {{I-D.draft-mcguinness-mission-authzen}}).
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Operational Considerations added (#310): a dependency-conditional outage
+  blast-radius table indexed by action class, the remaining-window
+  ride-through, the declared positive break-glass mode with truthful
+  emergency evidence, and the replication disclosure. The three operator
+  declarations carry no implementation coverage.
 
 # Parameter Digest Worked Example {#parameter-digest-example}
 

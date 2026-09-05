@@ -19,8 +19,8 @@
     "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "1c84c7455f4d97dbf871476ee5900ad3317ad095",
-    "content_sha256": "3d1afcfb7d41c73ec3cac02bbbd2452536c544878f9b5cce394d46764b4518f1"
+    "revision": "a16f772755d4a929c4bca1af064473670e5f4d81",
+    "content_sha256": "3bceba5c68645f59f918af6930ad28778740d29fc7787eacf8a0715a945f29ef"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -154,6 +154,7 @@
    "concurrency"
   ],
   "capabilities": [
+   "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
    "status.lifecycle",
@@ -202,268 +203,68 @@
  ],
  "requirements": [
   {
-   "id": "control-plane.consistency.serialization",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "serialization",
-   "text": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "concurrency",
-   "observation": {
-    "normative": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant. Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling."
-   },
-   "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.fresh-observation",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "fresh-observation",
-   "text": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "verification",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.state-surfaces",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "state-surfaces",
-   "text": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol.",
-   "role": "Controller",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.rollback",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "rollback",
-   "text": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "verification",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.tombstones",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "tombstones",
-   "text": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon. A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.partitions",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "partitions",
-   "text": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.emergency-deny",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "emergency-deny",
-   "text": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.emergency-authority",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "emergency-authority",
-   "text": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim.",
+   "id": "runtime.operational.ride-through-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "ride-through",
+   "text": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
    "role": "PEP",
-   "strength": "MUST",
+   "strength": "SHOULD",
    "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.isolation",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "isolation",
-   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.fanout",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "fanout",
-   "text": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "propagation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition. An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.declaration",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "deployment-declaration",
-   "text": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
-   "role": "Controller",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
   },
   {
-   "id": "control-plane.consistency.claim",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "conformance",
-   "text": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
-   "role": "Controller",
-   "strength": "MUST",
+   "id": "runtime.operational.replication-disclosed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-replication",
+   "text": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound.",
+   "role": "PEP",
+   "strength": "SHOULD",
    "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+    "normative": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound."
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
+  {
+   "id": "runtime.operational.break-glass-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "break-glass",
+   "text": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.break-glass"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
   },
   {
    "id": "capability-binding.recording.validating-server-records-binding",
@@ -934,6 +735,270 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#762 deliberately separates this from the ceiling fix: the mint currently supplies neither a local JTI nor this evidence record."
+  },
+  {
+   "id": "control-plane.consistency.serialization",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "serialization",
+   "text": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant. Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling."
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.fresh-observation",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "fresh-observation",
+   "text": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.state-surfaces",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "state-surfaces",
+   "text": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.rollback",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "rollback",
+   "text": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.tombstones",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "tombstones",
+   "text": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon. A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.partitions",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "partitions",
+   "text": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.emergency-deny",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "emergency-deny",
+   "text": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.emergency-authority",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "emergency-authority",
+   "text": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.isolation",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.fanout",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "fanout",
+   "text": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition. An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.declaration",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "deployment-declaration",
+   "text": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.claim",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
   },
   {
    "id": "core.submission.front-channel-refusal",
