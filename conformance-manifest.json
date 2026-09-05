@@ -193,6 +193,362 @@
  ],
  "requirements": [
   {
+   "id": "capability-binding.recording.validating-server-records-binding",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "conformance",
+   "text": "A validating server conforming to this document MUST record `tool_id`, `source_uri`, `source_digest`, `operation_ref`, and any `catalog_digest` for every consequential action sourced from a discovered catalog, at derivation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The validating server records trusted resolved capability bindings before computing the authority commitment.",
+    "local": "This deployment's trust unit is the selected capability definition, so source_digest is recorded and no catalog_digest is. Configured local snapshots cover direct approval, newly established expansion actions, and template consent; child and template derivations inherit existing bindings."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > records source_digest and never a catalog_digest; the selected definition is the trust unit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > resolves mixed actions individually and records a fresh expansion action without refreshing its predecessor binding",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > resolves the consented template ceiling before hashing and drawdown inherits it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.presentation.pep-presents-context-member",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "conformance",
+   "text": "A PEP conforming to this document MUST present `context.capability_source` on a consequential request for a catalog-sourced action",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The PEP presents the current definition's binding from the catalog it serves, independent of whether the Mission has a recorded member."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > presents the current per-tool binding even on a Mission with no recorded member",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.verification.pdp-verifies-and-refuses",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "conformance",
+   "text": "A PDP conforming to this document MUST verify the presented binding against the recorded one and return `capability_drift` on a mismatch",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A recorded per-action binding requires a well-formed matching presentation; missing, malformed, substituted and drifted values refuse capability_drift."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > denies capability_drift on a mismatched %s before resource policy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > denies absent or malformed presentation %#",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.verification.applicability-from-policy-view",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-verification",
+   "text": "not from the PEP's request; where no source binding was recorded, this check does not apply",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "Only bindings recorded for the requested action in the matched policy entry enable comparison; presentation neither creates applicability nor opts out."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > does not apply without recorded bindings, regardless of presentation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > uses only bindings for the requested action in a mixed entry",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.drift.reason-boundary",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-drift-reason",
+   "text": "`capability_drift` applies only when a source binding was recorded and the digest comparison ran",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Never-approved, contained and discharged authority preserve their existing refusal reasons; source verification applies only after those checks."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > preserves never-approved, contained and discharged reason precedence",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.derivation.covered-by-authority-hash",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-source-binding",
+   "text": "These values are part of the approved Mission's derived authority and are therefore covered by `authority_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Recorded bindings are committed in the Authority Set under authority_hash.",
+    "local": "The implementation-defined committed per-action capability_sources member from #752 is inherited byte-identically on issuer-derived lineage; binding-neutral wire comparisons use the shared predicate."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > records source_digest and never a catalog_digest; the selected definition is the trust unit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-binding.test.ts",
+     "name": "commits the inherited bindings under the child authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-binding.test.ts",
+     "name": "commits the inherited bindings under the instance authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.extraction.mcp-per-capability-definition",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-extraction",
+   "text": "For an MCP tool catalog, the extracted definition is the single tool's definition object as retrieved (the member of the catalog's tool list whose name is the capability's), JCS-canonicalized",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "MCP bindings hash one selected tool definition under JCS, not the whole catalog or an anchor envelope."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/capability-binding.test.ts",
+     "name": "reproduces the published write_document source_digest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/capability-binding.test.ts",
+     "name": "adding, removing, or renaming an unrelated tool leaves the digest unchanged",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.evidence.executor-recorded",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-source-binding",
+   "text": "It is a request-time fact, not part of the derived authority recorded at derivation, and is recorded in Decision Evidence when present",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Well-formed capability presentation, including an optional executor, is copied field by field into PDP-signed evidence; malformed presentation is omitted."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > carries catalog_digest and executor when present and signs only the closed normalized shape",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > records a structurally valid but mismatched binding on a capability_drift denial",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > omits malformed capability input %# while retaining drift reason and request-summary digest",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.verification.catalog-digest-compared-where-recorded",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-verification",
+   "text": "where a `catalog_digest` was recorded, the presented `catalog_digest` MUST equal it likewise; otherwise the PDP returns `capability_drift`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A recorded whole-catalog digest is required and compared in addition to the per-capability binding.",
+    "local": "No deployment approval surface here records a whole-catalog digest. Comparison is exercised with synthetic recorded fixtures at unit level; this deployment uses the selected capability definition as its trust unit."
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > compares catalog_digest where recorded, including omission",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-reverification",
+   "text": "The executing PEP MUST verify the permit's bindings",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The executing PEP verifies the decision's binding to the capability before invocation.",
+    "local": "One read returns the presented binding and a local exact-octet snapshot identity. The snapshot is carried with the effective operation and compared immediately before invocation. This is the deployment's execution-reverification facet, not a separate MUST invented in the capability-drift section."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > refuses a changed snapshot before a read executes",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > carries the snapshot into write and list effective operations and refuses a post-decision change",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
    "id": "core.submission.front-channel-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
@@ -7762,10 +8118,17 @@
    "observation": {
     "normative": "an action sourced from a discovered capability whose current extracted-definition digest no longer matches the digest recorded at derivation is refused"
    },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No code path: no discovered-catalog capability digest concept (extracted-definition digest, whole-source digest) exists anywhere in src/services/pdp or src/services/mcp-payments; AuthorityEntry and MissionView carry no such member."
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Recorded capability comparison is wired end to end. The runtime.discovered-catalog claim also brings the three runtime.classification.* rows into scope; those remain todo."
   },
   {
    "id": "runtime.decision-inputs.resource-policy-fail-closed",

@@ -30,7 +30,9 @@ import type {
   RuntimeActionClass,
   RuntimeConditions,
   RuntimePrincipalMapping,
+  RuntimeCapabilitySource,
 } from "./decision-evidence.js";
+import { runtimeCapabilitySourceOf } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
 import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
 import {
@@ -139,6 +141,7 @@ export interface EvaluationRequest {
       subject?: OriginPrincipal;
     };
     actor?: ContextActor;
+    capability_source?: RuntimeCapabilitySource;
     freshness?: Freshness;
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
@@ -174,6 +177,7 @@ export interface EvaluationRequest {
 }
 
 export type DenialReason =
+  | "capability_drift"
   | "out_of_authority"
   | "authority_contained"
   /**
@@ -399,7 +403,9 @@ async function emitDecisionEvidence(
         valid_until: raw.valid_until,
       }
     : undefined;
+  const capability_source = runtimeCapabilitySourceOf(req.context.capability_source);
   return emitter.emit({
+    ...(capability_source ? { capability_source } : {}),
     mission: {
       id: view.id,
       issuer: view.issuer,
@@ -764,6 +770,22 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
           entry_digest: digest,
         }),
       };
+    }
+  }
+
+  // @spec capability-binding#capability-verification — applicability comes
+  // ONLY from recorded policy for this action. A presented member cannot opt
+  // out, substitute another action's binding, or create applicability.
+  const bindings = entry.capability_sources?.filter(b => b.action === req.action.name) ?? [];
+  if (bindings.length) {
+    const presented = runtimeCapabilitySourceOf(req.context.capability_source);
+    const recorded = presented && bindings.find(b => b.tool_id === presented.tool_id);
+    if (!presented || !recorded || !runtimeCapabilitySourceOf(recorded) ||
+        presented.source_digest !== recorded.source_digest ||
+        presented.source_uri !== recorded.source_uri ||
+        presented.operation_ref !== recorded.operation_ref ||
+        (recorded.catalog_digest !== undefined && presented.catalog_digest !== recorded.catalog_digest)) {
+      return deny("capability_drift");
     }
   }
 
