@@ -1367,10 +1367,10 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.22">
-            <p id="section-toc.1-1.22.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+            <p id="section-toc.1-1.22.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-experimental-consumer-verif" class="internal xref">Experimental Consumer-Verified Cascade Modes</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23">
-            <p id="section-toc.1-1.23.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-experimental-consumer-verif" class="internal xref">Experimental Consumer-Verified Cascade Modes</a></p>
+            <p id="section-toc.1-1.23.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24">
             <p id="section-toc.1-1.24.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
@@ -2888,7 +2888,7 @@ restored to its prior state on parent resume.<a href="#section-10-9.2.1" class="
 <p id="section-10-10">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
 <code>status_required</code>, which trade issuer-committed transitions for
 consumer-side parent-state checks, are experimental and defined in
-<a href="#experimental-cascade" class="auto internal xref">Appendix B</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
+<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
 to continue deriving
 new credentials after the parent is known to be non-active.<a href="#section-10-10" class="pilcrow">¶</a></p>
 <p id="section-10-11">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
@@ -3035,7 +3035,7 @@ known, <code>cascade_mode</code>, and freshness information.<a href="#section-10
 own: it relies on the Mission Issuer's child state transition, read
 from the child's own state surfaces. The consumer obligations of the
 experimental consumer-verified modes are defined with those modes
-(<a href="#experimental-cascade" class="auto internal xref">Appendix B</a>).<a href="#section-10.1-17" class="pilcrow">¶</a></p>
+(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-17" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3059,33 +3059,34 @@ A policy-adjudicated progressive drawdown <span class="bcp14">MUST NOT</span> pe
 <p id="section-11.1-1">The Mission Issuer <span class="bcp14">MUST</span> render and commit the exact Carryover Manifest,
 including its exclusion policy and replacement approval facts, at the
 expansion approval event.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
-<p id="section-11.1-2">A manifest is a JSON object with format_version 1, predecessor and proposed
-successor references, the successor proposal's Intent and authority
-commitments, exclusion_policy, and entries. References include issuer and
-Mission identifier. Proposed identifiers are reserved during preparation;
-reservation creates no authority. Entries are ordered by old created_at,
-then old Mission identifier (byte order), independently of the generation
-order used for derivation. Each entry names:<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">A manifest is a JSON object with a <code>format_version</code> of 1, predecessor and
+proposed successor references, the successor proposal's Intent and
+authority commitments, <code>exclusion_policy</code>, and <code>entries</code>. References
+include <code>issuer</code> and Mission identifier. Proposed identifiers are
+reserved during preparation; reservation creates no authority. Entries
+are ordered by old <code>created_at</code>, then old Mission identifier (byte order),
+independently of the generation order used for derivation. Each entry names:<a href="#section-11.1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.1-3.1">
-            <p id="section-11.1-3.1.1">child_id, issuer, created_at, child_actor, and current state and version;<a href="#section-11.1-3.1.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-3.1.1"><code>child_id</code>, <code>issuer</code>, <code>created_at</code>, <code>child_actor</code>, and current state and
+version;<a href="#section-11.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-3.2">
-            <p id="section-11.1-3.2.1">authority_hash, intent_hash, effective_authority_hash,
-containment_version, and the exact parent reference and depth;<a href="#section-11.1-3.2.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-3.2.1"><code>authority_hash</code>, <code>intent_hash</code>, <code>effective_authority_hash</code>,
+<code>containment_version</code>, and the exact <code>parent</code> reference and <code>depth</code>;<a href="#section-11.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-3.3">
-            <p id="section-11.1-3.3.1">derivation_limit, derivation_count, expires_at, and every mutable
+            <p id="section-11.1-3.3.1"><code>derivation_limit</code>, <code>derivation_count</code>, <code>expires_at</code>, and every mutable
 discharge, fan-out, meter, or latch input used to decide or transfer
 eligibility (or authenticated commitments to those inputs);<a href="#section-11.1-3.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-3.4">
-            <p id="section-11.1-3.4.1">outcome, either carry or cascade, and a reason for cascade; and<a href="#section-11.1-3.4.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-3.4.1"><code>outcome</code>, either <code>carry</code> or <code>cascade</code>, and a <code>reason</code> for <code>cascade</code>; and<a href="#section-11.1-3.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-3.5">
-            <p id="section-11.1-3.5.1">for carry, replacement_id and the proposed replacement's Intent
+            <p id="section-11.1-3.5.1">for <code>carry</code>, <code>replacement_id</code> and the proposed replacement's Intent
 commitment, approved-authority commitment, actor, parent reference,
-authority_source, expiry, derivation budget, and deterministic
+<code>authority_source</code>, expiry, derivation budget, and deterministic
 child-specific approval event identifier.<a href="#section-11.1-3.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
@@ -3093,10 +3094,11 @@ child-specific approval event identifier.<a href="#section-11.1-3.5.1" class="pi
 the complete proposed Intent and authority alongside their commitments, or
 enough committed inputs and a versioned deterministic derivation to reproduce
 them exactly. A reference to an uncommitted mutable policy is insufficient.
-If the replacement inherits the successor's authority_source rather than the
+If the replacement inherits the successor's <code>authority_source</code> rather than the
 old child's, that change is explicitly rendered and committed.<a href="#section-11.1-4" class="pilcrow">¶</a></p>
-<p id="section-11.1-5">The manifest_hash uses the issuance profile's default commitment construction
-over the JCS canonical manifest, including exclusion_policy. The issuer retains
+<p id="section-11.1-5">The <code>manifest_hash</code> uses the issuance profile's default commitment
+construction over the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical manifest, including
+<code>exclusion_policy</code>. The issuer retains
 the manifest with its authenticated approval; the hash alone authenticates no
 approval. Each child-specific event identifier is derived from the committed
 expansion approval event identifier and qualified old-child identity using
@@ -3115,7 +3117,7 @@ a rendered cascade into carry.<a href="#section-11.1-6" class="pilcrow">¶</a></
         </h3>
 <p id="section-11.2-1">The Mission Issuer <span class="bcp14">MUST</span> compare-and-set every mutable eligibility and
 transfer input committed in the manifest within the completion transaction,
-not merely compare lifecycle version or authority_hash.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+not merely compare lifecycle version or <code>authority_hash</code>.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <p id="section-11.2-2">This includes effective authority/discharge state, derivation counters,
 fan-out occupancy, and any external meter/latch state. A derivation counter
 can change without a lifecycle-version increment; that still invalidates the
@@ -3127,7 +3129,7 @@ every dependent descendant: no replacement attaches to a missing parent.
 New descendants absent from the manifest are never carried; under
 disclosed-exclusions they cascade and appear in the completion evidence.
 Already-terminal old children retain their terminal state and are recorded as
-excluded, never transitioned again to cascaded. Each final outcome is recorded
+excluded, never transitioned again to <code>cascaded</code>. Each final outcome is recorded
 against its rendered row, not inferred from set equality over the subtree.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -3154,21 +3156,22 @@ The old mapping is evidence, not stable entry identity.<a href="#section-11.3-2"
 <p id="section-11.4-1">The Mission Issuer <span class="bcp14">MUST</span> use the old child's current Effective Authority Set
 as the replacement's authority ceiling and <span class="bcp14">MUST NOT</span> restore containment or
 discharge removed by that effective-set calculation.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
-<p id="section-11.4-2">Only an effectively active child is eligible. A suspended child is excluded,
-not resumed by carryover. The replacement's approved set is the rechecked
-effective set, with no overlay reset that restores removed authority.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
-<p id="section-11.4-3">The replacement's expires_at <span class="bcp14">MUST NOT</span> exceed either the old child's
-expires_at or its new parent's effective expires_at.<a href="#section-11.4-3" class="pilcrow">¶</a></p>
+<p id="section-11.4-2">Only an effectively <code>active</code> child is eligible. A <code>suspended</code> child is
+excluded, not resumed by carryover. The replacement's approved set is the
+rechecked effective set, with no overlay reset that restores removed
+authority.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
+<p id="section-11.4-3">The replacement's <code>expires_at</code> <span class="bcp14">MUST NOT</span> exceed either the old child's
+<code>expires_at</code> or its new parent's effective <code>expires_at</code>.<a href="#section-11.4-3" class="pilcrow">¶</a></p>
 <p id="section-11.4-4">A successor's separately approved expiry extension does not extend the old
 child's horizon. Any other policy shortening remains applicable.<a href="#section-11.4-4" class="pilcrow">¶</a></p>
-<p id="section-11.4-5">The Mission Issuer <span class="bcp14">MUST</span> preserve the old child's derivation_limit and
-derivation_count and atomically preserve every remaining operational budget
+<p id="section-11.4-5">The Mission Issuer <span class="bcp14">MUST</span> preserve the old child's <code>derivation_limit</code> and
+<code>derivation_count</code> and atomically preserve every remaining operational budget
 or make the child ineligible.<a href="#section-11.4-5" class="pilcrow">¶</a></p>
 <p id="section-11.4-6">This is a carryover-specific exception to starting a new child with a fresh
 derivation counter (<a href="#derivation-budget" class="auto internal xref">Section 8.2</a>): the replacement continues the old
 child's remaining budget, despite receiving a new record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
-binding; changing the key to replacement_id is not a transfer. Fan-out is
+binding; changing the key to <code>replacement_id</code> is not a transfer. Fan-out is
 recounted against new justifying entries in the same serialization domain,
 including concurrently non-terminal occupants and all carried generations.
 Repeated expansion/carryover cannot replenish any of these budgets.<a href="#section-11.4-6" class="pilcrow">¶</a></p>
@@ -3180,19 +3183,19 @@ Repeated expansion/carryover cannot replenish any of these budgets.<a href="#sec
 <a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-fresh-records-and-direct-ap" class="section-name selfRef">Fresh Records and Direct Approval</a>
         </h3>
 <p id="section-11.5-1">The Mission Issuer <span class="bcp14">MUST</span> create a new record for each replacement, with
-approval_basis.type direct and a child-specific approval event, and <span class="bcp14">MUST NOT</span>
-modify the old child's parent or immutable approval anchors.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
-<p id="section-11.5-2">The expansion Approver is the consent_principal and ordinary direct
-activation_actor for each replacement; activation carries its deterministic
-approval_event_id and root_commitment is its own authority_hash. The issuer
-re-runs the ordinary source-activation and source-ceiling checks for the
-rendered replacement authority_source. There is no expansion_carryover
+<code>approval_basis.type</code> <code>direct</code> and a child-specific approval event, and <span class="bcp14">MUST NOT</span> modify the old child's <code>parent</code> or immutable approval anchors.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+<p id="section-11.5-2">The expansion Approver is the <code>consent_principal</code> and ordinary <code>direct</code>
+          <code>activation_actor</code> for each replacement; activation carries its
+deterministic <code>approval_event_id</code> and <code>root_commitment</code> is its own
+<code>authority_hash</code>. The issuer re-runs the ordinary source-activation and
+source-ceiling checks for the
+rendered replacement <code>authority_source</code>. There is no <code>expansion_carryover</code>
 standing-consent basis.<a href="#section-11.5-2" class="pilcrow">¶</a></p>
-<p id="section-11.5-3">The replacement records related_to as correlation with the qualified old
+<p id="section-11.5-3">The replacement records <code>related_to</code> as correlation with the qualified old
 child, under expansion's existing correlation semantics. The old child gains
-carried_to, a string containing the replacement Mission identifier under the
-same issuer, only when its cascaded transition and replacement commit.
-carried_to is immutable thereafter, absent for excluded children, and grants
+<code>carried_to</code>, a string containing the replacement Mission identifier under
+the same issuer, only when its <code>cascaded</code> transition and replacement commit.
+<code>carried_to</code> is immutable thereafter, absent for excluded children, and grants
 nothing. Neither pointer selects authority or rebinds a credential.<a href="#section-11.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -3207,8 +3210,8 @@ the final old-to-new map, and durable publication/recovery work atomically.<a hr
 <p id="section-11.6-2">No partial successor, surviving replacement, or cascade is left by a failed
 transaction. Constructing replacements before cascades inside the transaction
 does not promise a remote observation order. External publication is performed
-after commit and is recoverable and idempotent; it is not included in the
-record transaction by calling a second store's API inside that transaction.<a href="#section-11.6-2" class="pilcrow">¶</a></p>
+after commit and is recoverable and idempotent; it is never performed inside
+the record transaction.<a href="#section-11.6-2" class="pilcrow">¶</a></p>
 <p id="section-11.6-3">The Mission Issuer <span class="bcp14">MUST</span> provide idempotent retrieval of the committed
 replacement result through the child-creation completion surface to the
 authenticated and authorized child actor.<a href="#section-11.6-3" class="pilcrow">¶</a></p>
@@ -3233,20 +3236,20 @@ worker execution.<a href="#section-11.6-6" class="pilcrow">¶</a></p>
 <a href="#section-11.7" class="section-number selfRef">11.7. </a><a href="#name-carryover-evidence-and-obse" class="section-name selfRef">Carryover Evidence and Observation</a>
         </h3>
 <p id="section-11.7-1">The Mission Issuer <span class="bcp14">MUST</span> retain authenticated Carryover Evidence containing
-the manifest_hash, predecessor and successor references, and the complete
+the <code>manifest_hash</code>, predecessor and successor references, and the complete
 final map of old child identities to carried or excluded outcomes.<a href="#section-11.7-1" class="pilcrow">¶</a></p>
-<p id="section-11.7-2">For a carried row the map includes replacement_id and its child-specific
-approval_event_id; for an excluded row it includes reason and observed
+<p id="section-11.7-2">For a carried row the map includes <code>replacement_id</code> and its child-specific
+<code>approval_event_id</code>; for an excluded row it includes <code>reason</code> and observed
 terminal state or committed cascade. Unrendered descendants are listed
-explicitly. The map, not related_to, is the normative record of replacement.<a href="#section-11.7-2" class="pilcrow">¶</a></p>
+explicitly. The map, not <code>related_to</code>, is the normative record of replacement.<a href="#section-11.7-2" class="pilcrow">¶</a></p>
 <p id="section-11.7-3">A replacement's ordinary Child Evidence object is extended with
-creation_mode set to carryover, carried_from (qualified old-child reference),
-manifest_hash, and carryover_evidence (an authenticated reference to the
-retained batch map). Its existing parent, child, attenuation, fanout, and
-decision members remain required; a batch map does not replace ordinary
-Child Evidence or become authority.<a href="#section-11.7-3" class="pilcrow">¶</a></p>
+<code>creation_mode</code> set to <code>carryover</code>, <code>carried_from</code> (a qualified old-child
+reference), <code>manifest_hash</code>, and <code>carryover_evidence</code> (an authenticated
+reference to the retained batch map). Its existing <code>parent</code>, <code>child</code>,
+<code>attenuation</code>, <code>fanout</code>, and <code>decision</code> members remain required; a batch
+map does not replace ordinary Child Evidence or become authority.<a href="#section-11.7-3" class="pilcrow">¶</a></p>
 <p id="section-11.7-4">When Status or Signals is deployed, the issuer <span class="bcp14">MUST</span> carry the committed
-carried_to correlation on the old child's cascaded observation as defined
+<code>carried_to</code> correlation on the old child's <code>cascaded</code> observation as defined
 by those profiles.<a href="#section-11.7-4" class="pilcrow">¶</a></p>
 <p id="section-11.7-5">A consumer <span class="bcp14">MUST NOT</span> infer absence of a replacement from receiving a cascade
 before the replacement's creation event.<a href="#section-11.7-5" class="pilcrow">¶</a></p>
@@ -3271,8 +3274,7 @@ record at completion; derivation consumption and discharge after rendering;
 unrendered new descendants; already-terminal child exclusion; two successive
 carryovers with non-increasing budgets; authenticated idempotent recovery;
 a forced mid-batch rollback; crash after commit before publication; and
-out-of-order creation/cascade signals. Specification of these cases is not
-a claim that the reference implementation passes them.<a href="#section-11.8-1" class="pilcrow">¶</a></p>
+out-of-order creation/cascade signals.<a href="#section-11.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4001,27 +4003,12 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
 </div>
 </section>
 </div>
-<div id="document-history">
-<section id="appendix-A">
-      <h2 id="name-document-history">
-<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
-      </h2>
-<ul class="normal">
-<li class="normal" id="appendix-A-1.1">
-          <p id="appendix-A-1.1.1">Added the capability-gated Child Mission Carryover foundation, including
-full snapshot/budget checks, committed exclusion semantics, fresh direct
-approvals, and durable observation/recovery. No worker-continuity or
-implementation-conformance claim is made (#576).<a href="#appendix-A-1.1.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-</section>
-</div>
 <div id="experimental-cascade">
-<section id="appendix-B">
+<section id="appendix-A">
       <h2 id="name-experimental-consumer-verif">
-<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-experimental-consumer-verif" class="section-name selfRef">Experimental Consumer-Verified Cascade Modes</a>
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-experimental-consumer-verif" class="section-name selfRef">Experimental Consumer-Verified Cascade Modes</a>
       </h2>
-<p id="appendix-B-1">This appendix is <strong>experimental</strong>: adopt it for evaluation, not as a
+<p id="appendix-A-1">This appendix is <strong>experimental</strong>: adopt it for evaluation, not as a
 stable interface. It is not part of this profile's conformance
 surface, so its rules are stated in lowercase rather than as BCP 14
 keywords. It defines two cascade modes that trade the
@@ -4029,12 +4016,12 @@ issuer-committed transition of <code>immediate</code> (<a href="#cascade" class=
 consumer-side parent-state checks, for deployments where the Mission
 Issuer cannot commit child transitions synchronously with the parent's.
 Each shifts a per-reliance obligation onto every consumer of child
-tokens, which is why they are not part of the base profile.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="appendix-B-2">
-        <dt id="appendix-B-2.1">
+tokens, which is why they are not part of the base profile.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="appendix-A-2">
+        <dt id="appendix-A-2.1">
 <code>bounded_staleness</code>:</dt>
-        <dd style="margin-left: 1.5em" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The Child Mission is treated as non-active no later than the cascade
+        <dd style="margin-left: 1.5em" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The Child Mission is treated as non-active no later than the cascade
 staleness bound, measured from the consumer's last confirmed-active
 observation of the parent, aligned with the Status profile's freshness
 model (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). That bound is
@@ -4043,24 +4030,24 @@ the deployment's <code>mission_max_stale_seconds</code>
 publishes a different bound for child cascade. Under this mode a
 non-terminal child counts against <code>max_children</code>
 (<a href="#fanout-accounting" class="auto internal xref">Section 9.1</a>) until the cascade window has closed or the
-child is otherwise confirmed non-active.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+child is otherwise confirmed non-active.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="appendix-B-2.3">
+<dt id="appendix-A-2.3">
 <code>status_required</code>:</dt>
-        <dd style="margin-left: 1.5em" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Consumers must check parent state, per reliance decision and within
+        <dd style="margin-left: 1.5em" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Consumers must check parent state, per reliance decision and within
 the deployment's declared freshness window
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), before accepting
 child Mission authority. The Mission Issuer must select this mode only
 where every audience of child tokens is known, by registration or
 deployment policy, to implement this profile's parent-state check;
 otherwise the Mission Issuer must compensate with short child-token
-lifetimes or introspection-required paths.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+lifetimes or introspection-required paths.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="appendix-B-3">The cascade behavior by trigger and mode:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
+<p id="appendix-A-3">The cascade behavior by trigger and mode:<a href="#appendix-A-3" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
         <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -4090,21 +4077,37 @@ lifetimes or introspection-required paths.<a href="#appendix-B-2.4.1" class="pil
           </tr>
         </tbody>
       </table>
-<p id="appendix-B-5">A consumer that cannot obtain parent state must obey the mode:<a href="#appendix-B-5" class="pilcrow">¶</a></p>
+<p id="appendix-A-5">A consumer that cannot obtain parent state must obey the mode:<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-B-6.1">
-          <p id="appendix-B-6.1.1">under <code>status_required</code>, it must refuse; and<a href="#appendix-B-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="appendix-A-6.1">
+          <p id="appendix-A-6.1.1">under <code>status_required</code>, it must refuse; and<a href="#appendix-A-6.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-6.2">
-          <p id="appendix-B-6.2.1">under <code>bounded_staleness</code>, it must refuse after the bound.<a href="#appendix-B-6.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="appendix-A-6.2">
+          <p id="appendix-A-6.2.1">under <code>bounded_staleness</code>, it must refuse after the bound.<a href="#appendix-A-6.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="appendix-B-7">For derivation under these modes, the Mission Issuer may rely on a
+<p id="appendix-A-7">For derivation under these modes, the Mission Issuer may rely on a
 prior confirmed-active parent observation within the mode's freshness
 rules where it cannot observe the parent synchronously; a Child
 Mission must not derive after the parent is known to be non-active.
 The <code>immediate</code> rules of <a href="#cascade" class="auto internal xref">Section 10</a> and <a href="#child-state" class="auto internal xref">Section 10.1</a> otherwise
-apply unchanged.<a href="#appendix-B-7" class="pilcrow">¶</a></p>
+apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">Added the capability-gated Child Mission Carryover foundation, including
+full snapshot and budget checks, committed exclusion semantics, fresh
+direct approvals, and durable observation and recovery. Carryover
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="acknowledgments">

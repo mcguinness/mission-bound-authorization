@@ -133,8 +133,8 @@ Table of Contents
    21. References
      21.1.  Normative References
      21.2.  Informative References
-   Appendix A.  Document History
-   Appendix B.  Experimental Consumer-Verified Cascade Modes
+   Appendix A.  Experimental Consumer-Verified Cascade Modes
+   Appendix B.  Document History
    Acknowledgments
    Author's Address
 
@@ -1301,7 +1301,7 @@ Table of Contents
    Two consumer-verified cascade modes, bounded_staleness and
    status_required, which trade issuer-committed transitions for
    consumer-side parent-state checks, are experimental and defined in
-   Appendix B.  A cascade mode MUST NOT allow a Child Mission to
+   Appendix A.  A cascade mode MUST NOT allow a Child Mission to
    continue deriving new credentials after the parent is known to be
    non-active.
 
@@ -1442,7 +1442,7 @@ Table of Contents
    own: it relies on the Mission Issuer's child state transition, read
    from the child's own state surfaces.  The consumer obligations of the
    experimental consumer-verified modes are defined with those modes
-   (Appendix B).
+   (Appendix A).
 
 11.  Child Mission Carryover
 
@@ -1462,9 +1462,9 @@ Table of Contents
    Manifest, including its exclusion policy and replacement approval
    facts, at the expansion approval event.
 
-   A manifest is a JSON object with format_version 1, predecessor and
-   proposed successor references, the successor proposal's Intent and
-   authority commitments, exclusion_policy, and entries.  References
+   A manifest is a JSON object with a format_version of 1, predecessor
+   and proposed successor references, the successor proposal's Intent
+   and authority commitments, exclusion_policy, and entries.  References
    include issuer and Mission identifier.  Proposed identifiers are
    reserved during preparation; reservation creates no authority.
    Entries are ordered by old created_at, then old Mission identifier
@@ -1498,7 +1498,7 @@ Table of Contents
    is explicitly rendered and committed.
 
    The manifest_hash uses the issuance profile's default commitment
-   construction over the JCS canonical manifest, including
+   construction over the JCS [RFC8785] canonical manifest, including
    exclusion_policy.  The issuer retains the manifest with its
    authenticated approval; the hash alone authenticates no approval.
    Each child-specific event identifier is derived from the committed
@@ -1617,8 +1617,7 @@ Table of Contents
    failed transaction.  Constructing replacements before cascades inside
    the transaction does not promise a remote observation order.
    External publication is performed after commit and is recoverable and
-   idempotent; it is not included in the record transaction by calling a
-   second store's API inside that transaction.
+   idempotent; it is never performed inside the record transaction.
 
    The Mission Issuer MUST provide idempotent retrieval of the committed
    replacement result through the child-creation completion surface to
@@ -1654,7 +1653,7 @@ Table of Contents
    normative record of replacement.
 
    A replacement's ordinary Child Evidence object is extended with
-   creation_mode set to carryover, carried_from (qualified old-child
+   creation_mode set to carryover, carried_from (a qualified old-child
    reference), manifest_hash, and carryover_evidence (an authenticated
    reference to the retained batch map).  Its existing parent, child,
    attenuation, fanout, and decision members remain required; a batch
@@ -1687,8 +1686,6 @@ Table of Contents
    carryovers with non-increasing budgets; authenticated idempotent
    recovery; a forced mid-batch rollback; crash after commit before
    publication; and out-of-order creation/cascade signals.
-   Specification of these cases is not a claim that the reference
-   implementation passes them.
 
 12.  Child Evidence
 
@@ -2249,15 +2246,7 @@ Table of Contents
               RFC 8126, DOI 10.17487/RFC8126, June 2017,
               <https://www.rfc-editor.org/rfc/rfc8126>.
 
-Appendix A.  Document History
-
-   *  Added the capability-gated Child Mission Carryover foundation,
-      including full snapshot/budget checks, committed exclusion
-      semantics, fresh direct approvals, and durable observation/
-      recovery.  No worker-continuity or implementation-conformance
-      claim is made (#576).
-
-Appendix B.  Experimental Consumer-Verified Cascade Modes
+Appendix A.  Experimental Consumer-Verified Cascade Modes
 
    This appendix is *experimental*: adopt it for evaluation, not as a
    stable interface.  It is not part of this profile's conformance
@@ -2321,6 +2310,16 @@ Appendix B.  Experimental Consumer-Verified Cascade Modes
    Mission must not derive after the parent is known to be non-active.
    The immediate rules of Section 10 and Section 10.1 otherwise apply
    unchanged.
+
+Appendix B.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Added the capability-gated Child Mission Carryover foundation,
+      including full snapshot and budget checks, committed exclusion
+      semantics, fresh direct approvals, and durable observation and
+      recovery.  Carryover preserves record continuity, not worker
+      continuity (#576).
 
 Acknowledgments
 

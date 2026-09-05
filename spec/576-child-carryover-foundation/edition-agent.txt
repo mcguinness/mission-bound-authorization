@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-05T04:01:37Z
-Source repository commit: c72783a2689e7ffb2981ef1cc579582579509e27
+Generated: 2026-09-05T21:21:54Z
+Source repository commit: 12071445f2fcba36c7fda04d833921269e69452a
 Member count: 9
 
 Reading order:
@@ -15063,6 +15063,8 @@ Informative References
               <https://www.rfc-editor.org/rfc/rfc9700>.
 
 Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
 
    *  Added conditional carryover correlation on an old child's cascaded
       observation; no state or authority is inferred from the pointer

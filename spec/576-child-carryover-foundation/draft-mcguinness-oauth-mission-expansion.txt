@@ -764,11 +764,6 @@ Table of Contents
 
 6.4.  Successor expiry
 
-   An approved successor extension MUST NOT extend a carried child's
-   expiry: carryover remains bounded by the old child and its new
-   parent's effective expiry
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
-
    The successor's effective expires_at follows the issuance profile's
    requested-versus-effective rule
    ([I-D.draft-mcguinness-oauth-mission]).  It MUST NOT be later than
@@ -799,6 +794,11 @@ Table of Contents
    Mission Issuer's policy permits the extension and the exact effective
    value was rendered and approved at the expansion consent event.  Any
    further shortening is justified by recorded policy.
+
+   An approved successor extension MUST NOT extend a carried child's
+   expiry: carryover remains bounded by the old child and its new
+   parent's effective expiry
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
 7.  The Predecessor Mission Reference
 
@@ -2121,6 +2121,8 @@ Informative References
               2024, <https://www.rfc-editor.org/rfc/rfc9562>.
 
 Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
 
    *  Added explicitly approved carryover hooks for disclosure, atomic
       completion, and the carried child's unchanged expiry ceiling

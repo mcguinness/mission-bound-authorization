@@ -1503,7 +1503,7 @@ transition emits <code>prior_state</code> of <code>active</code> and <code>state
 <code>carried_to</code> (string, conditional):</dt>
         <dd style="margin-left: 1.5em" id="section-5-6.8">
           <p id="section-5-6.8.1">A deployment implementing Child Mission Carryover <span class="bcp14">MUST</span> include the
-committed replacement Mission identifier on the old child's cascaded
+committed replacement Mission identifier on the old child's <code>cascaded</code>
 event, and <span class="bcp14">MUST</span> omit it when no replacement was committed. The identifier
 is qualified by the event's Mission issuer. A receiver does not assume
 that replacement creation was delivered first; it pairs or resynchronizes
@@ -2344,10 +2344,11 @@ IETF; Reference this document, <a href="#as-metadata" class="auto internal xref"
       <h2 id="name-document-history">
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
       </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-A-1.1">
-          <p id="appendix-A-1.1.1">Added carryover cascade correlation and out-of-order recovery semantics;
-event delivery remains non-atomic and may reorder (#576).<a href="#appendix-A-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Added carryover cascade correlation and out-of-order recovery semantics;
+event delivery remains non-atomic and may reorder (#576).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

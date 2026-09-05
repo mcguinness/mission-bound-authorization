@@ -2134,10 +2134,7 @@ the ordinary cascade notice and per-child re-creation above remain the floor.<a 
         <h3 id="name-successor-expiry">
 <a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-successor-expiry" class="section-name selfRef">Successor expiry</a>
         </h3>
-<p id="section-6.4-1">An approved successor extension <span class="bcp14">MUST NOT</span> extend a carried child's expiry:
-carryover remains bounded by the old child and its new parent's effective
-expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-6.4-1" class="pilcrow">¶</a></p>
-<p id="section-6.4-2">The successor's effective <code>expires_at</code> follows the issuance profile's
+<p id="section-6.4-1">The successor's effective <code>expires_at</code> follows the issuance profile's
 requested-versus-effective rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It <span class="bcp14">MUST NOT</span> be later than
 the expansion submission's <code>intent.expires_at</code>, the requested
@@ -2149,15 +2146,15 @@ ceiling. Expansion is an authority-addition mechanism, not a silent
 lifetime-extension mechanism. The issuance profile caps every derived
 credential's <code>exp</code> at the Mission's <code>expires_at</code>; a successor that
 silently outlived its predecessor would let expansion launder a
-longer-lived Mission past the originally approved horizon.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
-<p id="section-6.4-3">The completing success response, the resolving poll or the code
+longer-lived Mission past the originally approved horizon.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">The completing success response, the resolving poll or the code
 redemption, <span class="bcp14">MUST</span> carry the effective value in the issuance profile's
 <code>mission_expires_at</code> response member. Completion inherits the
 issuance profile's atomic creation-time check: where the
 submission's <code>intent.expires_at</code> passes while the expansion is
 pending, completion creates no successor Mission and the exchange
-fails with this profile's denial semantics (<a href="#denial-reasons" class="auto internal xref">Section 13</a>).<a href="#section-6.4-3" class="pilcrow">¶</a></p>
-<p id="section-6.4-4">An auditor verifies the successor record by inequalities, never by
+fails with this profile's denial semantics (<a href="#denial-reasons" class="auto internal xref">Section 13</a>).<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+<p id="section-6.4-3">An auditor verifies the successor record by inequalities, never by
 matching a recomputed minimum: in every case the effective value is
 no later than the submission's <code>intent.expires_at</code>; without an
 approved extension it is also no later than the predecessor's
@@ -2165,7 +2162,10 @@ approved extension it is also no later than the predecessor's
 <code>expires_at</code> only when the Mission Issuer's policy permits the
 extension and the exact effective value was rendered and approved at
 the expansion consent event. Any further shortening is justified by
-recorded policy.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
+recorded policy.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
+<p id="section-6.4-4">An approved successor extension <span class="bcp14">MUST NOT</span> extend a carried child's expiry:
+carryover remains bounded by the old child and its new parent's effective
+expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-6.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3815,10 +3815,11 @@ composition with the issuance flow.<a href="#section-19-1" class="pilcrow">¶</a
       <h2 id="name-document-history">
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
       </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-A-1.1">
-          <p id="appendix-A-1.1.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
-and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
+and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
