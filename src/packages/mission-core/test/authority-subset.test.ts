@@ -17,7 +17,7 @@ const binding = {
   action: "read",
   tool_id: "read",
   source_uri: "https://catalog.test",
-  source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"),
+  source_digest: `sha-256:${Buffer.alloc(32).toString("base64url")}`,
   operation_ref: "read",
 };
 
