@@ -203,7 +203,7 @@
    "id": "status.operational.bound-sized-to-recovery",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "status-operational",
-   "text": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing mission_max_stale_seconds and the availability consequence when recovery takes longer than that bound.",
+   "text": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound.",
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
@@ -214,7 +214,7 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The declared propagation ceiling includes its recovery sizing and designed-halt consequence; recovery never extends the security ceiling or restarts an old observation's window."
+    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
    },
    "level": "unit",
    "coverage": "todo",

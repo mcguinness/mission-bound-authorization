@@ -2539,8 +2539,11 @@ document requests no IANA action for it.
 
 # Document History {#document-history}
 
-- Pointed MAS availability guidance at Runtime and Status operational
-  considerations (#310); no MAS enforcement requirement changed.
+\[\[ To be removed from the final specification ]]
+
+- Pointed MAS Availability at the Runtime and Status Operational
+  Considerations sections for the dependency-specific outage, ride-through,
+  and recovery semantics (#310). No MAS requirement changed.
 
 # MAS-Mode End-to-End Example {#e2e-example}
 

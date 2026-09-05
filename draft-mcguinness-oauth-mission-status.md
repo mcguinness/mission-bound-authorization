@@ -1385,7 +1385,7 @@ prerequisites.
 # Operational Considerations {#status-operational}
 
 A deployment declaring revocation propagation SHOULD publish the recovery
-objective considered when choosing mission_max_stale_seconds and the
+objective considered when choosing `mission_max_stale_seconds` and the
 availability consequence when recovery takes longer than that bound.
 
 The security ceiling governs the choice: an operational recovery objective
@@ -1397,7 +1397,7 @@ Operational Considerations gives the per-action-class dependency analysis
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 The deployment describes its distribution posture per surface: Status
-responses are reused only to their authenticated fresh_until and other
+responses are reused only to their authenticated `fresh_until` and other
 applicable bounds; Status Lists are fetched within their freshness window
 and checked locally; Signals accelerate learning of transitions over a
 correctly bounded state source, not replace that source after confidence
@@ -1766,5 +1766,9 @@ Authorization work for feedback that shaped these extensions.
 
 # Document History {#document-history}
 
-- Added operational recovery/availability guidance beside the existing
-  propagation ceiling, without extending any freshness window (#310).
+\[\[ To be removed from the final specification ]]
+
+- Operational Considerations added (#310): recovery sizing for the
+  advertised propagation ceiling, the per-surface distribution posture,
+  and the operator observations after a degraded surface recovers. No
+  freshness window is extended and no member is added.
