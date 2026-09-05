@@ -39,6 +39,7 @@ import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain
 import {
   type EffectiveAuthoritySource,
   projectRarThroughMission,
+  projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
@@ -657,7 +658,7 @@ export async function handleAsyncDelegationExchange(
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }
-    confinedSubset = requestedSubset;
+    confinedSubset = projectThroughEffective(requestedSubset, effective);
   }
   if (confinedSubset.length === 0) {
     txError(ctx, 400, "invalid_authorization_details", "confined authorization_details must be non-empty");

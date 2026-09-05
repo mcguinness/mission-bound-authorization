@@ -49,7 +49,6 @@ beforeAll(async () => {
     loadView: () => undefined,
     jwks: { keys: [pubJwk as never] },
     issuer: ISSUER,
-    serverCard: { name: "payments" },
   });
 });
 

@@ -47,7 +47,6 @@ import {
   Pep,
   type PepDeps,
   type ResourceMetadataServer,
-  sourceDigestOf,
   startResourceMetadataServer,
   type TokenFacts,
 } from "@mission/mcp-payments";
@@ -566,7 +565,6 @@ export async function composeStack(opts: {
     modelId,
     loadView,
     instanceEpoch: "demo-epoch",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     revokedInstances,
     observe: (e) => observer?.(e),
     // JIT gate: sending a remittance email is in the mission's authority but
@@ -605,7 +603,6 @@ export async function composeStack(opts: {
     loadView,
     jwks: serverJwks,
     issuer,
-    serverCard: { name: "payments" },
     transaction: { engine: new TransactionEngine("demo-epoch"), connectors, evidence },
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.

@@ -36,7 +36,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
@@ -151,7 +150,6 @@ async function build(): Promise<{
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
-  const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
   // Deliberately NONCONFORMING (@spec authority-server#reference-tuple,
@@ -172,7 +170,6 @@ async function build(): Promise<{
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf(card),
     allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
@@ -181,7 +178,6 @@ async function build(): Promise<{
     loadView,
     jwks: { keys: [pubJwk] },
     issuer: ISSUER,
-    serverCard: card,
     transaction: { engine, connectors, evidence },
   });
   const channel = await createHttpMcpChannel(server);
@@ -524,7 +520,6 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     // joined path is a decision path like any other, so its PEP receives
     // `decide` and a resolver that verifies what the decision point emits.
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments" };
     // Conforming (@spec authority-server#reference-tuple): keyed on the full
     // canonical pair, unlike this file's Mission-bound fixture, which keys on
     // `id` alone on purpose.
@@ -552,7 +547,6 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       modelId,
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
       masJoin: {
         // Rule 8, bound 1: read from the credential AS ISSUED, its own scope.
@@ -574,7 +568,6 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       loadView,
       jwks: { keys: [pubJwk] },
       issuer: ISSUER,
-      serverCard: card,
     });
     const channel = await createHttpMcpChannel(server, { masGoverned: true });
     cleanups.push(channel.close);

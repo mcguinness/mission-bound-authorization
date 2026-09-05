@@ -30,7 +30,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type DecisionEvidence,
   type RefusalRecord,
   type TokenFacts,
@@ -109,7 +108,6 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     };
     const payments = seedPayments();
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments", tools: ["list_invoices"] };
     const pep = new Pep({
       decide,
       payments,
@@ -121,7 +119,6 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
           ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
           : undefined,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
@@ -133,7 +130,6 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
           : undefined,
       jwks: { keys: [] },
       issuer: ISSUER,
-      serverCard: card,
     });
     return { server, evidence };
   }
@@ -287,7 +283,6 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     };
     const payments = seedPayments();
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments", tools: ["list_invoices"] };
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === current.issuer
         ? { view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
@@ -300,10 +295,9 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       modelId: conn.modelId,
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
     });
-    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER, serverCard: card });
+    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER });
 
     const res = await server.callReadTool("list_invoices", {}, TOKEN, () => {
       // Mid-flight, exactly in the decision->execute window: the Mission's
@@ -363,7 +357,6 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
   function build(fga: import("@mission/pdp").Fga): { server: McpPaymentsServer } {
     const payments = seedPayments();
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments", tools: ["list_invoices"] };
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === view.issuer
         ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
@@ -376,10 +369,9 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
     });
-    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER, serverCard: card });
+    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER });
     return { server };
   }
 
@@ -443,7 +435,6 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
           ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
           : undefined,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
     });
     return { pep, evidence };
   }

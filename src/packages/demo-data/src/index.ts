@@ -421,6 +421,7 @@ export type CeilingEntry = AuthorityEntry;
 export interface CatalogActionSeed {
   id: string;
   amount_bearing: boolean;
+  tool_name?: string;
 }
 
 /** Validate one catalog service's OPTIONAL `actions` member (shared by the action schema and the catalog loader). */
@@ -439,7 +440,12 @@ function parseCatalogActions(
     }
     if (seen.has(id)) throw new ConfigError(file, `${ctx}.actions declares ${id} twice`);
     seen.add(id);
-    return { id, amount_bearing: a.amount_bearing };
+    if (a.tool_name !== undefined) reqString(file, a, "tool_name", `${ctx}.actions[${j}]`);
+    return {
+      id,
+      amount_bearing: a.amount_bearing,
+      ...(a.tool_name !== undefined ? { tool_name: a.tool_name as string } : {}),
+    };
   });
 }
 
@@ -1535,10 +1541,9 @@ export interface TrustedToolCatalog {
  * marked `trusted` with a `tool_catalog` path contributes one, so an
  * untrusted catalog is not resolvable by construction.
  *
- * The RESOLVER that turns these into recorded bindings at approval is
- * declared but not wired (`CapabilitySourceResolver`, authorization-server):
- * this ships the trusted-catalog configuration and the exact bytes a resolver
- * will read, not a retrieval path.
+ * The validating-server adapter resolves these snapshots at approval, and the
+ * payments executor serves these same octets. This is a configured local
+ * snapshot source, not a network retrieval or client-controlled URI fetch.
  */
 export const TRUSTED_TOOL_CATALOGS: TrustedToolCatalog[] = loadToolCatalogs();
 

@@ -46,7 +46,7 @@ export interface CapabilitySourceResolution {
 }
 
 /**
- * The resolver seam. DECLARED, NOT WIRED: no production path calls it yet.
+ * The resolver seam, supplied by the validating server's trusted adapter.
  * The implementation resolves an action against the deployment's CONFIGURED
  * TRUSTED catalogs only (`config/catalog.json`'s per-service `trusted` flag),
  * never a client-controlled `source_uri`, retrieves the catalog's exact
@@ -57,6 +57,21 @@ export interface CapabilitySourceResolution {
  */
 export interface CapabilitySourceResolver {
   resolve(entries: readonly AuthorityEntry[]): CapabilitySourceResolution[];
+}
+
+/** Resolve newly established actions, never refresh an inherited commitment. */
+export function resolveFreshCapabilitySources(entries: AuthorityEntry[], resolver?: CapabilitySourceResolver): AuthorityEntry[] {
+  if (!resolver) return entries; // a kernel without this deployment profile
+  return entries.map(entry => {
+    const actions = entry.actions.filter(action => !entry.capability_sources?.some(b => b.action === action));
+    if (!actions.length) return entry;
+    const fresh = attachCapabilitySources([{ ...entry, actions }], resolver.resolve([{ ...entry, actions }]))[0]!;
+    const bindings = [...(entry.capability_sources ?? []), ...(fresh.capability_sources ?? []).filter(b => actions.includes(b.action))];
+    return bindings.length ? { ...entry, capability_sources: bindings.sort((a, b) => {
+      const x = capabilitySourceIdentity(a), y = capabilitySourceIdentity(b);
+      return x < y ? -1 : x > y ? 1 : 0;
+    }) } : entry;
+  });
 }
 
 /**

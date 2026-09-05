@@ -30,7 +30,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
@@ -144,7 +143,6 @@ async function build(): Promise<{
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
-  const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
   // Deliberately NONCONFORMING (@spec authority-server#reference-tuple,
@@ -165,7 +163,6 @@ async function build(): Promise<{
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf(card),
     allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
@@ -174,7 +171,6 @@ async function build(): Promise<{
     loadView,
     jwks: { keys: [pubJwk] },
     issuer: ISSUER,
-    serverCard: card,
     transaction: { engine, connectors, evidence },
   });
   const { client } = await createMediatedClient(server);
