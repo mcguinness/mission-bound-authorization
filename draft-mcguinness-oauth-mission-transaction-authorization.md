@@ -358,11 +358,6 @@ Transaction token:
 
 # Applicability {#applicability}
 
-For compound actions, the runtime profile's Compound Actions section
-places this profile's single-use authorization at one commit-phase
-operation, never across preparation, commit, and compensation
-({{I-D.draft-mcguinness-mission-runtime}}).
-
 This profile is invoked when any of these requires action-bound
 approval for a normalized operation:
 
@@ -388,6 +383,11 @@ by a governance decision is also not an approval token: it becomes
 current governance state, and the fresh decision of
 {{challenge-redemption}} re-evaluates it like any other current
 policy input rather than consuming it as the approval itself.
+
+For a compound action, the runtime profile places this profile's
+single-use authorization at one commit-phase operation, never across
+preparation, commit, and compensation
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Resource Challenge {#resource-challenge}
 

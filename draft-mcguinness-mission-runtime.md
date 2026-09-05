@@ -1018,10 +1018,11 @@ Every consequential phase MUST obtain its own Decision. A permit MUST
 NOT authorize more than one phase. A preflight Decision MUST NOT
 satisfy the gate for a consequential phase. A reservation MUST NOT be
 presented as authorization for commit. The commit phase MUST obtain
-its own Decision against the Mission's effective authority and active
-state under the existing state-freshness bounds. This does not impose
-zero staleness or an issuer call for every request; it forbids using
-prepare's Decision or state observation as the commit authorization.
+its own Decision against the Mission's effective authority
+({{input-authority}}) and `active` state ({{state-freshness}}), under
+the existing freshness bounds. This does not impose zero staleness or
+an issuer call for every request; it forbids using prepare's Decision
+or state observation as the commit authorization.
 
 A permit for a phase MUST bind that phase. Where phases already have
 distinct action identifiers, the action binding also distinguishes
@@ -1035,18 +1036,19 @@ The PEP MUST NOT derive the phase from an agent-supplied argument.
 The executing PEP MUST compare the permit's bound phase with the phase
 of the crossing before releasing an effect. Unequal phases, an absent
 binding where the Operation Profile identifies a phase, or a phase
-that cannot be established MUST cause refusal. A PEP that does not
-recognize the phase condition MUST treat the permit as invalid. The
-AuthZEN realization is the returned permit condition
-`conditions.action_phase`; `context.action_phase` is the request
-mirror and Decision Evidence is retrospective. Neither substitutes
-for the permit condition. The phase MUST NOT be injected as a
+that cannot be established MUST cause refusal, fail closed, before any
+effect is released. A PEP that does not recognize the phase condition
+MUST treat the permit as invalid. The AuthZEN realization is the
+returned permit condition `conditions.action_phase`
+({{I-D.draft-mcguinness-mission-authzen}}); `context.action_phase` is
+the request mirror and Decision Evidence is retrospective. Neither
+substitutes for the permit condition. The phase MUST NOT be injected as a
 synthetic parameter into `parameter_digest`, whose definition is
 unchanged. Requester and executor remain one enforcement identity;
 this binds permit scope, not the agent's intent.
 
-Decision Evidence for a phase MUST record its action_phase. A
-compensate-phase Decision MUST carry compensates_evaluation_id
+Decision Evidence for a phase MUST record its `action_phase`. A
+compensate-phase Decision MUST carry `compensates_evaluation_id`
 identifying the evaluation whose committed effect it offsets. A
 compensation MUST NOT be authorized by the compensated action's
 permit. Its authority basis, unwind ordering, and partial-failure
@@ -1130,8 +1132,8 @@ and trusted for the refusal or decision path:
 - the decision identifier, when the PDP produced one;
 - the PDP's policy-view version;
 - the identity and role of the emitting enforcement component; and
-- a `compensates_evaluation_id` member, REQUIRED for a compensate
-  phase and OPTIONAL otherwise, linking a
+- a `compensates_evaluation_id` member, REQUIRED for a
+  compensate-phase decision and OPTIONAL otherwise, linking a
   compensating action's decision to the original evaluation
   identifier it reverses, so a compensation can be reconciled against
   the action it undoes.
@@ -3430,9 +3432,13 @@ worked example shows the concrete record
 \[\[ To be removed from the final specification ]]
 
 - Defined compound-action phases, one Decision per consequential
-  phase, a PEP-derived phase binding at permit use, phase-scoped
-  idempotency, and compensation correlation (#252 PR A). Wire
-  definitions and implementation coverage follow separately.
+  phase, a PEP-derived phase binding verified at permit use,
+  phase-scoped idempotency where phases share an action identifier,
+  and compensation correlation (#252). Strength change:
+  `compensates_evaluation_id` on Decision Evidence moves from OPTIONAL
+  to REQUIRED for a compensate-phase decision, OPTIONAL otherwise. The
+  AuthZEN condition, the evidence member, and conformance coverage are
+  specified separately.
 
 # Acknowledgments
 {:numbered="false"}
