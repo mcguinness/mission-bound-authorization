@@ -118,6 +118,11 @@ though a MAS deployment runs no OAuth Authorization Server.
 Correcting an edge, if one turns out wrong, is a manifest question,
 not a README one.
 
+Beyond that closure, the optional
+[Control-Plane Consistency profile](draft-mcguinness-mission-control-plane.md)
+states topology-neutral issuer invariants and fault-conformance cases for
+deployments that replicate or recover Mission state.
+
 ### 4. Go to the catalog
 
 [`DRAFTS.md`](DRAFTS.md) is the complete document catalog: the one

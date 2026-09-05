@@ -84,8 +84,41 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 46,
+ "count": 47,
  "drafts": [
+  {
+   "file": "draft-mcguinness-mission-control-plane.md",
+   "slug": "draft-mcguinness-mission-control-plane",
+   "title": "Mission Control-Plane Consistency",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "lab-best-effort",
+   "group": "lifecycle",
+   "verbs": [
+    "govern"
+   ],
+   "summary": "Topology-neutral issuer serialization, authoritative observation, rollback resistance, durable fan-out, and emergency-authority separation.",
+   "pull_when": "A deployment claims testable control-plane consistency across replication, partition, and recovery.",
+   "normative_references": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ]
+  },
   {
    "file": "draft-mcguinness-aauth-mission-expiry.md",
    "slug": "draft-mcguinness-aauth-mission-expiry",

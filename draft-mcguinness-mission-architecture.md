@@ -3369,6 +3369,7 @@ bound profiled by `aauth-mission-expiry`.
 | `oauth-mission-status-list` | A fleet-scale Status List: a signed, compressed bit array read locally per action instead of per-Mission status reads. |
 | `oauth-mission-discharge` | Per-entry discharge via the `terminal_when` constraint, registered as an extension operation on the Status profile's lifecycle endpoint. |
 | `oauth-mission-signals` | A signed event per lifecycle transition, push or poll. |
+| `mission-control-plane` | Experimental: topology-neutral issuer consistency, durable transition publication, rollback resistance, and the shared consistency/availability boundary. |
 | `oauth-mission-expansion` | Widening through an approved successor Mission. |
 | `oauth-mission-containment` | Event-triggered, monotonic narrowing of a live Mission's effective authority, with restoration only through an approved successor. |
 | `oauth-mission-progressive` | Experimental: policy-adjudicated expansion within a pre-consented ceiling. |
@@ -3507,6 +3508,9 @@ This document makes no IANA request.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Added the optional Control-Plane Consistency companion to the document
+  map (#250).
 
 - Controls taxonomy retirement (#636): the swarm-execution discussion
   no longer claims `derivation_limit` (renamed from `max_derivations`)
