@@ -49,6 +49,13 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-orchestration:
+    title: "Mission Orchestration"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC9700:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -967,6 +974,8 @@ Beyond the `parameter_digest`, the permit MUST also bind:
 - the actor context;
 - the sender-constraint confirmation key, when present;
 - the action;
+- the action phase, when the action is a phase of a compound action
+  ({{compound-actions}});
 - the resource;
 - the authorizing authority entry, or an entry digest;
 - the PDP's policy-view version; and
@@ -988,6 +997,79 @@ The permit lifetime control is set by action class:
 |---|---|
 | Reversible consequential write | The control MUST be either a single-use decision identifier or a short validity window combined with an idempotency key that prevents repeat execution of the same normalized action |
 | Irreversible action, external commitment, or privileged administration | The control MUST be a single-use decision identifier: a validity window alone does not bound how many times such a permit executes |
+
+## Compound Actions {#compound-actions}
+
+A compound action produces an effect through more than one boundary
+crossing, such as validate, reserve, execute, and settle, or draft,
+attach, and send. Four phases name what a crossing does:
+
+- `preflight`: checks feasibility or availability without a reservation
+  or external effect. Its reads retain the ordinary read-binding floor
+  ({{read-binding}}).
+- `prepare`: creates a reservation, hold, draft, or schedule. That state
+  is consequential in its own right and is not authority for commit.
+- `commit`: releases the consequential effect.
+- `compensate`: offsets an already committed effect. Cancelling an
+  uncommitted reservation is not, merely by its name, compensation for
+  a committed effect.
+
+Every consequential phase MUST obtain its own Decision. A permit MUST
+NOT authorize more than one phase. A preflight Decision MUST NOT
+satisfy the gate for a consequential phase. A reservation MUST NOT be
+presented as authorization for commit. The commit phase MUST obtain
+its own Decision against the Mission's effective authority
+({{input-authority}}) and `active` state ({{state-freshness}}), under
+the existing freshness bounds. This does not impose zero staleness or
+an issuer call for every request; it forbids using prepare's Decision
+or state observation as the commit authorization.
+A fresh commit-phase Decision binds the request as presented: where a
+resource-resolved fact moved between prepare and commit, the parameter
+digest can still match. Capturing target state at decision time is a
+separate runtime extension, outside this section.
+
+A permit for a phase MUST bind that phase. Where phases already have
+distinct action identifiers, the action binding also distinguishes
+them; where they share an identifier, phase binding prevents a prepare
+permit from releasing a commit effect with otherwise identical
+resource and parameters. The PEP derives the crossing's phase from
+its trusted Operation Profile ({{parameter-binding}}), which states
+whether each operation is part of a compound action and its phase.
+The PEP MUST NOT derive the phase from an agent-supplied argument.
+
+The executing PEP MUST compare the permit's bound phase with the phase
+of the crossing before releasing an effect. Unequal phases, an absent
+binding where the Operation Profile identifies a phase, or a phase
+that cannot be established MUST cause refusal, fail closed, before any
+effect is released. A PEP that does not recognize the phase condition
+MUST treat the permit as invalid. The AuthZEN realization is the
+returned permit condition `conditions.action_phase`
+({{I-D.draft-mcguinness-mission-authzen}}); `context.action_phase` is
+the request mirror and Decision Evidence is retrospective. Neither
+substitutes for the permit condition. The phase MUST NOT be injected as a
+synthetic parameter into `parameter_digest`, whose definition is
+unchanged. Requester and executor remain one enforcement identity;
+this binds permit scope, not the agent's intent.
+
+Decision Evidence for a phase MUST record its `action_phase`. A
+compensate-phase Decision MUST carry `compensates_evaluation_id`
+identifying the evaluation whose committed effect it offsets. A
+compensation MUST NOT be authorized by the compensated action's
+permit. Its authority basis, unwind ordering, and partial-failure
+semantics remain the orchestration profile's
+({{I-D.draft-mcguinness-mission-orchestration}}). The correlation
+identifier itself supplies no authority. A compensation is a new
+operation with a new idempotency key and obtains fresh action-bound
+approval where its class requires it.
+
+For a compound action, the transaction-authorization companion's
+single-use token authorizes one commit-phase operation, not a permit
+spanning preparation, commit, and compensation
+({{I-D.draft-mcguinness-oauth-mission-transaction-authorization}}).
+Metering reserve/commit governs consumption, not these effect phases
+({{I-D.draft-mcguinness-mission-metering}}). Outcome verification stays
+with Execution Evidence and reconciliation ({{evidence}}). These
+phases are Runtime Core vocabulary, not a new Named Assurance Extension.
 
 ## Failure Modes {#failure-modes}
 
@@ -1011,6 +1093,7 @@ refusal.
 | Unknown or unmetered constraint on the applicable entry | Refuse |
 | Consumption bound would be exceeded | Refuse |
 | `parameter_digest` mismatch at the executing PEP | Refuse |
+| Permit phase differs from the crossing, is absent where required, or cannot be established | Refuse before releasing an effect ({{compound-actions}}) |
 | Re-presentation of a consumed single-use decision identifier | Refuse (fail closed) |
 | Required actor-delegation chain missing or malformed | Refuse |
 | Invoked capability identity outside the approved `actions` | Refuse |
@@ -1053,7 +1136,8 @@ and trusted for the refusal or decision path:
 - the decision identifier, when the PDP produced one;
 - the PDP's policy-view version;
 - the identity and role of the emitting enforcement component; and
-- OPTIONAL, a `compensates_evaluation_id` member linking a
+- a `compensates_evaluation_id` member, REQUIRED for a
+  compensate-phase decision and OPTIONAL otherwise, linking a
   compensating action's decision to the original evaluation
   identifier it reverses, so a compensation can be reconciled against
   the action it undoes.
@@ -1078,7 +1162,7 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 122 conformance rows in conformance-manifest.json (30 tested, 21 partial, 68 todo, 3 blocked).
+Implementation: 134 conformance rows in conformance-manifest.json (30 tested, 21 partial, 80 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
@@ -2319,6 +2403,8 @@ operation as such, never re-execution under the consumed key.
   the actor, the audience, the action, and the resource; a deployment
   MAY narrow it further and MUST publish the scope in its Enforcement
   Scope Statement. Volatile members MUST NOT be added to the scope.
+- Where compound-action phases share an action identifier, the
+  idempotency scope MUST include the phase ({{compound-actions}}).
 - For the high-consequence classes the deployment MUST retain a
   durable consumed-key record (a tombstone) for at least its declared
   idempotency horizon, published in the Enforcement Scope Statement.
@@ -2348,6 +2434,12 @@ The executing PEP MUST verify the permit's bindings
 ({{permit-binding}}) and MUST recompute the `parameter_digest`
 against the parameters it is about to use. A mismatch MUST cause
 refusal: the permit does not authorize the changed parameters.
+
+The phase comparison of {{compound-actions}} runs at this same use
+boundary. A mismatch suppresses execution and is recorded as
+Execution Evidence, not as a pre-decision Refusal Record; an inability
+to establish phase before asking for a Decision is a pre-decision
+refusal instead.
 
 A permit authorizes initiation. An action still executing when the
 permit expires MAY run to completion, unless the action class requires
@@ -3338,6 +3430,19 @@ Refusal Record, carrying both the authorized digest and the differing
 effective digest it recomputed. The companion's parameter-deviation
 worked example shows the concrete record
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Defined compound-action phases, one Decision per consequential
+  phase, a PEP-derived phase binding verified at permit use,
+  phase-scoped idempotency where phases share an action identifier,
+  and compensation correlation (#252). Strength change:
+  `compensates_evaluation_id` on Decision Evidence moves from OPTIONAL
+  to REQUIRED for a compensate-phase decision, OPTIONAL otherwise. The
+  AuthZEN condition, the evidence member, and conformance coverage are
+  specified separately.
 
 # Acknowledgments
 {:numbered="false"}
