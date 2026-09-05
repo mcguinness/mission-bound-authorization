@@ -347,8 +347,8 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
       resourceToAs: RESOURCE_TO_AS,
     });
     const narrowingRas = new ResourceAuthorizationServer({
-    localCeiling: POLICY.ceiling.map(e => ({ ...e, actions: [...e.actions] })),
-    localPolicyVersion: POLICY.policy_version,
+      localCeiling: POLICY.ceiling.map(e => ({ ...e, actions: [...e.actions] })),
+      localPolicyVersion: POLICY.policy_version,
       issuer: RAS_ISS,
       trustedIssuers: { [AS_ISS]: { keys: [{ ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" } as never] } },
       signKey: rasKeys.privateKey,
