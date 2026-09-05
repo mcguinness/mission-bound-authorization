@@ -9,7 +9,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { computeAnchor, GOVERNED_POLICY_TYP, isAuthorityEntry, type AuthorityEntry } from "@mission/core";
+import {
+  type AuthorityEntry,
+  computeAnchor,
+  GOVERNED_POLICY_TYP,
+  isAuthorityEntry,
+} from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
 
 /** Fail-fast config error naming the offending file (cf. IntentError style). */
@@ -436,7 +441,11 @@ function parseCatalogActions(
     if (seen.has(id)) throw new ConfigError(file, `${ctx}.actions declares ${id} twice`);
     seen.add(id);
     if (a.tool_name !== undefined) reqString(file, a, "tool_name", `${ctx}.actions[${j}]`);
-    return { id, amount_bearing: a.amount_bearing, ...(a.tool_name !== undefined ? { tool_name: a.tool_name as string } : {}) };
+    return {
+      id,
+      amount_bearing: a.amount_bearing,
+      ...(a.tool_name !== undefined ? { tool_name: a.tool_name as string } : {}),
+    };
   });
 }
 
@@ -541,15 +550,29 @@ interface LoadedPolicy {
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
   const type = reqString(file, e, "type", ctx);
-  if (type !== "mission_resource_access") throw new ConfigError(file, ctx + " has unsupported authority type");
+  if (type !== "mission_resource_access")
+    throw new ConfigError(file, ctx + " has unsupported authority type");
   const entry: AuthorityEntry = {
     type,
     resource: reqString(file, e, "resource", ctx),
     actions: reqStringArray(file, e, "actions", ctx),
-    ...(e.constraints !== undefined ? { constraints: asObject(file, e.constraints, ctx + ".constraints") as NonNullable<AuthorityEntry["constraints"]> } : {}),
-    ...(e.delegation !== undefined ? { delegation: asObject(file, e.delegation, ctx + ".delegation") as NonNullable<AuthorityEntry["delegation"]> } : {}),
+    ...(e.constraints !== undefined
+      ? {
+          constraints: asObject(file, e.constraints, ctx + ".constraints") as NonNullable<
+            AuthorityEntry["constraints"]
+          >,
+        }
+      : {}),
+    ...(e.delegation !== undefined
+      ? {
+          delegation: asObject(file, e.delegation, ctx + ".delegation") as NonNullable<
+            AuthorityEntry["delegation"]
+          >,
+        }
+      : {}),
   };
-  if (!isAuthorityEntry(entry)) throw new ConfigError(file, ctx + " has malformed or unsupported authority");
+  if (!isAuthorityEntry(entry))
+    throw new ConfigError(file, ctx + " has malformed or unsupported authority");
   const bindingError = amountBearingBindingError(entry);
   if (bindingError) throw new ConfigError(file, ctx + " " + bindingError);
   return entry;
@@ -558,7 +581,9 @@ export function parseCeilingEntry(file: string, raw: unknown, ctx: string): Auth
 function loadPolicy(): LoadedPolicy {
   const file = "policy.json";
   const root = asObject(file, readJson(file), "policy");
-  const ceiling = asArray(file, root.ceiling, "policy.ceiling").map((raw, i) => parseCeilingEntry(file, raw, `policy.ceiling[${i}]`));
+  const ceiling = asArray(file, root.ceiling, "policy.ceiling").map((raw, i) =>
+    parseCeilingEntry(file, raw, `policy.ceiling[${i}]`),
+  );
   if (ceiling.length === 0) throw new ConfigError(file, "policy.ceiling must be non-empty");
   // @spec mission#derivation-issuance-policy — OPTIONAL; absent or explicit
   // null means this deployment imposes no ceiling of its own.
@@ -604,7 +629,9 @@ const POLICY = loadPolicy();
 export const RAS_LOCAL_POLICY = (() => {
   const file = "ras-policy.json";
   const root = asObject(file, readJson(file), "ras-policy");
-  const ceiling = asArray(file, root.ceiling, "ras-policy.ceiling").map((raw, i) => parseCeilingEntry(file, raw, `ras-policy.ceiling[${i}]`));
+  const ceiling = asArray(file, root.ceiling, "ras-policy.ceiling").map((raw, i) =>
+    parseCeilingEntry(file, raw, `ras-policy.ceiling[${i}]`),
+  );
   if (!ceiling.length) throw new ConfigError(file, "ras-policy.ceiling must be non-empty");
   return { policy_version: reqString(file, root, "policy_version", "ras-policy"), ceiling };
 })();
@@ -1099,7 +1126,8 @@ function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEnt
   return asArray(file, raw, ctx).map((item, i) => {
     const e = asObject(file, item, `${ctx}[${i}]`);
     const type = reqString(file, e, "type", `${ctx}[${i}]`);
-    if (type !== "mission_resource_access") throw new ConfigError(file, `${ctx}[${i}] has unsupported authority type`);
+    if (type !== "mission_resource_access")
+      throw new ConfigError(file, `${ctx}[${i}] has unsupported authority type`);
     const entry: CeilingEntry = {
       type,
       resource: reqString(file, e, "resource", `${ctx}[${i}]`),
