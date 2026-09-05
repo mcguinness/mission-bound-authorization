@@ -820,7 +820,9 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     return { uid, html: await page.text() };
   }
 
-  async function decideAt(uid: string, approver: string, subject: string): Promise<URL> {
+  // The Subject is established by the AS from the pushed login_hint; only the
+  // resolving Approver is a fixture input.
+  async function decideAt(uid: string, approver: string): Promise<URL> {
     let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
@@ -845,7 +847,7 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     });
     expect(html).toContain("Authority source (whose authority this draws on)");
     expect(html).toContain("user_delegated");
-    const redirect = await decideAt(uid, "bob", "alice");
+    const redirect = await decideAt(uid, "bob");
     expect(redirect.searchParams.get("code")).toBeTruthy();
   });
 
@@ -871,7 +873,7 @@ describe("authority source on the approval surface (@spec mission#authority-sour
       kid: "governed-agent-auth",
       key: () => governedKey,
     });
-    const redirect = await decideAt(uid, "bob", "alice");
+    const redirect = await decideAt(uid, "bob");
     expect(redirect.searchParams.get("error")).toBe("access_denied");
     expect(redirect.searchParams.get("code")).toBeNull();
   });
@@ -883,7 +885,7 @@ describe("authority source on the approval surface (@spec mission#authority-sour
       kid: "governed-agent-auth",
       key: () => governedKey,
     });
-    const redirect = await decideAt(uid, "alice", "alice");
+    const redirect = await decideAt(uid, "alice");
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 });

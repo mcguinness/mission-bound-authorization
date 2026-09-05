@@ -1319,6 +1319,8 @@ version before treating the evaluation as re-checked
 
 # Document History {#document-history}
 
+\[\[ To be removed from the final specification ]]
+
 - Clarified that the direct-human degenerate case presumes resolution by
   that human, not agent-invokable approval on the human's behalf (#759).
 

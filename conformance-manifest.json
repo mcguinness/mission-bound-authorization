@@ -314,12 +314,6 @@
      "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
      "level": "cross-component",
      "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/demo/test/approval-resolution-identity.test.ts",
-     "name": "approval resolution establishes identity from the surface (#759, #761) > ;",
-     "level": "cross-component",
-     "surface": "approval-ceremony"
     }
    ],
    "notes": "#759 closes the enabled headless seam and dashboard proxy. The OAuth interaction cookie is client-held and never counts as approver login. Independent browser-session integration enforces CSRF/origin/interaction binding; the local demo uses a separate short-lived operator bootstrap session. No production SSO or process-isolation claim."
@@ -989,12 +983,6 @@
     {
      "file": "src/demo/test/approval-resolution-identity.test.ts",
      "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
-     "level": "cross-component",
-     "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/demo/test/approval-resolution-identity.test.ts",
-     "name": "approval resolution establishes identity from the surface (#759, #761) > ;",
      "level": "cross-component",
      "surface": "approval-ceremony"
     }

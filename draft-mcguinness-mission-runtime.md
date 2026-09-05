@@ -1530,10 +1530,11 @@ Five rules govern the approval's enforcement:
    An approval resolved through a surface that fails either rule MUST NOT
    satisfy this section's gate, and the PEP MUST refuse the action.
 
-An agent MAY observe an approval's state and request independent approval;
-it MUST NOT be able to resolve that approval itself. Observable is not
-invokable: whoever nominally holds the resolving credential, the resolution
-path is not among the agent's tools.
+An agent MAY observe an approval's state, and a status poll is often
+necessary for it to decide whether to proceed; it MAY request an independent
+approval; it MUST NOT be able to resolve one. Observable, not invokable, is
+the distinction: whoever nominally holds the resolving credential, the
+resolution path is not among the agent's tools.
 
 The permit lease does not substitute for the maximum-age bound: a
 permit's validity window ({{parameter-binding}}) bounds the permit,
@@ -3203,6 +3204,8 @@ any decision-API wire members are defined by the decision-API binding
 --- back
 
 # Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
 
 - Added approval-resolution rule 5, the agent-invokable approval bypass,
   and its negative-conformance case (#759). Observing or requesting an
