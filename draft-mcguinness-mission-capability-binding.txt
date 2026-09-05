@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        4 September 2026
-Expires: 8 March 2027
+Intended status: Standards Track                        5 September 2026
+Expires: 9 March 2027
 
 
                        Mission Capability Binding
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 March 2027.
+   This Internet-Draft will expire on 9 March 2027.
 
 Copyright Notice
 
@@ -137,11 +137,11 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: Actions come from a discovered catalog
-   where invoked identity can drift from approval.  Requires: Mission-
-   Bound Runtime Enforcement: AuthZEN Profile; Mission-Bound Runtime
-   Enforcement; Mission Substrate Requirements.  Also requires,
+   Implementation: 9 conformance rows in conformance-manifest.json (8
+   tested, 1 partial).  Adopt when: Actions come from a discovered
+   catalog where invoked identity can drift from approval.  Requires:
+   Mission-Bound Runtime Enforcement: AuthZEN Profile; Mission-Bound
+   Runtime Enforcement; Mission Substrate Requirements.  Also requires,
    conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
    OAuth binding is the substrate).
 

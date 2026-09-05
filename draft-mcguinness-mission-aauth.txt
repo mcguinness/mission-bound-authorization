@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        4 September 2026
-Expires: 8 March 2027
+Intended status: Standards Track                        5 September 2026
+Expires: 9 March 2027
 
 
                    Mission Context Binding for AAuth
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 March 2027.
+   This Internet-Draft will expire on 9 March 2027.
 
 Copyright Notice
 
@@ -200,6 +200,10 @@ Table of Contents
    conformance ledger (conformance-manifest.json).  Adopt when: The
    substrate is AAuth: Mission context on its native propose/approve
    flow.  Requires: Mission Substrate Requirements.
+
+   This binding is written against the AAuth editor's copy at commit
+   fc5e972c (2026-08-14); the latest published revision is -10
+   (2026-08-06).
 
 3.  Conventions and Terminology
 
@@ -698,13 +702,14 @@ Table of Contents
 
    AAuth no longer treats a stripped mission as permitted downgrade: a
    resource MUST NOT omit mission_s256 from a resource token when the
-   person token it verified carried one, and a PS MUST resolve the
-   resource token's identified person token by person_token_jti and
-   reject any mismatch or omission against that person token's
-   mission_s256.  That base rule is what makes stripping detectable;
-   comparing claims by agent and resource alone cannot, because an agent
-   running concurrent missions holds more than one person token for the
-   same resource, and only the named person token resolves to one.
+   person token it verified carried one, and a PS MUST resolve
+   presented_jti against its retained records of the person tokens it
+   issued and reject any mismatch or omission against the resolved
+   person token's mission_s256.  That base rule is what makes stripping
+   detectable; comparing claims by agent and resource alone cannot,
+   because an agent running concurrent missions holds more than one
+   person token for the same resource, and only the named person token
+   resolves to one.
 
    This binding keeps two further local rules on top of it.  An agent
    operating under a mission MUST verify that a returned resource token
@@ -1200,9 +1205,9 @@ Table of Contents
 12.1.  Normative References
 
    [I-D.draft-hardt-oauth-aauth-protocol]
-              Hardt, D., "AAuth Protocol", 2026,
-              <https://dickhardt.github.io/AAuth/draft-hardt-oauth-
-              aauth-protocol.html>.
+              Hardt, D., "AAuth Protocol", Editor's copy, commit
+              fc5e972c, 2026, <https://dickhardt.github.io/AAuth/draft-
+              hardt-oauth-aauth-protocol.html>.
 
    [I-D.draft-mcguinness-mission-substrate]
               McGuinness, K., "Mission Substrate Requirements", 2026,

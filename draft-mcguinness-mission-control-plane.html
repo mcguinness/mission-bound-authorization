@@ -4,28 +4,20 @@
 <meta charset="utf-8">
 <meta content="Common,Latin" name="scripts">
 <meta content="initial-scale=1.0" name="viewport">
-<title>Mission Status List for OAuth 2.0</title>
+<title>Mission Control-Plane Consistency</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       The Mission Status and Lifecycle profile for OAuth 2.0 lets a
-consumer holding a  mission_id  resolve current Mission state, one
-Mission at a time, from a signed Mission Status Response or a token
-introspection projection. This document defines a companion surface
-for fleet scale: a Mission Issuer  MAY  additionally publish Mission
-state as an OAuth Status List, a signed, compressed bit array in
-which each participating Mission holds an index, fetched once per
-freshness window and read locally per action. It is optional and
-builds on the Mission Status and Lifecycle profile; a deployment
-that does not adopt it is unaffected. 
+       This optional profile specifies topology-neutral consistency and recovery
+invariants for Mission issuers and state-observation consumers. It separates
+serialized authority changes from asynchronous publication, prevents freshness
+from being manufactured after lag or recovery, and keeps emergency authority
+outside the Mission enforcement claim. It defines no endpoint or wire member. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
-<meta content="oauth" name="keyword">
 <meta content="mission" name="keyword">
-<meta content="agent" name="keyword">
 <meta content="authorization" name="keyword">
-<meta content="status" name="keyword">
-<meta content="status list" name="keyword">
-<meta content="draft-mcguinness-oauth-mission-status-list-latest" name="ietf.draft">
+<meta content="consistency" name="keyword">
+<meta content="draft-mcguinness-mission-control-plane-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
     Python 3.14.7
@@ -41,7 +33,7 @@ that does not adopt it is unaffected.
     requests 2.33.1
     wcwidth 0.8.3
 -->
-<link href="draft-mcguinness-oauth-mission-status-list.xml" rel="alternate" type="application/rfc+xml">
+<link href="draft-mcguinness-mission-control-plane.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
 <style type="text/css">@font-face {
   font-family: 'Lora';
@@ -1054,7 +1046,7 @@ svg {
 <table class="ears">
 <thead><tr>
 <td class="left">Internet-Draft</td>
-<td class="center">OAuth Mission Status List</td>
+<td class="center">Mission Control-Plane Consistency</td>
 <td class="right">September 2026</td>
 </tr></thead>
 <tfoot><tr>
@@ -1067,9 +1059,9 @@ svg {
 <div id="internal-metadata" class="document-information">
 <dl id="identifiers">
 <dt class="label-workgroup">Workgroup:</dt>
-<dd class="workgroup">Web Authorization Protocol</dd>
+<dd class="workgroup">Network Working Group</dd>
 <dt class="label-internet-draft">Internet-Draft:</dt>
-<dd class="internet-draft">draft-mcguinness-oauth-mission-status-list-latest</dd>
+<dd class="internet-draft">draft-mcguinness-mission-control-plane-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
 <time datetime="2026-09-05" class="published">5 September 2026</time>
@@ -1087,19 +1079,14 @@ svg {
 </dd>
 </dl>
 </div>
-<h1 id="title">Mission Status List for OAuth 2.0</h1>
+<h1 id="title">Mission Control-Plane Consistency</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">The Mission Status and Lifecycle profile for OAuth 2.0 lets a
-consumer holding a <code>mission_id</code> resolve current Mission state, one
-Mission at a time, from a signed Mission Status Response or a token
-introspection projection. This document defines a companion surface
-for fleet scale: a Mission Issuer <span class="bcp14">MAY</span> additionally publish Mission
-state as an OAuth Status List, a signed, compressed bit array in
-which each participating Mission holds an index, fetched once per
-freshness window and read locally per action. It is optional and
-builds on the Mission Status and Lifecycle profile; a deployment
-that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This optional profile specifies topology-neutral consistency and recovery
+invariants for Mission issuers and state-observation consumers. It separates
+serialized authority changes from asynchronous publication, prevents freshness
+from being manufactured after lag or recovery, and keeps emergency authority
+outside the Mission enforcement claim. It defines no endpoint or wire member.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1107,8 +1094,8 @@ that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcro
       </h2>
 <p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
 <p id="section-note.1-2">
-        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html</a></span>.
-        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-status-list/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-status-list/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-control-plane/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-control-plane/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
 <p id="section-note.1-3">Source for this draft and an issue tracker can be found at
         <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
 </section>
@@ -1167,39 +1154,75 @@ that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcro
             <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-profile" class="internal xref">Status: An Optional Profile</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions" class="internal xref">Conventions</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
-            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-status-list" class="internal xref">Mission Status List</a></p>
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-shared-consistency-and-avai" class="internal xref">Shared Consistency and Availability Rule</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-issuer-consistency-invarian" class="internal xref">Issuer Consistency Invariants</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-1-serialization-domains" class="internal xref">1. Serialization domains</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-2-fresh-observations-not-fr" class="internal xref">2. Fresh observations, not fresh signatures</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-3-one-state-observation-mod" class="internal xref">3. One state-observation model</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-4-rollback-resistance" class="internal xref">4. Rollback resistance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-5-terminal-state-tombstones" class="internal xref">5. Terminal-state tombstones</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-6-authoritative-mutation-un" class="internal xref">6. Authoritative mutation under partition</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-7-emergency-narrowing" class="internal xref">7. Emergency narrowing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.8">
+                <p id="section-toc.1-1.5.2.8.1"><a href="#section-5.8" class="auto internal xref">5.8</a>.  <a href="#name-8-positive-emergency-author" class="internal xref">8. Positive emergency authority is separate</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.9">
+                <p id="section-toc.1-1.5.2.9.1"><a href="#section-5.9" class="auto internal xref">5.9</a>.  <a href="#name-9-isolation-at-mutable-seam" class="internal xref">9. Isolation at mutable seams</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.10">
+                <p id="section-toc.1-1.5.2.10.1"><a href="#section-5.10" class="auto internal xref">5.10</a>. <a href="#name-10-repairable-fan-out" class="internal xref">10. Repairable fan-out</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-deployment-declaration" class="internal xref">Deployment Declaration</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-fault-conformance-cases" class="internal xref">Fault Conformance Cases</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1210,26 +1233,19 @@ that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcro
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">This document is a satellite of the Mission Status and Lifecycle
-profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> ("the Status
-profile"), adding a fleet-scale reliance surface.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">The Status profile lets a consumer resolve current Mission state
-from the dedicated Mission Status operation or the token
-introspection projection, one Mission at a time. A consumer that
-relies on many Missions concurrently, such as a gateway fronting an
-agent fleet, can instead read Mission state from a compact, signed
-bit array published once and read locally per action. This document
-defines that surface: a Mission Status List
-(<span>[<a href="#I-D.draft-ietf-oauth-status-list" class="cite xref">I-D.draft-ietf-oauth-status-list</a>]</span>) profile of a <code>status_list</code>
-extension member the Status profile's response and introspection
-surfaces already accommodate.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This document is optional. A Mission Issuer that does not publish a
-Status List, and a consumer that does not read one, are unaffected;
-they rely on the Status profile's per-Mission surfaces directly.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This document defines no new Mission semantics and changes no
-meaning of any existing member: the Mission, its lifecycle states,
-and the Mission Status Response are defined in
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-1">Mission approval anchors, mutable lifecycle state, and runtime policy views
+solve different problems. A correctly signed artifact is insufficient if its
+issuer lost a committed revocation, double-spent a creation budget, or
+re-stamped a stale observation. This profile gives those failure modes a
+testable consistency contract without prescribing a database, leader topology,
+or replication product.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The OAuth binding's existing atomic issuance and identifier-nonreuse duties
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) remain unconditional for adopters of that
+binding. Declining this optional profile cannot waive them. Status owns state
+versions and freshness (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), Signals
+owns its delivery protocol (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), and
+Runtime owns point-of-use bounded reliance
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="doc-status">
@@ -1237,133 +1253,268 @@ and the Mission Status Response are defined in
       <h2 id="name-status-an-optional-profile">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
-<p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
-Adopt when: A consumer relies on many Missions concurrently and per-Mission status reads do not scale.
-Requires: Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
+Implementation: 12 conformance rows in conformance-manifest.json (12 todo).
+Adopt when: A deployment claims testable control-plane consistency across replication, partition, and recovery.
+Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document has no implemented conformance coverage. Its fault cases
+and requirement rows are unimplemented, and its maintenance class reflects
+that absence of implementation evidence.<a href="#section-2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="conventions-and-terminology">
+<div id="conventions">
 <section id="section-3">
-      <h2 id="name-conventions-and-terminology">
-<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      <h2 id="name-conventions">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions" class="section-name selfRef">Conventions</a>
       </h2>
 <p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
-<p id="section-3-2">This document uses the terms defined in the issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, in particular Mission,
-Mission Issuer, <code>mission_id</code>, the Mission lifecycle states, the
-Mission Status Response, and the token introspection projection.<a href="#section-3-2" class="pilcrow">¶</a></p>
-<p id="section-3-3">All JSON shown in this document is non-normative and illustrative;
-the member definitions in the surrounding text are authoritative.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-2">"Mission Issuer" identifies the authority owning the Mission record, not
+necessarily an OAuth Authorization Server. "Canonical tuple" means the
+binding-established issuer identity and Mission identifier, not caller-chosen
+aliases. State versions and PDP policy-view identifiers inhabit different
+identifier spaces and are not compared for raw equality.<a href="#section-3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="status-list">
+<div id="consistency-availability">
 <section id="section-4">
-      <h2 id="name-mission-status-list">
-<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-status-list" class="section-name selfRef">Mission Status List</a>
+      <h2 id="name-shared-consistency-and-avai">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-shared-consistency-and-avai" class="section-name selfRef">Shared Consistency and Availability Rule</a>
       </h2>
-<p id="section-4-1">This section is <span class="bcp14">OPTIONAL</span>.<a href="#section-4-1" class="pilcrow">¶</a></p>
-<p id="section-4-2">One consumer often relies on many Missions at once: a gateway
-fronting an agent fleet holds a Mission per unit of work, and
-per-Mission status reads at that scale are a latency tax the Status
-profile's caching rules cannot amortize. A Mission Issuer <span class="bcp14">MAY</span>
-additionally publish Mission state as a Status List
-(<span>[<a href="#I-D.draft-ietf-oauth-status-list" class="cite xref">I-D.draft-ietf-oauth-status-list</a>]</span>): a signed, compressed bit
-array in which each participating Mission holds an index, fetched
-once per freshness window and read locally per action.<a href="#section-4-2" class="pilcrow">¶</a></p>
-<p id="section-4-3">The arithmetic is the point. A fleet of 100,000 participating
-Missions at two bits per entry is 25,000 bytes before compression,
-and a mostly-<code>active</code> population compresses far below that; a
-consumer fetching that list once per 30-second window spends under a
-kilobyte per second to hold fresh state for every Mission it relies
-on, where per-Mission status reads would cost 100,000 requests per
-window. Fleet scale makes state freshness cheaper per Mission, not
-more expensive.<a href="#section-4-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-4-4.1">
-          <p id="section-4-4.1.1"><strong>Reference.</strong> A participating Mission's <code>status_list</code> member
-(<code>idx</code> and <code>uri</code>, the referenced-token shape of
-<span>[<a href="#I-D.draft-ietf-oauth-status-list" class="cite xref">I-D.draft-ietf-oauth-status-list</a>]</span>) rides the Mission Status
-Response and the introspection projection
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Sections
-"Response" and "Token Introspection Mission Projection"), so a
-consumer learns its index from the authoritative surface it
-already reads.<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-4.2">
-          <p id="section-4-4.2.1"><strong>Mapping.</strong> VALID (0x00) reports <code>active</code>; SUSPENDED (0x02)
-reports <code>suspended</code>; INVALID (0x01) reports every terminal state.
-A consumer treats any other value as non-active, per the fail-safe
-rule. The list carries reliance bits only: which terminal state,
-the <code>successor</code>, and the state version stay on the Status
-profile's authoritative surfaces, and a consumer that observes a
-bit other than VALID re-establishes state there before any further
-reliance.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-4.3">
-          <p id="section-4-4.3.1"><strong>Freshness.</strong> The Status List Token's <code>ttl</code> and <code>exp</code> are a
-published staleness bound: within them a VALID bit permits
-reliance exactly as a fresh Mission Status Response reporting
-<code>active</code> does, and an expired or unfetchable list is stale state,
-never permission (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A
-committed lifecycle transition <span class="bcp14">MUST</span> be reflected in the next
-Status List Token published for its list, and where Signals runs,
-the event is the push complement to the list's pull floor.<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-4.4">
-          <p id="section-4-4.4.1"><strong>Privacy.</strong> Index assignment <span class="bcp14">MUST NOT</span> be derivable from or
-correlatable with the Mission Identifier, and the list conveys
-bits at opaque indices only, so publishing it preserves the Status
-profile's anti-oracle posture
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
-"Anti-Oracle Property") while the fetch itself, covering every
-index at once, reveals no per-Mission interest.<a href="#section-4-4.4.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
+<p id="section-4-1">A deployment may trade availability inside a declared freshness window, but
+it cannot manufacture freshness, lose a serialized narrowing transition, or
+relabel emergency authority as Mission authority. Operational availability
+guidance composes with this anchor; it does not define a second set of issuer
+invariants. Recovery objectives guide selecting bounds within the security
+ceiling, never extending them during an incident.<a href="#section-4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="security-considerations">
+<div id="issuer-consistency">
 <section id="section-5">
-      <h2 id="name-security-considerations">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      <h2 id="name-issuer-consistency-invarian">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-issuer-consistency-invarian" class="section-name selfRef">Issuer Consistency Invariants</a>
       </h2>
-<p id="section-5-1">The security considerations of the issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> apply in full. This
-document introduces no attack surface beyond the Mapping and
-Freshness rules of <a href="#status-list" class="auto internal xref">Section 4</a>, which are normative above: a
-consumer that fails safe on a non-VALID bit and never relies past
-the Status List Token's own <code>exp</code> inherits the Status profile's
-revocation-propagation guarantees for the fleet-scale path.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-1">The following requirements apply when the deployment claims this profile,
+in addition to the unconditional requirements of each adopted binding.
+Each subsection identifies its enforcing subject.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="serialization">
+<section id="section-5.1">
+        <h3 id="name-1-serialization-domains">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-1-serialization-domains" class="section-name selfRef">1. Serialization domains</a>
+        </h3>
+<p id="section-5.1-1">The Mission Issuer <span class="bcp14">MUST</span> provide one serialization order per Mission and per multi-object invariant.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="privacy-considerations">
+<div id="fresh-observation">
+<section id="section-5.2">
+        <h3 id="name-2-fresh-observations-not-fr">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-2-fresh-observations-not-fr" class="section-name selfRef">2. Fresh observations, not fresh signatures</a>
+        </h3>
+<p id="section-5.2-1">A signer of a state observation <span class="bcp14">MUST NOT</span> manufacture freshness by assigning a new <code>iat</code> or <code>fresh_until</code> to an older observation without establishing that its value reflects the authoritative committed state at the new observation point.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="state-surfaces">
+<section id="section-5.3">
+        <h3 id="name-3-one-state-observation-mod">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-3-one-state-observation-mod" class="section-name selfRef">3. One state-observation model</a>
+        </h3>
+<p id="section-5.3-1">A binding claiming this profile <span class="bcp14">MUST</span> map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rollback">
+<section id="section-5.4">
+        <h3 id="name-4-rollback-resistance">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-4-rollback-resistance" class="section-name selfRef">4. Rollback resistance</a>
+        </h3>
+<p id="section-5.4-1">After restore or failover, the Mission Issuer <span class="bcp14">MUST NOT</span> issue a lower state <code>version</code> for an existing Mission, and <span class="bcp14">MUST</span> refuse state-dependent service while its durable version or commit metadata is uncertain.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">A retaining consumer <span class="bcp14">MUST</span> key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="tombstones">
+<section id="section-5.5">
+        <h3 id="name-5-terminal-state-tombstones">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-5-terminal-state-tombstones" class="section-name selfRef">5. Terminal-state tombstones</a>
+        </h3>
+<p id="section-5.5-1">The Mission Issuer <span class="bcp14">MUST</span> retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer <span class="bcp14">MUST</span> retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="partitions">
+<section id="section-5.6">
+        <h3 id="name-6-authoritative-mutation-un">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-6-authoritative-mutation-un" class="section-name selfRef">6. Authoritative mutation under partition</a>
+        </h3>
+<p id="section-5.6-1">The Mission Issuer <span class="bcp14">MUST</span> perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and <span class="bcp14">MUST</span> refuse when it cannot establish that condition.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<p id="section-5.6-2">A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="emergency-deny">
+<section id="section-5.7">
+        <h3 id="name-7-emergency-narrowing">
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-7-emergency-narrowing" class="section-name selfRef">7. Emergency narrowing</a>
+        </h3>
+<p id="section-5.7-1">An issuer or deny cache <span class="bcp14">MUST NOT</span> use emergency deny information to create authority or extend the freshness of an active observation.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+<p id="section-5.7-2">A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry <span class="bcp14">MUST</span> carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone <span class="bcp14">MUST NOT</span> expire into active behavior.<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="emergency-authority">
+<section id="section-5.8">
+        <h3 id="name-8-positive-emergency-author">
+<a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-8-positive-emergency-author" class="section-name selfRef">8. Positive emergency authority is separate</a>
+        </h3>
+<p id="section-5.8-1">A deployment <span class="bcp14">MUST NOT</span> represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and <span class="bcp14">MUST</span> exclude actions relying on that permission from its Mission enforcement claim.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+<p id="section-5.8-2">The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in <a href="#emergency-deny" class="auto internal xref">Section 5.7</a>. No emergency flag turns a failed Mission check into a successful one.<a href="#section-5.8-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="isolation">
+<section id="section-5.9">
+        <h3 id="name-9-isolation-at-mutable-seam">
+<a href="#section-5.9" class="section-number selfRef">5.9. </a><a href="#name-9-isolation-at-mutable-seam" class="section-name selfRef">9. Isolation at mutable seams</a>
+        </h3>
+<p id="section-5.9-1">Issuers and retaining consumers <span class="bcp14">MUST</span> isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+<p id="section-5.9-2">This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.<a href="#section-5.9-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="fanout">
+<section id="section-5.10">
+        <h3 id="name-10-repairable-fan-out">
+<a href="#section-5.10" class="section-number selfRef">5.10. </a><a href="#name-10-repairable-fan-out" class="section-name selfRef">10. Repairable fan-out</a>
+        </h3>
+<p id="section-5.10-1">The Mission Issuer <span class="bcp14">MUST</span> atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition.<a href="#section-5.10-1" class="pilcrow">¶</a></p>
+<p id="section-5.10-2">An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology.<a href="#section-5.10-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="deployment-declaration">
 <section id="section-6">
-      <h2 id="name-privacy-considerations">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      <h2 id="name-deployment-declaration">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-deployment-declaration" class="section-name selfRef">Deployment Declaration</a>
       </h2>
-<p id="section-6-1">The privacy considerations of the issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> apply in full. The
-Status List's own privacy rule, that index assignment <span class="bcp14">MUST NOT</span> be
-derivable from or correlatable with the Mission Identifier, is given
-in <a href="#status-list" class="auto internal xref">Section 4</a>.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-1">A claiming deployment <span class="bcp14">MUST</span> document its serialization domains, authoritative
+observation mechanism, replication and recovery model, applicable recovery
+objectives, tenant isolation, and residual risks. The declaration may use the
+Deployment Profile's illustrative <code>state_sources</code> entries, for example
+<code>serialization_domain</code>, <code>replication</code>, and <code>recovery_objective_seconds</code>; those
+illustrative names define no standardized metadata member or endpoint.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The existing <code>mission_max_stale_seconds</code> ceiling retains its meaning.
+A residual risk is a disclosed limitation, not an exemption from a requirement
+the deployment claims.<a href="#section-6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="iana">
+<div id="fault-conformance">
 <section id="section-7">
-      <h2 id="name-iana-considerations">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      <h2 id="name-fault-conformance-cases">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-fault-conformance-cases" class="section-name selfRef">Fault Conformance Cases</a>
       </h2>
-<p id="section-7-1">This document requests no IANA actions. It defines no new OAuth
-Authorization Server metadata member, media type, or registry: the
-<code>status_list</code> object it profiles reuses the Status profile's
-existing Mission Status Response and introspection extension point
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Fault or race</th>
+            <th class="text-left" rowspan="1" colspan="1">Required outcome</th>
+            <th class="text-left" rowspan="1" colspan="1">Invariant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Two writers race a transition or counter</td>
+            <td class="text-left" rowspan="1" colspan="1">One serialized result; no double budget spend</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#serialization" class="auto internal xref">Section 5.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Child creation races the fan-out cap</td>
+            <td class="text-left" rowspan="1" colspan="1">Child record and counter commit together</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#serialization" class="auto internal xref">Section 5.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Expansion fails between predecessor and successor writes</td>
+            <td class="text-left" rowspan="1" colspan="1">Neither half survives alone</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#serialization" class="auto internal xref">Section 5.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Crash after state commit, before publication</td>
+            <td class="text-left" rowspan="1" colspan="1">Durable repair publishes without losing the transition</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#fanout" class="auto internal xref">Section 5.10</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lagging node signs a newly fresh active value</td>
+            <td class="text-left" rowspan="1" colspan="1">Refusal unless an authoritative observation establishes that value</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#fresh-observation" class="auto internal xref">Section 5.2</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Restore exposes a lower version</td>
+            <td class="text-left" rowspan="1" colspan="1">Issuer refuses until reconciled; retaining consumer rejects rollback</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#rollback" class="auto internal xref">Section 5.4</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Legitimate higher-version resume</td>
+            <td class="text-left" rowspan="1" colspan="1">State is not rejected merely because active seems less severe</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#rollback" class="auto internal xref">Section 5.4</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Partition outlasts the existing freshness horizon</td>
+            <td class="text-left" rowspan="1" colspan="1">No new control-plane mutation; stale reliance stops</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#partitions" class="auto internal xref">Section 5.6</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Terminal record is absent after backup restore</td>
+            <td class="text-left" rowspan="1" colspan="1">Identifier does not regain active authority</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#tombstones" class="auto internal xref">Section 5.5</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Same Mission ID under two issuers</td>
+            <td class="text-left" rowspan="1" colspan="1">No shared high-water mark, budget, or idempotency result</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#isolation" class="auto internal xref">Section 5.9</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Key rotation during replication lag</td>
+            <td class="text-left" rowspan="1" colspan="1">A new signing key does not create freshness</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#fresh-observation" class="auto internal xref">Section 5.2</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Duplicate or out-of-order transition events</td>
+            <td class="text-left" rowspan="1" colspan="1">Idempotent handling, gap detection, authoritative resynchronization</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#fanout" class="auto internal xref">Section 5.10</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Positive emergency permission</td>
+            <td class="text-left" rowspan="1" colspan="1">Truthfully separate authority; affected actions excluded from the claim</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#emergency-authority" class="auto internal xref">Section 5.8</a>
+</td>
+          </tr>
+        </tbody>
+      </table>
 </section>
 </div>
 <div id="conformance">
@@ -1371,72 +1522,108 @@ existing Mission Status Response and introspection extension point
       <h2 id="name-conformance">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-8-1">An implementation claiming this capability <span class="bcp14">MUST</span> publish a Mission
-Status List meeting the Reference, Mapping, Freshness, and Privacy
-rules of <a href="#status-list" class="auto internal xref">Section 4</a>. An implementation that does not claim it
-is unaffected and remains conformant to the Status profile.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-1">A deployment claiming Mission Control-Plane Consistency <span class="bcp14">MUST</span> satisfy every
+applicable requirement for the issuer, binding, and consumer roles it runs.
+The conformance ledger separates the ten invariant groups from implementation
+coverage; an unimplemented test is not evidence of compliance. Existing
+binding-level conformance remains independent of this optional claim.<a href="#section-8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="security-considerations">
 <section id="section-9">
-      <h2 id="name-acknowledgments">
-<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      <h2 id="name-security-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-9-1">The author thanks the implementers and reviewers of the Mission-Bound
-Authorization work for feedback that shaped this extension.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-1">A valid signature can authenticate a stale or rolled-back assertion.
+Consumer high-water marks complement, but do not replace, issuer durability:
+a new consumer has no history against which to detect rollback. Failure
+between the authoritative transaction and an external publisher requires
+repair work in the former, not a best-effort call to the latter.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">Emergency denial is not positive authorization. Expiring an emergency deny
+never skips ordinary state, authority, identity, or point-of-use checks.
+Shared infrastructure needs both identity isolation and bounded propagation
+capacity; correct cache keys alone do not establish tenant availability.<a href="#section-9-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="sec-combined-references">
+<div id="privacy-considerations">
 <section id="section-10">
-      <h2 id="name-references">
-<a href="#name-references" class="section-name selfRef">References</a>
+      <h2 id="name-privacy-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<div id="sec-normative-references">
-<section id="section-10.1">
-        <h3 id="name-normative-references">
-<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
-        </h3>
-<dl class="references">
-<dt id="I-D.draft-ietf-oauth-status-list">[I-D.draft-ietf-oauth-status-list]</dt>
-        <dd>
-<span class="refAuthor">Looker, T.</span>, <span class="refAuthor">Bastian, P.</span>, and <span class="refAuthor">C. Bormann</span>, <span class="refTitle">"Token Status List (TSL)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-status-list-21</span>, <time datetime="2026-06-21" class="refDate">21 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC2119">[RFC2119]</dt>
-        <dd>
-<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC8174">[RFC8174]</dt>
-      <dd>
-<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-</dl>
+<p id="section-10-1">Durable tombstones, idempotency records, and qualified Mission identifiers
+can correlate activity. Retain the minimum facts needed for the stated
+security horizons, restrict disclosure, and avoid putting human identity
+or action content into replication and queue keys.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="sec-informative-references">
-<section id="section-10.2">
-        <h3 id="name-informative-references">
-<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
-        </h3>
+<div id="iana">
+<section id="section-11">
+      <h2 id="name-iana-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-11-1">This document requests no IANA actions.<a href="#section-11-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-normative-references">
+<section id="section-12">
+      <h2 id="name-normative-references">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+      </h2>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+      <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+    <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 </dl>
 </section>
 </div>
+<div id="document-history">
+<section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Initial topology-neutral consistency foundation (#250): ten issuer
+invariant groups, the shared consistency and availability rule, the
+deployment declaration riding existing surfaces, and the fault
+conformance table. Implementation, multi-process claiming, and operator
+performance measurement are separate work.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">The author thanks the Mission-Bound Authorization implementer community.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-A">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

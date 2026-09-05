@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                          4 September 2026
-Expires: 8 March 2027
+Intended status: Informational                          5 September 2026
+Expires: 9 March 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 March 2027.
+   This Internet-Draft will expire on 9 March 2027.
 
 Copyright Notice
 
@@ -1098,7 +1098,9 @@ Table of Contents
       flight work, unwind activity.  A deployment provisions state-
       source, event-stream, and PDP availability accordingly, because
       under this model their outage stops governed work rather than
-      loosening it.
+      loosening it.  Runtime's Operational Considerations states the
+      dependency-conditional outage and ride-through semantics
+      ([I-D.draft-mcguinness-mission-runtime]).
 
 10.  Revocation-to-Action Latency
 
@@ -1669,6 +1671,10 @@ Appendix A.  OWASP Agentic Threat Coverage
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Pointed the Availability limit at Runtime's Operational
+      Considerations for the dependency-conditional outage and ride-
+      through semantics (#310).
 
    *  Failure taxonomy crosswalk (#671): an informative subsection added
       to Section 7, mapping the Mandate, Audit, Consent Evidence, and

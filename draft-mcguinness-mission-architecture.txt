@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                          4 September 2026
-Expires: 8 March 2027
+Intended status: Informational                          5 September 2026
+Expires: 9 March 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 March 2027.
+   This Internet-Draft will expire on 9 March 2027.
 
 Copyright Notice
 
@@ -3726,6 +3726,12 @@ Table of Contents
    | oauth-mission-signals     | A signed event per lifecycle         |
    |                           | transition, push or poll.            |
    +---------------------------+--------------------------------------+
+   | mission-control-plane     | Experimental: topology-neutral       |
+   |                           | issuer consistency, durable          |
+   |                           | transition publication, rollback     |
+   |                           | resistance, and the shared           |
+   |                           | consistency/availability boundary.   |
+   +---------------------------+--------------------------------------+
    | oauth-mission-expansion   | Widening through an approved         |
    |                           | successor Mission.                   |
    +---------------------------+--------------------------------------+
@@ -4329,6 +4335,9 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Added the optional Control-Plane Consistency companion to the
+      document map (#250).
 
    *  Controls taxonomy retirement (#636): the swarm-execution
       discussion no longer claims derivation_limit (renamed from
