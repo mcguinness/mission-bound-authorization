@@ -452,6 +452,47 @@ Evidence is inert audit material. A compromised or manipulated shaper
 can propose a hostile Mission; it cannot approve one, and what it
 proposed is what the derivation bounds and the Approver reads.
 
+# The Enforcement Perimeter {#perimeter}
+
+The deployment's observable perimeter has three rings:
+
+- **Mediated effects.** Every consequential effect on the declared
+  entry crosses a PEP before it occurs. The PEP, PDP, state source,
+  and harness's no-unmediated-path condition govern that crossing,
+  within the Enforcement Scope Statement.
+- **Reconstructed effects.** No per-action gate is in the path. The
+  executing system records how each output derives from its inputs,
+  supplying provenance, label inputs, and post-hoc traceability where
+  the substrate records flow. The family supplies attribution objects,
+  parameter provenance, and tainted-session floors, not the underlying
+  flow recording. Reconstruction is bounded by that recording's
+  granularity and integrity; it is not mediation and does not
+  retroactively authorize an effect.
+- **Unrecorded effects.** Compute reads, transforms, and emits without
+  recording how, including arbitrary code running inside the agent's
+  boundary with the credentials that boundary holds.
+
+The family does not close the third ring and does not claim to.
+Effects wholly inside the boundary, emission over an unenumerated
+channel, and unrecorded internal flow remain outside the guarantee.
+Mediated custody keeps high-consequence credentials outside that
+boundary; least exposure narrows what it can read; Containment narrows
+future derivation; credential lifetime bounds limit materialized
+authority. Evidence attributes effects that crossed a mediated
+boundary. Revocation stops new derivation and bounds mediated use by
+the existing freshness, permit, and execution windows; it terminates
+no process and closes no network path. Workload termination and egress
+control remain the platform's responsibility.
+
+The PEP, PDP, state source, and harness hold the first ring. The
+trusted provenance mediator and harness taint policy support what the
+second offers; no family component holds the third. Data-lineage label
+persistence over a governed catalog is a realization of the second
+ring where the substrate records flow. A deployment declares an
+entry's disposition inside the runtime profile's existing enforcement
+scope ({{I-D.draft-mcguinness-mission-runtime}}); declaring an
+unmediated entry is disclosure, never an enforcement claim.
+
 # The Trusted Base {#trusted-base}
 
 The following components are trusted to varying degrees. For each: what
@@ -1112,9 +1153,19 @@ A trusted-base component is compromised:
   Residual: not prevented; degrades the specific guarantee per
   {{trusted-base}}.
 
-Ten residuals are worth stating on their own, because they are the
+Arbitrary code runs inside the agent's boundary:
+: Addressed by the mediated boundary an effect crosses (an interpreter,
+  a spawned process, or a generated script), parameter-bound permits,
+  mediated credential custody, and the harness's isolation and channel
+  enumeration. Residual: unrecorded computation and channels
+  outside that perimeter ({{perimeter}}); sandboxing owns execution.
+
+Eleven residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:
 
+- **Unrecorded compute.** Effects and data flow outside a mediated or
+  reconstructible path remain unrecorded ({{perimeter}}). Reconstruction
+  supplies provenance, not containment or retrospective authorization.
 - **Comprehension.** The suite can commit and bind what an Approver was
   shown; it cannot prove what the Approver perceived or understood. The
   consent-evidence profile narrows what it can reach: authority
@@ -1402,7 +1453,7 @@ where the two could be read to differ, the adversary model governs.
 | T8 Repudiation and Untraceability | The `act` chain on every hop, the evidence family joined on the Mission identifier, and transparency keeping the feed tamper-evident ({{I-D.draft-mcguinness-mission-audit}}) | Contained |
 | T9 Identity Spoofing and Impersonation | Attested instance identity, sender-constrained tokens, and mediated custody keeping the credential out of the agent entirely for mediated classes; mediated custody is a named High-Assurance claim (SHOULD at base conformance), so the verdict holds where that claim is made | Contained (under the custody claim) |
 | T10 Overwhelming the Human in the Loop | Humans approve Missions, machines approve actions: the grain keeps human decisions rare and consequential, with deferred approval absorbing volume ({{I-D.draft-mcguinness-oauth-mission-approval}}) | Bounded |
-| T11 Unexpected RCE and Code Attacks | Sandboxing owns execution; the model gates what executed code can reach, since consequential effects still need permits and capabilities are bound to source digests with drift failing closed | Bounded |
+| T11 Unexpected RCE and Code Attacks | Sandboxing owns execution; the model gates effects crossing its declared perimeter ({{perimeter}}), where consequential effects need permits and capabilities are bound to source digests with drift failing closed | Bounded |
 | T12 Agent Communication Poisoning | Messages can lie, authority cannot: influence carries no authority between agents, because delegation only narrows and every hop is enforced against its own child Mission | Bounded |
 | T13 Rogue Agents | A rogue instance holds only mission-bound, instance-bound, revocable authority, and termination cascades through the delegation tree to issuance, permits, and the harness; instance-grain kill exists where the instance substrate is deployed, and the cascade's reach is the containment surface's, never instantaneous | Contained (with the instance substrate) |
 | T14 Human Attacks on Multi-Agent Systems | Social engineering is out of authorization's reach; a manipulated operator can still only approve what shaping rendered, and the approval is attributed to them | Bounded |
@@ -1432,6 +1483,9 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Added the three-ring Enforcement Perimeter, its arbitrary-code
+  adversary entry, and the explicit unrecorded-compute residual (#758).
 
 - Failure taxonomy crosswalk (#671): an informative subsection added
   to {{cross-cutting}}, mapping the Mandate, Audit, Consent Evidence,

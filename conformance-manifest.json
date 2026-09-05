@@ -15,8 +15,8 @@
     "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "dd7115f882e01828ef4dcba369fdf1d81f377acc",
-    "content_sha256": "58d6d40b46d8330daef7baa68f5426bb5f6a124804dcf7e2fc4b3ca2dc7f59eb"
+    "revision": "e86355ef998640d09e9b2847bc48697f710dd7fe",
+    "content_sha256": "aced771852f65bafd5471d9c3cd057197c5e0c70564c02ed1a8ca000b910b00e"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -192,6 +192,52 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "runtime.conformance.perimeter-disposition-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "Each declared resource and excluded path MUST have exactly one perimeter disposition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every declared entry has one disposition, with the defined legacy-resource shorthand; invalid nested shapes and conflicting keys refuse.",
+    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.conformance.no-reconstructed-as-mediated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "A deployment MUST NOT represent reconstructed or unrecorded entries as mediation.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A claim must name a mediated resource and no excluded execution path.",
+    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
   {
    "id": "core.submission.front-channel-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
@@ -6218,7 +6264,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement whose baseline declaration names its mediated resources/action classes/execution paths, PEP locations, excluded paths, and Mission-establishment mode; its supported authority-entry types and the evaluator for each; the PDP or PDPs; the Mission state source, maximum staleness bound, and PDP-unavailability posture; the remote decision-channel trust mode for every non-co-resident PEP/PDP boundary; and the append-only integrity-protection mechanism for its records (#724: custody mode, evidence mechanism, and retention are named-extension declarations attached only when claimed, never universal baseline members)"
+    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement whose baseline declaration names its mediated resources/action classes/execution paths, PEP locations, excluded paths, and Mission-establishment mode; its supported authority-entry types and the evaluator for each; the PDP or PDPs; the Mission state source, maximum staleness bound, and PDP-unavailability posture; the remote decision-channel trust mode for every non-co-resident PEP/PDP boundary; and the append-only integrity-protection mechanism for its records (#724: custody mode, evidence mechanism, and retention are named-extension declarations attached only when claimed, never universal baseline members); the per-entry perimeter disposition #758 adds inside mediated_scope is a field on entries, not a seventh baseline member, and its validation is carried by runtime.conformance.perimeter-disposition-declared and runtime.conformance.no-reconstructed-as-mediated, not by the six omission tests below"
    },
    "level": "endpoint",
    "coverage": "partial",

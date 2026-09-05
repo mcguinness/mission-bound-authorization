@@ -71,6 +71,13 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission Security Model"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -1620,6 +1627,16 @@ for one Mission from becoming ambient authority for another.
 
 ## Limits of the Taint Control {#sec-taint-limits}
 
+In the Security Model's Enforcement Perimeter, this provenance-backed
+taint control is an instrument of the reconstructed-effects ring;
+unrecorded arbitrary computation remains bounded, not closed
+({{I-D.draft-mcguinness-mission-security-model}}). The per-channel
+disposition of {{mediated-egress}} and the runtime profile's per-entry
+perimeter disposition answer different questions: the first says
+whether a channel class is covered, the second says how a declared
+resource or excluded path is governed
+({{I-D.draft-mcguinness-mission-runtime}}).
+
 The taint rule of {{session-taint}} remains a coarse control, not
 information-flow control, though source classing and parameter
 provenance give it discriminating power: it gates the egress whose
@@ -1709,6 +1726,15 @@ An integration is complete when each obligation is discharged at the
 named boundary. Nothing here requires the engine to persist Mission
 state beyond the binding, or the Mission Issuer to know the engine
 exists.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Linked the limits of provenance-backed taint control to the Security
+  Model's Enforcement Perimeter and distinguished the per-channel
+  egress disposition from the runtime profile's per-entry perimeter
+  disposition; no taint requirement changed (#758).
 
 # Acknowledgments
 {:numbered="false"}
