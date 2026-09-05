@@ -1215,6 +1215,9 @@ limits most likely to matter and most often overstated away elsewhere:
   A deployment provisions state-source, event-stream, and PDP
   availability accordingly, because under this model their outage stops
   governed work rather than loosening it.
+  Runtime's Operational Considerations states the dependency-conditional
+  outage and ride-through semantics
+  ({{runtime-operational of I-D.draft-mcguinness-mission-runtime}}).
 
 # Revocation-to-Action Latency {#revocation-latency}
 
@@ -1430,6 +1433,8 @@ model and pipeline layers, and saying so is the point:
 | LLM10 Unbounded Consumption | Expiry on every Mission and metering (experimental) on spend | Bounded |
 
 # Document History {#document-history}
+
+- Pointed availability analysis to Runtime's operational outage guidance (#310).
 
 \[\[ To be removed from the final specification ]]
 

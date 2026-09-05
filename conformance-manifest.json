@@ -150,6 +150,7 @@
    "concurrency"
   ],
   "capabilities": [
+   "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
    "status.lifecycle",
@@ -197,6 +198,70 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "runtime.operational.ride-through-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "ride-through",
+   "text": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
+  {
+   "id": "runtime.operational.replication-disclosed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-replication",
+   "text": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
+  {
+   "id": "runtime.operational.break-glass-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "break-glass",
+   "text": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.break-glass"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
   {
    "id": "control-plane.consistency.serialization",
    "spec": "draft-mcguinness-mission-control-plane.md",
