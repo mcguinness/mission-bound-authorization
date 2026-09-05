@@ -1217,7 +1217,7 @@ limits most likely to matter and most often overstated away elsewhere:
   governed work rather than loosening it.
   Runtime's Operational Considerations states the dependency-conditional
   outage and ride-through semantics
-  ({{runtime-operational of I-D.draft-mcguinness-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Revocation-to-Action Latency {#revocation-latency}
 

@@ -2888,7 +2888,8 @@ that require it.
 Deployment Considerations ({{runtime-deployment}}) describes sizing and
 placement. This section describes dependency outages and the operator's
 declared response. The shared consistency/availability rule is
-{{consistency-availability of I-D.draft-mcguinness-mission-control-plane}};
+the Shared Consistency and Availability Rule in
+{{I-D.draft-mcguinness-mission-control-plane}};
 operational guidance does not manufacture freshness or add emergency
 authority to an ordinary Mission permit.
 
@@ -2954,7 +2955,7 @@ when the ordinary path could not produce one. Activations are counted and
 reviewable. The ordinary Mission path continues to fail closed; emergency
 authority is a separate mode, not a successful result of that path. The
 consistency companion's Emergency Authority rule states this separation
-({{emergency-authority of I-D.draft-mcguinness-mission-control-plane}}).
+({{I-D.draft-mcguinness-mission-control-plane}}).
 
 ## Replication Is a Declared Deployment Property {#runtime-replication}
 
@@ -2965,7 +2966,8 @@ each published staleness bound.
 This recommends no consensus protocol or leader architecture. The
 observation must be justified by the deployment's consistency mechanism;
 a signature or new signing key does not turn a lagging value into a fresh
-one ({{fresh-observation of I-D.draft-mcguinness-mission-control-plane}}).
+one (Fresh Observations, Not Fresh Signatures in
+{{I-D.draft-mcguinness-mission-control-plane}}).
 Operators watch observation age, available fallback sources, propagation
 gaps, permit refusals, and recovery progress. Metrics targets and fleet
 benchmarks are separate deployment work.
