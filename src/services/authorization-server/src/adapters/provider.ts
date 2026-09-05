@@ -2793,6 +2793,7 @@ async function handleMissionDispatchGrant(
       dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
     }));
   } catch (e) {
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
     if (e instanceof DispatchError) {
       const code = dispatchErrorCode(e.reason);
       ctx.status = code === "access_denied" ? 403 : 400;

@@ -105,6 +105,11 @@ function newLineage(eventId: string, envelope: { authTime?: number; acr?: string
     approver: { iss: ISSUER, sub: "bob" },
     clientId: "ap-agent",
     approvalEventId: eventId,
+    capabilityResolution: [{ resource: RESOURCE, action: "payments:invoice.read", binding: {
+      action: "payments:invoice.read", tool_id: "mcp://payments.test/tools/get_invoice",
+      source_uri: "https://payments.test/.well-known/mcp", operation_ref: "get_invoice",
+      source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"),
+    } }],
   });
   const anchorId = as.continuationStore.rootGrantAnchor({ missionId: mission.id, authEnvelope: envelope });
   const handle = as.continuationStore.mint({

@@ -5,7 +5,7 @@
  * treats them. Presentation and decision-time comparison are separate changes.
  */
 
-import { authorityHash, type CapabilitySourceBinding, capabilitySourceDigest, capabilitySourceIdentity, catalogDigest, extractMcpToolDefinition } from "@mission/core";
+import { authorityHash, type CapabilitySourceBinding, capabilitySourceDigest, capabilitySourceIdentity, catalogDigest, extractMcpToolDefinition, isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { CATALOG_SERVICES, DERIVATION_POLICY, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { TOOLS } from "@mission/mcp-payments";
 import { generateKeyPair } from "jose";
@@ -17,6 +17,9 @@ import {
   createChildMission,
   createExpansion,
   createTemplate,
+  deriveAttenuationRoot,
+  deriveCrossOrgRoot,
+  mapAuthorityToTools,
   dispatchFromTemplate,
   IntentError,
   isSubsetEntry,
@@ -342,6 +345,32 @@ describe("projectThroughEffective: recorded bindings keep the subset property", 
       actions: [READ_ACTION, WRITE_ACTION],
     };
     expect(projectThroughEffective([bound], [unbound])).toEqual([]);
+  });
+
+  it("attaches effective bindings to a bare wire candidate without widening either authority", () => {
+    const { capability_sources: _drop, ...wire } = bound;
+    const result = projectThroughEffective([wire], [bound]);
+    expect(result).toEqual([bound]);
+    expect(isSubsetSet(result, [bound])).toBe(true);
+    expect(isSubsetSet(result, [wire])).toBe(false); // issuer lineage stays strict
+    expect(isSubsetSetIgnoringCapabilitySources(result, [wire])).toBe(true);
+    expect(isSubsetSetIgnoringCapabilitySources(result, [bound])).toBe(true);
+  });
+});
+
+describe("wire-bound attenuation over recorded authority", () => {
+  it("permits both root paths without putting recorded bindings on the AAT tools wire shape", async () => {
+    const record = approve([resolution(READ_ACTION, "get_invoice")]);
+    const { privateKey } = await generateKeyPair("ES256");
+    const requestedTools = mapAuthorityToTools(record.authority_set);
+    const common = { missionId: record.id, aud: RESOURCE, clientId: "ap-agent", cnfJkt: "test-key", requestedTools };
+    const root = await deriveAttenuationRoot(kernel, privateKey, "root", common);
+    expect(root.tools).toEqual(requestedTools);
+    const crossOrg = await deriveCrossOrgRoot(kernel, privateKey, "root", {
+      ...common, actor: { iss: ISS, sub: "ap-agent" }, mappingVersion: "test-v1",
+    });
+    expect(crossOrg.tools).toEqual(requestedTools);
+    expect(JSON.stringify(root.tools)).not.toContain("capability_sources");
   });
 });
 

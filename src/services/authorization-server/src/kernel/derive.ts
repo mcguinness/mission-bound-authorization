@@ -649,12 +649,9 @@ function intersectForProjection(
   }
   if (conditions) constraints.terminal_when = conditions;
   // @spec capability-binding#capability-source-binding — the fragment must
-  // satisfy `isSubsetEntry` against BOTH sides, and a recorded binding is
-  // monotonic in both directions there (it must be retained for a retained
-  // action, and may not be introduced). A fragment can therefore carry only
-  // bindings both sides recorded byte-identically for the retained actions;
-  // where the two sides disagree, no fragment is a subset of both and the
-  // pairing drops, exactly as an unprojectable constraint does.
+  // preserve effective-side issuer provenance even when the candidate came
+  // from a binding-free wire projection. Two recorded sides must still agree;
+  // a candidate cannot introduce a binding the effective side does not carry.
   const sources = projectCapabilitySources(candidate, effective, actions);
   if (sources === null) return null;
   const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
@@ -666,8 +663,8 @@ function intersectForProjection(
 }
 
 /**
- * The retained-action bindings both sides agree on: `undefined` where neither
- * side records any, `null` where the pairing is unprovable (the two sides
+ * Effective-side retained-action bindings, inherited by a bare wire candidate.
+ * `undefined` where neither side records any; `null` where unprovable (the two sides
  * disagree, or a binding cannot be canonicalized). Total, like the rest of
  * this projection, which is fail-closed-by-DROPPING rather than throwing.
  */
@@ -682,6 +679,11 @@ function projectCapabilitySources(
   const cSources = forRetained(candidate);
   const eSources = forRetained(effective);
   if (cSources.length === 0 && eSources.length === 0) return undefined;
+  if (cSources.length === 0) {
+    const keyed = eSources.map(b => [bindingKey(b), b] as const);
+    if (keyed.some(([key]) => key === null)) return null;
+    return keyed.sort(([a], [b]) => a! < b! ? -1 : a! > b! ? 1 : 0).map(([, b]) => b);
+  }
   const byKey = new Map<string, CapabilitySourceBinding>();
   for (const b of cSources) {
     const key = bindingKey(b);
@@ -708,8 +710,9 @@ function projectCapabilitySources(
  * fragment: actions intersected, `max_amount` the smaller (exact decimal
  * comparison), `vendors` intersected, `requires_action_approval` OR-ed,
  * `delegation` carried only where both sides grant it and then narrowed. The
- * result satisfies BOTH `isSubsetSet(result, candidate)` and
- * `isSubsetSet(result, effective)`, which is the whole point: it is the
+ * result satisfies BOTH authority-only comparisons via
+ * `isSubsetSetIgnoringCapabilitySources`, and stays a strict subset of the
+ * effective issuer-derived set. It is the
  * authority the credential still holds under the Mission's current narrowing.
  *
  * The prior implementation matched only the FIRST effective entry per resource
