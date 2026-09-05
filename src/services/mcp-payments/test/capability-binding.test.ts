@@ -113,4 +113,17 @@ describe("one catalog snapshot from discovery to invocation", () => {
     expect(await f.pep.reverify(write.effective!, parameterDigest(write.effective!), token)).toBe(false);
     expect(await f.pep.reverifyList(list.listEffective!, parameterDigest(list.listEffective!), token)).toBe(false);
   });
+
+  it("names the moved snapshot, not a parameter mismatch, when a write is refused at invocation", async () => {
+    let current = text;
+    const f = fixture(() => current);
+    const result = await f.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, token, () => {
+      current = text.replace("Read one invoice", "Changed after the decision");
+    });
+    expect(result).toEqual({ ok: false, refusal_reason: "capability_source_unresolvable" });
+    const refusals = f.evidence
+      .forMission(token.mission.id)
+      .filter(r => r.kind === "refusal") as { content: { denial_reason?: string } }[];
+    expect(refusals.map(r => r.content.denial_reason)).toEqual(["capability_source_unresolvable"]);
+  });
 });

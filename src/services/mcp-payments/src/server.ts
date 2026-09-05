@@ -787,6 +787,11 @@ export class McpPaymentsServer {
       };
     }
     beforeReverify?.();
+    // A moved catalog snapshot is its own refusal, not a parameter mismatch:
+    // check it first so the caller-visible reason matches the Refusal Record.
+    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, res.effective.action))) {
+      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+    }
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     if (!(await this.deps.pep.reverify(res.effective, digest, token))) {
       return { ok: false, refusal_reason: "parameter_mismatch" };
@@ -867,6 +872,11 @@ export class McpPaymentsServer {
 
     beforeCommit?.();
 
+    // A moved catalog snapshot is its own refusal, not a parameter mismatch.
+    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, res.effective.action))) {
+      tx.engine.advance(opKey, "abandoned");
+      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+    }
     // TOCTOU re-verify inside the lease, before commit.
     if (!tx.engine.leaseValid(opKey) || !(await this.deps.pep.reverify(res.effective, digest, token))) {
       tx.engine.advance(opKey, "abandoned");

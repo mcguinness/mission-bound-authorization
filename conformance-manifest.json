@@ -17757,12 +17757,6 @@
    "tests": [
     {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > .",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
      "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a covering ceiling preserves the delegated entry byte-identically",
      "level": "unit",
      "surface": "token-endpoint"
@@ -18000,12 +17994,6 @@
      "file": "src/services/mcp-saas/test/cross-domain.test.ts",
      "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > an entitlement entitled to the read alone narrows the local token, so the read permits and the delegated journal write is refused",
      "level": "cross-component",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > .",
-     "level": "unit",
      "surface": "token-endpoint"
     },
     {

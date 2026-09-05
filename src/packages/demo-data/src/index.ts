@@ -551,30 +551,30 @@ export function parseCeilingEntry(file: string, raw: unknown, ctx: string): Auth
   const e = asObject(file, raw, ctx);
   const type = reqString(file, e, "type", ctx);
   if (type !== "mission_resource_access")
-    throw new ConfigError(file, ctx + " has unsupported authority type");
+    throw new ConfigError(file, `${ctx} has unsupported authority type`);
   const entry: AuthorityEntry = {
     type,
     resource: reqString(file, e, "resource", ctx),
     actions: reqStringArray(file, e, "actions", ctx),
     ...(e.constraints !== undefined
       ? {
-          constraints: asObject(file, e.constraints, ctx + ".constraints") as NonNullable<
+          constraints: asObject(file, e.constraints, `${ctx}.constraints`) as NonNullable<
             AuthorityEntry["constraints"]
           >,
         }
       : {}),
     ...(e.delegation !== undefined
       ? {
-          delegation: asObject(file, e.delegation, ctx + ".delegation") as NonNullable<
+          delegation: asObject(file, e.delegation, `${ctx}.delegation`) as NonNullable<
             AuthorityEntry["delegation"]
           >,
         }
       : {}),
   };
   if (!isAuthorityEntry(entry))
-    throw new ConfigError(file, ctx + " has malformed or unsupported authority");
+    throw new ConfigError(file, `${ctx} has malformed or unsupported authority`);
   const bindingError = amountBearingBindingError(entry);
-  if (bindingError) throw new ConfigError(file, ctx + " " + bindingError);
+  if (bindingError) throw new ConfigError(file, `${ctx} ${bindingError}`);
   return entry;
 }
 
