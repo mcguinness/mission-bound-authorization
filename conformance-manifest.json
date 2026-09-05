@@ -366,7 +366,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in the referenced companion rules. No emergency flag turns a failed Mission check into a successful one."
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
    },
    "level": "cross-component",
    "coverage": "todo",

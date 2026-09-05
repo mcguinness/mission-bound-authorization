@@ -92,9 +92,9 @@ Adopt when: A deployment claims testable control-plane consistency across replic
 Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 <!-- family-status: END -->
 
-This initial specification has no claim of implemented conformance. Its
-fault cases and requirement rows are explicitly unimplemented; active
-experimental maintenance can be earned by implementation evidence later.
+This document has no implemented conformance coverage. Its fault cases
+and requirement rows are unimplemented, and its maintenance class reflects
+that absence of implementation evidence.
 
 # Conventions {#conventions}
 
@@ -186,11 +186,11 @@ An outbox or equivalent satisfies this only when it shares the state transaction
 A claiming deployment MUST document its serialization domains, authoritative
 observation mechanism, replication and recovery model, applicable recovery
 objectives, tenant isolation, and residual risks. The declaration may use the
-Deployment Profile's illustrative state_sources entries, for example
-serialization_domain, replication, and recovery_objective_seconds; those
+Deployment Profile's illustrative `state_sources` entries, for example
+`serialization_domain`, `replication`, and `recovery_objective_seconds`; those
 illustrative names define no standardized metadata member or endpoint.
 
-The existing mission_max_stale_seconds ceiling retains its meaning.
+The existing `mission_max_stale_seconds` ceiling retains its meaning.
 A residual risk is a disclosed limitation, not an exemption from a requirement
 the deployment claims.
 
@@ -248,10 +248,13 @@ This document requests no IANA actions.
 
 # Document History {#document-history}
 
-- Initial topology-neutral consistency foundation for #250, incorporating
-  the reviewed freshness, durability, and emergency-authority refinements.
-  Implementation, multi-process claiming, and operator performance
-  measurements are separate work.
+\[\[ To be removed from the final specification ]]
+
+- Initial topology-neutral consistency foundation (#250): ten issuer
+  invariant groups, the shared consistency and availability rule, the
+  deployment declaration riding existing surfaces, and the fault
+  conformance table. Implementation, multi-process claiming, and operator
+  performance measurement are separate work.
 
 # Acknowledgments
 {:numbered="false"}
