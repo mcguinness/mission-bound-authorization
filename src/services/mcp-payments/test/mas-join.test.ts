@@ -23,7 +23,6 @@ import {
   EvidenceStore,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type PepDeps,
   type TokenFacts,
 } from "../src/index.js";
@@ -84,7 +83,6 @@ function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = vie
     modelId: "unit-test-model",
     loadView: loadViewFor(viewOverride),
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
     ...overrides,
   });

@@ -38,10 +38,11 @@ import {
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
 import {
   type EffectiveAuthoritySource,
-  isSubsetSet,
   projectRarThroughMission,
+  projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
+import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
@@ -653,11 +654,11 @@ export async function handleAsyncDelegationExchange(
   if (requestedSubset === undefined) {
     confinedSubset = effective;
   } else {
-    if (!isSubsetSet(requestedSubset, effective)) {
+    if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }
-    confinedSubset = requestedSubset;
+    confinedSubset = projectThroughEffective(requestedSubset, effective);
   }
   if (confinedSubset.length === 0) {
     txError(ctx, 400, "invalid_authorization_details", "confined authorization_details must be non-empty");
@@ -1465,6 +1466,7 @@ export async function handleChildCreationExchange(
       return { missionId: created.child.id, value: created.child };
     });
   } catch (e) {
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
     if (e instanceof UniqueViolationError) {
       // A concurrent duplicate won the reservation: recover its outcome.
       const winner = idem.find(client.clientId, creationRequestId);
@@ -1774,7 +1776,7 @@ export async function handleExpansionExchange(
   // would strip mission_denial_reason).
   const requested = opts.kernel.derive(intent, proposedAuthority);
   const effective = opts.kernel.effectiveAuthoritySet(active);
-  if (isSubsetSet(requested, effective)) {
+  if (isSubsetSetIgnoringCapabilitySources(requested, effective)) {
     ctx.status = 400;
     ctx.body = { error: "invalid_request", mission_denial_reason: "nothing_to_expand" };
     ctx.set("cache-control", "no-store");

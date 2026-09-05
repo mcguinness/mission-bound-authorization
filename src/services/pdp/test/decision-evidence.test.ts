@@ -18,6 +18,8 @@
  */
 
 import { generateKeyPairSync } from "node:crypto";
+import { capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
+import { runtimeCapabilitySourceOf, type RuntimeCapabilitySource } from "../src/decision-evidence.js";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import {
@@ -38,6 +40,65 @@ const RESOURCE = "http://localhost:4403/mcp";
 const EMITTER = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+
+describe("validated capability evidence (#657)", () => {
+  const presented: RuntimeCapabilitySource = { tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };
+  const recorded: CapabilitySourceBinding = { action: "payments:invoice.read", ...presented };
+  async function decisionFor(value: unknown) {
+    const fixture = emitterFixture();
+    const v = view(); v.authority_set[0]!.capability_sources = [recorded];
+    const request = req(); request.context.capability_source = value as never;
+    const decision = await evaluate(request, opts({ view: v, evidence: fixture.emitter }));
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, fixture.resolve)).toEqual({ valid: true });
+    return { decision, record };
+  }
+
+  it("records the compared binding on a permit", async () => {
+    const { decision, record } = await decisionFor(presented);
+    expect(decision.decision).toBe(true); expect(record.capability_source).toEqual(presented);
+  });
+
+  it("records a structurally valid but mismatched binding on a capability_drift denial", async () => {
+    const mismatch = { ...presented, source_digest: capabilitySourceDigest({ changed: true }) };
+    const { record } = await decisionFor(mismatch);
+    expect(record.denial_reason).toBe("capability_drift"); expect(record.capability_source).toEqual(mismatch);
+  });
+
+  it.each([
+    ["an empty object", {}],
+    ["an array", []],
+    ["null", null],
+    ["a non-string executor", { ...presented, executor: 1 }],
+    ["an unknown source_digest prefix", { ...presented, source_digest: "sha-512:abc" }],
+    ["an unknown catalog_digest prefix", { ...presented, catalog_digest: "sha-512:abc" }],
+    ["an empty source_digest", { ...presented, source_digest: "sha-256:" }],
+    ["a supported prefix with a non-digest body", { ...presented, source_digest: "sha-256:not-a-digest" }],
+    ["a non-canonical source_digest", { ...presented, source_digest: `sha-256:${"A".repeat(42)}B` }],
+    ["an empty catalog_digest", { ...presented, catalog_digest: "sha-256:" }],
+    ["a non-canonical catalog_digest", { ...presented, catalog_digest: `sha-256:${"A".repeat(42)}B` }],
+  ] as const)("omits malformed capability input (%s) while retaining drift reason and request-summary digest", async (_label, malformed) => {
+    const { record } = await decisionFor(malformed);
+    expect(record.denial_reason).toBe("capability_drift");
+    expect(record).not.toHaveProperty("capability_source");
+    expect(record.evaluation_request_digest).toMatch(/^sha-256:/);
+    // This digest identifies the documented request summary, NOT omitted bytes.
+  });
+
+  it("carries catalog_digest and executor when present and signs only the closed normalized shape", async () => {
+    const extra = { ...presented, catalog_digest: capabilitySourceDigest({ whole: true }), executor: "executor-B", unregistered: "do not sign me" };
+    const { record } = await decisionFor(extra);
+    expect(record.capability_source).toEqual(runtimeCapabilitySourceOf(extra));
+    expect(record.capability_source).not.toHaveProperty("unregistered");
+    expect(record.capability_source?.catalog_digest).toBe(extra.catalog_digest);
+    expect(record.capability_source?.executor).toBe(extra.executor);
+  });
+
+  it("omits capability_source where no binding was presented", async () => {
+    const { record } = await decisionFor(undefined);
+    expect(record).not.toHaveProperty("capability_source");
+  });
+});
 
 const view = (over: Partial<MissionView> = {}): MissionView => ({
   id: "msn_evd_1",

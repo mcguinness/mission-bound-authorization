@@ -1,4 +1,5 @@
 export { PaymentsStore, type Invoice, type Vendor } from "./payments-store.js";
+export { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 export {
   buildEffectiveParams,
   buildListEffectiveParams,
@@ -49,7 +50,6 @@ export {
   type InsufficientAuthorization,
   CANONICAL_RESOURCE,
   TOOL_BASE,
-  sourceDigestOf,
   TOOL_ACTIONS,
   type ActionMapping,
 } from "./pep.js";
