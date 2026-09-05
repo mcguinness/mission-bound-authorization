@@ -44,8 +44,10 @@ describe("shared authority ceiling (#762)", () => {
     const malformed = [
       { ...entry, constraints: { unknown: true } },
       { ...entry, constraints: { max_amount: { amount: "NaN", currency: "USD" } } },
+      { ...entry, constraints: { max_amount: { amount: "1", currency: "USD", unknown: true } } },
       { ...entry, delegation: { max_depth: 1, allowed_delegates: [{ sub: "actor", sub_profile: 2 }] } },
       { ...entry, delegation: { max_depth: 1, children: { unknown: true } } },
+      { ...entry, delegation: { max_depth: 1, children: { child_creation_policy: "opaque-policy" } } },
     ];
     for (const candidate of malformed) {
       expect(isAuthorityEntry(candidate)).toBe(false);

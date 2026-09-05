@@ -34,7 +34,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
     if (c.terminal_when !== undefined && (!Array.isArray(c.terminal_when) || !c.terminal_when.length || !c.terminal_when.every(x => conditionCanonicalBytes(x) !== undefined))) return false;
     if (c.max_amount !== undefined) {
       const cap = c.max_amount as Record<string, unknown> | null;
-      if (!cap || typeof cap !== "object" || typeof cap.currency !== "string" || !/^[A-Z]{3}$/.test(cap.currency) || typeof cap.amount !== "string" || !isValidAmount(cap.amount)) return false;
+      if (!cap || typeof cap !== "object" || Array.isArray(cap) || Object.keys(cap).some(k => k !== "amount" && k !== "currency") || typeof cap.currency !== "string" || !/^[A-Z]{3}$/.test(cap.currency) || typeof cap.amount !== "string" || !isValidAmount(cap.amount)) return false;
     }
   }
   // Delegate narrowing retains known structures; unknown controls cannot be
@@ -54,7 +54,9 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       if (!c || typeof c !== "object" || Array.isArray(c) || Object.keys(c).some(k => !["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"].includes(k))) return false;
       for (const k of ["max_children", "max_child_depth"]) if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
       if (c.allowed_child_actors !== undefined && !matchers(c.allowed_child_actors)) return false;
-      if (c.child_creation_policy !== undefined && (typeof c.child_creation_policy !== "string" || !c.child_creation_policy)) return false;
+      // The strict engine does not compare this opaque policy identifier.
+      // Do not claim an intersection that could erase or substitute it.
+      if (c.child_creation_policy !== undefined) return false;
     }
   }
   if (e.capability_sources !== undefined && (!Array.isArray(e.capability_sources) || !e.capability_sources.every(b =>
