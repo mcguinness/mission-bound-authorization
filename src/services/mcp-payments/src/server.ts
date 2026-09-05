@@ -102,7 +102,6 @@ export interface McpServerDeps {
   loadView: (ref: MissionReference) => LoadedView | undefined;
   jwks: { keys: Record<string, unknown>[] };
   issuer: string;
-  serverCard: unknown;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
   /**
@@ -175,6 +174,7 @@ export interface TransactionToolResult {
 }
 
 export class McpPaymentsServer {
+  get capabilityCatalog() { return this.deps.pep.capabilityCatalog; }
   private readonly resolveKey;
   private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
@@ -742,8 +742,11 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
+    beforeReverify?.();
+    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, TOOL_ACTIONS[tool]?.action ?? tool))) {
+      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+    }
     if (res.listEffective) {
-      beforeReverify?.();
       // @spec runtime#read-binding: reverify the bound list read's
       // normalized parameters immediately before execution, exactly as
       // callWriteTool/callTransactionTool already do for a write.

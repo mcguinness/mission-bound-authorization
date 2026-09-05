@@ -6,14 +6,11 @@
  * @mission/actor-chain, parameter_digest), obtains a PDP decision, retains
  * the Decision Evidence the PDP emitted with it, and emits its own Refusal
  * Records and Execution Evidence. Core enforcement tier (M4); the
- * transaction-assurance tier (permits/leases) lands in M5. Does not present
- * `context.capability_source` on the PDP request envelope (#657; see
- * `sourceDigestOf` below), and no longer carries it on the retained Decision
- * Evidence either (#741: the PDP emits and signs that record, from its own
- * validated inputs).
+ * transaction-assurance tier (permits/leases) lands in M5. Presents the selected
+ * capability definition from the same snapshot discovery serves (#657 B2).
  */
 
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type JsonValue,
@@ -51,6 +48,7 @@ import type { EvidenceStore } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
+import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 /** The tool-id base for this server's capabilities (@spec runtime-evidence#evidence-extensions `capability_source.tool_id`). */
@@ -351,20 +349,8 @@ export interface PepDeps {
   loadView: (ref: MissionReference) => LoadedView | undefined;
   instanceEpoch: string;
   now?: () => Date;
-  /**
-   * @deprecated The digest this seam carries is `sourceDigestOf`'s whole-
-   * server-card hash (#657), not a valid `source_digest` (JCS over one
-   * capability's extracted definition). Optional (#657/#730): no longer read
-   * for the PDP request envelope (`context.capability_source` was removed
-   * there), and a new caller need not supply it. When present, the retained
-   * Decision Evidence's `capability_source` coordinated extension member
-   * (@spec runtime-evidence#evidence-extensions, issue #649) still carries
-   * it, reusing exactly this value; when absent, `capability_source` is
-   * simply omitted from that record too (it is itself OPTIONAL there).
-   * Removed once #657 PR B replaces it with the real per-action
-   * capability-binding resolver. See `sourceDigestOf` below.
-   */
-  sourceDigest?: string;
+  /** Trusted catalog serving this executor, never a caller-supplied digest. */
+  capabilityCatalog?: CapabilityCatalog;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -539,6 +525,7 @@ export interface ActionApprovalInput {
 }
 
 export interface EnforceResult {
+  capabilitySnapshot?: CapabilitySnapshot;
   permitted: boolean;
   decision?: Decision;
   denial_reason?: string;
@@ -630,8 +617,10 @@ export function buildInsufficientAuthorization(authorizationDetails: AuthorityEn
 }
 
 export class Pep {
+  readonly capabilityCatalog: CapabilityCatalog;
   private readonly now: () => Date;
   constructor(private readonly deps: PepDeps) {
+    this.capabilityCatalog = deps.capabilityCatalog ?? new PaymentsToolCatalog();
     this.now = deps.now ?? (() => new Date());
   }
 
@@ -886,20 +875,19 @@ export class Pep {
       }
     }
 
-    // @spec authzen#context-actor: the actor chain this request presents,
-    // built once and evaluated by the PDP, which is also what carries onto
-    // the Decision Evidence the PDP emits (#741). `capability_source` is not
-    // built here at all: the member left the decision request envelope with
-    // #657/#730, so no validated PDP-side input carries it, and a PEP-supplied
-    // copy would be caller-asserted record content (@spec
-    // runtime#agent-isolated-evidence-emission). It is OPTIONAL, so the record
-    // omits it until #657's per-action capability-binding resolver supplies it
-    // from the PDP's own verified inputs.
+    // Actor facts and capability presentation originate at the enforcement surface.
     const contextActor = buildContextActor({
       ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
       ...(token.clientInstanceId !== undefined ? { clientInstanceId: token.clientInstanceId } : {}),
       ...(token.act !== undefined ? { act: token.act } : {}),
     });
+
+    let capability: ReturnType<CapabilityCatalog["resolve"]>;
+    try { capability = this.capabilityCatalog.resolve(tool); }
+    catch { return this.refuse(token, "capability_source_unresolvable", mapping.action, view); }
+    const capabilitySnapshot = capability.catalog_sourced ? capability.snapshot : undefined;
+    if (effective && capabilitySnapshot) effective.capability_snapshot = capabilitySnapshot;
+    if (listEffective && capabilitySnapshot) listEffective.capability_snapshot = capabilitySnapshot;
 
     const req: EvaluationRequest = {
       // @spec authzen#pdp-request rule 10 — `subject.properties.iss` is this
@@ -947,14 +935,7 @@ export class Pep {
         // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
         freshness,
         actor: contextActor,
-        // `context.capability_source` intentionally absent (#657): see
-        // `sourceDigestOf` below for what stood here and why it was removed
-        // from the PDP-facing request envelope. The retained Decision
-        // Evidence below still carries `capability_source` (a coordinated
-        // extension member of the signed record, @spec
-        // runtime-evidence#evidence-extensions), reusing `capabilitySource`
-        // computed above -- that is a distinct, evidentiary use, not a
-        // second copy of what this request envelope presents to the PDP.
+        ...(capability.catalog_sourced ? { capability_source: capability.binding } : {}),
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
@@ -1057,7 +1038,7 @@ export class Pep {
         // scoped to the operation being approved, not the whole entry.
         const requested = view.authority_set
           .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
-          .map((e) => ({ ...e, actions: [mapping.action] })) as unknown as JsonValue[];
+          .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: [mapping.action] })) as unknown as JsonValue[];
         const digest = parameterDigest(effective);
         const signed = await signChallenge(
           {
@@ -1164,6 +1145,7 @@ export class Pep {
       },
       ...(effective ? { effective } : {}),
       ...(listEffective ? { listEffective } : {}),
+      ...(capabilitySnapshot ? { capabilitySnapshot } : {}),
       ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
     };
   }
@@ -1174,6 +1156,7 @@ export class Pep {
    * (record changed under us) is a refusal, not an execution.
    */
   async reverify(effective: EffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
+    if (!(await this.reverifyCapability(effective.capability_snapshot, token, effective.action))) return false;
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
@@ -1203,6 +1186,7 @@ export class Pep {
    * `"requested"`), so no separate input needs to be threaded through.
    */
   async reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
+    if (!(await this.reverifyCapability(effective.capability_snapshot, token, effective.action))) return false;
     // @spec authority-server#mission-join (#557): the baseline-Join gateway
     // path is not wired into read-binding reverification (a documented
     // remainder -- doing so needs the resolved Mission anchor threaded back
@@ -1228,6 +1212,16 @@ export class Pep {
       return false;
     }
     return true;
+  }
+
+  async reverifyCapability(snapshot: CapabilitySnapshot | undefined, token: TokenFacts, action: string): Promise<boolean> {
+    if (!snapshot) return true;
+    try {
+      const current = this.capabilityCatalog.resolve(snapshot.tool);
+      if (current.catalog_sourced && current.snapshot.id === snapshot.id) return true;
+    } catch { /* unavailable at invocation is also a refusal */ }
+    await this.recordRefusal(token, "capability_source_unresolvable", action);
+    return false;
   }
 
   private async refuse(
@@ -1277,27 +1271,5 @@ export class Pep {
   }
 }
 
-/**
- * Vestigial (#657): hashes the whole `serverCard` via ordinary
- * `JSON.stringify`, not a JCS-canonical digest over one capability's
- * extracted definition, which is what the capability-binding draft's
- * `source_digest` requires. Not a valid `catalog_digest` either, since
- * parsing and reserializing `serverCard` loses the exact retrieved octets
- * that member requires. Formerly attached to every enforced tool call as
- * `context.capability_source`; removed from the PDP request envelope
- * entirely (`enforceInner` presents no such member there, and no PDP here
- * ever typed or verified one) because presenting the wrong bytes read as
- * coverage this deployment did not have. Still feeds the retained Decision
- * Evidence's own `capability_source` (issue #649: a non-authoritative,
- * OPTIONAL coordinated extension member of the signed record, never
- * something the PDP evaluated) alongside existing tests, the demo stack,
- * and the eval harness, which still construct `PepDeps.sourceDigest` with
- * it; all three drop it once #657 PR A/B land the real per-action binding.
- *
- * @deprecated Do not add new callers. Tracked for removal in #657 PR B.
- */
-export function sourceDigestOf(serverCard: unknown): string {
-  return `sha-256:${createHash("sha256").update(JSON.stringify(serverCard), "utf8").digest("base64url")}`;
-}
 
 export { TOOL_ACTIONS };

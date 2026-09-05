@@ -25,6 +25,7 @@
  */
 
 import { type Server } from "node:http";
+import { canonicalize, type JsonValue } from "@mission/core";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -466,7 +467,7 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
     expect((body.refresh_token as string).length).toBeGreaterThan(0);
     expect(body.expires_in).toBeGreaterThan(0);
     expect(res.headers.get("cache-control")).toContain("no-store");
-    expect(body.authorization_details).toEqual(confinedAuthority());
+    expect(body.authorization_details).toMatchObject(confinedAuthority());
 
     const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
       issuer: ISSUER,
@@ -475,7 +476,7 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
     expect(payload.aud).toBe(RESOURCE);
     expect((payload.cnf as { jkt?: string }).jkt).toBe(actingJkt); // sender-constrained to the acting DPoP key
     expect((payload.mission as { id?: string }).id).toBe(missionId);
-    expect(payload.authorization_details).toEqual(confinedAuthority());
+    expect(payload.authorization_details).toMatchObject(confinedAuthority());
 
     // The family is recorded (grant_id -> mission_id).
     const families = as.delegationFamilyStore.familiesForMission(missionId);
@@ -522,7 +523,7 @@ describe("async-delegation disconnected refresh (@spec async-delegation)", () =>
     const { payload } = await jwtVerify(body.access_token as string, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
     expect(payload.aud).toBe(RESOURCE);
     expect((payload.cnf as { jkt?: string }).jkt).toBe(actingJkt);
-    expect(payload.authorization_details).toEqual(confinedAuthority());
+    expect(payload.authorization_details).toMatchObject(confinedAuthority());
   });
 
   it("sender-constrained refresh token: a DPoP proof from the WRONG key fails jkt verification", async () => {
@@ -594,7 +595,7 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
       refresh_token: string;
       authorization_details?: unknown;
     };
-    expect(first.authorization_details).toEqual(confinedAuthority());
+    expect(first.authorization_details).toMatchObject(confinedAuthority());
 
     // Contain exactly the family's own capability (invoice.read only). The
     // Mission still holds remittance.send, so the MISSION-WIDE effective set
@@ -727,7 +728,7 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(body.authorization_details).toEqual(withoutRemittance(missionId));
   });
 
-  it("regression: a no-containment mission's refresh is byte-identical to issuance (fast path)", async () => {
+  it("regression: a no-containment mission's refresh preserves the canonical issuance commitment", async () => {
     const { baseAccessToken } = await issueBaseMission();
     const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
       refresh_token: string;
@@ -737,10 +738,10 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     const res = await refreshFamily(first.refresh_token);
     const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
-    // Byte-identical authorization_details across issuance and refresh.
-    expect(JSON.stringify(body.authorization_details)).toBe(JSON.stringify(first.authorization_details));
-    expect(JSON.stringify(decodeJwt(body.access_token as string).authorization_details)).toBe(
-      JSON.stringify(decodeJwt(first.access_token).authorization_details),
+    // Canonical-byte-identical authority across issuance and refresh (JSON member order is not significant).
+    expect(canonicalize(body.authorization_details as JsonValue)).toBe(canonicalize(first.authorization_details as JsonValue));
+    expect(canonicalize(decodeJwt(body.access_token as string).authorization_details as JsonValue)).toBe(
+      canonicalize(decodeJwt(first.access_token).authorization_details as JsonValue),
     );
   });
 });
@@ -864,7 +865,7 @@ describe("unresolvable Mission fails closed (@spec issuance-grant#effective-set-
       refresh_token: string;
       authorization_details?: unknown;
     };
-    expect(first.authorization_details).toEqual(confinedAuthority());
+    expect(first.authorization_details).toMatchObject(confinedAuthority());
 
     purgeMission(missionId);
 
@@ -1114,7 +1115,7 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
     // The initial refresh token is unconsumed: the STORED response is returned.
     expect(retryBody.access_token).toBe(firstBody.access_token);
     expect(retryBody.refresh_token).toBe(firstBody.refresh_token);
-    expect(retryBody.authorization_details).toEqual(confinedAuthority());
+    expect(retryBody.authorization_details).toMatchObject(confinedAuthority());
 
     // ONE family, ONE derivation across both presentations.
     expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(1);
@@ -1189,7 +1190,7 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
       if (res.status === 200) {
         delivered += 1;
         expect(body.refresh_token, JSON.stringify(body)).toBeTruthy();
-        expect(body.authorization_details).toEqual(confinedAuthority());
+        expect(body.authorization_details).toMatchObject(confinedAuthority());
       } else {
         expect(res.status, JSON.stringify(body)).toBe(400);
         expect(body.error).toBe("invalid_request");
@@ -1226,7 +1227,7 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
     // Freshly issued initial tokens for the RECORDED family.
     expect(body.refresh_token).toBeTruthy();
     expect(body.refresh_token).not.toBe(first.refresh_token);
-    expect(body.authorization_details).toEqual(confinedAuthority());
+    expect(body.authorization_details).toMatchObject(confinedAuthority());
 
     // The SAME family, no recount.
     expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(1);

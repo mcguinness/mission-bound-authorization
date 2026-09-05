@@ -44,7 +44,6 @@ import {
   EvidenceStore,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "@mission/mcp-payments";
 import {
@@ -458,7 +457,6 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       modelId,
       loadView,
       instanceEpoch: "aam-epoch",
-      sourceDigest: sourceDigestOf({ name: "payments", tools: ["get_invoice", "send_remittance_email"] }),
       allowedFreshnessSources: new Set(["load_view"]),
     });
 

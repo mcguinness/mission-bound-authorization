@@ -2481,6 +2481,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           template_hash: template.template_hash,
         };
       } catch (e) {
+        if (e instanceof IntentError) throw intentErrorToOidc(e);
         if (e instanceof TemplateError) {
           ctx.status = 400;
           ctx.body = { error: "invalid_request", error_description: e.message };
