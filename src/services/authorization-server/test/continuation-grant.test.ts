@@ -25,7 +25,7 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
@@ -357,6 +357,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
 
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
     const ras = new ResourceAuthorizationServer({
+      localCeiling: DERIVATION_POLICY.ceiling,
+      localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
@@ -411,6 +413,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // (5) RAS metadata advertises both id-jag grant profiles.
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
     const ras = new ResourceAuthorizationServer({
+      localCeiling: DERIVATION_POLICY.ceiling,
+      localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: {},
       signKey: rasKeys.privateKey,
@@ -627,6 +631,8 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const asContinuationPub = serverJwks.keys.find((k) => k.kid === "as-continuation");
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
     const ras = new ResourceAuthorizationServer({
+      localCeiling: DERIVATION_POLICY.ceiling,
+      localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
       signKey: rasKeys.privateKey,

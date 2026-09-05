@@ -36,9 +36,11 @@ import {
   DERIVATION_POLICY,
   GOVERNED_POLICIES,
   MAS_JOIN,
+  RAS_LOCAL_POLICY,
   TOPOLOGY,
 } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
+import { narrowToCeiling } from "@mission/core";
 import {
   buildAuthorizationServer,
   deriveAuthoritySet,
@@ -48,6 +50,12 @@ import {
 } from "../src/index.js";
 
 const ISS = "https://as.test";
+
+it("the shipped RAS local policy covers the audience-scoped SaaS grant (#762)", () => {
+  const delegated = DERIVATION_POLICY.ceiling.filter(entry => entry.resource === "http://localhost:4406/mcp");
+  expect(delegated.length).toBeGreaterThan(0);
+  expect(narrowToCeiling(delegated, RAS_LOCAL_POLICY.ceiling)).toEqual(delegated);
+});
 const MISSION_ID = "msn_shipped_config_test";
 
 /** The repo-root `config/` directory the reference deployment ships. */

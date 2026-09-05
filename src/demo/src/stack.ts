@@ -19,7 +19,7 @@ import {
   OperationProfileRegistry,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
@@ -332,6 +332,8 @@ export async function composeStack(opts: {
       throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
     }
     const ras = new ResourceAuthorizationServer({
+      localCeiling: RAS_LOCAL_POLICY.ceiling,
+      localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
       issuer: RAS_ISS,
       trustedIssuers: { [asUrl]: { keys: [xdPub as never, asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
