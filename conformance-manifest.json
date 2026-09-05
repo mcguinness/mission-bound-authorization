@@ -249,7 +249,7 @@
    "id": "child-delegation.carryover.completion-cas",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-cas",
-   "text": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or authority_hash.",
+   "text": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -260,7 +260,7 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or authority_hash."
+    "normative": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`."
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -315,7 +315,7 @@
    "id": "child-delegation.carryover.no-expiry-extension",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-no-reset",
-   "text": "The replacement's expires_at MUST NOT exceed either the old child's expires_at or its new parent's effective expires_at.",
+   "text": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -326,7 +326,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The replacement's expires_at MUST NOT exceed either the old child's expires_at or its new parent's effective expires_at."
+    "normative": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`."
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -337,7 +337,7 @@
    "id": "child-delegation.carryover.budget-transfer",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-no-reset",
-   "text": "The Mission Issuer MUST preserve the old child's derivation_limit and derivation_count and atomically preserve every remaining operational budget or make the child ineligible.",
+   "text": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -348,7 +348,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The Mission Issuer MUST preserve the old child's derivation_limit and derivation_count and atomically preserve every remaining operational budget or make the child ineligible."
+    "normative": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible."
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -359,7 +359,7 @@
    "id": "child-delegation.carryover.fresh-direct-records",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-records",
-   "text": "The Mission Issuer MUST create a new record for each replacement, with approval_basis.type direct and a child-specific approval event, and MUST NOT modify the old child's parent or immutable approval anchors.",
+   "text": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -370,7 +370,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The Mission Issuer MUST create a new record for each replacement, with approval_basis.type direct and a child-specific approval event, and MUST NOT modify the old child's parent or immutable approval anchors."
+    "normative": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors."
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -447,7 +447,7 @@
    "id": "child-delegation.carryover.authenticated-map",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-evidence",
-   "text": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the manifest_hash, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes.",
+   "text": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -458,7 +458,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the manifest_hash, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes."
+    "normative": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes."
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -469,7 +469,7 @@
    "id": "child-delegation.carryover.observation-correlation",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-evidence",
-   "text": "When Status or Signals is deployed, the issuer MUST carry the committed carried_to correlation on the old child's cascaded observation as defined by those profiles.",
+   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -480,7 +480,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "When Status or Signals is deployed, the issuer MUST carry the committed carried_to correlation on the old child's cascaded observation as defined by those profiles."
+    "normative": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles."
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -601,7 +601,7 @@
    "id": "child-delegation.carryover.signals-correlation",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "lifecycle-event",
-   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's cascaded event, and MUST omit it when no replacement was committed.",
+   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -612,7 +612,7 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's cascaded event, and MUST omit it when no replacement was committed."
+    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed."
    },
    "level": "cross-component",
    "coverage": "todo",

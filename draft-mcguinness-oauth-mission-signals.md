@@ -367,7 +367,7 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
 
 `carried_to` (string, conditional):
 : A deployment implementing Child Mission Carryover MUST include the
-  committed replacement Mission identifier on the old child's cascaded
+  committed replacement Mission identifier on the old child's `cascaded`
   event, and MUST omit it when no replacement was committed. The identifier
   is qualified by the event's Mission issuer. A receiver does not assume
   that replacement creation was delivered first; it pairs or resynchronizes

@@ -1511,35 +1511,37 @@ The Mission Issuer MUST render and commit the exact Carryover Manifest,
 including its exclusion policy and replacement approval facts, at the
 expansion approval event.
 
-A manifest is a JSON object with format_version 1, predecessor and proposed
-successor references, the successor proposal's Intent and authority
-commitments, exclusion_policy, and entries. References include issuer and
-Mission identifier. Proposed identifiers are reserved during preparation;
-reservation creates no authority. Entries are ordered by old created_at,
-then old Mission identifier (byte order), independently of the generation
-order used for derivation. Each entry names:
+A manifest is a JSON object with a `format_version` of 1, predecessor and
+proposed successor references, the successor proposal's Intent and
+authority commitments, `exclusion_policy`, and `entries`. References
+include `issuer` and Mission identifier. Proposed identifiers are
+reserved during preparation; reservation creates no authority. Entries
+are ordered by old `created_at`, then old Mission identifier (byte order),
+independently of the generation order used for derivation. Each entry names:
 
-- child_id, issuer, created_at, child_actor, and current state and version;
-- authority_hash, intent_hash, effective_authority_hash,
-  containment_version, and the exact parent reference and depth;
-- derivation_limit, derivation_count, expires_at, and every mutable
+- `child_id`, `issuer`, `created_at`, `child_actor`, and current state and
+  version;
+- `authority_hash`, `intent_hash`, `effective_authority_hash`,
+  `containment_version`, and the exact `parent` reference and `depth`;
+- `derivation_limit`, `derivation_count`, `expires_at`, and every mutable
   discharge, fan-out, meter, or latch input used to decide or transfer
   eligibility (or authenticated commitments to those inputs);
-- outcome, either carry or cascade, and a reason for cascade; and
-- for carry, replacement_id and the proposed replacement's Intent
+- `outcome`, either `carry` or `cascade`, and a `reason` for `cascade`; and
+- for `carry`, `replacement_id` and the proposed replacement's Intent
   commitment, approved-authority commitment, actor, parent reference,
-  authority_source, expiry, derivation budget, and deterministic
+  `authority_source`, expiry, derivation budget, and deterministic
   child-specific approval event identifier.
 
 The manifest includes every non-terminal descendant at rendering. It retains
 the complete proposed Intent and authority alongside their commitments, or
 enough committed inputs and a versioned deterministic derivation to reproduce
 them exactly. A reference to an uncommitted mutable policy is insufficient.
-If the replacement inherits the successor's authority_source rather than the
+If the replacement inherits the successor's `authority_source` rather than the
 old child's, that change is explicitly rendered and committed.
 
-The manifest_hash uses the issuance profile's default commitment construction
-over the JCS {{RFC8785}} canonical manifest, including exclusion_policy. The issuer retains
+The `manifest_hash` uses the issuance profile's default commitment
+construction over the JCS {{RFC8785}} canonical manifest, including
+`exclusion_policy`. The issuer retains
 the manifest with its authenticated approval; the hash alone authenticates no
 approval. Each child-specific event identifier is derived from the committed
 expansion approval event identifier and qualified old-child identity using
@@ -1555,7 +1557,7 @@ a rendered cascade into carry.
 
 The Mission Issuer MUST compare-and-set every mutable eligibility and
 transfer input committed in the manifest within the completion transaction,
-not merely compare lifecycle version or authority_hash.
+not merely compare lifecycle version or `authority_hash`.
 
 This includes effective authority/discharge state, derivation counters,
 fan-out occupancy, and any external meter/latch state. A derivation counter
@@ -1569,7 +1571,7 @@ every dependent descendant: no replacement attaches to a missing parent.
 New descendants absent from the manifest are never carried; under
 disclosed-exclusions they cascade and appear in the completion evidence.
 Already-terminal old children retain their terminal state and are recorded as
-excluded, never transitioned again to cascaded. Each final outcome is recorded
+excluded, never transitioned again to `cascaded`. Each final outcome is recorded
 against its rendered row, not inferred from set equality over the subtree.
 
 ## Generation-by-Generation Eligibility {#carryover-generations}
@@ -1590,25 +1592,26 @@ The Mission Issuer MUST use the old child's current Effective Authority Set
 as the replacement's authority ceiling and MUST NOT restore containment or
 discharge removed by that effective-set calculation.
 
-Only an effectively active child is eligible. A suspended child is excluded,
-not resumed by carryover. The replacement's approved set is the rechecked
-effective set, with no overlay reset that restores removed authority.
+Only an effectively `active` child is eligible. A `suspended` child is
+excluded, not resumed by carryover. The replacement's approved set is the
+rechecked effective set, with no overlay reset that restores removed
+authority.
 
-The replacement's expires_at MUST NOT exceed either the old child's
-expires_at or its new parent's effective expires_at.
+The replacement's `expires_at` MUST NOT exceed either the old child's
+`expires_at` or its new parent's effective `expires_at`.
 
 A successor's separately approved expiry extension does not extend the old
 child's horizon. Any other policy shortening remains applicable.
 
-The Mission Issuer MUST preserve the old child's derivation_limit and
-derivation_count and atomically preserve every remaining operational budget
+The Mission Issuer MUST preserve the old child's `derivation_limit` and
+`derivation_count` and atomically preserve every remaining operational budget
 or make the child ineligible.
 
 This is a carryover-specific exception to starting a new child with a fresh
 derivation counter ({{derivation-budget}}): the replacement continues the old
 child's remaining budget, despite receiving a new record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
-binding; changing the key to replacement_id is not a transfer. Fan-out is
+binding; changing the key to `replacement_id` is not a transfer. Fan-out is
 recounted against new justifying entries in the same serialization domain,
 including concurrently non-terminal occupants and all carried generations.
 Repeated expansion/carryover cannot replenish any of these budgets.
@@ -1616,21 +1619,22 @@ Repeated expansion/carryover cannot replenish any of these budgets.
 ## Fresh Records and Direct Approval {#carryover-records}
 
 The Mission Issuer MUST create a new record for each replacement, with
-approval_basis.type direct and a child-specific approval event, and MUST NOT
-modify the old child's parent or immutable approval anchors.
+`approval_basis.type` `direct` and a child-specific approval event, and MUST
+NOT modify the old child's `parent` or immutable approval anchors.
 
-The expansion Approver is the consent_principal and ordinary direct
-activation_actor for each replacement; activation carries its deterministic
-approval_event_id and root_commitment is its own authority_hash. The issuer
-re-runs the ordinary source-activation and source-ceiling checks for the
-rendered replacement authority_source. There is no expansion_carryover
+The expansion Approver is the `consent_principal` and ordinary `direct`
+`activation_actor` for each replacement; activation carries its
+deterministic `approval_event_id` and `root_commitment` is its own
+`authority_hash`. The issuer re-runs the ordinary source-activation and
+source-ceiling checks for the
+rendered replacement `authority_source`. There is no `expansion_carryover`
 standing-consent basis.
 
-The replacement records related_to as correlation with the qualified old
+The replacement records `related_to` as correlation with the qualified old
 child, under expansion's existing correlation semantics. The old child gains
-carried_to, a string containing the replacement Mission identifier under the
-same issuer, only when its cascaded transition and replacement commit.
-carried_to is immutable thereafter, absent for excluded children, and grants
+`carried_to`, a string containing the replacement Mission identifier under
+the same issuer, only when its `cascaded` transition and replacement commit.
+`carried_to` is immutable thereafter, absent for excluded children, and grants
 nothing. Neither pointer selects authority or rebinds a credential.
 
 ## Atomic Records, Recoverable Delivery {#carryover-commit}
@@ -1668,23 +1672,23 @@ worker execution.
 ## Carryover Evidence and Observation {#carryover-evidence}
 
 The Mission Issuer MUST retain authenticated Carryover Evidence containing
-the manifest_hash, predecessor and successor references, and the complete
+the `manifest_hash`, predecessor and successor references, and the complete
 final map of old child identities to carried or excluded outcomes.
 
-For a carried row the map includes replacement_id and its child-specific
-approval_event_id; for an excluded row it includes reason and observed
+For a carried row the map includes `replacement_id` and its child-specific
+`approval_event_id`; for an excluded row it includes `reason` and observed
 terminal state or committed cascade. Unrendered descendants are listed
-explicitly. The map, not related_to, is the normative record of replacement.
+explicitly. The map, not `related_to`, is the normative record of replacement.
 
 A replacement's ordinary Child Evidence object is extended with
-creation_mode set to carryover, carried_from (qualified old-child reference),
-manifest_hash, and carryover_evidence (an authenticated reference to the
-retained batch map). Its existing parent, child, attenuation, fanout, and
-decision members remain required; a batch map does not replace ordinary
-Child Evidence or become authority.
+`creation_mode` set to `carryover`, `carried_from` (a qualified old-child
+reference), `manifest_hash`, and `carryover_evidence` (an authenticated
+reference to the retained batch map). Its existing `parent`, `child`,
+`attenuation`, `fanout`, and `decision` members remain required; a batch
+map does not replace ordinary Child Evidence or become authority.
 
 When Status or Signals is deployed, the issuer MUST carry the committed
-carried_to correlation on the old child's cascaded observation as defined
+`carried_to` correlation on the old child's `cascaded` observation as defined
 by those profiles.
 
 A consumer MUST NOT infer absence of a replacement from receiving a cascade
