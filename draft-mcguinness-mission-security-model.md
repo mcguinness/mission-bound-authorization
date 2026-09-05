@@ -456,17 +456,18 @@ proposed is what the derivation bounds and the Approver reads.
 
 The deployment's observable perimeter has three rings:
 
-- **Mediated effects.** Every consequential effect in the declared
+- **Mediated effects.** Every consequential effect on the declared
   entry crosses a PEP before it occurs. The PEP, PDP, state source,
   and harness's no-unmediated-path condition govern that crossing,
   within the Enforcement Scope Statement.
 - **Reconstructed effects.** No per-action gate is in the path. The
   executing system records how each output derives from its inputs,
-  permitting post-hoc provenance and label reconstruction. The family
-  supplies attribution objects, parameter provenance, and tainted-session
-  floors, not the underlying flow recording. Reconstruction is bounded
-  by that recording's granularity and integrity; it is not mediation
-  and does not retroactively authorize an effect.
+  supplying provenance, label inputs, and post-hoc traceability where
+  the substrate records flow. The family supplies attribution objects,
+  parameter provenance, and tainted-session floors, not the underlying
+  flow recording. Reconstruction is bounded by that recording's
+  granularity and integrity; it is not mediation and does not
+  retroactively authorize an effect.
 - **Unrecorded effects.** Compute reads, transforms, and emits without
   recording how, including arbitrary code running inside the agent's
   boundary with the credentials that boundary holds.
@@ -1153,7 +1154,7 @@ A trusted-base component is compromised:
   {{trusted-base}}.
 
 Arbitrary code runs inside the agent's boundary (an interpreter,
-a spawned process, or a generated script):
+  a spawned process, or a generated script):
 : Addressed by the mediated boundary an effect crosses, parameter-bound
   permits, mediated credential custody, and the harness's isolation and
   channel enumeration. Residual: unrecorded computation and channels
@@ -1165,7 +1166,6 @@ limits most likely to matter and most often overstated away elsewhere:
 - **Unrecorded compute.** Effects and data flow outside a mediated or
   reconstructible path remain unrecorded ({{perimeter}}). Reconstruction
   supplies provenance, not containment or retrospective authorization.
-
 - **Comprehension.** The suite can commit and bind what an Approver was
   shown; it cannot prove what the Approver perceived or understood. The
   consent-evidence profile narrows what it can reach: authority
@@ -1482,10 +1482,10 @@ model and pipeline layers, and saying so is the point:
 
 # Document History {#document-history}
 
+\[\[ To be removed from the final specification ]]
+
 - Added the three-ring Enforcement Perimeter, its arbitrary-code
   adversary entry, and the explicit unrecorded-compute residual (#758).
-
-\[\[ To be removed from the final specification ]]
 
 - Failure taxonomy crosswalk (#671): an informative subsection added
   to {{cross-cutting}}, mapping the Mandate, Audit, Consent Evidence,

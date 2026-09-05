@@ -1345,11 +1345,13 @@ Resource identifiers and path names are non-empty strings. Resource
 entries take any of the three dispositions; excluded paths take only
 `reconstructed` or `unrecorded`. For compatibility, a resource entry
 written as a bare string denotes `mediated`, its existing meaning.
-An excluded-path string has no implicit disposition and requires
+An excluded-path string has no such default: `unrecorded` would
+fabricate a claim and `reconstructed` would overclaim, so it requires
 migration to an object. A validator MUST reject a missing or unknown
-disposition, an excluded path marked `mediated`, or duplicate keys
-with conflicting dispositions. Identical repeated keys can be
-normalized to one entry.
+disposition, an excluded-path entry written as a bare string, an
+excluded path marked `mediated`, or duplicate keys with conflicting
+dispositions, naming the entry in each case. Identical repeated keys
+can be normalized to one entry.
 
 A deployment MUST NOT represent reconstructed or unrecorded entries
 as mediation. A runtime-enforcement claim is in scope only when its
