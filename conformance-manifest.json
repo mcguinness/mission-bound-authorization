@@ -549,6 +549,12 @@
      "name": "one catalog snapshot from discovery to invocation > carries the snapshot into write and list effective operations and refuses a post-decision change",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ]
   },

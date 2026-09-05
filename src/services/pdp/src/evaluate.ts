@@ -177,6 +177,13 @@ export interface EvaluationRequest {
 }
 
 export type DenialReason =
+  /**
+   * @spec capability-binding#capability-drift-reason — the coordinated extension
+   * value this family reserves: a catalog-sourced action whose approved entry
+   * recorded a binding presents a current definition that no longer matches it.
+   * Distinct from `out_of_authority` (never approved), `authority_contained`
+   * (approved, trust lost) and `authority_discharged` (approved, work done).
+   */
   | "capability_drift"
   | "out_of_authority"
   | "authority_contained"
