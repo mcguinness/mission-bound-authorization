@@ -1,6 +1,3 @@
-export type { AuthorityEntry, DelegateMatcher, ChildFanoutControls, TerminalWhenCondition } from "./authority-entry.js";
-export { withoutCapabilitySources, isSubsetSetIgnoringCapabilitySources, entryWithinCeiling, narrowToCeiling, isAuthorityEntry } from "./authority-subset.js";
-export { isSubsetEntry, isSubsetSet, conditionsNoBroader, conditionCanonicalBytes } from "./authority-subset.js";
 export {
   AUTHORITY_ENTRY_TYP,
   AUTHORITY_SET_TYP,
@@ -50,6 +47,23 @@ export {
   toolsSubset,
   verifyAttenuationChain,
 } from "./attenuation-chain.js";
+export type {
+  AuthorityEntry,
+  ChildFanoutControls,
+  DelegateMatcher,
+  TerminalWhenCondition,
+} from "./authority-entry.js";
+export {
+  conditionCanonicalBytes,
+  conditionsNoBroader,
+  entryWithinCeiling,
+  isAuthorityEntry,
+  isSubsetEntry,
+  isSubsetSet,
+  isSubsetSetIgnoringCapabilitySources,
+  narrowToCeiling,
+  withoutCapabilitySources,
+} from "./authority-subset.js";
 export type {
   MissionBinding,
   MissionStatusLease,
