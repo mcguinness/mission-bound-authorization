@@ -47,14 +47,14 @@ normative:
 informative:
   RFC8725:
   I-D.draft-mcguinness-mission-discovery:
-    title: "Mission Discovery"
+    title: "Mission Open-World Discovery"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
     author:
       - ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
-    title: "Mission Resource Access for OAuth 2.0"
+    title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
     author:
       - ins: K. McGuinness
@@ -690,7 +690,7 @@ later companions and not specified here:
   Producing Mission is compromised.
 
 This document specifies none of those mechanisms now. The informative
-pattern in {{lineage-labels}} describes deployment-assigned
+pattern in {{artifact-lineage-labels}} describes deployment-assigned
 classification and lineage inputs to aggregate bounds; it does not
 standardize those mechanisms or quarantine with consumer blocking.
 
@@ -753,7 +753,7 @@ invariants: information may propagate, and authority may not.
 
 --- back
 
-# Artifact-Lineage Label Persistence {#lineage-labels}
+# Artifact-Lineage Label Persistence {#artifact-lineage-labels}
 
 This appendix is informative. Lineage here is the artifact provenance
 chain of {{provenance}}, including the derivation recorded by
@@ -819,7 +819,7 @@ Mission's Authority Set or make the artifact an authorization grant.
 | Harness parameter provenance at the data plane | Recorded input-to-output derivation, step 2 |
 | Harness taint across session boundaries | Join preserving each input's restrictions, step 2 |
 | Harness session-level fallback | Session taint as a persistent component, step 3 |
-| Harness default-taint polarity | Conservative top for unknown lineage, step 5 |
+| Harness default-taint polarity | Conservative top for unknown lineage, step 5, and a join that sheds no input restriction, step 2 |
 | Discovery egress-capable binding under taint | Trusted consumer label read, step 4 |
 
 These mappings refer to the harness's Session Taint rules

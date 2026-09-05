@@ -878,7 +878,6 @@ This document registers one media type per {{RFC6838}}.
 - Added an informative pointer from Injection-Driven Discovery to
   artifact-lineage label persistence in the work-products profile;
   the taint custody and adjudication requirements are unchanged (#757).
-
 - Security Considerations gained a conformance note stating explicitly
   that the harness's provenance-tracking and egress-gating taint
   duties are SHOULD-level outside its opt-in PDP-enforced path: a
