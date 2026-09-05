@@ -1,8 +1,9 @@
 /** Shared strict lineage comparisons and binding-neutral wire/config boundaries. */
-import { canonicalize, type JsonValue } from "./canonicalize.js";
-import { capabilitySourceIdentity, type CapabilitySourceBinding } from "./capability-binding.js";
-import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+
 import type { AuthorityEntry, DelegateMatcher, TerminalWhenCondition } from "./authority-entry.js";
+import { canonicalize, type JsonValue } from "./canonicalize.js";
+import { type CapabilitySourceBinding, capabilitySourceIdentity } from "./capability-binding.js";
+import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /** Provenance is compared between issuer-derived lineage sets, not config ceilings. */
 export function withoutCapabilitySources(entries: readonly AuthorityEntry[]): AuthorityEntry[] {
@@ -10,12 +11,18 @@ export function withoutCapabilitySources(entries: readonly AuthorityEntry[]): Au
 }
 
 /** Authority-only comparisons at wire/config boundaries; lineage stays strict. */
-export function isSubsetSetIgnoringCapabilitySources(candidate: readonly AuthorityEntry[], granted: readonly AuthorityEntry[]): boolean {
+export function isSubsetSetIgnoringCapabilitySources(
+  candidate: readonly AuthorityEntry[],
+  granted: readonly AuthorityEntry[],
+): boolean {
   return isSubsetSet(withoutCapabilitySources(candidate), withoutCapabilitySources(granted));
 }
 
 /** Assertion, never a narrowing operation: every action must fit one config entry. */
-export function entryWithinCeiling(entry: AuthorityEntry, ceiling: readonly AuthorityEntry[]): boolean {
+export function entryWithinCeiling(
+  entry: AuthorityEntry,
+  ceiling: readonly AuthorityEntry[],
+): boolean {
   return isSubsetSet(withoutCapabilitySources([entry]), [...ceiling]);
 }
 
@@ -23,44 +30,116 @@ export function entryWithinCeiling(entry: AuthorityEntry, ceiling: readonly Auth
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const e = value as Record<string, unknown>;
-  const strings = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 && v.every(x => typeof x === "string" && x.length > 0);
-  if (e.type !== "mission_resource_access" || typeof e.resource !== "string" || !e.resource || !strings(e.actions)) return false;
+  const strings = (v: unknown): v is string[] =>
+    Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
+  if (
+    e.type !== "mission_resource_access" ||
+    typeof e.resource !== "string" ||
+    !e.resource ||
+    !strings(e.actions)
+  )
+    return false;
   if (e.constraints !== undefined) {
-    if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints)) return false;
+    if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints))
+      return false;
     const c = e.constraints as Record<string, unknown>;
-    if (Object.keys(c).some(k => !["max_amount", "vendors", "requires_action_approval", "terminal_when"].includes(k))) return false;
+    if (
+      Object.keys(c).some(
+        (k) => !["max_amount", "vendors", "requires_action_approval", "terminal_when"].includes(k),
+      )
+    )
+      return false;
     if (c.vendors !== undefined && !strings(c.vendors)) return false;
-    if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean") return false;
-    if (c.terminal_when !== undefined && (!Array.isArray(c.terminal_when) || !c.terminal_when.length || !c.terminal_when.every(x => conditionCanonicalBytes(x) !== undefined))) return false;
+    if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean")
+      return false;
+    if (
+      c.terminal_when !== undefined &&
+      (!Array.isArray(c.terminal_when) ||
+        !c.terminal_when.length ||
+        !c.terminal_when.every((x) => conditionCanonicalBytes(x) !== undefined))
+    )
+      return false;
     if (c.max_amount !== undefined) {
       const cap = c.max_amount as Record<string, unknown> | null;
-      if (!cap || typeof cap !== "object" || Array.isArray(cap) || Object.keys(cap).some(k => k !== "amount" && k !== "currency") || typeof cap.currency !== "string" || !/^[A-Z]{3}$/.test(cap.currency) || typeof cap.amount !== "string" || !isValidAmount(cap.amount)) return false;
+      if (
+        !cap ||
+        typeof cap !== "object" ||
+        Array.isArray(cap) ||
+        Object.keys(cap).some((k) => k !== "amount" && k !== "currency") ||
+        typeof cap.currency !== "string" ||
+        !/^[A-Z]{3}$/.test(cap.currency) ||
+        typeof cap.amount !== "string" ||
+        !isValidAmount(cap.amount)
+      )
+        return false;
     }
   }
   // Delegate narrowing retains known structures; unknown controls cannot be
   // interpreted as permission by this ceiling implementation.
   if (e.delegation !== undefined) {
     const d = e.delegation as Record<string, unknown> | null;
-    if (!d || typeof d !== "object" || Array.isArray(d) || !Number.isInteger(d.max_depth) || (d.max_depth as number) < 0) return false;
-    if (Object.keys(d).some(k => !["max_depth", "allowed_delegates", "children"].includes(k))) return false;
-    const matchers = (v: unknown) => Array.isArray(v) && v.every(m => m && typeof m === "object" && !Array.isArray(m) &&
-      Object.keys(m).every(k => k === "sub" || k === "sub_profile") &&
-      (m.sub !== undefined || m.sub_profile !== undefined) &&
-      (m.sub === undefined || (typeof m.sub === "string" && m.sub.length > 0)) &&
-      (m.sub_profile === undefined || (typeof m.sub_profile === "string" && m.sub_profile.length > 0)));
+    if (
+      !d ||
+      typeof d !== "object" ||
+      Array.isArray(d) ||
+      !Number.isInteger(d.max_depth) ||
+      (d.max_depth as number) < 0
+    )
+      return false;
+    if (Object.keys(d).some((k) => !["max_depth", "allowed_delegates", "children"].includes(k)))
+      return false;
+    const matchers = (v: unknown) =>
+      Array.isArray(v) &&
+      v.every(
+        (m) =>
+          m &&
+          typeof m === "object" &&
+          !Array.isArray(m) &&
+          Object.keys(m).every((k) => k === "sub" || k === "sub_profile") &&
+          (m.sub !== undefined || m.sub_profile !== undefined) &&
+          (m.sub === undefined || (typeof m.sub === "string" && m.sub.length > 0)) &&
+          (m.sub_profile === undefined ||
+            (typeof m.sub_profile === "string" && m.sub_profile.length > 0)),
+      );
     if (d.allowed_delegates !== undefined && !matchers(d.allowed_delegates)) return false;
     if (d.children !== undefined) {
       const c = d.children as Record<string, unknown> | null;
-      if (!c || typeof c !== "object" || Array.isArray(c) || Object.keys(c).some(k => !["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"].includes(k))) return false;
-      for (const k of ["max_children", "max_child_depth"]) if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
+      if (
+        !c ||
+        typeof c !== "object" ||
+        Array.isArray(c) ||
+        Object.keys(c).some(
+          (k) =>
+            ![
+              "max_children",
+              "max_child_depth",
+              "allowed_child_actors",
+              "child_creation_policy",
+            ].includes(k),
+        )
+      )
+        return false;
+      for (const k of ["max_children", "max_child_depth"])
+        if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
       if (c.allowed_child_actors !== undefined && !matchers(c.allowed_child_actors)) return false;
       // The strict engine does not compare this opaque policy identifier.
       // Do not claim an intersection that could erase or substitute it.
       if (c.child_creation_policy !== undefined) return false;
     }
   }
-  if (e.capability_sources !== undefined && (!Array.isArray(e.capability_sources) || !e.capability_sources.every(b =>
-    b && typeof b === "object" && ["action", "tool_id", "source_uri", "source_digest", "operation_ref"].every(k => typeof b[k] === "string" && b[k].length > 0)))) return false;
+  if (
+    e.capability_sources !== undefined &&
+    (!Array.isArray(e.capability_sources) ||
+      !e.capability_sources.every(
+        (b) =>
+          b &&
+          typeof b === "object" &&
+          ["action", "tool_id", "source_uri", "source_digest", "operation_ref"].every(
+            (k) => typeof b[k] === "string" && b[k].length > 0,
+          ),
+      ))
+  )
+    return false;
   return true;
 }
 
@@ -69,29 +148,33 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
  * dimensions remain byte-identical: an unsupported or too-broad restriction
  * is refused, never dropped or relaxed to manufacture an intersection.
  */
-export function narrowToCeiling(entries: readonly AuthorityEntry[], ceiling: readonly AuthorityEntry[]): AuthorityEntry[] {
+export function narrowToCeiling(
+  entries: readonly AuthorityEntry[],
+  ceiling: readonly AuthorityEntry[],
+): AuthorityEntry[] {
   if (!entries.every(isAuthorityEntry) || !ceiling.every(isAuthorityEntry)) return [];
   const out: AuthorityEntry[] = [];
   for (const entry of entries) {
-    const actions = entry.actions.filter(action => {
-      try { return entryWithinCeiling({ ...entry, actions: [action] }, ceiling); }
-      catch { return false; }
+    const actions = entry.actions.filter((action) => {
+      try {
+        return entryWithinCeiling({ ...entry, actions: [action] }, ceiling);
+      } catch {
+        return false;
+      }
     });
     if (!actions.length) continue;
-    if (actions.length === entry.actions.length) { out.push(entry); continue; }
+    if (actions.length === entry.actions.length) {
+      out.push(entry);
+      continue;
+    }
     const { capability_sources, ...rest } = entry;
-    const bindings = capability_sources?.filter(b => actions.includes(b.action));
+    const bindings = capability_sources?.filter((b) => actions.includes(b.action));
     out.push({ ...rest, actions, ...(bindings?.length ? { capability_sources: bindings } : {}) });
   }
   return out;
 }
 
 type JsonObject = { [k: string]: JsonValue };
-
-/** View a delegation/children object as an open JSON record (all-JSON at runtime). */
-function jsonRec(v: object): { [k: string]: JsonValue | undefined } {
-  return v as unknown as { [k: string]: JsonValue | undefined };
-}
 
 function asJsonObject(v: JsonValue | undefined): JsonObject | undefined {
   return v !== null && typeof v === "object" && !Array.isArray(v) ? (v as JsonObject) : undefined;
@@ -105,7 +188,6 @@ function matcherKey(m: DelegateMatcher): string {
   return JSON.stringify([m.sub ?? null, m.sub_profile ?? null]);
 }
 
-
 function readMatchers(v: JsonValue | undefined): DelegateMatcher[] | undefined {
   if (!Array.isArray(v)) return undefined;
   return v.map((el) => {
@@ -117,9 +199,9 @@ function readMatchers(v: JsonValue | undefined): DelegateMatcher[] | undefined {
   });
 }
 
-
 export function conditionCanonicalBytes(condition: unknown): string | undefined {
-  if (condition === null || typeof condition !== "object" || Array.isArray(condition)) return undefined;
+  if (condition === null || typeof condition !== "object" || Array.isArray(condition))
+    return undefined;
   const c = condition as Record<string, unknown>;
   if (typeof c.event_type !== "string") return undefined;
   if (c.discharge_policy !== undefined && typeof c.discharge_policy !== "string") return undefined;
@@ -181,15 +263,19 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   // @spec txn-authorization#applicability — a delegated child MUST preserve
   // `requires_action_approval: true`; dropping it (or restating it as `false`,
   // which is equivalent to omission) would WIDEN, so it is not a subset.
-  if (granted.constraints?.requires_action_approval === true &&
-      candidate.constraints?.requires_action_approval !== true) {
+  if (
+    granted.constraints?.requires_action_approval === true &&
+    candidate.constraints?.requires_action_approval !== true
+  ) {
     return false;
   }
   // @spec discharge#subset-extension — a derived entry carries every parent
   // completion condition unchanged and MAY add more: dropping or altering one
   // WIDENS (a verifier cannot tell from opaque event types whether a changed
   // condition discharges earlier or later), so it is not a subset.
-  if (!conditionsNoBroader(candidate.constraints?.terminal_when, granted.constraints?.terminal_when)) {
+  if (
+    !conditionsNoBroader(candidate.constraints?.terminal_when, granted.constraints?.terminal_when)
+  ) {
     return false;
   }
   // @spec capability-binding#capability-source-binding — MONOTONIC derivation:
@@ -289,7 +375,8 @@ function childrenNoBroader(
   if (candidate && !granted) return false; // introduces the child-creation on-switch
   if (!candidate) return true; // omits -> strictly narrower
   if (!capNoBroader(asNum(candidate.max_children), asNum(granted?.max_children))) return false;
-  if (!capNoBroader(asNum(candidate.max_child_depth), asNum(granted?.max_child_depth))) return false;
+  if (!capNoBroader(asNum(candidate.max_child_depth), asNum(granted?.max_child_depth)))
+    return false;
   return matchersSubset(
     readMatchers(candidate.allowed_child_actors),
     readMatchers(granted?.allowed_child_actors),
