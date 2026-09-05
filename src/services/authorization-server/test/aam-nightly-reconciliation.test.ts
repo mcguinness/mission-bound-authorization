@@ -395,6 +395,8 @@ const loadView = (ref: { id: string; issuer: string }) => {
 };
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */
+import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+
 const evalAction = async (missionId: string, action: string) => {
   const view = viewFor(missionId);
   return evaluate(
@@ -403,6 +405,7 @@ const evalAction = async (missionId: string, action: string) => {
       resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
       action: { name: action },
       context: {
+        ...capabilityPresentationFor(action),
         audience: RESOURCE,
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         // The reconciliation ceiling/proposal entries bind a max_amount across
