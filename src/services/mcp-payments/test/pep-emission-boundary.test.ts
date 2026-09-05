@@ -34,7 +34,6 @@ import {
   PaymentsStore,
   Pep,
   type PepDeps,
-  sourceDigestOf,
 } from "../src/index.js";
 
 /**
@@ -78,7 +77,6 @@ function pepDeps(): PepDeps {
     modelId: "unit-test-model",
     loadView: () => undefined,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
     requiresActionApproval: (action) => action === "payments:remittance.send",
     observe: () => {},

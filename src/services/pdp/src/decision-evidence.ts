@@ -97,6 +97,30 @@ export interface RuntimeCapabilitySource {
   source_uri: string;
   source_digest: string;
   operation_ref: string;
+  catalog_digest?: string;
+  executor?: string;
+}
+
+/** Supported prefix is insufficient: require canonical unpadded SHA-256 bytes. */
+function capabilityDigest(value: unknown): value is string {
+  if (typeof value !== "string" || !/^sha-256:[A-Za-z0-9_-]{43}$/.test(value)) return false;
+  const encoded = value.slice("sha-256:".length);
+  const bytes = Buffer.from(encoded, "base64url");
+  return bytes.length === 32 && bytes.toString("base64url") === encoded;
+}
+
+/** Field-by-field narrowing; malformed input is never copied into signed evidence. */
+export function runtimeCapabilitySourceOf(presented: unknown): RuntimeCapabilitySource | undefined {
+  if (!presented || typeof presented !== "object" || Array.isArray(presented)) return undefined;
+  const p = presented as Record<string, unknown>;
+  const nonempty = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+  if (!nonempty(p.tool_id) || !nonempty(p.source_uri) || !nonempty(p.operation_ref) || !capabilityDigest(p.source_digest)) return undefined;
+  if (p.catalog_digest !== undefined && !capabilityDigest(p.catalog_digest)) return undefined;
+  if (p.executor !== undefined && !nonempty(p.executor)) return undefined;
+  return { tool_id: p.tool_id, source_uri: p.source_uri, source_digest: p.source_digest, operation_ref: p.operation_ref,
+    ...(p.catalog_digest !== undefined ? { catalog_digest: p.catalog_digest as string } : {}),
+    ...(p.executor !== undefined ? { executor: p.executor as string } : {}),
+  };
 }
 
 /** @spec runtime-evidence#decision-evidence-object (lines 331-573): the closed wire object. */
@@ -159,14 +183,12 @@ export function requestDigestFallback(input: {
  * asserting an emitter identity, a sequence position, or a classification
  * source it does not own ({{agent-isolated-evidence-emission}}).
  *
- * `capability_source` is absent by construction (#657/#730): the member left
- * the decision request envelope, so no validated PDP-side input carries it.
- * It is OPTIONAL, and a PEP-supplied copy would be exactly the caller-asserted
- * record content this emitter exists to prevent; it returns once #657's
- * per-action capability-binding resolver supplies it from the PDP's own
- * verified inputs.
+ * `capability_source` is narrowed from the PDP's own evaluated input. A valid
+ * mismatch is useful on a drift denial; malformed input is omitted. The
+ * fallback request summary and parameter digest do not commit omitted bytes.
  */
 export interface DecisionEvidenceEmissionInput {
+  capability_source?: RuntimeCapabilitySource;
   mission: RuntimeMissionRef;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
@@ -245,6 +267,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
               subject: input.subject.id,
             })
           : undefined;
+      const capability_source = runtimeCapabilitySourceOf(input.capability_source);
       const unsigned = {
         evidence_id: newRecordId("evd"),
         evaluation_id: input.evaluation_id,
@@ -255,6 +278,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         audience: input.audience,
         action_class,
         class_source,
+        ...(capability_source ? { capability_source } : {}),
         ...(input.actor !== undefined ? { actor: input.actor } : {}),
         ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
         ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),

@@ -34,7 +34,6 @@ import {
   type CallToolResult,
   ListToolsRequestSchema,
   type ListToolsResult,
-  type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
@@ -43,7 +42,7 @@ import type { MediatedToolResult } from "./mcp-transport.js";
 import { MISSION_REFERENCE_HEADER, parseMissionReferenceField } from "@mission/core";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
 import { serveResourceMetadata } from "./resource-metadata.js";
-import type { McpPaymentsServer, ToolDef } from "./server.js";
+import type { McpPaymentsServer } from "./server.js";
 
 /** The ES256 DPoP keypair the harness holds for the life of a mission credential. */
 export interface DpopKeys {
@@ -105,14 +104,6 @@ export async function dpopProofFor(
     .sign(dpopKeys.privateKey);
 }
 
-/** Map an internal ToolDef to an MCP `Tool` (least-exposure list entry). */
-function toMcpTool(def: ToolDef): Tool {
-  const mapping = TOOL_ACTIONS[def.name];
-  const inputSchema = mapping?.needsInvoice
-    ? { type: "object" as const, properties: { invoice_id: { type: "string" } }, required: ["invoice_id"] }
-    : { type: "object" as const, properties: { vendor_id: { type: "string" } } };
-  return { name: def.name, description: def.description, inputSchema };
-}
 
 /** Encode a PEP verdict as an MCP tool result: denials are structured results
  * (isError + structuredContent), never thrown transport errors, so the client
@@ -160,7 +151,7 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
     // No validated credential reached us -> least exposure (should not happen:
     // the middleware gates every request before dispatch).
     if (!token) return { tools: [] };
-    return { tools: paymentsServer.toolsList(token).map(toMcpTool) };
+    return { tools: paymentsServer.capabilityCatalog.toolDefinitions(paymentsServer.toolsList(token).map(t => t.name)) };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request, extra): Promise<CallToolResult> => {

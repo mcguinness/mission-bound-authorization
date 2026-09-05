@@ -22,7 +22,6 @@ import {
   parameterDigest,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -85,7 +84,6 @@ function build(): { pep: Pep; server: McpPaymentsServer } {
     modelId: "unused",
     loadView: nonconformingLoadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
   });
   const server = new McpPaymentsServer({
     pep,
@@ -93,7 +91,6 @@ function build(): { pep: Pep; server: McpPaymentsServer } {
     loadView: nonconformingLoadView,
     jwks: { keys: [] },
     issuer: "https://as.test",
-    serverCard: { name: "payments" },
   });
   return { pep, server };
 }
