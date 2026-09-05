@@ -5,6 +5,8 @@
  * wire. The PDP and MCP pieces here are throwaway-grade by design.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { createServer, type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, INVOICES } from "@mission/demo-data";
 import {
@@ -133,7 +135,7 @@ let refreshToken = "";
 let missionId = "";
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
@@ -181,6 +183,7 @@ describe("M1 tracer slice", () => {
         resource: CANONICAL_RESOURCE,
         code_challenge: challenge,
         code_challenge_method: "S256",
+        login_hint: "alice",
         mission_intent: intent,
         authorization_details: authorizationDetails,
         client_assertion: await clientAssertion(),
@@ -204,8 +207,8 @@ describe("M1 tracer slice", () => {
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -437,6 +440,7 @@ describe("mission_error wire carriage: derivations_exhausted (@spec mission#erro
         resource: CANONICAL_RESOURCE,
         code_challenge: challenge,
         code_challenge_method: "S256",
+        login_hint: "alice",
         mission_intent: intent,
         authorization_details: authorizationDetails,
         client_assertion: await clientAssertion(),
@@ -456,8 +460,8 @@ describe("mission_error wire carriage: derivations_exhausted (@spec mission#erro
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;

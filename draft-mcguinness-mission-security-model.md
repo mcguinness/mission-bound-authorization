@@ -1090,6 +1090,15 @@ generations):
   metering profile's role
   ({{I-D.draft-mcguinness-mission-metering}}).
 
+Approval surface exposed to the agent as a tool (self-approval):
+: Addressed by resolution being unavailable from the agent's tool plane or
+  agent-driven channels, with resolver identity and achieved authentication
+  established by the approval surface, never caller input
+  ({{I-D.draft-mcguinness-mission-runtime}}). A distinct nominal Approver and
+  isolated evidence signer do not suffice when the agent can invoke that
+  Approver's resolution capability. Residual: reachability is a deployment
+  property; a self-declared boundary still needs negative-path evidence.
+
 Operator surface abused (fleet management):
 : Addressed by management Client authorization; dry-run-then-execute
   with a bulk token pinning the evaluated membership; every call
@@ -1430,6 +1439,9 @@ model and pipeline layers, and saying so is the point:
 | LLM10 Unbounded Consumption | Expiry on every Mission and metering (experimental) on spend | Bounded |
 
 # Document History {#document-history}
+
+- Named agent-invokable approval resolution as a bypass distinct from
+  evidence forgery or nominal principal equality (#759).
 
 \[\[ To be removed from the final specification ]]
 

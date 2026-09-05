@@ -12,6 +12,8 @@
  * against the operation it retained, consuming the `txn` exactly once.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { AccessRequestService } from "@mission/access-request";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
@@ -148,6 +150,7 @@ async function issueMissionToken(): Promise<{ token: string; missionId: string }
       resource: RESOURCE,
       code_challenge: codeChallenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
           goal: "Pay Acme invoices and send remittance",
@@ -178,8 +181,8 @@ async function issueMissionToken(): Promise<{ token: string; missionId: string }
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader() },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res);
   location = res.headers.get("location") as string;
@@ -264,7 +267,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     ]);
     as = await buildAuthorizationServer({
       issuer: ISSUER,
-      allowHeadlessAdjudication: true,
+      allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
       transactionAuthorization: {
         challengeIssuers,
         ars,

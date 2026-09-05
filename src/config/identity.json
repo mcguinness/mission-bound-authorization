@@ -1,4 +1,4 @@
 [
   { "sub": "alice", "name": "Alice Anderson", "email": "alice@acme.example", "roles": ["subject"] },
-  { "sub": "bob", "name": "Bob Brown", "email": "bob@acme.example", "roles": ["subject", "approver"] }
+  { "sub": "bob", "name": "Bob Brown", "email": "bob@acme.example", "roles": ["subject", "approver"], "approves_for": ["alice", "acme-accounts-payable"] }
 ]

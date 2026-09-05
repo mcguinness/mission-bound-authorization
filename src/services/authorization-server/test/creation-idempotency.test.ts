@@ -24,6 +24,8 @@
  *    pending retry returns the SAME deferral_code.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { UniqueViolationError } from "@mission/store";
@@ -141,6 +143,7 @@ async function issueMission(actions: string[]): Promise<{ missionId: string; acc
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: intentJson("Pay Acme invoices"),
       authorization_details: JSON.stringify(authority(actions)),
       client_assertion: await clientAssertion(),
@@ -159,8 +162,8 @@ async function issueMission(actions: string[]): Promise<{ missionId: string; acc
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -201,6 +204,7 @@ function childParams(subjectToken: string, creationRequestId: string, goal = "Ex
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: JWT_TOKEN_TYPE,
     creation_request_id: creationRequestId,
+    login_hint: "alice",
     mission_intent: intentJson(goal),
     authorization_details: JSON.stringify(childAuthority()),
     child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
@@ -214,6 +218,7 @@ function expansionParams(subjectToken: string, creationRequestId: string, action
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     creation_request_id: creationRequestId,
+    login_hint: "alice",
     mission_intent: intentJson("Widen to remittance"),
     authorization_details: JSON.stringify(authority(actions)),
   };
@@ -229,7 +234,7 @@ function activatingCommits(missionId: string): LifecycleCommit[] {
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    allowHeadlessAdjudication: true,
+    allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     actorProfiles: aiAgents("subagent-extractor"),
     onLifecycleCommit: (c) => commits.push(c),
   });
@@ -395,6 +400,7 @@ describe("evidence vs recovery ordering (@spec mission#intent-submission-evidenc
   const IDEM_ENTRY = { type: IDEM_TYPE, assertion: "idem-artifact" };
   const evidenceChildParams = (subjectToken: string, crid: string): Record<string, string> => ({
     ...childParams(subjectToken, crid),
+    login_hint: "alice",
     mission_intent: JSON.stringify({
       intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
       evidence: [IDEM_ENTRY],
@@ -585,6 +591,7 @@ describe("dispatch (@spec mission-template#dispatch)", () => {
     const res = await tokenRequest({
       grant_type: MISSION_DISPATCH_GRANT_TYPE,
       template_id: "tmpl_any",
+      login_hint: "alice",
       mission_intent: intentJson("reconcile Acme invoices"),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };

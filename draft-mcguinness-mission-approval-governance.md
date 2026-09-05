@@ -638,6 +638,10 @@ an approval event when any of the following holds:
 Direct self-approval by one authenticated human is the degenerate
 case: the Mission record already carries it completely, and no
 record is required.
+This presumes the human resolved approval on the approval surface itself;
+where an agent resolves it on its own behalf, there is no human decision
+for this list to be degenerate about
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Consent Evidence Relationship {#consent-evidence-relationship}
 
@@ -1312,6 +1316,11 @@ version before treating the evaluation as re-checked
 ({{envelope}}).
 
 --- back
+
+# Document History {#document-history}
+
+- Clarified that the direct-human degenerate case presumes resolution by
+  that human, not agent-invokable approval on the human's behalf (#759).
 
 # Acknowledgments
 {:numbered="false"}

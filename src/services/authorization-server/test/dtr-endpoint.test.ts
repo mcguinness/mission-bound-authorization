@@ -9,6 +9,8 @@
  * cnf.jkt = the DPoP key, a `mission` claim, exp <= approved_until.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
@@ -131,6 +133,7 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: intent,
       authorization_details: authorizationDetails,
       client_assertion: await clientAssertion(),
@@ -148,8 +151,8 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader() },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res);
   location = res.headers.get("location") as string;
@@ -206,7 +209,7 @@ function subset(actions: string[]): AuthorityEntry[] {
 }
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });

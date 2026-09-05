@@ -18,6 +18,8 @@ import {
 } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import type Provider from "oidc-provider";
+import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
+export { ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 import {
   buildProvider,
   type ProtectedEventSource,
@@ -489,6 +491,8 @@ export interface BuiltAs {
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
+  /** Independent approver login integration; OAuth interaction cookies never establish this login. */
+  approvalSessions?: ApprovalSessionStore;
   /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
@@ -817,6 +821,9 @@ export async function buildAuthorizationServer(opts: {
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
+    ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
+    approverApprovesFor: new Map(USERS.map(u => [u.sub, new Set(u.approves_for)])),
+    knownSubjects: new Set([...USERS.map(u => u.sub), ...AUTHORITY_SOURCES.entries.flatMap(e => e.principals ?? [])]),
     ...(opts.requiredIntentEvidenceTypes
       ? { requiredIntentEvidenceTypes: opts.requiredIntentEvidenceTypes }
       : {}),

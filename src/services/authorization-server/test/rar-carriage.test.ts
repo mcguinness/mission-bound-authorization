@@ -20,6 +20,8 @@
  *    output feeds the standard parameter with no re-wrapping.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { computeAnchor, PROPOSED_AUTHORITY_TYP, proposalHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
@@ -279,7 +281,7 @@ async function pushPar(
 }
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
   asServer = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   governedKey = (await importJWK(as.governedClientJwk as never, "ES256")) as CryptoKey;
@@ -292,6 +294,7 @@ afterAll(() => {
 describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission)", () => {
   it("accepts authorization_details alongside mission_intent as the proposal", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(PROPOSAL),
     });
@@ -321,6 +324,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("a governed client submitting the proposal WITH mission_intent proceeds", async () => {
     const res = await pushPar("governed-agent", "governed-agent-auth", governedKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(PROPOSAL),
     });
@@ -329,6 +333,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("refuses a pushed Intent that carries the retired proposed_authority member", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, proposed_authority: PROPOSAL } }),
     });
     expect(res.status).toBe(400);
@@ -340,6 +345,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     // refused at submission acceptance, not rewritten forward and not accepted
     // into a Mission that would be expired the instant it committed.
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: { ...TASK_INTENT, expires_at: "2020-01-01T00:00:00Z" },
       }),
@@ -351,6 +357,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("refuses an unparseable requested expires_at at submission acceptance (invalid_request)", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, expires_at: "whenever" } }),
       authorization_details: JSON.stringify(PROPOSAL),
     });
@@ -360,6 +367,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("refuses a proposal entry whose resource is not among the Intent resources", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify([
         { type: "mission_resource_access", resource: "https://other.example", actions: ["a"] },
@@ -373,6 +381,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 describe("Submission envelope carriage (@spec mission#submission-via-par, issue #506)", () => {
   it("refuses the retired bare-Intent parameter shape (invalid_request)", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify(TASK_INTENT),
     });
     expect(res.status).toBe(400);
@@ -383,6 +392,7 @@ describe("Submission envelope carriage (@spec mission#submission-via-par, issue 
 
   it("refuses an unknown evidence type on the wire (no types are registered)", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: TASK_INTENT,
         evidence: [
@@ -403,6 +413,7 @@ describe("Submission envelope carriage (@spec mission#submission-via-par, issue 
 
   it("refuses a typeless evidence entry on the wire", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT, evidence: [{ assertion: "eyJ" }] }),
     });
     expect(res.status).toBe(400);
@@ -428,6 +439,7 @@ describe("end-to-end issuance under the new carriage", () => {
 
   it("derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only", async () => {
     const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(OVER_ASK),
     });
@@ -452,8 +464,8 @@ describe("end-to-end issuance under the new carriage", () => {
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -566,6 +578,7 @@ describe("end-to-end issuance under the new carriage", () => {
 describe("derivation refusal at the authorization decision (@spec mission#error-mapping)", () => {
   async function decideAndGetErrorRedirect(missionIntent: unknown, authorizationDetails?: unknown) {
     const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify(missionIntent),
       ...(authorizationDetails ? { authorization_details: JSON.stringify(authorizationDetails) } : {}),
     });
@@ -581,8 +594,8 @@ describe("derivation refusal at the authorization decision (@spec mission#error-
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -613,10 +626,8 @@ describe("derivation refusal at the authorization decision (@spec mission#error-
 // APPROVER's authentication strength, never the token Subject's. Covers the
 // #636-adopted acceptance criterion: same-principal, split-principal,
 // max_age=0, and unsupported-ACR, all wire-level through PAR -> /interaction
-// -> decide. The achieved context is supplied on decide()'s body
-// (`approver_acr`, `approver_auth_time`): this reference stack's headless
-// adjudication surface has no real IdP login step, exactly like
-// `approver`/`subject` already being plain decide()-body strings.
+// -> decide. The trusted fixture establishes achieved context in its registered
+// service principal; the decide body cannot assert identity or authentication.
 describe("Approver Authentication Strength (@spec mission#approval-authentication, issue #636)", () => {
   const READ_ONLY_PROPOSAL: AuthorityEntry[] = [
     { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
@@ -629,6 +640,7 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
     decideExtra?: Record<string, unknown>;
   }): Promise<URL> {
     const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(READ_ONLY_PROPOSAL),
       // oidc-provider requires the `openid` scope to accept `acr_values`
@@ -651,13 +663,8 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({
-        decision: "approve",
-        approver: args.approver,
-        subject: args.subject,
-        ...(args.decideExtra ?? {}),
-      }),
+      headers: { ...trustedApprovalHeaders(args.approver, args.decideExtra), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -792,6 +799,7 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     key: () => CryptoKey;
   }): Promise<{ uid: string; html: string }> {
     const par = await pushPar(args.clientId, args.kid, args.key(), {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(SOURCE_PROPOSAL),
     });
@@ -816,8 +824,8 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve", approver, subject }),
+      headers: { ...trustedApprovalHeaders(approver), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
     let location = res.headers.get("location") as string;
@@ -875,7 +883,7 @@ describe("authority source on the approval surface (@spec mission#authority-sour
       kid: "governed-agent-auth",
       key: () => governedKey,
     });
-    const redirect = await decideAt(uid, "alice", "acme-accounts-payable");
+    const redirect = await decideAt(uid, "alice", "alice");
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 });
