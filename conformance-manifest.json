@@ -7,8 +7,8 @@
     "content_sha256": "59c6a070b21b08556d7507e66a2be2a7b67402af21c076b447fee773ab3f8aa0"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "16cd23afa44c7bbe9a8813e4dc5d739e2697f047",
-    "content_sha256": "bb32eb7c901f567a68dd8ae90e769da72408061ff3925aa1a6862679d254d82a"
+    "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
+    "content_sha256": "48bdb4ec63bbc9fe1293a1c4b6c339bb327afbbc9ca3f0144e0acf5420ab3d7c"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "889e4294ab7d91469458b72a6da85593fcdd571f",
@@ -47,8 +47,8 @@
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "49fc10f054ae34b36db4b931801c2b7b9db746c8",
-    "content_sha256": "a8212952fbe9fd97ce345b648d596f041f081941b31e5e7ff96018477c4dc542"
+    "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
+    "content_sha256": "af7bfc6d7eeffd479e15d4d0c39f62b5eccc9c6c3a0b931bfa4a5ae0af8c8731"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -154,6 +154,7 @@
    "concurrency"
   ],
   "capabilities": [
+   "status.revocation-propagation",
    "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
@@ -202,6 +203,28 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "status.operational.bound-sized-to-recovery",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "status-operational",
+   "text": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
+  },
   {
    "id": "runtime.operational.ride-through-declared",
    "spec": "draft-mcguinness-mission-runtime.md",

@@ -243,7 +243,7 @@ referenced, not re-specified, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 3 conformance rows in conformance-manifest.json (2 tested, 1 todo).
+Implementation: 4 conformance rows in conformance-manifest.json (2 tested, 2 todo).
 Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->
@@ -1382,6 +1382,37 @@ below its high-consequence floor). Introspection and per-request
 status checks tighten specific paths; they are upgrades, not
 prerequisites.
 
+# Operational Considerations {#status-operational}
+
+A deployment declaring revocation propagation SHOULD publish the recovery
+objective considered when choosing `mission_max_stale_seconds` and the
+availability consequence when recovery takes longer than that bound.
+
+The security ceiling governs the choice: an operational recovery objective
+never authorizes extending a published freshness horizon during an incident.
+An existing observation's remaining validity is not reset when an outage is
+detected. An issuer outage and a state-source outage are distinct where the
+topology provides an independently available authoritative source. Runtime's
+Operational Considerations gives the per-action-class dependency analysis
+({{I-D.draft-mcguinness-mission-runtime}}).
+
+The deployment describes its distribution posture per surface: Status
+responses are reused only to their authenticated `fresh_until` and other
+applicable bounds; Status Lists are fetched within their freshness window
+and checked locally; Signals accelerate learning of transitions over a
+correctly bounded state source, not replace that source after confidence
+is lost. The Status List freshness rules
+({{I-D.draft-mcguinness-oauth-mission-status-list}}) and Signals' Missed
+Events Are Not Fail-Open rule
+({{I-D.draft-mcguinness-oauth-mission-signals}}) remain authoritative.
+
+Operators watch observation age and remaining validity, failed refreshes,
+stream gaps, fallback availability, clock health, and catch-up after recovery.
+A recovery check reconciles committed state and versions before publishing
+newly fresh observations. A successful HTTP response or a new signature
+alone does not establish that reconciliation. No new endpoint, metadata
+member, availability target, or replication protocol is defined here.
+
 # Authorization Server Metadata {#as-metadata}
 
 This section is OPTIONAL and applies only to a deployment that adopts
@@ -1732,3 +1763,12 @@ The author thanks the implementers and reviewers of the Mission-Bound
 Authorization work for feedback that shaped these extensions.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Operational Considerations added (#310): recovery sizing for the
+  advertised propagation ceiling, the per-surface distribution posture,
+  and the operator observations after a degraded surface recovers. No
+  freshness window is extended and no member is added.
