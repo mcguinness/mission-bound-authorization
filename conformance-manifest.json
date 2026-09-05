@@ -3,12 +3,12 @@
  "source": {
   "specs": {
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
-    "content_sha256": "9cca446bd5ba68b7a5a2fa96660db3a7e75907a0ece6f6d5734d41cd302ecce0"
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "7a7c2a154cfa928f3480adb8e562941e9952fed9eb9b182621988dfa3c3f10d1"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
-    "content_sha256": "869ec957caa243303360ea7f96663dff2312d5161879f40a74ac2d6e5095c81d"
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "d8296d718961ef9733f9923a83bebb290ab4f1fbe03aba51930f7372d7e38467"
    },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "16cd23afa44c7bbe9a8813e4dc5d739e2697f047",
@@ -43,16 +43,16 @@
     "content_sha256": "9ffee3c2139259552755eb526894e90d58969dbe3db807fe42a485677ab76a3e"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
-    "content_sha256": "1d14809cb2c138a090186a64a5a33432519d88766ab0abb3908dca185cf099cd"
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "26de126e0e9e0cfd0cc7fc3334d107a73462a22196edf0fda7b60fa335950ce6"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "172fb46606ec02b2942cac492b28c181c60bae2f",
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "5a4e6af91f5b22d0e6cdb1fc8226bffa3c8fbe04",
-    "content_sha256": "58f3382954eb7ab0c44133c57d978fe53e35250a154ea64d86df1b118ee4e4a7"
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "34f6e4fa62943391fc909b095f85661030902946c69912997a2cc0ae2e952ca4"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
