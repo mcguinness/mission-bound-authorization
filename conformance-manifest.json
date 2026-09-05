@@ -305,7 +305,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > denies absent or malformed presentation %#",
+     "name": "recorded per-action capability verification > denies absent or malformed presentation: %s",
      "level": "unit",
      "surface": "decision-request"
     }
@@ -402,13 +402,13 @@
     },
     {
      "file": "src/services/authorization-server/test/capability-binding.test.ts",
-     "name": "commits the inherited bindings under the child authority_hash",
+     "name": "child creation inherits the parent's recorded bindings > commits the inherited bindings under the child authority_hash",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/capability-binding.test.ts",
-     "name": "commits the inherited bindings under the instance authority_hash",
+     "name": "template dispatch inherits the ceiling's recorded bindings > commits the inherited bindings under the instance authority_hash",
      "level": "unit",
      "surface": "derivation"
     }
@@ -436,13 +436,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/capability-binding.test.ts",
-     "name": "reproduces the published write_document source_digest",
+     "name": "capabilitySourceDigest: spec vector (capability-binding.md) > reproduces the published write_document source_digest",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/packages/mission-core/test/capability-binding.test.ts",
-     "name": "adding, removing, or renaming an unrelated tool leaves the digest unchanged",
+     "name": "extractMcpToolDefinition: per-capability scope > adding, removing, or renaming an unrelated tool leaves the digest unchanged",
      "level": "unit",
      "surface": "derivation"
     }
@@ -482,7 +482,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "validated capability evidence (#657) > omits malformed capability input %# while retaining drift reason and request-summary digest",
+     "name": "validated capability evidence (#657) > omits malformed capability input (%s) while retaining drift reason and request-summary digest",
      "level": "unit",
      "surface": "evidence-emission"
     }

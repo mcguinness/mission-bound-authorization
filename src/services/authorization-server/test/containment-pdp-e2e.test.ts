@@ -22,6 +22,7 @@ import {
 } from "@mission/pdp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
+import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 
 const PORT = 14495;
 const ISSUER = `http://localhost:${PORT}`;
@@ -94,7 +95,6 @@ function viewFor(missionId: string): MissionView {
   };
 }
 
-import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 
 const evalAction = async (missionId: string, action: string) => {
   const view = viewFor(missionId);

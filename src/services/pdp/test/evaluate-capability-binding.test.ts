@@ -33,7 +33,18 @@ describe("recorded per-action capability verification", () => {
     expect(calls).toBe(0);
   });
 
-  it.each([undefined, null, [], {}, { ...presented, executor: 4 }, { ...presented, source_digest: "sha-512:abc" }, { ...presented, source_digest: "sha-256:" }, { ...presented, source_digest: "sha-256:not-a-digest" }, { ...presented, source_digest: "sha-256:" + "A".repeat(42) + "B" }, { ...presented, catalog_digest: "sha-256:" }])("denies absent or malformed presentation %#", async malformed => {
+  it.each([
+    ["absent", undefined],
+    ["null", null],
+    ["an array", []],
+    ["an empty object", {}],
+    ["a non-string executor", { ...presented, executor: 4 }],
+    ["an unknown digest algorithm prefix", { ...presented, source_digest: "sha-512:abc" }],
+    ["an empty sha-256 digest", { ...presented, source_digest: "sha-256:" }],
+    ["a supported prefix with a non-digest body", { ...presented, source_digest: "sha-256:not-a-digest" }],
+    ["a non-canonical base64url digest", { ...presented, source_digest: `sha-256:${"A".repeat(42)}B` }],
+    ["a malformed catalog_digest", { ...presented, catalog_digest: "sha-256:" }],
+  ] as const)("denies absent or malformed presentation: %s", async (_label, malformed) => {
     const req = makeRequest();
     req.context.capability_source = malformed as never;
     expect((await evaluate(req, options())).context.denial_reason).toBe("capability_drift");

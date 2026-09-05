@@ -69,6 +69,7 @@ import { ConsoleBff } from "../../console-bff/src/index.js";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
+import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -395,7 +396,6 @@ const loadView = (ref: { id: string; issuer: string }) => {
 };
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */
-import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 
 const evalAction = async (missionId: string, action: string) => {
   const view = viewFor(missionId);

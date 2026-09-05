@@ -65,7 +65,19 @@ describe("validated capability evidence (#657)", () => {
     expect(record.denial_reason).toBe("capability_drift"); expect(record.capability_source).toEqual(mismatch);
   });
 
-  it.each([{}, [], null, { ...presented, executor: 1 }, { ...presented, source_digest: "sha-512:abc" }, { ...presented, catalog_digest: "sha-512:abc" }, { ...presented, source_digest: "sha-256:" }, { ...presented, source_digest: "sha-256:not-a-digest" }, { ...presented, source_digest: "sha-256:" + "A".repeat(42) + "B" }, { ...presented, catalog_digest: "sha-256:" }, { ...presented, catalog_digest: "sha-256:" + "A".repeat(42) + "B" }])("omits malformed capability input %# while retaining drift reason and request-summary digest", async malformed => {
+  it.each([
+    ["an empty object", {}],
+    ["an array", []],
+    ["null", null],
+    ["a non-string executor", { ...presented, executor: 1 }],
+    ["an unknown source_digest prefix", { ...presented, source_digest: "sha-512:abc" }],
+    ["an unknown catalog_digest prefix", { ...presented, catalog_digest: "sha-512:abc" }],
+    ["an empty source_digest", { ...presented, source_digest: "sha-256:" }],
+    ["a supported prefix with a non-digest body", { ...presented, source_digest: "sha-256:not-a-digest" }],
+    ["a non-canonical source_digest", { ...presented, source_digest: `sha-256:${"A".repeat(42)}B` }],
+    ["an empty catalog_digest", { ...presented, catalog_digest: "sha-256:" }],
+    ["a non-canonical catalog_digest", { ...presented, catalog_digest: `sha-256:${"A".repeat(42)}B` }],
+  ] as const)("omits malformed capability input (%s) while retaining drift reason and request-summary digest", async (_label, malformed) => {
     const { record } = await decisionFor(malformed);
     expect(record.denial_reason).toBe("capability_drift");
     expect(record).not.toHaveProperty("capability_source");

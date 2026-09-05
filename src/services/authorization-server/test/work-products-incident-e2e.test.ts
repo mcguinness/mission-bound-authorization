@@ -47,6 +47,7 @@ import {
 } from "../src/index.js";
 import { exportJWK, generateKeyPair } from "jose";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 
 const PORT = 14498;
 const ISSUER = `http://localhost:${PORT}`;
@@ -115,7 +116,6 @@ function viewFor(missionId: string): MissionView {
   };
 }
 
-import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 
 const evalAction = async (missionId: string, action: string) => {
   const view = viewFor(missionId);
