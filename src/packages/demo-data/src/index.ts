@@ -338,7 +338,10 @@ function loadUsers(): SeededUser[] {
       name: reqString(file, u, "name", `identity[${i}]`),
       email: reqString(file, u, "email", `identity[${i}]`),
       roles: reqStringArray(file, u, "roles", `identity[${i}]`),
-      approves_for: u.approves_for === undefined ? [] : reqStringArray(file, u, "approves_for", `identity[${i}]`),
+      approves_for:
+        u.approves_for === undefined
+          ? []
+          : reqStringArray(file, u, "approves_for", `identity[${i}]`),
     };
   });
 }
