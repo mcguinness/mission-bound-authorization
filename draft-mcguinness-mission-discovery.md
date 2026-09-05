@@ -74,6 +74,13 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-work-products:
+    title: "Mission Work Products"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
+    author:
+      - ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
@@ -610,6 +617,11 @@ every publisher check passes. Two rules close the policy path:
   or the original enumeration is a violation of the mediated
   environment, not a discovery.
 
+Where a deployment persists taint on the artifacts a session produces,
+the work-products profile's informative Artifact-Lineage Label
+Persistence appendix describes that realization
+({{I-D.draft-mcguinness-oauth-mission-work-products}}).
+
 Where the metering companion is deployed, a deployment MAY place
 discovered egress-capable bindings in an exclusivity group with its
 sensitive-read authority, so a session that has read cannot acquire
@@ -863,6 +875,9 @@ This document registers one media type per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Added an informative pointer from Injection-Driven Discovery to
+  artifact-lineage label persistence in the work-products profile;
+  the taint custody and adjudication requirements are unchanged (#757).
 - Security Considerations gained a conformance note stating explicitly
   that the harness's provenance-tracking and egress-gating taint
   duties are SHOULD-level outside its opt-in PDP-enforced path: a
