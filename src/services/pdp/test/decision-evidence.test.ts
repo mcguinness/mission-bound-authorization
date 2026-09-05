@@ -88,6 +88,20 @@ function opts(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
 }
 
 describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741)", () => {
+  it("evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits", async () => {
+    const { emitter } = emitterFixture();
+    const decision = await evaluate(req(), opts({ evidence: emitter }));
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(record.evidence_id).toMatch(/^[A-Za-z0-9_-]{1,64}$/);
+    expect(record.evidence_id.startsWith("evd_")).toBe(true);
+    const randomSegment = record.evidence_id.slice("evd_".length);
+    const bytes = Buffer.from(randomSegment, "base64url");
+    expect(bytes.toString("base64url")).toBe(randomSegment);
+    expect(bytes.byteLength * 8).toBeGreaterThanOrEqual(128);
+    // Shape is tested here; entropy is supplied by newRecordId's CSPRNG
+    // randomBytes(20), not inferred from sample uniqueness or string length.
+  });
+
   it("returns a signed record on a PERMIT that an independent verifier accepts", async () => {
     const { emitter, resolve } = emitterFixture();
     const decision = await evaluate(req(), opts({ evidence: emitter }));
