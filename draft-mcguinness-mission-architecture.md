@@ -3507,9 +3507,10 @@ This document makes no IANA request.
 
 # Document History {#document-history}
 
-- Added the optional Control-Plane Consistency companion to the document map (#250).
-
 \[\[ To be removed from the final specification ]]
+
+- Added the optional Control-Plane Consistency companion to the document
+  map (#250).
 
 - Controls taxonomy retirement (#636): the swarm-execution discussion
   no longer claims `derivation_limit` (renamed from `max_derivations`)

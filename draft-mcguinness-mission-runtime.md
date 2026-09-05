@@ -2887,9 +2887,9 @@ that require it.
 
 Deployment Considerations ({{runtime-deployment}}) describes sizing and
 placement. This section describes dependency outages and the operator's
-declared response. The shared consistency/availability rule is
-the Shared Consistency and Availability Rule in
-{{I-D.draft-mcguinness-mission-control-plane}};
+declared response. It composes with the Shared Consistency and
+Availability Rule section of
+{{I-D.draft-mcguinness-mission-control-plane}}:
 operational guidance does not manufacture freshness or add emergency
 authority to an ordinary Mission permit.
 
@@ -2954,8 +2954,8 @@ and excluded claim. It does not fabricate a PDP Decision or Mission permit
 when the ordinary path could not produce one. Activations are counted and
 reviewable. The ordinary Mission path continues to fail closed; emergency
 authority is a separate mode, not a successful result of that path. The
-consistency companion's Emergency Authority rule states this separation
-({{I-D.draft-mcguinness-mission-control-plane}}).
+Positive emergency authority is separate section of
+{{I-D.draft-mcguinness-mission-control-plane}} states that separation.
 
 ## Replication Is a Declared Deployment Property {#runtime-replication}
 
@@ -2966,8 +2966,8 @@ each published staleness bound.
 This recommends no consensus protocol or leader architecture. The
 observation must be justified by the deployment's consistency mechanism;
 a signature or new signing key does not turn a lagging value into a fresh
-one (Fresh Observations, Not Fresh Signatures in
-{{I-D.draft-mcguinness-mission-control-plane}}).
+one, per the Fresh observations, not fresh signatures section of
+{{I-D.draft-mcguinness-mission-control-plane}}.
 Operators watch observation age, available fallback sources, propagation
 gaps, permit refusals, and recovery progress. Metrics targets and fleet
 benchmarks are separate deployment work.
@@ -3282,10 +3282,13 @@ any decision-API wire members are defined by the decision-API binding
 
 # Document History {#document-history}
 
-- Added operational availability guidance, topology-conditional outage
-  behavior, remaining-window ride-through, and truthful separate emergency
-  authority evidence (#310). Operator declarations have no implementation
-  coverage claim in this specification slice.
+\[\[ To be removed from the final specification ]]
+
+- Operational Considerations added (#310): a dependency-conditional outage
+  blast-radius table indexed by action class, the remaining-window
+  ride-through, the declared positive break-glass mode with truthful
+  emergency evidence, and the replication disclosure. The three operator
+  declarations carry no implementation coverage.
 
 # Parameter Digest Worked Example {#parameter-digest-example}
 

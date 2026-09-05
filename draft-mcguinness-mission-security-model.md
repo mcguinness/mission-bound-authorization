@@ -1434,9 +1434,10 @@ model and pipeline layers, and saying so is the point:
 
 # Document History {#document-history}
 
-- Pointed availability analysis to Runtime's operational outage guidance (#310).
-
 \[\[ To be removed from the final specification ]]
+
+- Pointed the Availability limit at Runtime's Operational Considerations
+  for the dependency-conditional outage and ride-through semantics (#310).
 
 - Failure taxonomy crosswalk (#671): an informative subsection added
   to {{cross-cutting}}, mapping the Mandate, Audit, Consent Evidence,
