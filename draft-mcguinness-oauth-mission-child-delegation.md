@@ -215,7 +215,7 @@ back on the issuance profile.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
+Implementation: 14 conformance rows in conformance-manifest.json (14 todo).
 Adopt when: A sub-agent needs its own Mission outliving a call frame, with cascade termination.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Expansion for OAuth 2.0 and Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation reacts to parent lifecycle states); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
@@ -1332,7 +1332,8 @@ Child Mission creation ({{child-creation}}) under a successor grant,
 which re-runs strict-subset validation ({{strict-subset}}) against the
 successor's Authority Set.
 
-There is no subtree-preserving path from fan-out to widening: a
+Without explicitly approved carryover ({{carryover}}), there is no
+batched record-continuity path from fan-out to widening: a
 deployment that creates several Child Missions under a predecessor and
 later expands that predecessor pays for it by tearing down every
 non-terminal descendant and re-creating each one still needed under
@@ -1494,6 +1495,221 @@ from the child's own state surfaces. The consumer obligations of the
 experimental consumer-verified modes are defined with those modes
 ({{experimental-cascade}}).
 
+# Child Mission Carryover {#carryover}
+
+Child Mission Carryover is OPTIONAL. It batches explicitly approved creation
+of replacement records during expansion; it never preserves an old record by
+re-parenting it. The rules below apply to a Mission Issuer implementing this
+capability. Ordinary cascade remains the default when it is not selected.
+
+Carryover requires a child-specific direct approval for each replacement.
+A policy-adjudicated progressive drawdown MUST NOT perform carryover.
+
+## The Approved Manifest {#carryover-manifest}
+
+The Mission Issuer MUST render and commit the exact Carryover Manifest,
+including its exclusion policy and replacement approval facts, at the
+expansion approval event.
+
+A manifest is a JSON object with format_version 1, predecessor and proposed
+successor references, the successor proposal's Intent and authority
+commitments, exclusion_policy, and entries. References include issuer and
+Mission identifier. Proposed identifiers are reserved during preparation;
+reservation creates no authority. Entries are ordered by old created_at,
+then old Mission identifier (byte order), independently of the generation
+order used for derivation. Each entry names:
+
+- child_id, issuer, created_at, child_actor, and current state and version;
+- authority_hash, intent_hash, effective_authority_hash,
+  containment_version, and the exact parent reference and depth;
+- derivation_limit, derivation_count, expires_at, and every mutable
+  discharge, fan-out, meter, or latch input used to decide or transfer
+  eligibility (or authenticated commitments to those inputs);
+- outcome, either carry or cascade, and a reason for cascade; and
+- for carry, replacement_id and the proposed replacement's Intent
+  commitment, approved-authority commitment, actor, parent reference,
+  authority_source, expiry, derivation budget, and deterministic
+  child-specific approval event identifier.
+
+The manifest includes every non-terminal descendant at rendering. It retains
+the complete proposed Intent and authority alongside their commitments, or
+enough committed inputs and a versioned deterministic derivation to reproduce
+them exactly. A reference to an uncommitted mutable policy is insufficient.
+If the replacement inherits the successor's authority_source rather than the
+old child's, that change is explicitly rendered and committed.
+
+The manifest_hash uses the issuance profile's default commitment construction
+over the JCS canonical manifest, including exclusion_policy. The issuer retains
+the manifest with its authenticated approval; the hash alone authenticates no
+approval. Each child-specific event identifier is derived from the committed
+expansion approval event identifier and qualified old-child identity using
+JCS and the same namespaced commitment construction, and is stable on retry.
+
+The exclusion policy is either all-or-nothing (any change requires a fresh
+render/approval), or disclosed-exclusions (only the stated change classes can
+exclude rows, with dependent-descendant exclusion and unrendered-child cascade
+explicitly disclosed). Neither mode silently adds a replacement or changes
+a rendered cascade into carry.
+
+## Completion Snapshot Check {#carryover-cas}
+
+The Mission Issuer MUST compare-and-set every mutable eligibility and
+transfer input committed in the manifest within the completion transaction,
+not merely compare lifecycle version or authority_hash.
+
+This includes effective authority/discharge state, derivation counters,
+fan-out occupancy, and any external meter/latch state. A derivation counter
+can change without a lifecycle-version increment; that still invalidates the
+snapshot. Where the issuer cannot atomically protect an external transfer,
+the affected child is ineligible, with that reason disclosed before approval.
+
+A changed or missing input requires re-rendering, or exclusion strictly under
+the committed policy. Excluding a prospective replacement parent excludes
+every dependent descendant: no replacement attaches to a missing parent.
+New descendants absent from the manifest are never carried; under
+disclosed-exclusions they cascade and appear in the completion evidence.
+Already-terminal old children retain their terminal state and are recorded as
+excluded, never transitioned again to cascaded. Each final outcome is recorded
+against its rendered row, not inferred from set equality over the subtree.
+
+## Generation-by-Generation Eligibility {#carryover-generations}
+
+The Mission Issuer MUST re-derive and validate each carried child in
+generation order against its prospective parent's Effective Authority Set,
+using all ordinary strict-subset, actor, and children-control checks.
+
+A direct child's parent is the successor; a deeper child's parent is its
+new replacement parent, never the root successor. Justification is recomputed
+by {{fanout-accounting}} against the new parent. Survival of the old justifying
+entry is not required: the successor may reorder, split, or combine entries.
+The old mapping is evidence, not stable entry identity.
+
+## No State, Authority, Expiry, or Budget Reset {#carryover-no-reset}
+
+The Mission Issuer MUST use the old child's current Effective Authority Set
+as the replacement's authority ceiling and MUST NOT restore containment or
+discharge removed by that effective-set calculation.
+
+Only an effectively active child is eligible. A suspended child is excluded,
+not resumed by carryover. The replacement's approved set is the rechecked
+effective set, with no overlay reset that restores removed authority.
+
+The replacement's expires_at MUST NOT exceed either the old child's
+expires_at or its new parent's effective expires_at.
+
+A successor's separately approved expiry extension does not extend the old
+child's horizon. Any other policy shortening remains applicable.
+
+The Mission Issuer MUST preserve the old child's derivation_limit and
+derivation_count and atomically preserve every remaining operational budget
+or make the child ineligible.
+
+This is a carryover-specific exception to starting a new child with a fresh
+derivation counter ({{derivation-budget}}): the replacement continues the old
+child's remaining budget, despite receiving a new record identifier.
+Metering and exclusivity require defined, atomic transfer or shared-state
+binding; changing the key to replacement_id is not a transfer. Fan-out is
+recounted against new justifying entries in the same serialization domain,
+including concurrently non-terminal occupants and all carried generations.
+Repeated expansion/carryover cannot replenish any of these budgets.
+
+## Fresh Records and Direct Approval {#carryover-records}
+
+The Mission Issuer MUST create a new record for each replacement, with
+approval_basis.type direct and a child-specific approval event, and MUST NOT
+modify the old child's parent or immutable approval anchors.
+
+The expansion Approver is the consent_principal and ordinary direct
+activation_actor for each replacement; activation carries its deterministic
+approval_event_id and root_commitment is its own authority_hash. The issuer
+re-runs the ordinary source-activation and source-ceiling checks for the
+rendered replacement authority_source. There is no expansion_carryover
+standing-consent basis.
+
+The replacement records related_to as correlation with the qualified old
+child, under expansion's existing correlation semantics. The old child gains
+carried_to, a string containing the replacement Mission identifier under the
+same issuer, only when its cascaded transition and replacement commit.
+carried_to is immutable thereafter, absent for excluded children, and grants
+nothing. Neither pointer selects authority or rebinds a credential.
+
+## Atomic Records, Recoverable Delivery {#carryover-commit}
+
+The Mission Issuer MUST commit successor activation, predecessor
+supersession, every replacement record, the required old-child cascades,
+the final old-to-new map, and durable publication/recovery work atomically.
+
+No partial successor, surviving replacement, or cascade is left by a failed
+transaction. Constructing replacements before cascades inside the transaction
+does not promise a remote observation order. External publication is performed
+after commit and is recoverable and idempotent; it is not included in the
+record transaction by calling a second store's API inside that transaction.
+
+The Mission Issuer MUST provide idempotent retrieval of the committed
+replacement result through the child-creation completion surface to the
+authenticated and authorized child actor.
+
+The deterministic event identifier is a correlation/idempotency key, never
+a bearer credential. Retrieval repeats no approval, creates no duplicate
+replacement, and still enforces current authorization and lifecycle checks
+on any newly issued credential. An interrupted delivery can resume from the
+durably retained result.
+
+A token for the terminated child MUST NOT be treated as a credential of its
+replacement.
+
+Existing tokens retain their original identity and ordinary expiry and
+state-reliance rules; new derivation under the old child stops. Replacement
+authority requires a credential issued for the new record. Without a separate
+readiness/acknowledgment protocol, carryover preserves record continuity and
+removes repeated approval ceremonies, but does not guarantee uninterrupted
+worker execution.
+
+## Carryover Evidence and Observation {#carryover-evidence}
+
+The Mission Issuer MUST retain authenticated Carryover Evidence containing
+the manifest_hash, predecessor and successor references, and the complete
+final map of old child identities to carried or excluded outcomes.
+
+For a carried row the map includes replacement_id and its child-specific
+approval_event_id; for an excluded row it includes reason and observed
+terminal state or committed cascade. Unrendered descendants are listed
+explicitly. The map, not related_to, is the normative record of replacement.
+
+A replacement's ordinary Child Evidence object is extended with
+creation_mode set to carryover, carried_from (qualified old-child reference),
+manifest_hash, and carryover_evidence (an authenticated reference to the
+retained batch map). Its existing parent, child, attenuation, fanout, and
+decision members remain required; a batch map does not replace ordinary
+Child Evidence or become authority.
+
+When Status or Signals is deployed, the issuer MUST carry the committed
+carried_to correlation on the old child's cascaded observation as defined
+by those profiles.
+
+A consumer MUST NOT infer absence of a replacement from receiving a cascade
+before the replacement's creation event.
+
+Signals may duplicate or reorder deliveries. Consumers pair by the
+authenticated issuer-qualified identifiers, retain unresolved pairs, and
+resynchronize through authorized Status/completion/evidence retrieval. The
+durable map makes recovery possible even if creation was never delivered to
+that consumer. Correlation does not override ordinary state, authority, or
+credential verification. No cross-Mission version ordering is implied.
+
+## Acceptance Cases {#carryover-acceptance}
+
+A carryover implementation exercises at least: a carried leaf; an ineligible
+leaf; contained/discharged authority not restored; suspended child excluded;
+grandchild under its replacement parent; dependent exclusion; new fan-out
+limits; predecessor expiry extension not inherited; changed state and missing
+record at completion; derivation consumption and discharge after rendering;
+unrendered new descendants; already-terminal child exclusion; two successive
+carryovers with non-increasing budgets; authenticated idempotent recovery;
+a forced mid-batch rollback; crash after commit before publication; and
+out-of-order creation/cascade signals. Specification of these cases is not
+a claim that the reference implementation passes them.
+
 # Child Evidence {#child-evidence}
 
 The Mission Issuer MUST record a child delegation evidence record with:
@@ -1599,8 +1815,8 @@ A Child Mission MAY be expanded, but only within the parent's authority:
 a successor Child Mission MUST remain a strict subset of the Parent
 Mission's Authority Set ({{strict-subset}}) and keeps the same `parent`.
 Expanding a Child Mission beyond its parent requires expanding the parent
-first. Re-creation of children after a parent is expanded, and
-re-parenting a Child Mission to a different parent, are deferred work.
+first. Explicitly approved batched re-creation after a parent expands is
+defined by {{carryover}}; re-parenting an existing record remains forbidden.
 
 # Composition with Offline Attenuation {#composition-attenuation}
 
@@ -1842,6 +2058,13 @@ this document removes that request, folding child creation into the
 token-exchange grant the rest of the Mission family already uses.
 
 --- back
+
+# Document History {#document-history}
+
+- Added the capability-gated Child Mission Carryover foundation, including
+  full snapshot/budget checks, committed exclusion semantics, fresh direct
+  approvals, and durable observation/recovery. No worker-continuity or
+  implementation-conformance claim is made (#576).
 
 # Experimental Consumer-Verified Cascade Modes {#experimental-cascade}
 

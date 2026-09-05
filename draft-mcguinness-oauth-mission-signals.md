@@ -217,7 +217,7 @@ unaffected by this document.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 6 conformance rows in conformance-manifest.json (5 tested, 1 partial).
+Implementation: 7 conformance rows in conformance-manifest.json (5 tested, 1 partial, 1 todo).
 Adopt when: Consumers need push notice of state changes instead of polling per Mission.
 Requires: Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
@@ -364,6 +364,16 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   approval-event emission, where there is no prior state. A supersede
   transition emits `prior_state` of `active` and `state` of
   `superseded`.
+
+`carried_to` (string, conditional):
+: A deployment implementing Child Mission Carryover MUST include the
+  committed replacement Mission identifier on the old child's cascaded
+  event, and MUST omit it when no replacement was committed. The identifier
+  is qualified by the event's Mission issuer. A receiver does not assume
+  that replacement creation was delivered first; it pairs or resynchronizes
+  under the child profile's Carryover Evidence and Observation rules
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). This is correlation,
+  never authority or a reason to ignore the old child's non-active state.
 
 `version` (integer, required):
 : the Mission's state version at this event's commit, letting a
@@ -948,6 +958,11 @@ IETF; Reference this document, {{as-metadata}}.
 - `mission_event_stream_endpoint`
 
 --- back
+
+# Document History {#document-history}
+
+- Added carryover cascade correlation and out-of-order recovery semantics;
+  event delivery remains non-atomic and may reorder (#576).
 
 # Acknowledgments
 {:numbered="false"}

@@ -243,7 +243,7 @@ referenced, not re-specified, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 3 conformance rows in conformance-manifest.json (2 tested, 1 todo).
+Implementation: 4 conformance rows in conformance-manifest.json (2 tested, 2 todo).
 Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->
@@ -578,6 +578,12 @@ The members are:
     replaced this Mission, set atomically at supersession on the
     predecessor's record
     ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+  - `carried_to`: CONDITIONAL string. A deployment implementing Child Mission
+    Carryover MUST include the committed replacement Mission identifier when
+    reporting the old child's `cascaded` state, and MUST omit it when no
+    replacement was committed. It is same-issuer correlation, not authority
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+    "Carryover Evidence and Observation").
   - `version`: REQUIRED. The Mission's **state version**: a strictly
     monotonic per-Mission counter the Mission Issuer maintains,
     incremented on each committed lifecycle transition (the approval
@@ -1732,3 +1738,8 @@ The author thanks the implementers and reviewers of the Mission-Bound
 Authorization work for feedback that shaped these extensions.
 
 --- back
+
+# Document History {#document-history}
+
+- Added conditional carryover correlation on an old child's cascaded
+  observation; no state or authority is inferred from the pointer (#576).

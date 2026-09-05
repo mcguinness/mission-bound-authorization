@@ -270,7 +270,7 @@ This document does NOT define:
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
+Implementation: 3 conformance rows in conformance-manifest.json (3 todo).
 Adopt when: Approved authority will predictably need to widen mid-task via fresh approval.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->
@@ -775,7 +775,17 @@ above, the expansion consent event is where this price is rendered;
 that consent event is the only point in this profile at which a human
 can witness the cascade before it happens.
 
+Where explicitly approved Child Mission Carryover is selected, the Mission
+Issuer MUST render and commit its complete manifest and exclusion policy,
+and recheck that snapshot at completion under the child profile's Carryover
+rules ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise
+the ordinary cascade notice and per-child re-creation above remain the floor.
+
 ## Successor expiry {#successor-expiry}
+
+An approved successor extension MUST NOT extend a carried child's expiry:
+carryover remains bounded by the old child and its new parent's effective
+expiry ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 The successor's effective `expires_at` follows the issuance profile's
 requested-versus-effective rule
@@ -932,6 +942,12 @@ The transition has these requirements:
     and no successor record exists. The Mission Issuer MUST NOT
     produce a partial successor or a predecessor left in an
     indeterminate state.
+- **Explicit carryover.** When the approved operation includes Child Mission
+  Carryover, the Mission Issuer MUST include replacement records, required
+  old-child cascades, the committed outcome map, and durable recovery work
+  in the same atomic operation. Publication follows commit and is repairable;
+  constructing replacements first does not guarantee external event order
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 - **Non-active: no further derivation.** A `superseded` Mission is not
   `active`, so the issuance profile's issuance gating refuses to derive
   any new token, refresh, token exchange, or cross-domain grant under
@@ -1915,3 +1931,8 @@ OAuth 2.0 profile for feedback on the expansion model and its
 composition with the issuance flow.
 
 --- back
+
+# Document History {#document-history}
+
+- Added explicitly approved carryover hooks for disclosure, atomic completion,
+  and the carried child's unchanged expiry ceiling (#576).
