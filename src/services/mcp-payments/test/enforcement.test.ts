@@ -15,7 +15,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type DecisionEvidence,
   type RefusalRecord,
   type TokenFacts,
@@ -107,7 +106,6 @@ d("M4 core enforcement tier", () => {
       ],
     );
     evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments", tools: ["get_invoice"] };
     const pep = new Pep({
       decide: EVIDENCE_KEYS.decide,
       payments,
@@ -116,7 +114,6 @@ d("M4 core enforcement tier", () => {
       modelId,
       loadView: loadViewFor(VIEW),
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     server = new McpPaymentsServer({
@@ -125,7 +122,6 @@ d("M4 core enforcement tier", () => {
       loadView: loadViewFor(VIEW),
       jwks: { keys: [] },
       issuer: ISSUER,
-      serverCard: card,
     });
   };
 
@@ -266,7 +262,6 @@ d("M4 core enforcement tier", () => {
       ],
     );
     evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments", tools: ["get_invoice"] };
     const pep = new Pep({
       decide: EVIDENCE_KEYS.decide,
       payments,
@@ -275,7 +270,6 @@ d("M4 core enforcement tier", () => {
       modelId,
       loadView: loadViewFor(containedView),
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const containedServer = new McpPaymentsServer({
@@ -284,7 +278,6 @@ d("M4 core enforcement tier", () => {
       loadView: loadViewFor(containedView),
       jwks: { keys: [] },
       issuer: ISSUER,
-      serverCard: card,
     });
     const res = await containedServer.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
     expect(res.ok).toBe(false);

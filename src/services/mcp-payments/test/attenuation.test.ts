@@ -36,7 +36,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
@@ -187,14 +186,12 @@ beforeAll(async () => {
       modelId: "m",
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: "sha-256:x",
       allowedFreshnessSources: new Set(["load_view"]),
     }),
     payments: new PaymentsStore(),
     loadView,
     jwks: { keys: [asPub] },
     issuer: AS_ISS,
-    serverCard: {},
   });
   facts = await server.validateAttenuationChain(chain, await dpopProof(CANONICAL_RESOURCE), CANONICAL_RESOURCE, "POST");
 });
@@ -235,7 +232,6 @@ describe("attenuation chain: verify + leaf enforcement", () => {
       modelId: "m",
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: "sha-256:x",
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const res = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, facts);
@@ -281,7 +277,6 @@ d("attenuation chain: PEP permits an in-leaf action (OpenFGA)", () => {
       [{ id: "acme", name: "Acme", status: "approved" }],
       [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
     );
-    const card = { name: "payments", tools: ["get_invoice"] };
     const pep = new Pep({
       decide: EVIDENCE_KEYS.decide,
       payments,
@@ -290,7 +285,6 @@ d("attenuation chain: PEP permits an in-leaf action (OpenFGA)", () => {
       modelId,
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf(card),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const res = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, facts);

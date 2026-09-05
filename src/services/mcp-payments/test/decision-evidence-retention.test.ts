@@ -38,7 +38,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -106,7 +105,6 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
@@ -115,7 +113,6 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     loadView,
     jwks: { keys: [] },
     issuer: ISSUER,
-    serverCard: { name: "payments" },
   });
   return { server, evidence };
 }

@@ -5,7 +5,7 @@
  * treats them. Presentation and decision-time comparison are separate changes.
  */
 
-import { authorityHash, type CapabilitySourceBinding, capabilitySourceDigest, capabilitySourceIdentity, catalogDigest, extractMcpToolDefinition } from "@mission/core";
+import { authorityHash, type CapabilitySourceBinding, capabilitySourceDigest, capabilitySourceIdentity, catalogDigest, extractMcpToolDefinition, isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { CATALOG_SERVICES, DERIVATION_POLICY, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { TOOLS } from "@mission/mcp-payments";
 import { generateKeyPair } from "jose";
@@ -17,7 +17,11 @@ import {
   createChildMission,
   createExpansion,
   createTemplate,
+  deriveAttenuationRoot,
+  deriveCrossOrgRoot,
+  mapAuthorityToTools,
   dispatchFromTemplate,
+  inheritCapabilitySources,
   IntentError,
   isSubsetEntry,
   isSubsetSet,
@@ -342,6 +346,86 @@ describe("projectThroughEffective: recorded bindings keep the subset property", 
       actions: [READ_ACTION, WRITE_ACTION],
     };
     expect(projectThroughEffective([bound], [unbound])).toEqual([]);
+  });
+
+  it("attaches effective bindings to a bare wire candidate without widening either authority", () => {
+    const { capability_sources: _drop, ...wire } = bound;
+    const result = projectThroughEffective([wire], [bound]);
+    expect(result).toEqual([bound]);
+    expect(isSubsetSet(result, [bound])).toBe(true);
+    expect(isSubsetSet(result, [wire])).toBe(false); // issuer lineage stays strict
+    expect(isSubsetSetIgnoringCapabilitySources(result, [wire])).toBe(true);
+    expect(isSubsetSetIgnoringCapabilitySources(result, [bound])).toBe(true);
+  });
+});
+
+describe("wire-bound attenuation over recorded authority", () => {
+  it("permits both root paths without putting recorded bindings on the AAT tools wire shape", async () => {
+    const record = approve([resolution(READ_ACTION, "get_invoice")]);
+    const { privateKey } = await generateKeyPair("ES256");
+    const requestedTools = mapAuthorityToTools(record.authority_set);
+    const common = { missionId: record.id, aud: RESOURCE, clientId: "ap-agent", cnfJkt: "test-key", requestedTools };
+    const root = await deriveAttenuationRoot(kernel, privateKey, "root", common);
+    expect(root.tools).toEqual(requestedTools);
+    const crossOrg = await deriveCrossOrgRoot(kernel, privateKey, "root", {
+      ...common, actor: { iss: ISS, sub: "ap-agent" }, mappingVersion: "test-v1",
+    });
+    expect(crossOrg.tools).toEqual(requestedTools);
+    expect(JSON.stringify(root.tools)).not.toContain("capability_sources");
+  });
+});
+
+/**
+ * @spec capability-binding#capability-source-binding — the shared predicate the
+ * nine wire-candidate comparison sites now call. A binding is issuer-recorded
+ * provenance, so it is compared only between two issuer-derived sets of one
+ * lineage; a wire candidate carries none by construction and must not be read
+ * as narrower or broader for that reason alone.
+ */
+describe("wire candidates compared against a bound effective set", () => {
+  const bound: AuthorityEntry = {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: [READ_ACTION, WRITE_ACTION],
+    capability_sources: [bindingFor(READ_ACTION, "get_invoice")],
+  };
+  const { capability_sources: _bare, ...wire } = bound;
+
+  it("a wire-requested subset validates against a bound effective set with bindings ignored", () => {
+    const requested: AuthorityEntry = { ...wire, actions: [READ_ACTION] };
+    expect(isSubsetSet([requested], [bound])).toBe(false); // strict refuses it
+    expect(isSubsetSetIgnoringCapabilitySources([requested], [bound])).toBe(true);
+  });
+
+  it("a wire-requested subset that exceeds the effective set on actions still refuses", () => {
+    const requested: AuthorityEntry = { ...wire, actions: [READ_ACTION, VENDOR_ACTION] };
+    expect(isSubsetSetIgnoringCapabilitySources([requested], [bound])).toBe(false);
+  });
+
+  it("the ignoring predicate is symmetric: grantor bound with a bare candidate, and the reverse", () => {
+    expect(isSubsetSetIgnoringCapabilitySources([wire], [bound])).toBe(true);
+    expect(isSubsetSetIgnoringCapabilitySources([bound], [wire])).toBe(true);
+    expect(isSubsetSet([wire], [bound])).toBe(false);
+    expect(isSubsetSet([bound], [wire])).toBe(false);
+  });
+
+  it("a grantor-side binding contradiction refuses as invalid_authorization_details, the code the child-creation and dispatch adapters map", () => {
+    const conflicting: CapabilitySourceBinding = {
+      ...bindingFor(READ_ACTION, "get_invoice"),
+      source_digest: capabilitySourceDigest({ name: "get_invoice", description: "y" }),
+    };
+    const grantor: AuthorityEntry[] = [
+      { ...wire, actions: [READ_ACTION], capability_sources: [bindingFor(READ_ACTION, "get_invoice")] },
+      { ...wire, actions: [READ_ACTION], capability_sources: [conflicting] },
+    ];
+    expect(() => inheritCapabilitySources([{ ...wire, actions: [READ_ACTION] }], grantor)).toThrow(
+      IntentError,
+    );
+    try {
+      inheritCapabilitySources([{ ...wire, actions: [READ_ACTION] }], grantor);
+    } catch (e) {
+      expect((e as IntentError).code).toBe("invalid_authorization_details");
+    }
   });
 });
 

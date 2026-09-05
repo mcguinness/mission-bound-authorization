@@ -16,7 +16,6 @@ import {
   EvidenceStore,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -110,7 +109,6 @@ function pep(): Pep {
         ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
         : undefined,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
     revokedInstances: revoked,
   });

@@ -30,7 +30,7 @@ import {
   authoritySourceOf,
   resolveSourceForClient,
 } from "./authority-source.js";
-import { inheritCapabilitySources } from "./capability-binding.js";
+import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -125,7 +125,7 @@ export interface CreateTemplateInput {
 export function createTemplate(
   store: TemplateStore,
   input: CreateTemplateInput,
-  options: { authoritySourceCatalog: AuthoritySourceCatalog },
+  options: { authoritySourceCatalog: AuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver },
 ): MissionTemplate {
   if (input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
@@ -146,10 +146,14 @@ export function createTemplate(
   if (existing) return existing;
 
   const authority_source = establishTemplateAuthoritySource(input, options);
+  // At this trusted establishment boundary, request-body bindings are never facts.
+  const ceiling = options.capabilityResolver
+    ? resolveFreshCapabilitySources(input.ceiling.map(({ capability_sources: _drop, ...entry }) => entry), options.capabilityResolver)
+    : input.ceiling;
 
   const templateBody = {
     template_version: input.template_version,
-    ceiling: input.ceiling,
+    ceiling,
     dispatch_policy: input.dispatch_policy,
     dispatchers: input.dispatchers,
     recipients: input.recipients,
@@ -165,7 +169,7 @@ export function createTemplate(
     templateBody as unknown as JsonValue,
   );
   const id = `tmpl_${randomBytes(18).toString("base64url")}`;
-  const create: TemplateCreate = { ...input, id, template_hash, authority_source };
+  const create: TemplateCreate = { ...input, ceiling, id, template_hash, authority_source };
   return store.create(create);
 }
 
