@@ -1023,6 +1023,10 @@ its own Decision against the Mission's effective authority
 the existing freshness bounds. This does not impose zero staleness or
 an issuer call for every request; it forbids using prepare's Decision
 or state observation as the commit authorization.
+A fresh commit-phase Decision binds the request as presented: where a
+resource-resolved fact moved between prepare and commit, the parameter
+digest can still match. Capturing target state at decision time is a
+separate runtime extension, outside this section.
 
 A permit for a phase MUST bind that phase. Where phases already have
 distinct action identifiers, the action binding also distinguishes
