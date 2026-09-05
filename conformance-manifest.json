@@ -150,6 +150,7 @@
    "concurrency"
   ],
   "capabilities": [
+   "status.revocation-propagation",
    "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
@@ -198,6 +199,28 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "status.operational.bound-sized-to-recovery",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "status-operational",
+   "text": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing mission_max_stale_seconds and the availability consequence when recovery takes longer than that bound.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The declared propagation ceiling includes its recovery sizing and designed-halt consequence; recovery never extends the security ceiling or restarts an old observation's window."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
+  },
   {
    "id": "runtime.operational.ride-through-declared",
    "spec": "draft-mcguinness-mission-runtime.md",

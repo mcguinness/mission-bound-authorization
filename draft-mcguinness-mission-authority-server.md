@@ -2389,6 +2389,10 @@ work stoppage for governed actions, not into loosened enforcement
 {{I-D.draft-mcguinness-mission-security-model}}). A deployment
 provisions MAS availability accordingly and sizes
 `mission_max_stale_seconds` to the caching it can tolerate.
+Runtime and Status's Operational Considerations describe dependency-specific
+outage effects, remaining-window ride-through, and recovery observations
+({{I-D.draft-mcguinness-mission-runtime}},
+{{I-D.draft-mcguinness-oauth-mission-status}}).
 
 ## Signing-Key Custody
 
@@ -2532,6 +2536,11 @@ extension data and are not registered in an IETF registry, so this
 document requests no IANA action for it.
 
 --- back
+
+# Document History {#document-history}
+
+- Pointed MAS availability guidance at Runtime and Status operational
+  considerations (#310); no MAS enforcement requirement changed.
 
 # MAS-Mode End-to-End Example {#e2e-example}
 
