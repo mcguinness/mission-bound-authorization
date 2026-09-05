@@ -783,10 +783,6 @@ the ordinary cascade notice and per-child re-creation above remain the floor.
 
 ## Successor expiry {#successor-expiry}
 
-An approved successor extension MUST NOT extend a carried child's expiry:
-carryover remains bounded by the old child and its new parent's effective
-expiry ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
-
 The successor's effective `expires_at` follows the issuance profile's
 requested-versus-effective rule
 ({{I-D.draft-mcguinness-oauth-mission}}). It MUST NOT be later than
@@ -818,6 +814,10 @@ approved extension it is also no later than the predecessor's
 extension and the exact effective value was rendered and approved at
 the expansion consent event. Any further shortening is justified by
 recorded policy.
+
+An approved successor extension MUST NOT extend a carried child's expiry:
+carryover remains bounded by the old child and its new parent's effective
+expiry ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 # The Predecessor Mission Reference {#predecessor-member}
 
@@ -1933,6 +1933,8 @@ composition with the issuance flow.
 --- back
 
 # Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
 
 - Added explicitly approved carryover hooks for disclosure, atomic completion,
   and the carried child's unchanged expiry ceiling (#576).

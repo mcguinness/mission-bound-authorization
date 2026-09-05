@@ -1741,5 +1741,7 @@ Authorization work for feedback that shaped these extensions.
 
 # Document History {#document-history}
 
+\[\[ To be removed from the final specification ]]
+
 - Added conditional carryover correlation on an old child's cascaded
   observation; no state or authority is inferred from the pointer (#576).

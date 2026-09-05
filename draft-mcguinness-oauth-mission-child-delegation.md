@@ -1539,7 +1539,7 @@ If the replacement inherits the successor's authority_source rather than the
 old child's, that change is explicitly rendered and committed.
 
 The manifest_hash uses the issuance profile's default commitment construction
-over the JCS canonical manifest, including exclusion_policy. The issuer retains
+over the JCS {{RFC8785}} canonical manifest, including exclusion_policy. The issuer retains
 the manifest with its authenticated approval; the hash alone authenticates no
 approval. Each child-specific event identifier is derived from the committed
 expansion approval event identifier and qualified old-child identity using
@@ -1642,8 +1642,8 @@ the final old-to-new map, and durable publication/recovery work atomically.
 No partial successor, surviving replacement, or cascade is left by a failed
 transaction. Constructing replacements before cascades inside the transaction
 does not promise a remote observation order. External publication is performed
-after commit and is recoverable and idempotent; it is not included in the
-record transaction by calling a second store's API inside that transaction.
+after commit and is recoverable and idempotent; it is never performed inside
+the record transaction.
 
 The Mission Issuer MUST provide idempotent retrieval of the committed
 replacement result through the child-creation completion surface to the
@@ -1707,8 +1707,7 @@ record at completion; derivation consumption and discharge after rendering;
 unrendered new descendants; already-terminal child exclusion; two successive
 carryovers with non-increasing budgets; authenticated idempotent recovery;
 a forced mid-batch rollback; crash after commit before publication; and
-out-of-order creation/cascade signals. Specification of these cases is not
-a claim that the reference implementation passes them.
+out-of-order creation/cascade signals.
 
 # Child Evidence {#child-evidence}
 
@@ -2059,13 +2058,6 @@ token-exchange grant the rest of the Mission family already uses.
 
 --- back
 
-# Document History {#document-history}
-
-- Added the capability-gated Child Mission Carryover foundation, including
-  full snapshot/budget checks, committed exclusion semantics, fresh direct
-  approvals, and durable observation/recovery. No worker-continuity or
-  implementation-conformance claim is made (#576).
-
 # Experimental Consumer-Verified Cascade Modes {#experimental-cascade}
 
 This appendix is **experimental**: adopt it for evaluation, not as a
@@ -2118,6 +2110,15 @@ rules where it cannot observe the parent synchronously; a Child
 Mission must not derive after the parent is known to be non-active.
 The `immediate` rules of {{cascade}} and {{child-state}} otherwise
 apply unchanged.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Added the capability-gated Child Mission Carryover foundation, including
+  full snapshot and budget checks, committed exclusion semantics, fresh
+  direct approvals, and durable observation and recovery. Carryover
+  preserves record continuity, not worker continuity (#576).
 
 # Acknowledgments
 {:numbered="false"}

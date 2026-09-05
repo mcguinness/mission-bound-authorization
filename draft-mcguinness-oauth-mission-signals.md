@@ -961,6 +961,8 @@ IETF; Reference this document, {{as-metadata}}.
 
 # Document History {#document-history}
 
+\[\[ To be removed from the final specification ]]
+
 - Added carryover cascade correlation and out-of-order recovery semantics;
   event delivery remains non-atomic and may reorder (#576).
 
