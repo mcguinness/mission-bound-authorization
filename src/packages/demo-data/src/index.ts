@@ -441,7 +441,11 @@ function parseCatalogActions(
     if (seen.has(id)) throw new ConfigError(file, `${ctx}.actions declares ${id} twice`);
     seen.add(id);
     if (a.tool_name !== undefined) reqString(file, a, "tool_name", `${ctx}.actions[${j}]`);
-    return { id, amount_bearing: a.amount_bearing, ...(a.tool_name !== undefined ? { tool_name: a.tool_name as string } : {}) };
+    return {
+      id,
+      amount_bearing: a.amount_bearing,
+      ...(a.tool_name !== undefined ? { tool_name: a.tool_name as string } : {}),
+    };
   });
 }
 
