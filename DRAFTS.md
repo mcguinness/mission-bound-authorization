@@ -48,7 +48,7 @@ everything outside their markers is hand-authored.
 
 46 documents: 1 core, 5 adapter-binding, 37 companion, 3 guide.
 Spec maturity: 1 candidate, 38 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
-Conformance ledger (`conformance-manifest.json`): 646 requirement rows across 20 audited specs (183 tested, 70 partial, 390 todo, 3 blocked); 26 documents carry no rows in the audited set yet.
+Conformance ledger (`conformance-manifest.json`): 656 requirement rows across 21 audited specs (193 tested, 71 partial, 389 todo, 3 blocked); 25 documents carry no rows in the audited set yet.
 
 <!-- generated:family-counts:end -->
 

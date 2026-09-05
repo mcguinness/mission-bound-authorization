@@ -935,6 +935,9 @@ export class Pep {
         // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
         freshness,
         actor: contextActor,
+        // @spec capability-binding#context-capability-source — the PEP supplies
+        // the binding for a catalog-sourced action, and omits the member entirely
+        // for a non-catalog one.
         ...(capability.catalog_sourced ? { capability_source: capability.binding } : {}),
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),

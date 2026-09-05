@@ -1,5 +1,8 @@
 import { catalogDigest, capabilitySourceDigest, extractMcpToolDefinition } from "@mission/core";
-import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
+import { TRUSTED_TOOL_CATALOGS, DERIVATION_POLICY, AUTHORITY_SOURCES } from "@mission/demo-data";
+import { MissionKernel, validateMissionIntent } from "@mission/authorization-server";
+import { trustedCapabilityResolver } from "../../authorization-server/src/adapters/capability-resolver.js";
+import { generateKeyPair } from "jose";
 import type { EvaluationRequest, Fga, MissionView } from "@mission/pdp";
 import { describe, expect, it } from "vitest";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, PaymentsToolCatalog, Pep, TOOLS, parameterDigest, type TokenFacts } from "../src/index.js";
@@ -26,6 +29,24 @@ function fixture(source: () => string = () => text) {
 }
 
 describe("one catalog snapshot from discovery to invocation", () => {
+  it("a served definition edited after real approval denies capability_drift and retains the compared evidence", async () => {
+    const key = (await generateKeyPair("ES256")).privateKey;
+    const kernel = new MissionKernel({ issuer: "https://as.test", policy: DERIVATION_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, capabilityResolver: trustedCapabilityResolver(), statusKey: key, statusKid: "status" });
+    const record = kernel.approve({ intent: validateMissionIntent(JSON.stringify({ goal: "Read invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" })), proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }], subject: { iss: "https://as.test", sub: "alice" }, approver: { iss: "https://as.test", sub: "bob" }, clientId: "ap-agent", approvalEventId: "catalog-e2e" });
+    let current = text;
+    const f = fixture(() => current);
+    Object.assign(f.view, { id: record.id, authority_hash: record.authority_hash, authority_set: record.authority_set });
+    const credential = { ...token, mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash } };
+    expect((await f.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, credential)).ok).toBe(true);
+    current = text.replace("Read one invoice", "A different operation definition");
+    expect(await f.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, credential)).toEqual({ ok: false, denial_reason: "capability_drift" });
+    const retained = f.evidence.forMission(record.id).filter(e => e.kind === "decision");
+    expect(retained).toHaveLength(2);
+    expect(retained[0]?.content.capability_source?.source_digest).toBe(record.authority_set[0]?.capability_sources?.[0]?.source_digest);
+    expect(retained[1]?.content.denial_reason).toBe("capability_drift");
+    expect(retained[1]?.content.capability_source?.source_digest).toBe(capabilitySourceDigest(extractMcpToolDefinition(current, "get_invoice")));
+  });
+
   it("serves exact discovery octets and selects tools/list definitions from the same source", async () => {
     const f = fixture();
     const listener = await startResourceMetadataServer(() => f.server);

@@ -1,4 +1,11 @@
-/** Trusted, synchronous snapshot adapter; never follows a client-supplied URI. */
+/**
+ * Trusted, synchronous snapshot adapter; never follows a client-supplied URI.
+ *
+ * @spec capability-binding#conformance — the validating server's recording
+ * duty: `tool_id`, `source_uri`, `source_digest` and `operation_ref` for every
+ * catalog-sourced action, resolved at derivation. This deployment's trust unit
+ * is the selected capability definition, so no `catalog_digest` is recorded.
+ */
 import { capabilitySourceDigest, extractMcpToolDefinition } from "@mission/core";
 import { CATALOG_SERVICES, TRUSTED_TOOL_CATALOGS, type CatalogServiceSeed, type TrustedToolCatalog } from "@mission/demo-data";
 import type { CapabilitySourceResolver, CapabilitySourceResolution } from "../kernel/capability-binding.js";
