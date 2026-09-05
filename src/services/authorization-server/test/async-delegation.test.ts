@@ -25,7 +25,7 @@
  */
 
 import { type Server } from "node:http";
-import { canonicalize, type JsonValue } from "@mission/core";
+import { type AuthorityEntry, canonicalize, type JsonValue } from "@mission/core";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -477,6 +477,19 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
     expect((payload.cnf as { jkt?: string }).jkt).toBe(actingJkt); // sender-constrained to the acting DPoP key
     expect((payload.mission as { id?: string }).id).toBe(missionId);
     expect(payload.authorization_details).toMatchObject(confinedAuthority());
+
+    // @spec capability-binding#capability-source-binding (#657 B2) — the extra
+    // member `toMatchObject` tolerates above is the issuer's own recorded
+    // provenance, inherited by the wire-confined subset at mint through the
+    // asymmetric projection. Assert it exactly, so the relaxed matcher never
+    // silently admits something else.
+    const minted = (payload.authorization_details as AuthorityEntry[])[0];
+    expect(minted?.capability_sources).toEqual(
+      (as.kernel.get(missionId)?.authority_set ?? [])
+        .flatMap((e) => e.capability_sources ?? [])
+        .filter((b) => b.action === "payments:invoice.read"),
+    );
+    expect(minted?.capability_sources?.length).toBeGreaterThan(0);
 
     // The family is recorded (grant_id -> mission_id).
     const families = as.delegationFamilyStore.familiesForMission(missionId);
