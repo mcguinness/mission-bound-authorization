@@ -15,8 +15,8 @@
     "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "c8e39a5ddca4a92749c324ec2ffea777d21bc8a2",
-    "content_sha256": "091e70e557fa75965250e7ad4fcf8e7181cc7ac4b6bcadeb2e64e404d44bb5f3"
+    "revision": "e86355ef998640d09e9b2847bc48697f710dd7fe",
+    "content_sha256": "aced771852f65bafd5471d9c3cd057197c5e0c70564c02ed1a8ca000b910b00e"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -6264,7 +6264,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement whose baseline declaration names its mediated resources/action classes/execution paths, PEP locations, excluded paths, and Mission-establishment mode; its supported authority-entry types and the evaluator for each; the PDP or PDPs; the Mission state source, maximum staleness bound, and PDP-unavailability posture; the remote decision-channel trust mode for every non-co-resident PEP/PDP boundary; and the append-only integrity-protection mechanism for its records (#724: custody mode, evidence mechanism, and retention are named-extension declarations attached only when claimed, never universal baseline members)"
+    "normative": "a deployment claiming this profile publishes a structured Enforcement Scope Statement whose baseline declaration names its mediated resources/action classes/execution paths, PEP locations, excluded paths, and Mission-establishment mode; its supported authority-entry types and the evaluator for each; the PDP or PDPs; the Mission state source, maximum staleness bound, and PDP-unavailability posture; the remote decision-channel trust mode for every non-co-resident PEP/PDP boundary; and the append-only integrity-protection mechanism for its records (#724: custody mode, evidence mechanism, and retention are named-extension declarations attached only when claimed, never universal baseline members); the per-entry perimeter disposition #758 adds inside mediated_scope is a field on entries, not a seventh baseline member, and its validation is carried by runtime.conformance.perimeter-disposition-declared and runtime.conformance.no-reconstructed-as-mediated, not by the six omission tests below"
    },
    "level": "endpoint",
    "coverage": "partial",
