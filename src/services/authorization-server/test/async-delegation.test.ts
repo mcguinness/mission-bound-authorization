@@ -24,6 +24,8 @@
  *   plus absolute-lifetime clamping and family revocation on terminal lifecycle paths.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
@@ -208,6 +210,7 @@ async function issueBaseMission(
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: intent,
       authorization_details: JSON.stringify(authority),
       client_assertion: await clientAssertion(),
@@ -226,8 +229,8 @@ async function issueBaseMission(
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -371,6 +374,7 @@ async function createChildViaExchange(
     requested_token_type: JWT_TOKEN_TYPE,
     creation_request_id: crypto.randomUUID(),
     parent: parentId,
+    login_hint: "alice",
     mission_intent: JSON.stringify({
       intent: {
         goal: "Extract Acme invoices",
@@ -407,7 +411,7 @@ beforeAll(async () => {
   };
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    allowHeadlessAdjudication: true,
+    allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     authoritySource: {
       effectiveAuthoritySet: (record) => {
         if (sourceOutage !== undefined) throw new SourceUnavailableError(sourceOutage);
@@ -1303,6 +1307,7 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
       subject_token: predecessorAccessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
           goal: "Widen for the async-delegation family lineage regression (#651)",

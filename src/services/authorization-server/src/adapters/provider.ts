@@ -5,6 +5,7 @@
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
@@ -260,6 +261,7 @@ export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
 export interface ServiceTokenPrincipal {
   principal_id: string;
   scopes: string[];
+  approver?: ApprovalPrincipal;
 }
 
 /**
@@ -288,8 +290,11 @@ export interface AdapterOptions {
   clients: Record<string, unknown>[];
   jwks: { keys: Record<string, unknown>[] };
   publicJwks: { keys: Record<string, unknown>[] };
-  /** Test-only headless adjudication (D40): disabled unless set. */
+  /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
+  approvalSessions?: ApprovalSessionStore;
+  approverApprovesFor: Map<string, Set<string>>;
+  knownSubjects: Set<string>;
   /**
    * @spec mission#intent-submission-evidence — the GLOBAL policy-required
    * Intent Submission Evidence types (the anti-downgrade hook): resolved
@@ -1747,9 +1752,28 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
     if (decideMatch && ctx.method === "POST") {
-      if (!opts.allowHeadlessAdjudication && !requireServiceToken(ctx)) return;
       const body = await readJsonBody(ctx.req);
-      await decide(provider, opts, ctx, body);
+      if (["approver", "subject", "approver_acr", "approver_auth_time"].some(k => Object.hasOwn(body, k)) ||
+          (body.decision !== "approve" && body.decision !== "deny")) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "decide accepts a decision, not resolving identity" };
+        return;
+      }
+      const uid = decideMatch[1]!;
+      const origin = ctx.get("origin");
+      const browser = (!origin || origin === new URL(opts.issuer).origin)
+        ? opts.approvalSessions?.resolve(ctx.get("cookie"), ctx.get("x-csrf-token"), uid)
+        : undefined;
+      const token = ctx.get("x-service-token");
+      const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
+      const principal = browser ?? (opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
+        validApprovalPrincipal(service.approver) ? service.approver : undefined);
+      if (!principal || principal.auth_time > Math.floor(opts.kernel.nowDate().getTime() / 1000)) {
+        ctx.status = 401;
+        ctx.body = { error: "unauthorized" };
+        return;
+      }
+      await decide(provider, opts, ctx, body, principal);
       return;
     }
 
@@ -2932,8 +2956,14 @@ async function decide(
   opts: AdapterOptions,
   ctx: KoaCtx,
   body: Record<string, unknown>,
+  principal: ApprovalPrincipal,
 ) {
   const details = await provider.interactionDetails(ctx.req, ctx.res);
+  if (details.uid !== ctx.path.split("/")[2]) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request" };
+    return;
+  }
   const params = details.params as Record<string, unknown>;
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
   // approval and intent_hash cover exactly the semantic `intent`.
@@ -2976,8 +3006,13 @@ async function decide(
     typeof params.authorization_details === "string"
       ? opts.kernel.validateProposal(params.authorization_details, intent.target_resources)
       : undefined;
-  const approver = String(body.approver ?? "");
-  const subject = String(body.subject ?? approver);
+  const approver = principal.sub;
+  const subject = typeof params.login_hint === "string" ? params.login_hint : approver;
+  if (!opts.knownSubjects.has(subject) || (subject !== approver && !opts.approverApprovesFor.get(approver)?.has(subject))) {
+    ctx.status = 403;
+    ctx.body = { error: "approval_forbidden" };
+    return;
+  }
 
   if (body.decision !== "approve") {
     await provider.interactionFinished(ctx.req, ctx.res, {
@@ -2991,19 +3026,10 @@ async function decide(
   // `acr_values`/`max_age` (standard OIDC authorization-request params;
   // oidc-provider parses them unconditionally, no extraParams registration
   // needed) describe the Approver's authentication, never the Subject's. This
-  // headless adjudication surface has no real IdP login step, so the achieved
-  // context is supplied directly on the decide() body (`approver_acr`,
-  // `approver_auth_time`), exactly as `approver`/`subject` already are; a
-  // deployment with a real approval UI sources it from that UI's own
-  // login/session, never from client input. Failure here is the
-  // {{error-mapping}} authorization-decision row: `access_denied`.
-  const achievedAcr = typeof body.approver_acr === "string" ? body.approver_acr : undefined;
-  const achievedAuthTime =
-    typeof body.approver_auth_time === "number"
-      ? body.approver_auth_time
-      : typeof body.approver_auth_time === "string"
-        ? Math.floor(Date.parse(body.approver_auth_time) / 1000)
-        : undefined;
+  // resolution surface supplies the achieved context from its independent
+  // login or scoped service-principal registration, never from decide input.
+  const achievedAcr = principal.acr;
+  const achievedAuthTime = principal.auth_time;
   const requestedPrompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
   if (
     !approverAuthenticationSatisfies(

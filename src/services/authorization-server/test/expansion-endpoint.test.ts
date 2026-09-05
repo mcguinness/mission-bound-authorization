@@ -27,6 +27,8 @@
  * proof are both refused (#448).
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
@@ -179,6 +181,7 @@ async function issuePredecessor(actions: string[]): Promise<{ missionId: string;
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: intentJson("Pay Acme invoices", actions),
       authorization_details: JSON.stringify(authority(actions)),
       client_assertion: await clientAssertion(),
@@ -197,8 +200,8 @@ async function issuePredecessor(actions: string[]): Promise<{ missionId: string;
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -236,6 +239,7 @@ async function expandViaExchange(
     subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    login_hint: "alice",
     mission_intent: intentJson(goal, actions, expiresAt),
     authorization_details: JSON.stringify(authority(actions)),
     // @spec expansion#creation-request-id — REQUIRED on every initiation.
@@ -268,7 +272,7 @@ const containEvent = (id: string) => ({
 });
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
@@ -329,6 +333,7 @@ describe("expansion wire: Submission envelope (@spec mission#submission-via-par,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       // The pre-envelope bare shape, byte-for-byte what intentJson used to emit.
+      login_hint: "alice",
       mission_intent: JSON.stringify({ goal: "Widen", target_resources: [RESOURCE], expires_at: FAR_EXP }),
       authorization_details: JSON.stringify(authority(["payments:invoice.read", "payments:remittance.send"])),
       creation_request_id: crypto.randomUUID(),
@@ -365,6 +370,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
       subject_token: pred.accessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: { goal: "Widen with provenance", target_resources: [RESOURCE], expires_at: FAR_EXP },
         evidence: [entry],
@@ -411,6 +417,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
       subject_token: pred.accessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: { goal: "Widen with stale provenance", target_resources: [RESOURCE], expires_at: FAR_EXP },
         evidence: [{ type: EXP_TYPE, assertion: "stale" }],
@@ -792,6 +799,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
       subject_token: "not-an-access-token",
       subject_token_type: REFRESH_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: intentJson("Widen", ["payments:invoice.read"]),
       authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
     });
@@ -809,6 +817,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
       subject_token: pred.accessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: intentJson("Read invoices only", ["payments:invoice.read"]),
       authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
     });

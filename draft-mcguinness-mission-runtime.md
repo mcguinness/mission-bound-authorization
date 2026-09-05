@@ -1078,7 +1078,7 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 122 conformance rows in conformance-manifest.json (30 tested, 21 partial, 68 todo, 3 blocked).
+Implementation: 124 conformance rows in conformance-manifest.json (31 tested, 22 partial, 68 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
@@ -1501,7 +1501,7 @@ bound to the action parameters. It composes with, and does not replace,
 {{RFC9470}} step-up authentication, which strengthens the actor's
 authentication context rather than approving a specific action.
 
-Four rules govern the approval's enforcement:
+Five rules govern the approval's enforcement:
 
 1. A PEP MUST refuse an action for which the applicable entry's
    `constraints.requires_action_approval` is `true`, or deployment
@@ -1523,6 +1523,18 @@ Four rules govern the approval's enforcement:
    be reverified under the time-of-check to time-of-use rules of
    {{parameter-binding}}. A parameter change after approval
    invalidates it.
+5. The surface that resolves an action-bound approval MUST NOT be invocable
+   from the agent's tool plane or from any channel the agent drives. The
+   resolving principal's identity and achieved authentication context MUST be
+   established by the resolution surface itself, never taken from caller input.
+   An approval resolved through a surface that fails either rule MUST NOT
+   satisfy this section's gate, and the PEP MUST refuse the action.
+
+An agent MAY observe an approval's state, and a status poll is often
+necessary for it to decide whether to proceed; it MAY request an independent
+approval; it MUST NOT be able to resolve one. Observable, not invokable, is
+the distinction: whoever nominally holds the resolving credential, the
+resolution path is not among the agent's tools.
 
 The permit lease does not substitute for the maximum-age bound: a
 permit's validity window ({{parameter-binding}}) bounds the permit,
@@ -1784,6 +1796,13 @@ an emitter's assertion nor the completeness or ordering of the
 evidence stream; those remain the concern of reconciliation,
 sequence-gap detection, and the transparency mechanisms
 ({{evidence}}, {{I-D.draft-mcguinness-mission-audit}}).
+
+**Agent-invokable approval resolution** can leave evidence-emission isolation
+intact while defeating the approval gate. An isolated emitter can faithfully
+record a decision whose approval input the agent supplied by invoking a
+resolution surface, even when the nominal Approver is a distinct principal.
+Emission-path validation alone does not establish independent resolution;
+the approval-resolution boundary in {{action-approval}} supplies that rule.
 
 Key separation is not part of this condition: an evidence-signing
 key SHOULD be cryptographically distinct from every
@@ -2746,6 +2765,7 @@ claim, and a deployment SHOULD retain evidence that it ran them.
 | Agent resumes background work after Mission state went stale | Paused or refused on resume re-check |
 | Agent delegates to a sub-agent with no explicit delegation | Blocked (no inheritance by session ancestry) |
 | Agent alters action parameters after the permit is issued | Blocked by parameter-digest reverification |
+| Agent invokes approval resolution, or supplies the resolving principal, to satisfy required approval | Refused; the approval does not count and the action fails closed |
 | Agent requests or receives context outside the active Mission's scope | Refused or withheld |
 | Agent egresses over a secondary channel (DNS, logs, shared store) | Blocked if the channel is in the mediated set; otherwise declared outside the claim |
 
@@ -3182,6 +3202,14 @@ any decision-API wire members are defined by the decision-API binding
 ({{authzen}}, {{I-D.draft-mcguinness-mission-authzen}}).
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Added approval-resolution rule 5, the agent-invokable approval bypass,
+  and its negative-conformance case (#759). Observing or requesting an
+  independent approval is distinct from resolving it.
 
 # Parameter Digest Worked Example {#parameter-digest-example}
 

@@ -24,12 +24,11 @@ import { callWithTransactionCredential, composeStack } from "./stack.js";
 import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import {
   clientAssertionSigner,
-  completeMissionApproval,
-  denyMissionApproval,
   dpopProofFor,
-  issueMissionToken,
   submitMissionApproval,
 } from "./oauth-client.js";
+import { completeMissionApproval, denyMissionApproval, issueMissionToken } from "./approval-console.js";
+import { installConsoleSessionBoundary } from "./console-session-boundary.js";
 
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
 
@@ -204,7 +203,7 @@ async function main() {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ]);
-  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
+  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" }, stack.authServer.approverServiceToken);
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   // @spec authority-server#mission-join (#557 review point 5) — validateToken()
   // returns MissionBoundTokenFacts specifically (mission REQUIRED, never
@@ -232,8 +231,9 @@ async function main() {
     await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
   }
 
-  // One dev session with both persona roles (auto-login for the demo).
-  const session = stack.bff.sessions.create("demo-operator", ["operator", "approver"]);
+  // Separate operator login: its random bootstrap secret is never served by
+  // an agent route. The downstream approver credential remains server-side.
+  const session = stack.bff.sessions.create("bob", ["operator", "approver"]);
 
   // Publish any evidence produced since the last call to the transparency log
   // so the operator timeline reflects the newest agent activity.
@@ -414,6 +414,7 @@ async function main() {
   };
 
   const app = new Hono();
+  installConsoleSessionBoundary(app, session);
   app.onError((err, c) => c.json({ error: err.message }, 500));
   app.notFound((c) => c.json({ error: "not found" }, 404));
 
@@ -453,7 +454,7 @@ async function main() {
         return c.json({ approved: rec.state === "active", state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
       }
       if (decision === "deny") {
-        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar });
+        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, stack.authServer!.approverServiceToken);
         rec.state = "denied";
         return c.json({ approved: false, state: "denied" });
       }
@@ -466,7 +467,7 @@ async function main() {
           uid: rec.submitted.uid,
           jar: rec.submitted.jar,
           par: rec.submitted.par,
-        });
+        }, stack.authServer!.approverServiceToken);
       } catch (e) {
         return c.json({ approved: false, error: (e as Error).message }, 400);
       }
@@ -717,7 +718,7 @@ async function main() {
   });
 
   serve({ fetch: app.fetch, port: PORT }, () => {
-    console.log(`\nMission demo console: http://localhost:${PORT}`);
+    console.log(`\nMission demo console (operator-only login link): http://localhost:${PORT}/#console-login=${session.id}`);
     console.log(`Seeded mission ${missionId} (subject alice, approver bob), one wire executed with evidence.`);
     console.log("Operator: fleet + lifecycle + verified evidence timeline. Agent: catalog + act. Approver: queue.\n");
   });
