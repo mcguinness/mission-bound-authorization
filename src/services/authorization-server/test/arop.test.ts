@@ -96,6 +96,11 @@ const approveMission = (n: number, vendors: string[]) =>
   kernel.approve({
     intent: intent(),
     proposedAuthority: proposal(vendors),
+    capabilityResolution: [{ resource: RESOURCE, action: "payments:invoice.read", binding: {
+      action: "payments:invoice.read", tool_id: "mcp://payments.test/tools/get_invoice",
+      source_uri: "https://payments.test/.well-known/mcp", operation_ref: "get_invoice",
+      source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"),
+    } }],
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "ap-agent",
