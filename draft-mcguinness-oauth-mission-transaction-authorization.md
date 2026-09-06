@@ -384,6 +384,11 @@ current governance state, and the fresh decision of
 {{challenge-redemption}} re-evaluates it like any other current
 policy input rather than consuming it as the approval itself.
 
+For a compound action, the runtime profile places this profile's
+single-use authorization at one commit-phase operation, never across
+preparation, commit, and compensation
+({{I-D.draft-mcguinness-mission-runtime}}).
+
 # Resource Challenge {#resource-challenge}
 
 After receiving an ordinary Mission-bound request for an action that
@@ -1218,6 +1223,13 @@ JWT or an ordinary Mission token presented as a transaction token; a
 privacy projection showing raw parameters and approval detail absent
 from the token; and evidence correlation from challenge and decision
 through exactly one execution or terminal refusal.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Linked applicability to the runtime compound-action model: a
+  transaction token authorizes one commit-phase operation (#252).
 
 # Acknowledgments
 {:numbered="false"}

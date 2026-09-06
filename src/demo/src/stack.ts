@@ -9,6 +9,7 @@ import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   type AuthorityEntry,
   buildAuthorizationServer,
+  MISSION_APPROVAL_SCOPE,
   type ChallengeIssuers,
   CatalogProvider,
   type DeferralStore,
@@ -67,6 +68,8 @@ export interface AuthServerExtras {
   asUrl: string;
   /** The agent confidential client's private JWK (private_key_jwt signer). */
   agentClientJwk: Record<string, unknown>;
+  /** Trusted console/driver only. Never included in agent dependencies or tool results. */
+  approverServiceToken: string;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
   deferrals: DeferralStore;
   ras: ResourceAuthorizationServer;
@@ -234,9 +237,14 @@ export async function composeStack(opts: {
         },
       ],
     ]);
+    const approverServiceToken = crypto.randomUUID();
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
+      serviceTokenPrincipals: {
+        [approverServiceToken]: { principal_id: "svc:approver-console", scopes: [MISSION_APPROVAL_SCOPE],
+          approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
+      },
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
       // this deployment mints one. The AS itself is unchanged by the Join;
@@ -388,6 +396,7 @@ export async function composeStack(opts: {
     authServer = {
       asUrl,
       agentClientJwk: as.agentClientJwk,
+      approverServiceToken,
       deferrals: as.deferrals,
       ras,
       saas,

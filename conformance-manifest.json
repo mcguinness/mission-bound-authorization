@@ -19,8 +19,8 @@
     "content_sha256": "55b175f4ec1b06ee3caaaa99242b7005c41d8d31c3296bca9b3262fd9d8b93f4"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "a32d895bd52eebb83deb64c74dddf350d06a3efb",
-    "content_sha256": "eff69e019bbb8d43b6b73603ffa3b5c65474cb842f66cd2f98c647296b7ed5bc"
+    "revision": "26d4b5ee641e274587030dee8e29b0eeb825a158",
+    "content_sha256": "7ec7af3047fa82f103d49280ec269c60c88e2ce7059d559e4a006d6ab5dbfd0d"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -55,8 +55,8 @@
     "content_sha256": "c46703c3740d19dcaa21aa1f348708da36729f6cac54626874b29ef3851763d9"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
-    "content_sha256": "31a919c319f33a11b228fd9858e4d192612627dd31345d805d14aaf54ed71401"
+    "revision": "4d435fca44070a971fa883a47efe95d57c285272",
+    "content_sha256": "58fe82b35e8de7df774c9eb8e183b8a14dd8724a8c4fca7793f1b72f925ffce1"
    },
    "draft-mcguinness-oauth-mission.md": {
     "revision": "3b0de2648fbc2153d05e0606d7847255ae1457c8",
@@ -83,8 +83,8 @@
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "717e3e3f2786c938c9fc664cb88ffdfaa9f7ba89",
-    "content_sha256": "e4246cdcb23be68bfddd1df355fe0ec445bf1fe246bc3909326e5098a422bbf1"
+    "revision": "406e4104f0834c7f154fd8337a9b8c3bc126c9ce",
+    "content_sha256": "0765d900afd8e8601bbf6aaffb357b7f19d9a540f86dbc048650d256050c0430"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "1c84c7455f4d97dbf871476ee5900ad3317ad095",
@@ -212,6 +212,397 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "runtime.action-approval.resolution-not-agent-invocable",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "The surface that resolves an action-bound approval MUST NOT be invocable from the agent's tool plane or from any channel the agent drives.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Approval resolution is unavailable to the agent's tool plane and every agent-driven channel; polling and independent approval requests remain allowed."
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > enabled headless mode refuses all agent-held credentials and cookies for both approve and deny, then the independent approver succeeds",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > the catalog has no approval-resolution action and retained PEP dependencies have no approval capability",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Enabled real-AS and demo-console proxy refusals exercise the agent's interaction cookies, client assertion, existing Mission credential/DPoP, and ordinary console service token. The same pending interaction succeeds through the independent approver. Catalog/dependency closure is supporting evidence, not a proof about every deployment route; the broader reachability claim remains partial. The single-process demo is not an OS-isolation or compromise-resistant deployment."
+  },
+  {
+   "id": "runtime.action-approval.resolver-principal-not-caller-supplied",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "action-approval",
+   "text": "The resolving principal's identity and achieved authentication context MUST be established by the resolution surface itself, never taken from caller input.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "Identity-bearing decide members are invalid_request; identity and achieved context come from an independent interaction-bound approval session or scoped service-principal record. Subject is resolved from the pushed hint and checked against the approver's configured authority."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > enabled headless mode refuses all agent-held credentials and cookies for both approve and deny, then the independent approver succeeds",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > refuses every identity-bearing body member loudly, even with a valid approver credential",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > independent browser login requires its own session, CSRF, origin, and interaction binding",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > a service token without the approval scope cannot resolve, even though it authenticates other console operations",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > requested authentication strength is checked against the surface context, including stale authentication",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > write-bearing distinctness and role checks run over the resolved identities",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > headless mode defaults off and a service approver cannot bypass that default",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#759 closes the enabled headless seam and dashboard proxy. The OAuth interaction cookie is client-held and never counts as approver login. Independent browser-session integration enforces CSRF/origin/interaction binding; the local demo uses a separate short-lived operator bootstrap session. No production SSO or process-isolation claim."
+  },
+  {
+   "id": "runtime.compound-actions.decision-per-phase",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "Every consequential phase MUST obtain its own Decision.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consequential phase never proceeds on another phase's Decision: each obtains its own"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.no-cross-phase-permit-reuse",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A permit MUST NOT authorize more than one phase.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "one permit authorizes exactly one phase, never a second phase of the same compound action"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.preflight-not-a-gate",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A preflight Decision MUST NOT satisfy the gate for a consequential phase.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a preflight Decision never stands as the gate for a consequential phase"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.commit-reevaluates-state",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The commit phase MUST obtain its own Decision against the Mission's effective authority ({{input-authority}}) and `active` state ({{state-freshness}}), under the existing freshness bounds.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the commit phase runs on its own Decision, taken against effective authority and active state within the existing freshness bounds, never on prepare's Decision or state observation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.phase-on-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "Decision Evidence for a phase MUST record its `action_phase`.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence for a phase records the phase; the member is retrospective only and never substitutes for the permit's phase condition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.compensate-link-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A compensate-phase Decision MUST carry `compensates_evaluation_id` identifying the evaluation whose committed effect it offsets.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a compensate-phase Decision carries the evaluation identifier of the committed effect it offsets"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.compensate-not-under-original-permit",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A compensation MUST NOT be authorized by the compensated action's permit.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a compensation is separately authorized, never authorized by the permit of the action it offsets, and its correlation link supplies no authority"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.permit-binds-phase",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A permit for a phase MUST bind that phase.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit issued for a phase binds that phase, alongside the action, resource, and parameter digest it already binds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.phase-pep-derived",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The PEP MUST NOT derive the phase from an agent-supplied argument.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the phase of a crossing comes from the PEP's own Operation Profile, never from a request argument the agent supplies"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.phase-verified-at-use",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The executing PEP MUST compare the permit's bound phase with the phase of the crossing before releasing an effect.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the executing PEP compares the permit's bound phase against the crossing's phase and refuses, fail closed, before any effect is released"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.compound-actions.unrecognized-phase-condition-invalid",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "A PEP that does not recognize the phase condition MUST treat the permit as invalid.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that does not recognize the phase condition treats the permit as invalid rather than executing it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.idempotency.phase-in-scope",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "Where compound-action phases share an action identifier, the idempotency scope MUST include the phase",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "where a compound action's phases share one action identifier, the idempotency scope includes the phase",
+    "local": "applies only where a compound action's phases share one action identifier; deployments giving each phase its own action identifier already separate the keys"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
   {
    "id": "runtime.conformance.perimeter-disposition-declared",
    "spec": "draft-mcguinness-mission-runtime.md",
@@ -1689,10 +2080,65 @@
    "observation": {
     "normative": "the Approver's identity and achieved authentication context come from the authenticated surface that resolved the approval; a client-supplied approver, acr, or auth_time establishes neither"
    },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "todo, not blocked: the headless decide path still takes `approver`, `approver_acr`, and `approver_auth_time` from the request body. Coverage lands with #759, which sources them from the authenticated interaction session and removes the caller-controlled path."
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > enabled headless mode refuses all agent-held credentials and cookies for both approve and deny, then the independent approver succeeds",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > refuses every identity-bearing body member loudly, even with a valid approver credential",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > independent browser login requires its own session, CSRF, origin, and interaction binding",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > a service token without the approval scope cannot resolve, even though it authenticates other console operations",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > requested authentication strength is checked against the surface context, including stale authentication",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > write-bearing distinctness and role checks run over the resolved identities",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > headless mode defaults off and a service approver cannot bypass that default",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#759: enabled-path identity tests pass, including identity-body refusal, scoped-service and independent-browser resolution, achieved authentication strength, Subject authorization, and agent/console separation. #761's normative core sentence was already landed; no duplicate core edit."
   },
   {
    "id": "core.approval-event.authority-source-trusted-establishment",
@@ -10607,9 +11053,33 @@
      "name": "egress gate: default-deny against the published scope statement > never reaches the inner fetch through guardedFetch when the channel is not mediated",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > enabled headless mode refuses all agent-held credentials and cookies for both approve and deny, then the independent approver succeeds",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > refuses every identity-bearing body member loudly, even with a valid approver credential",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > the catalog has no approval-resolution action and retained PEP dependencies have no approval capability",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "The unmediated-direct-call and secondary-channel bypass attempts are exercised for egress; the cached-token-after-revocation, stale-resume, no-inheritance-delegation, and parameter-alteration bypass rows are covered as duplicates of their own anchors (state-freshness, custody, input-actor, parameter-digest) rather than as a dedicated bypass-table test."
+   "notes": "The unmediated-direct-call and secondary-channel bypass attempts are exercised for egress; the cached-token-after-revocation, stale-resume, no-inheritance-delegation, and parameter-alteration bypass rows are covered as duplicates of their own anchors (state-freshness, custody, input-actor, parameter-digest) rather than as a dedicated bypass-table test. #759 adds retained PEP unknown-tool refusals and real enabled-AS resolution refusals. Catalog closure is not proof of all deployment reachability."
   },
   {
    "id": "runtime.negative-conformance.evidence-emission-should-demonstrate",
