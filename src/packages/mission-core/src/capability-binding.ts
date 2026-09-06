@@ -101,10 +101,22 @@ export function catalogDigest(retrieved: string | Uint8Array): string {
  * Reject an unrecognized algorithm prefix on a recorded digest, mirroring the
  * integrity-anchor verifier rule: never treat an unknown prefix as sha-256.
  */
-export function assertSupportedDigest(value: string, member: string): void {
+export function assertSupportedDigest(value: unknown, member: string): asserts value is string {
+  if (typeof value !== "string") {
+    throw new CapabilityBindingError(`malformed ${member}: expected a sha-256 digest string`);
+  }
   if (!value.startsWith(CAPABILITY_DIGEST_PREFIX)) {
     throw new CapabilityBindingError(
       `unrecognized ${member} algorithm prefix: ${value.split(":")[0]}`,
+    );
+  }
+  const body = value.slice(CAPABILITY_DIGEST_PREFIX.length);
+  if (
+    !/^[A-Za-z0-9_-]{43}$/.test(body) ||
+    Buffer.from(body, "base64url").toString("base64url") !== body
+  ) {
+    throw new CapabilityBindingError(
+      `malformed ${member}: expected canonical unpadded sha-256 bytes`,
     );
   }
 }

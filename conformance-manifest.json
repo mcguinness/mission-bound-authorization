@@ -779,6 +779,24 @@
      "name": "trusted capability recording > resolves the consented template ceiling before hashing and drawdown inherits it",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > refuses mixed resolver modes before derivation or resolution and preserves empty or injected-only modes",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/capability-binding.test.ts",
+     "name": "normalizeCapabilitySources: committed-array validation > applies the shared canonical digest vectors to source and optional catalog recording",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > applies the shared recording digest vectors independently at the evidence boundary",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ]
   },
@@ -3033,6 +3051,12 @@
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "child-creation idempotency (@spec child-delegation#creation-request-id) > replays a definitive IntentError verbatim after its creation invariant failure has been removed",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -18828,7 +18852,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance. RAS minting additionally intersects the result per action with its REQUIRED configured ceiling, preserves constraints and retained-action provenance, and refuses an empty result before consuming the grant."
+    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance. RAS minting additionally intersects the result per action with its REQUIRED configured ceiling, preserves constraints and retained-action provenance, and refuses an empty result before consuming the grant. The PDP additionally requires current resource policy to permit an action even when both Mission authority and entitlement cover it."
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -19012,9 +19036,15 @@
      "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a continuation grant is narrowed by the same destination policy",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > resource policy independently narrows a Mission action covered by fresh entitlement",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The existing SaaS cross-component read-permits/write-refuses test below demonstrates the resource-policy term at this lifetime-bounded token-only estate. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. Per-token derivation evidence remains separately tracked as SHOULD/todo."
+   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. Per-token derivation evidence remains separately tracked as SHOULD/todo."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

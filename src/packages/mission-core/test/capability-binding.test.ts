@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   CapabilityBindingError,
@@ -175,6 +176,22 @@ describe("normalizeCapabilitySources: committed-array validation", () => {
     source_digest: WRITE_DOCUMENT_DIGEST,
     operation_ref: "schedule_payment",
   };
+
+  it("applies the shared canonical digest vectors to source and optional catalog recording", () => {
+    const vectors = JSON.parse(
+      readFileSync(
+        new URL("../../../test-fixtures/capability-digests.json", import.meta.url),
+        "utf8",
+      ),
+    ) as Array<{ label: string; value: unknown; valid: boolean }>;
+    for (const vector of vectors)
+      for (const member of ["source_digest", "catalog_digest"] as const) {
+        const run = () =>
+          normalizeCapabilitySources([{ ...binding, [member]: vector.value } as never]);
+        if (vector.valid) expect(run, `${member}: ${vector.label}`).not.toThrow();
+        else expect(run, `${member}: ${vector.label}`).toThrow(CapabilityBindingError);
+      }
+  });
 
   it("permits several tool_id values for one action", () => {
     const out = normalizeCapabilitySources([

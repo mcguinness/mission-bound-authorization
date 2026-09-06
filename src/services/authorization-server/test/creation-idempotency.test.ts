@@ -30,7 +30,7 @@ import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { UniqueViolationError } from "@mission/store";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -248,6 +248,29 @@ afterAll(() => {
 });
 
 describe("child-creation idempotency (@spec child-delegation#creation-request-id)", () => {
+  it("replays a definitive IntentError verbatim after its creation invariant failure has been removed", async () => {
+    const parent = await issueMission(["payments:invoice.read", "payments:remittance.send"]);
+    const requestId = crypto.randomUUID();
+    const originalInsert = as.kernel.insertRecord.bind(as.kernel);
+    const insert = vi.spyOn(as.kernel, "insertRecord").mockImplementationOnce(record => originalInsert({ ...record, created_at: record.expires_at }));
+    const derive = vi.spyOn(as.kernel, "derive");
+    try {
+      const first = await tokenRequest(childParams(parent.accessToken, requestId));
+      const body = await first.json();
+      expect(first.status, JSON.stringify(body)).toBe(400);
+      expect(body).toMatchObject({ error: "invalid_request" });
+      expect(as.creationIdempotency.find("ap-agent", requestId)?.state).toBe("failed");
+      expect(as.kernel.findChildren(parent.missionId)).toHaveLength(0);
+      const calls = derive.mock.calls.length;
+      // The one-shot insert fault is gone: executing creation again would work.
+      const retry = await tokenRequest(childParams(parent.accessToken, requestId));
+      expect(retry.status).toBe(first.status);
+      expect(await retry.json()).toEqual(body);
+      expect(insert).toHaveBeenCalledTimes(1);
+      expect(derive).toHaveBeenCalledTimes(calls);
+      expect(as.kernel.findChildren(parent.missionId)).toHaveLength(0);
+    } finally { insert.mockRestore(); derive.mockRestore(); }
+  });
   it("lost-response retry returns the SAME child: mission id equal, fan-out counted ONCE, one activating lifecycle commit (no second Child Evidence)", async () => {
     const parent = await issueMission(["payments:invoice.read", "payments:remittance.send"]);
     const derivBefore = as.kernel.get(parent.missionId)?.derivation_count;
