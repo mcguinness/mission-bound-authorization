@@ -39,16 +39,16 @@
     "content_sha256": "bf2239e29d649ae7e831e2c634ecd6455a0b4cc20607330fa0a695b726e7c125"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
-    "content_sha256": "1722dd6c39d6e5fc39db0b5f0bf8797363cfe631ab7e342b4cf4f86a45d17a02"
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "26de126e0e9e0cfd0cc7fc3334d107a73462a22196edf0fda7b60fa335950ce6"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "172fb46606ec02b2942cac492b28c181c60bae2f",
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
-    "content_sha256": "af7bfc6d7eeffd479e15d4d0c39f62b5eccc9c6c3a0b931bfa4a5ae0af8c8731"
+    "revision": "302ba47bc49d8e8e1a27c745528c0221412e4a73",
+    "content_sha256": "85a7c474869de53e8965086d5f41f142ccfaa030f01e5f0dc1502879cadef33a"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -89,6 +89,14 @@
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "1c84c7455f4d97dbf871476ee5900ad3317ad095",
     "content_sha256": "4558f03b06b6d7c19bab670e4df88ce0cd4d4bf50507b9229879f13fc3f436c4"
+   },
+   "draft-mcguinness-oauth-mission-expansion.md": {
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "7a7c2a154cfa928f3480adb8e562941e9952fed9eb9b182621988dfa3c3f10d1"
+   },
+   "draft-mcguinness-oauth-mission-child-delegation.md": {
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "d8296d718961ef9733f9923a83bebb290ab4f1fbe03aba51930f7372d7e38467"
    }
   }
  },
@@ -195,7 +203,8 @@
    "authzen.obligations",
    "authzen.arap",
    "authzen.batch",
-   "approval-context.manifest"
+   "approval-context.manifest",
+   "child-delegation.carryover"
   ]
  },
  "profiles": [
@@ -4462,6 +4471,28 @@
    "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
   },
   {
+   "id": "child-delegation.carryover.status-correlation",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -4688,6 +4719,28 @@
      "surface": "signals"
     }
    ]
+  },
+  {
+   "id": "child-delegation.carryover.signals-correlation",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "lifecycle-event",
+   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
    "id": "cross-org.chain.presentation-closed",
@@ -19605,6 +19658,380 @@
     }
    ],
    "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
+  },
+  {
+   "id": "child-delegation.carryover.no-progressive-drawdown",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover",
+   "text": "Carryover requires a child-specific direct approval for each replacement. A policy-adjudicated progressive drawdown MUST NOT perform carryover.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Carryover requires a child-specific direct approval for each replacement. A policy-adjudicated progressive drawdown MUST NOT perform carryover."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.manifest-committed",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-manifest",
+   "text": "The Mission Issuer MUST render and commit the exact Carryover Manifest, including its exclusion policy and replacement approval facts, at the expansion approval event.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST render and commit the exact Carryover Manifest, including its exclusion policy and replacement approval facts, at the expansion approval event."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.completion-cas",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-cas",
+   "text": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.generation-order",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-generations",
+   "text": "The Mission Issuer MUST re-derive and validate each carried child in generation order against its prospective parent's Effective Authority Set, using all ordinary strict-subset, actor, and children-control checks.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST re-derive and validate each carried child in generation order against its prospective parent's Effective Authority Set, using all ordinary strict-subset, actor, and children-control checks."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.effective-set-basis",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-no-reset",
+   "text": "The Mission Issuer MUST use the old child's current Effective Authority Set as the replacement's authority ceiling and MUST NOT restore containment or discharge removed by that effective-set calculation.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST use the old child's current Effective Authority Set as the replacement's authority ceiling and MUST NOT restore containment or discharge removed by that effective-set calculation."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.no-expiry-extension",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-no-reset",
+   "text": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.budget-transfer",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-no-reset",
+   "text": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.fresh-direct-records",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-records",
+   "text": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.atomic-records-map-outbox",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-commit",
+   "text": "The Mission Issuer MUST commit successor activation, predecessor supersession, every replacement record, the required old-child cascades, the final old-to-new map, and durable publication/recovery work atomically.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "The Mission Issuer MUST commit successor activation, predecessor supersession, every replacement record, the required old-child cascades, the final old-to-new map, and durable publication/recovery work atomically."
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.authorized-idempotent-retrieval",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-commit",
+   "text": "The Mission Issuer MUST provide idempotent retrieval of the committed replacement result through the child-creation completion surface to the authenticated and authorized child actor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The Mission Issuer MUST provide idempotent retrieval of the committed replacement result through the child-creation completion surface to the authenticated and authorized child actor."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.no-token-rebind",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-commit",
+   "text": "A token for the terminated child MUST NOT be treated as a credential of its replacement.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A token for the terminated child MUST NOT be treated as a credential of its replacement."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.authenticated-map",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.observation-correlation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.out-of-order-recovery",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "A consumer MUST NOT infer absence of a replacement from receiving a cascade before the replacement's creation event.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A consumer MUST NOT infer absence of a replacement from receiving a cascade before the replacement's creation event."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.expansion-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "deferred-window",
+   "text": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.expansion-expiry",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-expiry",
+   "text": "An approved successor extension MUST NOT extend a carried child's expiry",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An approved successor extension MUST NOT extend a carried child's expiry"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.expansion-atomicity",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "superseded-state",
+   "text": "When the approved operation includes Child Mission Carryover, the Mission Issuer MUST include replacement records, required old-child cascades, the committed outcome map, and durable recovery work in the same atomic operation.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "When the approved operation includes Child Mission Carryover, the Mission Issuer MUST include replacement records, required old-child cascades, the committed outcome map, and durable recovery work in the same atomic operation."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   }
  ]
 }
