@@ -620,11 +620,17 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "Every declared entry has one disposition, with the defined legacy-resource shorthand; invalid nested shapes and conflicting keys refuse.",
-    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+    "local": "Unit tests validate the published declaration shape and reject ambiguous JSON; correspondence to a live deployment remains an audit property."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > the draft's nested resources and excluded paths validate", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a bare resource string is the mediated shorthand and validates", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses %s and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > identical repeated keys normalize to one entry and validate", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > malformed JSON containers and entries yield findings rather than throwing or widening claims", "level": "unit", "surface": "deployment-documentation" }
+   ]
   },
   {
    "id": "runtime.conformance.no-reconstructed-as-mediated",
@@ -643,11 +649,16 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A claim must name a mediated resource and no excluded execution path.",
-    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+    "local": "Claims are checked against a validated declaration, including conflicting duplicates and exclusions; this does not audit live mediation."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming a %s resource is rejected", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > an excluded execution path refuses even when it is also declared", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a mediated resource on a declared nonexcluded path is accepted", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate", "level": "unit", "surface": "deployment-documentation" }
+   ]
   },
   {
    "id": "status.operational.bound-sized-to-recovery",

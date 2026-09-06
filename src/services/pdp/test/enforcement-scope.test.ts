@@ -14,6 +14,7 @@
 import { describe, expect, it } from "vitest";
 import {
   claimsWithinScope,
+  resourceDispositions,
   type EnforcementScopeStatement,
   validateEnforcementScopeStatement,
 } from "../src/enforcement-scope.js";
@@ -38,6 +39,80 @@ const baseline = (): EnforcementScopeStatement => ({
   },
   remote_decision_channels: [{ boundary: RESOURCE, trust_mode: "signed-request-response" }],
   record_integrity_mechanism: "hash-linked-log",
+});
+
+describe("Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance)", () => {
+  const statement = (resources: unknown, excluded_paths: unknown = []) => ({
+    ...baseline(), mediated_scope: { ...baseline().mediated_scope, resources, excluded_paths },
+  });
+  it("the draft's nested resources and excluded paths validate", () => {
+    expect(validateEnforcementScopeStatement(statement([
+      { resource: RESOURCE, disposition: "mediated" },
+      { resource: "https://warehouse.example.com/sales", disposition: "reconstructed" },
+    ], [{ path: "notebook_interpreter", disposition: "unrecorded" }]))).toEqual([]);
+  });
+  it("a bare resource string is the mediated shorthand and validates", () => {
+    const stmt = statement([RESOURCE]);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
+    expect(resourceDispositions(stmt).get(RESOURCE)).toBe("mediated");
+  });
+  it.each([
+    ["missing disposition", [{ resource: RESOURCE }], []],
+    ["unknown disposition", [{ resource: RESOURCE, disposition: "other" }], []],
+    ["bare excluded path", [RESOURCE], ["notebook_interpreter"]],
+    ["mediated excluded path", [RESOURCE], [{ path: "notebook_interpreter", disposition: "mediated" }]],
+    ["conflicting resource dispositions", [RESOURCE, { resource: RESOURCE, disposition: "reconstructed" }], []],
+    ["conflicting excluded dispositions", [RESOURCE], [{ path: "notebook_interpreter", disposition: "unrecorded" }, { path: "notebook_interpreter", disposition: "reconstructed" }]],
+  ])("refuses %s and names the offending entry", (_label, resources, excluded) => {
+    const stmt = statement(resources, excluded);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ member: expect.stringMatching(/^mediated_scope\.(resources|excluded_paths)\[\d+\]$/) }),
+    ]));
+    expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(false);
+  });
+  it("identical repeated keys normalize to one entry and validate", () => {
+    const stmt = statement([RESOURCE, { resource: RESOURCE, disposition: "mediated" }], [
+      { path: "excluded", disposition: "unrecorded" }, { path: "excluded", disposition: "unrecorded" },
+    ]);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
+    expect(resourceDispositions(stmt).size).toBe(1);
+  });
+  it.each(["reconstructed", "unrecorded"])("a claim naming a %s resource is rejected", (disposition) => {
+    const stmt = statement([{ resource: RESOURCE, disposition }]);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
+    expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(false);
+  });
+  it("an excluded execution path refuses even when it is also declared", () => {
+    const stmt = statement([RESOURCE], [{ path: "mcp:tools/call", disposition: "unrecorded" }]);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
+    expect(claimsWithinScope(stmt, { resource: RESOURCE, execution_path: "mcp:tools/call" })).toBe(false);
+  });
+  it("a mediated resource on a declared nonexcluded path is accepted", () => {
+    const stmt = statement([{ resource: RESOURCE, disposition: "mediated" }]);
+    expect(claimsWithinScope(stmt, { resource: RESOURCE, execution_path: "mcp:tools/call" })).toBe(true);
+  });
+  it("conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate", () => {
+    for (const bad of [{ resource: RESOURCE, disposition: "reconstructed" }, { resource: RESOURCE }]) {
+      for (const entries of [[RESOURCE, bad], [bad, RESOURCE], [RESOURCE, bad, RESOURCE]]) {
+        const stmt = statement(entries);
+        expect(resourceDispositions(stmt).size).toBe(0);
+        expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(false);
+      }
+    }
+  });
+  it("malformed JSON containers and entries yield findings rather than throwing or widening claims", () => {
+    for (const input of [null, [], 42, {},
+      { ...baseline(), mediated_scope: null },
+      statement(null), statement([null]), statement([RESOURCE], [null]),
+      statement([RESOURCE], [{ disposition: "unrecorded" }]),
+      { ...baseline(), state_source: null },
+      { ...baseline(), authority_entry_types: [null] },
+      { ...baseline(), remote_decision_channels: [null] },
+    ]) {
+      expect(validateEnforcementScopeStatement(input).length).toBeGreaterThan(0);
+      expect(claimsWithinScope(input, { resource: RESOURCE })).toBe(false);
+    }
+  });
 });
 
 /** Removes one key entirely (not `undefined`-assigned) so the statement is
