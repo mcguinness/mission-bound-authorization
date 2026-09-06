@@ -20,7 +20,6 @@ import {
   EvidenceStore,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type DecisionEvidence,
   type TokenFacts,
 } from "../src/index.js";
@@ -70,7 +69,6 @@ function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
     modelId: "unit-test-model",
     loadView: loadViewFor(view),
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
     observe: (e) => envelopes.push(e.envelope),
   });
@@ -148,7 +146,6 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       modelId: "unit-test-model",
       loadView: loadViewFor(view),
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
       observe: (e) => envelopes.push(e.envelope),
       principalMapping: {

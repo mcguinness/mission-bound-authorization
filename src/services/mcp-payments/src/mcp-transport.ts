@@ -31,11 +31,10 @@ import {
   type CallToolResult,
   ListToolsRequestSchema,
   type ListToolsResult,
-  type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { MCP_REFERENCE_META_KEY, parseMcpReferenceMeta } from "@mission/core";
 import { type InsufficientAuthorization, type RequestSignals, TOOL_ACTIONS, type TokenFacts } from "./pep.js";
-import type { McpPaymentsServer, ToolDef } from "./server.js";
+import type { McpPaymentsServer } from "./server.js";
 
 /**
  * The namespaced `_meta` key that carries the mission access token (JWT) across
@@ -63,14 +62,6 @@ export interface MediatedToolResult {
   transaction_challenge?: string;
 }
 
-/** Map an internal ToolDef to an MCP `Tool` (least-exposure list entry). */
-function toMcpTool(def: ToolDef): Tool {
-  const mapping = TOOL_ACTIONS[def.name];
-  const inputSchema = mapping?.needsInvoice
-    ? { type: "object" as const, properties: { invoice_id: { type: "string" } }, required: ["invoice_id"] }
-    : { type: "object" as const, properties: { vendor_id: { type: "string" } } };
-  return { name: def.name, description: def.description, inputSchema };
-}
 
 /** Encode a PEP verdict as an MCP tool result: denials are structured results
  * (isError + structuredContent), never thrown transport errors, so the client
@@ -124,7 +115,7 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
       // An unvalidated caller sees nothing (fail closed, least exposure).
       return { tools: [] };
     }
-    return { tools: paymentsServer.toolsList(token).map(toMcpTool) };
+    return { tools: paymentsServer.capabilityCatalog.toolDefinitions(paymentsServer.toolsList(token).map(t => t.name)) };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {

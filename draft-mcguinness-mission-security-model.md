@@ -1266,6 +1266,9 @@ limits most likely to matter and most often overstated away elsewhere:
   A deployment provisions state-source, event-stream, and PDP
   availability accordingly, because under this model their outage stops
   governed work rather than loosening it.
+  Runtime's Operational Considerations states the dependency-conditional
+  outage and ride-through semantics
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Revocation-to-Action Latency {#revocation-latency}
 
@@ -1486,6 +1489,9 @@ model and pipeline layers, and saying so is the point:
 
 - Added the three-ring Enforcement Perimeter, its arbitrary-code
   adversary entry, and the explicit unrecorded-compute residual (#758).
+
+- Pointed the Availability limit at Runtime's Operational Considerations
+  for the dependency-conditional outage and ride-through semantics (#310).
 
 - Failure taxonomy crosswalk (#671): an informative subsection added
   to {{cross-cutting}}, mapping the Mandate, Audit, Consent Evidence,

@@ -11,7 +11,7 @@
  * side, offline, under the parent's `cnf` key: no Authorization Server contact.
  *
  * This is a standalone kernel module (mirrors kernel/cross-domain.ts); it is
- * not wired to an endpoint. It imports {@link isSubsetSet} read-only.
+ * not wired to an endpoint. It imports {@link isSubsetSetIgnoringCapabilitySources} read-only.
  */
 
 import { randomBytes } from "node:crypto";
@@ -26,7 +26,7 @@ import {
   parseAatToolId,
 } from "@mission/core";
 import { calculateJwkThumbprint, type CryptoKey, decodeJwt, exportJWK, type JWK, SignJWT } from "jose";
-import { isSubsetSet } from "./derive.js";
+import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
@@ -201,7 +201,7 @@ export async function deriveAttenuationRoot(
     // Validate the requested narrowing is within the Mission Authority Set by
     // reverse-mapping to entries and reusing the issuance-profile subset rule.
     const requestedEntries = mapToolsToAuthority(input.requestedTools);
-    if (!isSubsetSet(requestedEntries, effective)) {
+    if (!isSubsetSetIgnoringCapabilitySources(requestedEntries, effective)) {
       throw new Error("attenuation: requested root exceeds the Mission Authority Set");
     }
     tools = input.requestedTools;
@@ -343,7 +343,7 @@ export async function deriveCrossOrgRoot(
   let tools: AATTools;
   if (input.requestedTools) {
     const requestedEntries = mapToolsToAuthority(input.requestedTools);
-    if (!isSubsetSet(requestedEntries, effective)) {
+    if (!isSubsetSetIgnoringCapabilitySources(requestedEntries, effective)) {
       throw new Error("attenuation: requested root exceeds the Mission Authority Set");
     }
     tools = input.requestedTools;

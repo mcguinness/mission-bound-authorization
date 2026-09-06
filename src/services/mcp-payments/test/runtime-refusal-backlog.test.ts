@@ -28,7 +28,6 @@ import {
   parameterDigest,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   TransactionEngine,
   type ActionApprovalInput,
   type DecisionEvidence,
@@ -85,7 +84,6 @@ function buildStack(missionView: MissionView, fga: Fga) {
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
-  const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
   const loadView = (ref: { id: string; issuer: string }) =>
@@ -100,7 +98,6 @@ function buildStack(missionView: MissionView, fga: Fga) {
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf(card),
     allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
@@ -109,7 +106,6 @@ function buildStack(missionView: MissionView, fga: Fga) {
     loadView,
     jwks: { keys: [] },
     issuer: ISSUER,
-    serverCard: card,
     transaction: { engine, connectors, evidence },
   });
   return { payments, evidence, connectors, engine, pep, server };
@@ -269,7 +265,6 @@ describe("a PDP deny is terminal for the attempted action: no execution, and no 
       // read, never a stale cached one (Finding 1).
       loadView: () => ({ view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }),
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
     });
 
@@ -317,7 +312,6 @@ describe("the PEP establishes token validity before using any of its claims as d
       modelId: "unit-test-model",
       loadView: () => undefined,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
     });
     const server = new McpPaymentsServer({
       pep,
@@ -325,7 +319,6 @@ describe("the PEP establishes token validity before using any of its claims as d
       loadView: () => undefined,
       jwks: { keys: [pubJwk] },
       issuer: ISSUER,
-      serverCard: { name: "payments" },
     });
     return { server, evidence };
   }

@@ -9,8 +9,11 @@
 import { createHash } from "node:crypto";
 import { canonicalize, type JsonValue } from "@mission/core";
 import type { Invoice, Vendor } from "./payments-store.js";
+import type { CapabilitySnapshot } from "./tool-catalog.js";
 
 export interface EffectiveParams {
+  /** Local invocation guard, separate from the operation's parameter normal form. */
+  capability_snapshot?: CapabilitySnapshot;
   action: string;
   invoice_id: string;
   invoice_version: number;
@@ -56,6 +59,7 @@ export function buildEffectiveParams(input: {
  * `UNSCOPED_VENDOR_OBJECT`'s role as an explicit sentinel in pep.ts).
  */
 export interface ListEffectiveParams {
+  capability_snapshot?: CapabilitySnapshot;
   action: string;
   resource: string;
   vendor_scope: string[];
@@ -77,6 +81,7 @@ export function buildListEffectiveParams(input: {
 }
 
 export function parameterDigest(params: EffectiveParams | ListEffectiveParams): string {
-  const canonical = canonicalize(params as unknown as JsonValue);
+  const { capability_snapshot: _localInvocationGuard, ...parameters } = params;
+  const canonical = canonicalize(parameters as unknown as JsonValue);
   return `sha-256:${createHash("sha256").update(canonical, "utf8").digest("base64url")}`;
 }

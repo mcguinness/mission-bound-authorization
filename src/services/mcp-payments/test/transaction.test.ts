@@ -22,7 +22,6 @@ import {
   PaymentsStore,
   Pep,
   reconcile,
-  sourceDigestOf,
   type TokenFacts,
   TransactionEngine,
   type TxnConsumptionStore,
@@ -159,7 +158,6 @@ function build(
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
-  const card = { name: "payments" };
   const gated = Boolean(opts.jit || opts.challengeSigner || opts.gateRemittance);
   const pep = new Pep({
     decide: EVIDENCE_KEYS.decide,
@@ -169,7 +167,6 @@ function build(
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf(card),
     allowedFreshnessSources: new Set(["load_view"]),
     ...(gated
       ? { requiresActionApproval: (action: string) => action === "payments:remittance.send", maxApprovalAgeSeconds: 300 }
@@ -183,7 +180,6 @@ function build(
     loadView,
     jwks: opts.jwks ?? { keys: [] },
     issuer: "https://as.test",
-    serverCard: card,
     transaction: { engine, connectors, evidence },
     ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
     ...(opts.asIssuer ? { asIssuer: opts.asIssuer } : {}),
