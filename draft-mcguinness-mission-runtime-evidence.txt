@@ -171,8 +171,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 91 conformance rows in conformance-manifest.json (8
-   tested, 9 partial, 74 todo).  Adopt when: Runtime enforcement is
+   Implementation: 91 conformance rows in conformance-manifest.json (9
+   tested, 9 partial, 73 todo).  Adopt when: Runtime enforcement is
    deployed and decisions need durable, verifiable records.  Requires:
    Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
    Also requires, conditionally: Mission Cross-Domain Projection for

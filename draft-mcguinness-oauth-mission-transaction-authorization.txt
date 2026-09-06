@@ -95,6 +95,7 @@ Table of Contents
      15.2.  Carrier Requirements
      15.3.  OAuth Discharge
    16. Conformance
+   17. Document History
    Acknowledgments
    References
      Normative References
@@ -271,6 +272,11 @@ Table of Contents
    current governance state, and the fresh decision of Section 6 re-
    evaluates it like any other current policy input rather than
    consuming it as the approval itself.
+
+   For a compound action, the runtime profile places this profile's
+   single-use authorization at one commit-phase operation, never across
+   preparation, commit, and compensation
+   ([I-D.draft-mcguinness-mission-runtime]).
 
 5.  Resource Challenge
 
@@ -1181,6 +1187,13 @@ Table of Contents
    token; a privacy projection showing raw parameters and approval
    detail absent from the token; and evidence correlation from challenge
    and decision through exactly one execution or terminal refusal.
+
+17.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Linked applicability to the runtime compound-action model: a
+      transaction token authorizes one commit-phase operation (#252).
 
 Acknowledgments
 

@@ -1356,7 +1356,10 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
-            <p id="section-toc.1-1.21.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.21.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.22">
+            <p id="section-toc.1-1.22.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1502,7 +1505,7 @@ approval.<a href="#section-1.3-4.5.1" class="pilcrow">¶</a></p>
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
+Implementation: 3 conformance rows in conformance-manifest.json (3 todo).
 Adopt when: Approved authority will predictably need to widen mid-task via fresh approval.
 Requires: Mission-Bound Authorization for OAuth 2.0.<a href="#section-2-1" class="pilcrow">¶</a></p>
 </section>
@@ -2119,6 +2122,11 @@ while the replacement is delivered
 above, the expansion consent event is where this price is rendered;
 that consent event is the only point in this profile at which a human
 can witness the cascade before it happens.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-6">Where explicitly approved Child Mission Carryover is selected, the Mission
+Issuer <span class="bcp14">MUST</span> render and commit its complete manifest and exclusion policy,
+and recheck that snapshot at completion under the child profile's Carryover
+rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Otherwise
+the ordinary cascade notice and per-child re-creation above remain the floor.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="successor-expiry">
@@ -2155,6 +2163,9 @@ approved extension it is also no later than the predecessor's
 extension and the exact effective value was rendered and approved at
 the expansion consent event. Any further shortening is justified by
 recorded policy.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
+<p id="section-6.4-4">An approved successor extension <span class="bcp14">MUST NOT</span> extend a carried child's expiry:
+carryover remains bounded by the old child and its new parent's effective
+expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-6.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2332,36 +2343,44 @@ indeterminate state.<a href="#section-8-6.1.2.2.1" class="pilcrow">¶</a></p>
           </ul>
 </li>
         <li class="normal" id="section-8-6.2">
-          <p id="section-8-6.2.1"><strong>Non-active: no further derivation.</strong> A <code>superseded</code> Mission is not
+          <p id="section-8-6.2.1"><strong>Explicit carryover.</strong> When the approved operation includes Child Mission
+Carryover, the Mission Issuer <span class="bcp14">MUST</span> include replacement records, required
+old-child cascades, the committed outcome map, and durable recovery work
+in the same atomic operation. Publication follows commit and is repairable;
+constructing replacements first does not guarantee external event order
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-6.3">
+          <p id="section-8-6.3.1"><strong>Non-active: no further derivation.</strong> A <code>superseded</code> Mission is not
 <code>active</code>, so the issuance profile's issuance gating refuses to derive
 any new token, refresh, token exchange, or cross-domain grant under
 it: derivation proceeds only from an <code>active</code> Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). New authority for the task
-flows through the successor.<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
+flows through the successor.<a href="#section-8-6.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-6.3">
-          <p id="section-8-6.3.1"><strong>Already-issued predecessor tokens.</strong> Tokens already derived under
+        <li class="normal" id="section-8-6.4">
+          <p id="section-8-6.4.1"><strong>Already-issued predecessor tokens.</strong> Tokens already derived under
 the predecessor before it was superseded remain valid until their own
 <code>exp</code>, exactly as in the issuance profile's revocation model:
 superseding a Mission stops new derivation; it does not retroactively
-invalidate access tokens already issued.<a href="#section-8-6.3.1" class="pilcrow">¶</a></p>
+invalidate access tokens already issued.<a href="#section-8-6.4.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-8-6.3.2.1">
-              <p id="section-8-6.3.2.1.1">These tokens <span class="bcp14">MUST NOT</span> be silently rebound to the successor.
+<li class="normal" id="section-8-6.4.2.1">
+              <p id="section-8-6.4.2.1.1">These tokens <span class="bcp14">MUST NOT</span> be silently rebound to the successor.
 Authority under the successor is obtained only by deriving from
 the successor's grant, which is a new derivation governed by the
-successor's Authority Set.<a href="#section-8-6.3.2.1.1" class="pilcrow">¶</a></p>
+successor's Authority Set.<a href="#section-8-6.4.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-8-6.3.2.2">
-              <p id="section-8-6.3.2.2.1">A deployment that needs a lower cutoff latency on the
+            <li class="normal" id="section-8-6.4.2.2">
+              <p id="section-8-6.4.2.2.1">A deployment that needs a lower cutoff latency on the
 predecessor's outstanding tokens <span class="bcp14">SHOULD</span> use short token lifetimes.
 It <span class="bcp14">MAY</span> additionally revoke the predecessor's refresh token where
-the issuance profile's optional revocation composition is in use.<a href="#section-8-6.3.2.2.1" class="pilcrow">¶</a></p>
+the issuance profile's optional revocation composition is in use.<a href="#section-8-6.4.2.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
-        <li class="normal" id="section-8-6.4">
-          <p id="section-8-6.4.1"><strong>Reported as non-active.</strong> A <code>superseded</code> predecessor is reported
+        <li class="normal" id="section-8-6.5">
+          <p id="section-8-6.5.1"><strong>Reported as non-active.</strong> A <code>superseded</code> predecessor is reported
 through the same mechanisms that report a <code>revoked</code> or <code>expired</code>
 Mission. Where the issuance profile's optional token introspection is
 offered, the composite <code>active</code> is <code>false</code> and, from the issuer, the
@@ -2372,7 +2391,7 @@ states and the Status Response <code>mission.state</code> gives <code>superseded
 deployment that offers either surface and this document <span class="bcp14">MUST</span> include
 <code>superseded</code> among the lifecycle states its issuer may report.
 Consumers rely on the issuance profile's forward-compatibility rule:
-<code>superseded</code>, like any non-<code>active</code> state, is non-deriving.<a href="#section-8-6.4.1" class="pilcrow">¶</a></p>
+<code>superseded</code>, like any non-<code>active</code> state, is non-deriving.<a href="#section-8-6.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <div id="no-rollback">
@@ -3791,8 +3810,22 @@ composition with the issuance flow.<a href="#section-19-1" class="pilcrow">¶</a
 </div>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
+and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

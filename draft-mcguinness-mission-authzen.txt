@@ -365,8 +365,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 84 conformance rows in conformance-manifest.json (14
-   tested, 5 partial, 65 todo).  Adopt when: The PDP speaks AuthZEN and
+   Implementation: 84 conformance rows in conformance-manifest.json (15
+   tested, 5 partial, 64 todo).  Adopt when: The PDP speaks AuthZEN and
    needs the decision-contract wire mapping.  Requires: Mission-Bound
    Runtime Enforcement; Mission Substrate Requirements.  Also requires,
    conditionally: Mission-Bound Authorization for OAuth 2.0 (when the

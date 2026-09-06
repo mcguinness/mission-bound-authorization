@@ -1338,10 +1338,13 @@ treats session continuity as proof that Mission authority continues.<a href="#se
             <p id="section-toc.1-1.23.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-mapping-to-durable-executio" class="internal xref">Mapping to Durable-Execution Engines</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24">
-            <p id="section-toc.1-1.24.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.24.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.25">
-            <p id="section-toc.1-1.25.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.25.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.26">
+            <p id="section-toc.1-1.26.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -3399,7 +3402,16 @@ for one Mission from becoming ambient authority for another.<a href="#section-19
         <h3 id="name-limits-of-the-taint-control">
 <a href="#section-19.7" class="section-number selfRef">19.7. </a><a href="#name-limits-of-the-taint-control" class="section-name selfRef">Limits of the Taint Control</a>
         </h3>
-<p id="section-19.7-1">The taint rule of <a href="#session-taint" class="auto internal xref">Section 15</a> remains a coarse control, not
+<p id="section-19.7-1">In the Security Model's Enforcement Perimeter, this provenance-backed
+taint control is an instrument of the reconstructed-effects ring;
+unrecorded arbitrary computation remains bounded, not closed
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). The per-channel
+disposition of <a href="#mediated-egress" class="auto internal xref">Section 6</a> and the runtime profile's per-entry
+perimeter disposition answer different questions: the first says
+whether a channel class is covered, the second says how a declared
+resource or excluded path is governed
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-19.7-1" class="pilcrow">¶</a></p>
+<p id="section-19.7-2">The taint rule of <a href="#session-taint" class="auto internal xref">Section 15</a> remains a coarse control, not
 information-flow control, though source classing and parameter
 provenance give it discriminating power: it gates the egress whose
 inputs derive from untrusted content and leaves trusted-provenance
@@ -3417,7 +3429,7 @@ The control still cannot close within-scope data laundering
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it raises the bar by
 forcing a human or a fresh approval between untrusted input and
-egress.<a href="#section-19.7-1" class="pilcrow">¶</a></p>
+egress.<a href="#section-19.7-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3522,6 +3534,10 @@ of <a href="#harness-evidence" class="auto internal xref">Section 16</a> is loca
 <dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-6-draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
         <dd>
@@ -3650,18 +3666,34 @@ state beyond the binding, or the Mission Issuer to know the engine
 exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">Linked the limits of provenance-backed taint control to the Security
+Model's Enforcement Perimeter and distinguished the per-channel
+egress disposition from the runtime profile's per-entry perimeter
+disposition; no taint requirement changed (#758).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-C">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-C-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 set and defines how agent harnesses keep runtime continuity separate
-from Mission authority.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+from Mission authority.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

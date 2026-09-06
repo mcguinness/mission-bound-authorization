@@ -106,6 +106,7 @@ Table of Contents
    19. References
      19.1.  Normative References
      19.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -151,8 +152,8 @@ Table of Contents
    depends on no deferral substrate.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 15 conformance rows in conformance-manifest.json (6
-   tested, 2 partial, 7 todo).  Adopt when: Approval authority itself
+   Implementation: 15 conformance rows in conformance-manifest.json (7
+   tested, 1 partial, 7 todo).  Adopt when: Approval authority itself
    needs authenticated, policy-backed provenance.  Requires: Mission
    Substrate Requirements.  Also requires, conditionally: Mission
    Progressive Authorization for OAuth 2.0 (when the Approval Context
@@ -593,7 +594,10 @@ Table of Contents
 
    Direct self-approval by one authenticated human is the degenerate
    case: the Mission record already carries it completely, and no record
-   is required.
+   is required.  This presumes the human resolved approval on the
+   approval surface itself; where an agent resolves it on its own
+   behalf, there is no human decision for this list to be degenerate
+   about ([I-D.draft-mcguinness-mission-runtime]).
 
 11.  Consent Evidence Relationship
 
@@ -1393,6 +1397,14 @@ Table of Contents
               Rich Authorization Requests", RFC 9396,
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Clarified that the direct-human degenerate case presumes
+      resolution by that human, not agent-invokable approval on the
+      human's behalf (#759).
 
 Acknowledgments
 

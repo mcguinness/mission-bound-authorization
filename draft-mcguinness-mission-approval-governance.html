@@ -1279,10 +1279,13 @@ Mission record's single accountable Approver is unchanged.<a href="#section-abst
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
-            <p id="section-toc.1-1.20.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.20.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
-            <p id="section-toc.1-1.21.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.21.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.22">
+            <p id="section-toc.1-1.22.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1333,7 +1336,7 @@ approval, deferred approval
 Mission Authority Server's native asynchronous approval alike, and
 depends on no deferral substrate.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 15 conformance rows in conformance-manifest.json (6 tested, 2 partial, 7 todo).
+Implementation: 15 conformance rows in conformance-manifest.json (7 tested, 1 partial, 7 todo).
 Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling).<a href="#section-2-3" class="pilcrow">¶</a></p>
@@ -1902,7 +1905,11 @@ Mission record.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-10-3">Direct self-approval by one authenticated human is the degenerate
 case: the Mission record already carries it completely, and no
-record is required.<a href="#section-10-3" class="pilcrow">¶</a></p>
+record is required.
+This presumes the human resolved approval on the approval surface itself;
+where an agent resolves it on its own behalf, there is no human decision
+for this list to be degenerate about
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="consent-evidence-relationship">
@@ -3010,22 +3017,36 @@ version before treating the evaluation as re-checked
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Clarified that the direct-human degenerate case presumes resolution by
+that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document extracts the experimental approval-provenance record
+<p id="appendix-B-1">This document extracts the experimental approval-provenance record
 that Mission Deferred Approval first sketched into a standalone
 companion, and reshapes it so its assertions carry the
 authentication, binding, and policy-authorization requirements that
 governance evidence with teeth requires. The author thanks the
 Mission-Bound Authorization
-implementer community for feedback.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+implementer community for feedback.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>
