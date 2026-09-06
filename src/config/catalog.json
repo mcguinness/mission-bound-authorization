@@ -9,12 +9,12 @@
     "server_card_uri": "http://localhost:4403/.well-known/mcp",
     "resource": "http://localhost:4403/mcp",
     "actions": [
-      { "id": "payments:invoice.list", "amount_bearing": false },
-      { "id": "payments:invoice.read", "amount_bearing": true },
-      { "id": "payments:vendor.read", "amount_bearing": false },
-      { "id": "payments:payment.schedule", "amount_bearing": true },
-      { "id": "payments:payment.execute", "amount_bearing": true },
-      { "id": "payments:remittance.send", "amount_bearing": true }
+      { "id": "payments:invoice.list", "amount_bearing": false, "tool_name": "list_invoices" },
+      { "id": "payments:invoice.read", "amount_bearing": true, "tool_name": "get_invoice" },
+      { "id": "payments:vendor.read", "amount_bearing": false, "tool_name": "lookup_vendor" },
+      { "id": "payments:payment.schedule", "amount_bearing": true, "tool_name": "schedule_payment" },
+      { "id": "payments:payment.execute", "amount_bearing": true, "tool_name": "execute_wire_transfer" },
+      { "id": "payments:remittance.send", "amount_bearing": true, "tool_name": "send_remittance_email" }
     ],
     "connection": { "profile": "oauth", "type": "authorization_code" },
     "approvable": true,

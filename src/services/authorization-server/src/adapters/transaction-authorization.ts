@@ -29,7 +29,7 @@ import {
 } from "jose";
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { isSubsetSet } from "../kernel/derive.js";
+import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { GateError, type MissionKernel } from "../kernel/kernel.js";
 import {
   ChallengeError,
@@ -492,7 +492,7 @@ async function admit(
   }
   const subjectAuthority = (subject.authorization_details as AuthorityEntry[] | undefined) ?? [];
   const effective = deps.kernel.effectiveAuthoritySet(active);
-  if (!isSubsetSet(requested, subjectAuthority) || !isSubsetSet(requested, effective)) {
+  if (!isSubsetSetIgnoringCapabilitySources(requested, subjectAuthority) || !isSubsetSetIgnoringCapabilitySources(requested, effective)) {
     fail(ctx, 400, "invalid_grant", "challenge authority is outside the Authority Set");
     return;
   }
@@ -922,7 +922,7 @@ async function completionChecks(
   // Containment may have narrowed the Mission since admission, so the subset
   // rule is recomputed against the CURRENT effective set, never the pinned one.
   const permitted = wf.challenge.authorization_details as unknown as AuthorityEntry[];
-  if (!isSubsetSet(permitted, deps.kernel.effectiveAuthoritySet(gated))) {
+  if (!isSubsetSetIgnoringCapabilitySources(permitted, deps.kernel.effectiveAuthoritySet(gated))) {
     return {
       ok: false,
       error: "access_denied",

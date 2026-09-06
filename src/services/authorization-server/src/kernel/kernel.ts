@@ -16,6 +16,8 @@ import { SignJWT, type CryptoKey } from "jose";
 import {
   attachCapabilitySources,
   type CapabilitySourceResolution,
+  type CapabilitySourceResolver,
+  resolveFreshCapabilitySources,
 } from "./capability-binding.js";
 import {
   buildContainmentEvidence,
@@ -209,6 +211,7 @@ export interface ApproveInput {
 }
 
 export interface KernelOptions {
+  capabilityResolver?: CapabilitySourceResolver;
   issuer: string;
   policy: DerivationPolicy;
   statusKey: CryptoKey;
@@ -464,8 +467,13 @@ export class MissionKernel {
    * ({@link createTemplate}). Exposed rather than duplicated as an adapter
    * option so a deployment has exactly one catalog.
    */
-  authoritySourceOptions(): { authoritySourceCatalog: AuthoritySourceCatalog } {
-    return { authoritySourceCatalog: this.opts.authoritySourceCatalog };
+  authoritySourceOptions(): { authoritySourceCatalog: AuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver } {
+    return { authoritySourceCatalog: this.opts.authoritySourceCatalog,
+      ...(this.opts.capabilityResolver ? { capabilityResolver: this.opts.capabilityResolver } : {}) };
+  }
+
+  resolveFreshCapabilities(entries: AuthorityEntry[]): AuthorityEntry[] {
+    return resolveFreshCapabilitySources(entries, this.opts.capabilityResolver);
   }
 
   /**
@@ -559,10 +567,10 @@ export class MissionKernel {
     // `authorityHash` below, so `authority_hash` covers them by construction.
     // An unresolvable catalog-sourced action refuses the derivation
     // (IntentError) rather than being approved unbound.
-    const authoritySet = attachCapabilitySources(
+    const authoritySet = this.resolveFreshCapabilities(attachCapabilitySources(
       this.derive(input.intent, proposal),
-      input.capabilityResolution,
-    );
+      this.opts.capabilityResolver ? undefined : input.capabilityResolution,
+    ));
     // @spec mission#approval-event (step 3) — establish the authority source
     // BEFORE any anchor is computed and before the record exists: gates 1, 2,
     // 4 and 5 here, then gate 3 (the source ceiling) as its own assertion.

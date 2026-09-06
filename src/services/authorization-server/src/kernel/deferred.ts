@@ -15,7 +15,7 @@
 import { randomBytes } from "node:crypto";
 import { openStore, withTransaction, type Database } from "@mission/store";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
-import { isSubsetSet } from "./derive.js";
+import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { createExpansion } from "./expansion.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -113,7 +113,7 @@ export class DeferralStore {
     // @spec D42: AROP grant is a subset of the active Mission; widening -> Expansion.
     // Containment: the ceiling is the EFFECTIVE set, so a contained capability
     // is not deferrable.
-    if (!isSubsetSet(input.requested, this.kernel.effectiveAuthoritySet(mission))) {
+    if (!isSubsetSetIgnoringCapabilitySources(input.requested, this.kernel.effectiveAuthoritySet(mission))) {
       throw new DeferralError(
         "out_of_authority",
         "requested authority exceeds the active Mission; use Expansion to widen",
@@ -209,7 +209,7 @@ export class DeferralStore {
     }
     // Re-verify subset at redemption (the Mission may have changed) against the
     // EFFECTIVE set: containment applied between approval and redemption refuses.
-    if (!isSubsetSet(parsed.r, this.kernel.effectiveAuthoritySet(mission))) {
+    if (!isSubsetSetIgnoringCapabilitySources(parsed.r, this.kernel.effectiveAuthoritySet(mission))) {
       this.db.prepare("UPDATE deferrals SET state = 'access_denied' WHERE deferral_code = ?").run(deferralCode);
       return { error: "access_denied" };
     }

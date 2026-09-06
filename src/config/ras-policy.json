@@ -1,0 +1,10 @@
+{
+  "policy_version": "demo-ras-policy-1",
+  "ceiling": [
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4406/mcp",
+      "actions": ["ledger:vendor.read", "ledger:journal.write"]
+    }
+  ]
+}
