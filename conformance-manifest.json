@@ -678,9 +678,22 @@
     "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "published runtime posture (@spec runtime#runtime-operational, status#status-operational) > publishes the enforced per-class bounds, issuer ceiling, recovery objective and beyond-bound refusal",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "PR A of #310: declaration/publication and shared configuration consumption only. The reference deployment denies immediately on PDP unavailability; remote wiring belongs to PR B. No bounded-reuse, replication, or positive break-glass capability is claimed."
   },
   {
    "id": "runtime.operational.ride-through-declared",
@@ -699,9 +712,22 @@
     "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "published runtime posture (@spec runtime#runtime-operational, status#status-operational) > publishes the enforced per-class bounds, issuer ceiling, recovery objective and beyond-bound refusal",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "PR A of #310: declaration/publication and shared configuration consumption only. The reference deployment denies immediately on PDP unavailability; remote wiring belongs to PR B. No bounded-reuse, replication, or positive break-glass capability is claimed."
   },
   {
    "id": "runtime.operational.replication-disclosed",

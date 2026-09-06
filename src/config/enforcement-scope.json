@@ -1,0 +1,31 @@
+{
+  "mediated_scope": {
+    "resources": ["http://localhost:4403/mcp"],
+    "action_classes": ["consequential_read", "consequential_write", "irreversible_action", "external_commitment"],
+    "execution_paths": ["mcp:tools/call"],
+    "pep_locations": ["mcp-payments-pep"],
+    "excluded_paths": [],
+    "mission_establishment_mode": "token-claim"
+  },
+  "authority_entry_types": [{"type": "mission_resource_access", "evaluator": "fga-contextual-check"}],
+  "pdps": ["mcp-payments-pdp"],
+  "state_source": {
+    "source": "kernel-committed load_view",
+    "max_staleness_seconds": 300,
+    "mission_max_stale_seconds": 300,
+    "pdp_unavailability_posture": "deny",
+    "unknown_action_class": "deny",
+    "per_class": {
+      "consequential_read": {"max_staleness_seconds": 300, "recovery_objective_seconds": 60, "beyond_bound": "deny"},
+      "consequential_write": {"max_staleness_seconds": 300, "recovery_objective_seconds": 60, "beyond_bound": "deny"},
+      "irreversible_action": {"max_staleness_seconds": 30, "recovery_objective_seconds": 60, "beyond_bound": "deny"},
+      "external_commitment": {"max_staleness_seconds": 60, "recovery_objective_seconds": 60, "beyond_bound": "deny"},
+      "privileged_administration": {"max_staleness_seconds": 30, "recovery_objective_seconds": 60, "beyond_bound": "deny"}
+    },
+    "availability_consequence": "An unavailable PDP denies immediately. Stale state denies even if recovery takes longer than the class bound; an outage never restarts observation age or extends a permit.",
+    "replication": "none",
+    "break_glass": "absent"
+  },
+  "remote_decision_channels": [],
+  "record_integrity_mechanism": "emitter-signed append-only runtime evidence; full Evidence capability not claimed"
+}

@@ -1,3 +1,5 @@
+import { postureStalenessBound, RUNTIME_POSTURE } from "./runtime-posture.js";
+
 /**
  * Deployment policy for the payments estate: action -> FGA relation mapping
  * and per-class staleness bounds (payments-runtime-profile-v1; O-8 numbers).
@@ -29,12 +31,5 @@ export function relationForAction(action: string) {
 
 /** Published staleness bounds (O-8): tight for high-consequence, looser for reads. */
 export function stalenessBoundSeconds(actionClass: string | undefined): number {
-  switch (actionClass) {
-    case "irreversible_action":
-      return 30;
-    case "external_commitment":
-      return 60;
-    default:
-      return 300;
-  }
+  return postureStalenessBound(RUNTIME_POSTURE, actionClass);
 }

@@ -24,6 +24,7 @@ export {
   type PrincipalMappingResolver,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";
+export { RUNTIME_POSTURE, RUNTIME_CLASSES, loadRuntimePosture, postureStalenessBound, type RuntimePosture } from "./runtime-posture.js";
 export {
   createDecisionPoint,
   createEphemeralDecisionPoint,

@@ -533,6 +533,8 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // floor the draft treats token-lifetime expiry as itself a conforming
   // state source, so an absent member there is not by itself a refusal.
   const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
+  const declaredStalenessSeconds = opts.stalenessBoundSeconds(actionClass);
+  if (!Number.isFinite(declaredStalenessSeconds) || declaredStalenessSeconds <= 0) return deny("stale_state");
   if (req.context.freshness) {
     const observedAtMs = Date.parse(req.context.freshness.observed_at);
     const ageMs = now().getTime() - observedAtMs;
@@ -547,7 +549,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     if (
       !Number.isFinite(observedAtMs) ||
       ageMs < -skewToleranceMs ||
-      ageMs > opts.stalenessBoundSeconds(actionClass) * 1000 ||
+      ageMs > declaredStalenessSeconds * 1000 ||
       !sourceTrusted
     ) {
       return deny("stale_state");
@@ -947,7 +949,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // on. Previously this checked only "irreversible_action", so a
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
-  const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment";
+  const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment" || actionClass === "privileged_administration";
   return {
     decision: true,
     context: base({

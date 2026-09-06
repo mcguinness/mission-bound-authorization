@@ -369,6 +369,7 @@ describe("M1 tracer slice", () => {
       unknown
     >;
     expect(meta.mission_bound_authorization_supported).toBe(true);
+    expect(meta.mission_max_stale_seconds).toBe(300);
     expect(meta.introspection_endpoint).toBe(`${ISSUER}/introspect`);
     expect(meta.pushed_authorization_request_endpoint).toBe(`${ISSUER}/request`);
   });

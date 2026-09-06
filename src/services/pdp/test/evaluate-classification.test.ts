@@ -60,12 +60,32 @@ const opts = {
   fga: alwaysAllowFga,
   modelId: "unit-test-model",
   now: () => NOW,
-  stalenessBoundSeconds,
+  // Isolate entry-match gate independence even for unknown classes. The
+  // deployment's separate unknown-class fail-closed rule is tested below.
+  stalenessBoundSeconds: (value: string | undefined) => stalenessBoundSeconds(value) || 300,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
 };
 
 describe("classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification)", () => {
+  it("privileged administration uses the declared 30-second bound and a single-use permit", async () => {
+    const request = reqFor("privileged_administration");
+    request.action.name = "payments:invoice.read";
+    request.context.parameter_digest = "sha-256:params";
+    const permit = await evaluate(request, { ...opts, stalenessBoundSeconds });
+    expect(permit.decision).toBe(true);
+    expect((permit.context.conditions as Record<string, unknown>).use_limit).toBe(1);
+    request.context.freshness!.observed_at = new Date(NOW.getTime() - 31_000).toISOString();
+    expect((await evaluate(request, { ...opts, stalenessBoundSeconds })).context.denial_reason).toBe("stale_state");
+  });
+
+  it("unknown classes refuse even with a zero-age observation or no observation", async () => {
+    const request = reqFor("unknown");
+    request.action.name = "payments:invoice.read";
+    expect((await evaluate(request, { ...opts, stalenessBoundSeconds })).context.denial_reason).toBe("stale_state");
+    delete request.context.freshness;
+    expect((await evaluate(request, { ...opts, stalenessBoundSeconds })).decision).toBe(false);
+  });
   it("no action_class label, including the high-consequence and unrecognized ones, opens a bypass around the authority-entry-match gate", async () => {
     for (const actionClass of [
       "non_consequential",
