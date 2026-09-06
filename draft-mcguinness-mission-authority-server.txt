@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        5 September 2026
-Expires: 9 March 2027
+Intended status: Standards Track                        6 September 2026
+Expires: 10 March 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 March 2027.
+   This Internet-Draft will expire on 10 March 2027.
 
 Copyright Notice
 
@@ -146,11 +146,12 @@ Table of Contents
    21. References
      21.1.  Normative References
      21.2.  Informative References
-   Appendix A.  MAS-Mode End-to-End Example
-     A.1.  Submit
-     A.2.  Poll to Approved
-     A.3.  Join
-     A.4.  Permit
+   Appendix A.  Document History
+   Appendix B.  MAS-Mode End-to-End Example
+     B.1.  Submit
+     B.2.  Poll to Approved
+     B.3.  Join
+     B.4.  Permit
    Acknowledgments
    Author's Address
 
@@ -2473,7 +2474,11 @@ Table of Contents
    (the availability trade the security model states,
    [I-D.draft-mcguinness-mission-security-model]).  A deployment
    provisions MAS availability accordingly and sizes
-   mission_max_stale_seconds to the caching it can tolerate.
+   mission_max_stale_seconds to the caching it can tolerate.  Runtime
+   and Status's Operational Considerations describe dependency-specific
+   outage effects, remaining-window ride-through, and recovery
+   observations ([I-D.draft-mcguinness-mission-runtime],
+   [I-D.draft-mcguinness-oauth-mission-status]).
 
 18.6.  Signing-Key Custody
 
@@ -2875,14 +2880,23 @@ Table of Contents
               DOI 10.17487/RFC9635, October 2024,
               <https://www.rfc-editor.org/rfc/rfc9635>.
 
-Appendix A.  MAS-Mode End-to-End Example
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Pointed MAS Availability at the Runtime and Status Operational
+      Considerations sections for the dependency-specific outage, ride-
+      through, and recovery semantics (#310).  No MAS requirement
+      changed.
+
+Appendix B.  MAS-Mode End-to-End Example
 
    This appendix is non-normative.  It stages the standalone binding end
    to end on one Mission; the architecture's MAS-mode sequence diagram
    shows the same stages in temporal order
    ([I-D.draft-mcguinness-mission-architecture]).
 
-A.1.  Submit
+B.1.  Submit
 
    The client proposes the Mission by POSTing its Mission Intent to the
    submission endpoint; the MAS validates it, derives the Authority Set
@@ -2912,7 +2926,7 @@ A.1.  Submit
      "expires_at": "2026-10-16T14:32:11Z"
    }
 
-A.2.  Poll to Approved
+B.2.  Poll to Approved
 
    The MAS routes the submission to its approval surface; the Approver
    authenticates, reviews the rendered Authority Set, and approves, and
@@ -2939,7 +2953,7 @@ A.2.  Poll to Approved
      ]
    }
 
-A.3.  Join
+B.3.  Join
 
    The agent works under an ordinary OAuth token from the unchanged AS,
    which carries no Mission signal.  For the first consequential action,
@@ -2967,7 +2981,7 @@ A.3.  Join
      }
    }
 
-A.4.  Permit
+B.4.  Permit
 
    The join holds and the action is within the Mission's Authority Set,
    so the PDP permits; the PEP executes the call to

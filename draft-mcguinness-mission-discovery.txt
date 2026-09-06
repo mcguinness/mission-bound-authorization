@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                           5 September 2026
-Expires: 9 March 2027
+Intended status: Experimental                           6 September 2026
+Expires: 10 March 2027
 
 
                       Mission Open-World Discovery
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 March 2027.
+   This Internet-Draft will expire on 10 March 2027.
 
 Copyright Notice
 
@@ -546,6 +546,11 @@ Table of Contents
       or the original enumeration is a violation of the mediated
       environment, not a discovery.
 
+   Where a deployment persists taint on the artifacts a session
+   produces, the work-products profile's informative Artifact-Lineage
+   Label Persistence appendix describes that realization
+   ([I-D.draft-mcguinness-oauth-mission-work-products]).
+
    Where the metering companion is deployed, a deployment MAY place
    discovered egress-capable bindings in an exclusivity group with its
    sensitive-read authority, so a session that has read cannot acquire
@@ -930,9 +935,19 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-work-products]
+              McGuinness, K., "Mission Work Products", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-work-products.html>.
+
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Added an informative pointer from Injection-Driven Discovery to
+      artifact-lineage label persistence in the work-products profile;
+      the taint custody and adjudication requirements are unchanged
+      (#757).
 
    *  Security Considerations gained a conformance note stating
       explicitly that the harness's provenance-tracking and egress-

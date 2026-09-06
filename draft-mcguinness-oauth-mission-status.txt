@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        5 September 2026
-Expires: 9 March 2027
+Intended status: Standards Track                        6 September 2026
+Expires: 10 March 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 March 2027.
+   This Internet-Draft will expire on 10 March 2027.
 
 Copyright Notice
 
@@ -99,29 +99,31 @@ Table of Contents
      6.9.  Deferred Lifecycle Capabilities
    7.  Revocation Propagation
      7.1.  Recommended Access-Token TTL
-   8.  Authorization Server Metadata
-     8.1.  Worked Metadata Example
-   9.  Conformance
-   10. Security Considerations
-     10.1.  Mission Status Enumeration
-     10.2.  Mission Status Response Replay
-     10.3.  Mission Status Denial of Service
-     10.4.  RFC 9701 vs. New Media Type
-     10.5.  Signing-Key Retention for Audit
-     10.6.  General OAuth Security
-   11. Privacy Considerations
-     11.1.  Status and Lifecycle as Disclosure Surfaces
-     11.2.  Status Audit Logging
-   12. IANA Considerations
-     12.1.  OAuth Authorization Server Metadata Registration
-     12.2.  Media Type Registration
-       12.2.1.  application/mission-status-response+jwt
-     12.3.  Mission Lifecycle States Registrations
-     12.4.  Well-Known URI
+   8.  Operational Considerations
+   9.  Authorization Server Metadata
+     9.1.  Worked Metadata Example
+   10. Conformance
+   11. Security Considerations
+     11.1.  Mission Status Enumeration
+     11.2.  Mission Status Response Replay
+     11.3.  Mission Status Denial of Service
+     11.4.  RFC 9701 vs. New Media Type
+     11.5.  Signing-Key Retention for Audit
+     11.6.  General OAuth Security
+   12. Privacy Considerations
+     12.1.  Status and Lifecycle as Disclosure Surfaces
+     12.2.  Status Audit Logging
+   13. IANA Considerations
+     13.1.  OAuth Authorization Server Metadata Registration
+     13.2.  Media Type Registration
+       13.2.1.  application/mission-status-response+jwt
+     13.3.  Mission Lifecycle States Registrations
+     13.4.  Well-Known URI
    Acknowledgments
    References
      Normative References
      Informative References
+   Appendix A.  Document History
    Author's Address
 
 1.  Introduction
@@ -165,12 +167,12 @@ Table of Contents
       mission_max_stale_seconds bound and how to size token lifetimes to
       the propagation mechanisms in use.
 
-   *  *Authorization Server metadata* members (Section 8) advertising
+   *  *Authorization Server metadata* members (Section 9) advertising
       the endpoints above.
 
    Each capability is independently optional.  An implementation states
-   which it supports through the metadata of Section 8 and the
-   conformance language of Section 9.  An implementation that supports
+   which it supports through the metadata of Section 9 and the
+   conformance language of Section 10.  An implementation that supports
    none of them is unaffected and remains a conforming issuance profile.
 
    This document does not restate the issuance profile.  The Mission
@@ -185,8 +187,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 3 conformance rows in conformance-manifest.json (2
-   tested, 1 todo).  Adopt when: You must observe or change Mission
+   Implementation: 4 conformance rows in conformance-manifest.json (2
+   tested, 2 todo).  Adopt when: You must observe or change Mission
    state beyond token expiry (revoke, suspend, complete).  Requires:
    Mission-Bound Authorization for OAuth 2.0.
 
@@ -259,7 +261,7 @@ Table of Contents
    resolves it without holding a token the AS issued.
 
    The Mission Issuer publishes its Mission Status endpoint URL in
-   Authorization Server metadata (Section 8) as mission_status_endpoint,
+   Authorization Server metadata (Section 9) as mission_status_endpoint,
    which a consumer resolves from a credential's mission.issuer.  The
    endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED),
    following the recommendations of [RFC9325].
@@ -317,7 +319,7 @@ Table of Contents
        mission_lifecycle_endpoint for a Lifecycle request), not the
        token endpoint; the AS MUST reject an assertion whose aud names
        no such endpoint.  The AS accepts only the JWS [RFC7515]
-       algorithms it advertises for that endpoint (Section 8); none MUST
+       algorithms it advertises for that endpoint (Section 9); none MUST
        NOT be used.
 
    Plain Basic or POST client authentication MUST NOT be used for this
@@ -361,7 +363,7 @@ Table of Contents
    Which mechanisms and authorization this endpoint accepts are
    discoverable per endpoint, not inferred from the token endpoint's
    metadata.  The AS advertises the methods this endpoint accepts in
-   mission_status_endpoint_auth_methods_supported (Section 8).
+   mission_status_endpoint_auth_methods_supported (Section 9).
 
    For the sender-constrained access-token path, this endpoint is an
    OAuth protected resource: the AS publishes, in its Protected Resource
@@ -373,7 +375,7 @@ Table of Contents
    direct-client-authentication path (mTLS [RFC8705] or private-key JWT
    [RFC7523]), the accepted methods and, for private_key_jwt, the
    accepted client-assertion signing algorithms are advertised for this
-   endpoint (Section 8), not read from the token endpoint's
+   endpoint (Section 9), not read from the token endpoint's
    token_endpoint_auth_methods_supported [RFC8414].  Both paths are
    therefore discoverable.
 
@@ -396,7 +398,7 @@ Table of Contents
    carries typ of mission-status-response+jwt and a kid identifying the
    signing key.  Per [RFC7515] Section 4.1.9 the typ header omits the
    application/ prefix; the full media type application/mission-status-
-   response+jwt (registered in Section 12) is used as the HTTP Content-
+   response+jwt (registered in Section 13) is used as the HTTP Content-
    Type.  Exact validation of the protected typ value, together with
    mutually exclusive validation rules for the artifact profiles,
    implements the substitution defense of [RFC8725], Sections 3.11 and
@@ -405,7 +407,7 @@ Table of Contents
    [RFC9701] signed introspection responses are scoped to token
    introspection and do not apply to a lookup keyed by mission_id; the
    dedicated Mission Status operation therefore uses a new media type
-   and a JWS, not [RFC9701] (see Section 10.4).  Implementations MUST
+   and a JWS, not [RFC9701] (see Section 11.4).  Implementations MUST
    NOT use [RFC9701] for the dedicated Mission Status operation.
 
    The signed payload reports the Mission's current state and the
@@ -558,7 +560,7 @@ Table of Contents
    1.  the JWS header typ is mission-status-response+jwt;
 
    2.  the JWS header alg is one the AS advertises in
-       mission_status_signing_alg_values_supported (Section 8),
+       mission_status_signing_alg_values_supported (Section 9),
        rejecting none and any algorithm not listed;
 
    3.  the JWS signature against a current jwks_uri entry for the issuer
@@ -591,14 +593,14 @@ Table of Contents
       mission.fresh_until.
 
    *  *Freshness cap.* When the AS advertises mission_max_stale_seconds
-      (Section 8), it MUST NOT set mission.fresh_until later than the
+      (Section 9), it MUST NOT set mission.fresh_until later than the
       response iat plus that value.
 
    *  *Skew tolerance.* When comparing the current time to
       mission.fresh_until, a consumer MAY allow up to 30 seconds of
       tolerance for the active state only, and no tolerance for any
       other state.  The tolerance MUST NOT exceed the AS's advertised
-      mission_max_stale_seconds (Section 8).
+      mission_max_stale_seconds (Section 9).
 
    The freshness cap keeps report freshness within the deployment's
    advertised revocation-propagation tolerance.  The skew tolerance is a
@@ -836,7 +838,7 @@ Table of Contents
    section standardizes that management surface.
 
    The AS publishes its Mission Lifecycle endpoint URL in Authorization
-   Server metadata (Section 8) as mission_lifecycle_endpoint, distinct
+   Server metadata (Section 9) as mission_lifecycle_endpoint, distinct
    from [RFC7009] token revocation.  The endpoint MUST be served over
    TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations
    of [RFC9325].
@@ -1050,7 +1052,7 @@ Table of Contents
    mission_lifecycle_endpoint_auth_methods_supported and, for
    private_key_jwt, the accepted client-assertion algorithms in
    mission_lifecycle_endpoint_auth_signing_alg_values_supported
-   (Section 8).
+   (Section 9).
 
    For the sender-constrained access-token path, this endpoint is an
    OAuth protected resource exactly as the Mission Status endpoint is:
@@ -1348,7 +1350,7 @@ Table of Contents
       stream ([I-D.draft-mcguinness-oauth-mission-signals]), discovered
       from mission_event_stream_endpoint.
 
-   A deployment advertises mission_max_stale_seconds (Section 8), the
+   A deployment advertises mission_max_stale_seconds (Section 9), the
    maximum interval it tolerates for a Mission state change to take
    effect, so a consumer can size token lifetimes and choose propagation
    mechanisms to match.  When the member is absent, no propagation bound
@@ -1381,7 +1383,41 @@ Table of Contents
    status checks tighten specific paths; they are upgrades, not
    prerequisites.
 
-8.  Authorization Server Metadata
+8.  Operational Considerations
+
+   A deployment declaring revocation propagation SHOULD publish the
+   recovery objective considered when choosing mission_max_stale_seconds
+   and the availability consequence when recovery takes longer than that
+   bound.
+
+   The security ceiling governs the choice: an operational recovery
+   objective never authorizes extending a published freshness horizon
+   during an incident.  An existing observation's remaining validity is
+   not reset when an outage is detected.  An issuer outage and a state-
+   source outage are distinct where the topology provides an
+   independently available authoritative source.  Runtime's Operational
+   Considerations gives the per-action-class dependency analysis
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+   The deployment describes its distribution posture per surface: Status
+   responses are reused only to their authenticated fresh_until and
+   other applicable bounds; Status Lists are fetched within their
+   freshness window and checked locally; Signals accelerate learning of
+   transitions over a correctly bounded state source, not replace that
+   source after confidence is lost.  The Status List freshness rules
+   ([I-D.draft-mcguinness-oauth-mission-status-list]) and Signals'
+   Missed Events Are Not Fail-Open rule
+   ([I-D.draft-mcguinness-oauth-mission-signals]) remain authoritative.
+
+   Operators watch observation age and remaining validity, failed
+   refreshes, stream gaps, fallback availability, clock health, and
+   catch-up after recovery.  A recovery check reconciles committed state
+   and versions before publishing newly fresh observations.  A
+   successful HTTP response or a new signature alone does not establish
+   that reconciliation.  No new endpoint, metadata member, availability
+   target, or replication protocol is defined here.
+
+9.  Authorization Server Metadata
 
    This section is OPTIONAL and applies only to a deployment that adopts
    one or more of the extensions above.  An AS advertises the surfaces
@@ -1464,7 +1500,7 @@ Table of Contents
    discovered through the standard
    introspection_signing_alg_values_supported metadata.
 
-8.1.  Worked Metadata Example
+9.1.  Worked Metadata Example
 
    A discovery response from https://as.example.com/.well-known/oauth-
    authorization-server, showing the issuance profile members plus the
@@ -1498,7 +1534,7 @@ Table of Contents
      "mission_max_stale_seconds": 60
    }
 
-9.  Conformance
+10.  Conformance
 
    An implementation conforms to the issuance profile
    [I-D.draft-mcguinness-oauth-mission] or implements the Mission Issuer
@@ -1548,13 +1584,13 @@ Table of Contents
    mechanism computes a parallel view, and no surface reports authority
    the computation has not reduced.
 
-10.  Security Considerations
+11.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] apply in full.  This section
    covers threats specific to the extensions defined here.
 
-10.1.  Mission Status Enumeration
+11.1.  Mission Status Enumeration
 
    Per the anti-oracle property (Section 4.6), the AS MUST NOT let a
    caller readily distinguish an unknown mission_id from a known-but-
@@ -1566,7 +1602,7 @@ Table of Contents
    implementation that leaks the distinction exposes the Mission space
    to enumeration.
 
-10.2.  Mission Status Response Replay
+11.2.  Mission Status Response Replay
 
    A Mission Status Response is bound to (caller sub, audience, nonce,
    issuance time).  Replay against a different caller or audience, or
@@ -1577,7 +1613,7 @@ Table of Contents
    to a fresh response; a consumer MUST NOT use a cached response after
    mission.fresh_until, with the skew tolerance of Section 4.5.
 
-10.3.  Mission Status Denial of Service
+11.3.  Mission Status Denial of Service
 
    The Mission Status operation is on the consumption path of every
    Mission-bound credential validation in deployments where consumers
@@ -1585,19 +1621,19 @@ Table of Contents
    rate limiting (returning rate_limited, Section 4.7) and SHOULD
    encourage consumer-side caching (Section 4.5) to reduce traffic.
 
-10.4.  RFC 9701 vs. New Media Type
+11.4.  RFC 9701 vs. New Media Type
 
    When the introspection projection is signed (Section 5), it uses
    [RFC9701], which is scoped to token introspection.  The dedicated
    Mission Status operation uses a new media type (application/mission-
-   status-response+jwt, Section 12) and a JWS [RFC7515], because
+   status-response+jwt, Section 13) and a JWS [RFC7515], because
    [RFC9701] does not apply to a lookup keyed by mission_id.
    Implementations MUST NOT use [RFC9701] for the dedicated Mission
    Status operation, and MUST NOT accept an unsigned response from the
    dedicated Mission Status operation in place of the signed form it
    requires.
 
-10.5.  Signing-Key Retention for Audit
+11.5.  Signing-Key Retention for Audit
 
    The AS signs Mission Status and Lifecycle responses with a key from
    its jwks_uri.  The AS MUST keep the public JWK for every kid it has
@@ -1610,19 +1646,19 @@ Table of Contents
    exception: the AS removes it, and the Mandate profile's compromise-
    time rule governs how artifacts signed under it are then classified.
 
-10.6.  General OAuth Security
+11.6.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
    OAuth security guidance.
 
-11.  Privacy Considerations
+12.  Privacy Considerations
 
    The privacy considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] apply in full.  This section
    covers privacy specific to the extensions here.
 
-11.1.  Status and Lifecycle as Disclosure Surfaces
+12.1.  Status and Lifecycle as Disclosure Surfaces
 
    The Mission Status operation (Section 4) and the introspection
    projection (Section 5) disclose Mission state and the audience-scoped
@@ -1633,29 +1669,29 @@ Table of Contents
    the disclosed authority so a consumer never sees entries addressed to
    other audiences (Section 4.4).
 
-11.2.  Status Audit Logging
+12.2.  Status Audit Logging
 
    The AS records Status and Lifecycle requests (containing mission_id,
    audience, caller, and timing) in audit logs.  Deployments MUST treat
    these logs as PII sinks per the issuance profile's privacy
    considerations.
 
-12.  IANA Considerations
+13.  IANA Considerations
 
    This document requests IANA actions for OAuth AS metadata members and
    a media type.  It defines no new registry of its own: the endpoint
    authentication-method value space is a closed set defined inline
-   (Section 8).  A companion profile MAY register further extension
+   (Section 9).  A companion profile MAY register further extension
    members or Common Constraints against a family registry; the Entry
    Discharge companion registers terminal_when in the Mission Resource
    Access Profile's Mission Common Constraints registry this way
    ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
-12.1.  OAuth Authorization Server Metadata Registration
+13.1.  OAuth Authorization Server Metadata Registration
 
    IANA is requested to register the following in the "OAuth
    Authorization Server Metadata" registry [RFC8414].  For each: Change
-   Controller IETF; Reference this document, Section 8.
+   Controller IETF; Reference this document, Section 9.
 
    *  mission_status_endpoint
 
@@ -1673,11 +1709,11 @@ Table of Contents
 
    *  mission_max_stale_seconds
 
-12.2.  Media Type Registration
+13.2.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838].
 
-12.2.1.  application/mission-status-response+jwt
+13.2.1.  application/mission-status-response+jwt
 
    *  Type name: application
 
@@ -1689,7 +1725,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -1717,7 +1753,7 @@ Table of Contents
 
    *  Author/Change controller: IETF
 
-12.3.  Mission Lifecycle States Registrations
+13.3.  Mission Lifecycle States Registrations
 
    This document requests registration of two states in the issuance
    profile's Mission Lifecycle States registry
@@ -1741,10 +1777,10 @@ Table of Contents
 
                                  Table 5
 
-12.4.  Well-Known URI
+13.4.  Well-Known URI
 
    This document registers no new Well-Known URI.  The metadata members
-   of Section 8 are added to the OAuth Authorization Server Metadata
+   of Section 9 are added to the OAuth Authorization Server Metadata
    document at /.well-known/oauth-authorization-server [RFC8414].
 
 Acknowledgments
@@ -1933,6 +1969,15 @@ Informative References
               "Best Current Practice for OAuth 2.0 Security", BCP 240,
               RFC 9700, DOI 10.17487/RFC9700, January 2025,
               <https://www.rfc-editor.org/rfc/rfc9700>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Operational Considerations added (#310): recovery sizing for the
+      advertised propagation ceiling, the per-surface distribution
+      posture, and the operator observations after a degraded surface
+      recovers.  No freshness window is extended and no member is added.
 
 Author's Address
 
