@@ -1786,6 +1786,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const statusNonce = str(ctx.query.nonce);
       try {
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
+          freshnessSeconds: Math.min(60, Number(MISSION_MAX_STALE_SECONDS)),
           ...optional("audience", str(ctx.query.audience)),
           ...optional("nonce", statusNonce),
           requester: principal.principal_id,
@@ -3342,6 +3343,7 @@ async function handleDischarge(input: {
     // nonce: the durable acknowledgement an at-least-once sender stops retrying
     // against.
     const jws = await kernel.signedStatus(missionId, {
+      freshnessSeconds: Math.min(60, Number(MISSION_MAX_STALE_SECONDS)),
       requester: principal.principal_id,
       nonce,
       dischargeResult: result,
