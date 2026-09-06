@@ -2,6 +2,10 @@
  "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.specs names, for every spec file a row references, the revision (the commit whose text that spec's rows were validated against) and content_sha256 (a mechanical gate recomputed from the working-tree file's current bytes, which must match, or the entry needs deliberate re-review and a bump before CI passes again); the stale-text check catches an edited or relocated clause inside an anchored section, source.specs catches any other edit to a spec whose rows were not re-reviewed. Completeness provenance per spec lives in the tracking issues, not in this manifest. Each row's profiles array (enumerated at the top level in profiles) names which published baseline profile(s) this requirement belongs to: a floor document beyond core typically carries only runtime-enforced, core typically carries both, and an empty array means this requirement belongs to no published baseline profile, whether because its document sits outside every baseline or because a baseline document's own row is scoped to an optional capability no published baseline selects; profiles and applicability are orthogonal, since applicability already encodes election of an OPTIONAL capability.",
  "source": {
   "specs": {
+   "draft-mcguinness-mission-control-plane.md": {
+    "revision": "efb2a01b9dc4f9e61a118f94c8a4061aa5b0aaa8",
+    "content_sha256": "59c6a070b21b08556d7507e66a2be2a7b67402af21c076b447fee773ab3f8aa0"
+   },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
     "content_sha256": "48bdb4ec63bbc9fe1293a1c4b6c339bb327afbbc9ca3f0144e0acf5420ab3d7c"
@@ -35,16 +39,16 @@
     "content_sha256": "bf2239e29d649ae7e831e2c634ecd6455a0b4cc20607330fa0a695b726e7c125"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "01306ccabd282a0ceac126aa39e67133b9f37479",
-    "content_sha256": "1722dd6c39d6e5fc39db0b5f0bf8797363cfe631ab7e342b4cf4f86a45d17a02"
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "26de126e0e9e0cfd0cc7fc3334d107a73462a22196edf0fda7b60fa335950ce6"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "172fb46606ec02b2942cac492b28c181c60bae2f",
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
-    "content_sha256": "af7bfc6d7eeffd479e15d4d0c39f62b5eccc9c6c3a0b931bfa4a5ae0af8c8731"
+    "revision": "302ba47bc49d8e8e1a27c745528c0221412e4a73",
+    "content_sha256": "85a7c474869de53e8965086d5f41f142ccfaa030f01e5f0dc1502879cadef33a"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -82,13 +86,17 @@
     "revision": "406e4104f0834c7f154fd8337a9b8c3bc126c9ce",
     "content_sha256": "0765d900afd8e8601bbf6aaffb357b7f19d9a540f86dbc048650d256050c0430"
    },
-   "draft-mcguinness-mission-control-plane.md": {
-    "revision": "efb2a01b9dc4f9e61a118f94c8a4061aa5b0aaa8",
-    "content_sha256": "59c6a070b21b08556d7507e66a2be2a7b67402af21c076b447fee773ab3f8aa0"
-   },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "1c84c7455f4d97dbf871476ee5900ad3317ad095",
     "content_sha256": "4558f03b06b6d7c19bab670e4df88ce0cd4d4bf50507b9229879f13fc3f436c4"
+   },
+   "draft-mcguinness-oauth-mission-expansion.md": {
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "7a7c2a154cfa928f3480adb8e562941e9952fed9eb9b182621988dfa3c3f10d1"
+   },
+   "draft-mcguinness-oauth-mission-child-delegation.md": {
+    "revision": "da26fa4fb46f878914bbdd61bae902be0885fbdd",
+    "content_sha256": "d8296d718961ef9733f9923a83bebb290ab4f1fbe03aba51930f7372d7e38467"
    }
   }
  },
@@ -154,6 +162,9 @@
    "concurrency"
   ],
   "capabilities": [
+   "status.revocation-propagation",
+   "runtime.break-glass",
+   "control-plane.consistency",
    "core.introspection",
    "status.lifecycle",
    "status.discharge",
@@ -193,9 +204,7 @@
    "authzen.arap",
    "authzen.batch",
    "approval-context.manifest",
-   "status.revocation-propagation",
-   "runtime.break-glass",
-   "control-plane.consistency"
+   "child-delegation.carryover"
   ]
  },
  "profiles": [
@@ -328,6 +337,872 @@
     }
    ],
    "notes": "#759 closes the enabled headless seam and dashboard proxy. The OAuth interaction cookie is client-held and never counts as approver login. Independent browser-session integration enforces CSRF/origin/interaction binding; the local demo uses a separate short-lived operator bootstrap session. No production SSO or process-isolation claim."
+  },
+  {
+   "id": "runtime.conformance.perimeter-disposition-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "Each declared resource and excluded path MUST have exactly one perimeter disposition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every declared entry has one disposition, with the defined legacy-resource shorthand; invalid nested shapes and conflicting keys refuse.",
+    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.conformance.no-reconstructed-as-mediated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-conformance",
+   "text": "A deployment MUST NOT represent reconstructed or unrecorded entries as mediation.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A claim must name a mediated resource and no excluded execution path.",
+    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "status.operational.bound-sized-to-recovery",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "status-operational",
+   "text": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
+  },
+  {
+   "id": "runtime.operational.ride-through-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "ride-through",
+   "text": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
+  {
+   "id": "runtime.operational.replication-disclosed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "runtime-replication",
+   "text": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
+  {
+   "id": "runtime.operational.break-glass-declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "break-glass",
+   "text": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.break-glass"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+  },
+  {
+   "id": "capability-binding.recording.validating-server-records-binding",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "conformance",
+   "text": "A validating server conforming to this document MUST record `tool_id`, `source_uri`, `source_digest`, `operation_ref`, and any `catalog_digest` for every consequential action sourced from a discovered catalog, at derivation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The validating server records trusted resolved capability bindings before computing the authority commitment.",
+    "local": "This deployment's trust unit is the selected capability definition, so source_digest is recorded and no catalog_digest is. Configured local snapshots cover direct approval, newly established expansion actions, and template consent; child and template derivations inherit existing bindings."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > records source_digest and never a catalog_digest; the selected definition is the trust unit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > resolves mixed actions individually and records a fresh expansion action without refreshing its predecessor binding",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > resolves the consented template ceiling before hashing and drawdown inherits it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.presentation.pep-presents-context-member",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "conformance",
+   "text": "A PEP conforming to this document MUST present `context.capability_source` on a consequential request for a catalog-sourced action",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The PEP presents the current definition's binding from the catalog it serves, independent of whether the Mission has a recorded member."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > presents the current per-tool binding even on a Mission with no recorded member",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.verification.pdp-verifies-and-refuses",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "conformance",
+   "text": "A PDP conforming to this document MUST verify the presented binding against the recorded one and return `capability_drift` on a mismatch",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A recorded per-action binding requires a well-formed matching presentation; missing, malformed, substituted and drifted values refuse capability_drift."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > denies capability_drift on a mismatched %s before resource policy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > denies absent or malformed presentation: %s",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.verification.applicability-from-policy-view",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-verification",
+   "text": "not from the PEP's request; where no source binding was recorded, this check does not apply",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "Only bindings recorded for the requested action in the matched policy entry enable comparison; presentation neither creates applicability nor opts out."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > does not apply without recorded bindings, regardless of presentation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > uses only bindings for the requested action in a mixed entry",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.drift.reason-boundary",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-drift-reason",
+   "text": "`capability_drift` applies only when a source binding was recorded and the digest comparison ran",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Never-approved, contained and discharged authority preserve their existing refusal reasons; source verification applies only after those checks."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > preserves never-approved, contained and discharged reason precedence",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.derivation.covered-by-authority-hash",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-source-binding",
+   "text": "These values are part of the approved Mission's derived authority and are therefore covered by `authority_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Recorded bindings are committed in the Authority Set under authority_hash.",
+    "local": "The implementation-defined committed per-action capability_sources member from #752 is inherited byte-identically on issuer-derived lineage; binding-neutral wire comparisons use the shared predicate."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > records source_digest and never a catalog_digest; the selected definition is the trust unit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-binding.test.ts",
+     "name": "child creation inherits the parent's recorded bindings > commits the inherited bindings under the child authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-binding.test.ts",
+     "name": "template dispatch inherits the ceiling's recorded bindings > commits the inherited bindings under the instance authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.extraction.mcp-per-capability-definition",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-extraction",
+   "text": "For an MCP tool catalog, the extracted definition is the single tool's definition object as retrieved (the member of the catalog's tool list whose name is the capability's), JCS-canonicalized",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "MCP bindings hash one selected tool definition under JCS, not the whole catalog or an anchor envelope."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/capability-binding.test.ts",
+     "name": "capabilitySourceDigest: spec vector (capability-binding.md) > reproduces the published write_document source_digest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/capability-binding.test.ts",
+     "name": "extractMcpToolDefinition: per-capability scope > adding, removing, or renaming an unrelated tool leaves the digest unchanged",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.evidence.executor-recorded",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-source-binding",
+   "text": "It is a request-time fact, not part of the derived authority recorded at derivation, and is recorded in Decision Evidence when present",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Well-formed capability presentation, including an optional executor, is copied field by field into PDP-signed evidence; malformed presentation is omitted."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > carries catalog_digest and executor when present and signs only the closed normalized shape",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > records a structurally valid but mismatched binding on a capability_drift denial",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > omits malformed capability input (%s) while retaining drift reason and request-summary digest",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "capability-binding.verification.catalog-digest-compared-where-recorded",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-verification",
+   "text": "where a `catalog_digest` was recorded, the presented `catalog_digest` MUST equal it likewise; otherwise the PDP returns `capability_drift`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A recorded whole-catalog digest is required and compared in addition to the per-capability binding.",
+    "local": "No deployment approval surface here records a whole-catalog digest. Comparison is exercised with synthetic recorded fixtures at unit level; this deployment uses the selected capability definition as its trust unit."
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
+     "name": "recorded per-action capability verification > compares catalog_digest where recorded, including omission",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-reverification",
+   "text": "The executing PEP MUST verify the permit's bindings",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The executing PEP verifies the decision's binding to the capability before invocation.",
+    "local": "One read returns the presented binding and a local exact-octet snapshot identity. The snapshot is carried with the effective operation and compared immediately before invocation. This is the deployment's execution-reverification facet, not a separate MUST invented in the capability-drift section."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > refuses a changed snapshot before a read executes",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > carries the snapshot into write and list effective operations and refuses a post-decision change",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "cross-domain.resource-as.local-policy-bound",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST bound the issued `authorization_details` by what the cross-domain grant conveyed. It MUST apply its own local authorization policy in addition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a covering ceiling preserves the delegated entry byte-identically",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a local resource ceiling drops the other resource",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > narrows one multi-action entry to the surviving action without dropping its constraints",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a split ceiling covers each retained action without requiring one entry to cover both",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a lower amount ceiling drops the too-broad entry rather than removing its restriction",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > an empty intersection refuses without consuming the grant, which remains redeemable after a policy change",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a binding-free ceiling preserves issuer bindings only for retained actions",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a continuation grant is narrowed by the same destination policy",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > entitlement then ceiling compose to an empty-set refusal",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > malformed or unsupported grant authority refuses rather than minting verbatim",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "cross-domain.resource-as.derivation-record",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "SHOULD record, per minted local token, both sides of the derivation: the consumed grant's `jti` and conveyed `authorization_details`, and the local token's own identifier or digest (`jti`), `iss`, `aud`, `iat`, `exp`, and issued `authorization_details`.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Each minted local token has an input/output derivation record with consumed grant and local-token identifiers and authority."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#762 deliberately separates this from the ceiling fix: the mint currently supplies neither a local JTI nor this evidence record."
+  },
+  {
+   "id": "control-plane.consistency.serialization",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "serialization",
+   "text": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant. Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling."
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.fresh-observation",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "fresh-observation",
+   "text": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.state-surfaces",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "state-surfaces",
+   "text": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.rollback",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "rollback",
+   "text": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.tombstones",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "tombstones",
+   "text": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon. A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.partitions",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "partitions",
+   "text": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.emergency-deny",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "emergency-deny",
+   "text": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.emergency-authority",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "emergency-authority",
+   "text": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.isolation",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.fanout",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "fanout",
+   "text": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition. An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.declaration",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "deployment-declaration",
+   "text": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.claim",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
   },
   {
    "id": "core.submission.front-channel-refusal",
@@ -3777,6 +4652,28 @@
    "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
   },
   {
+   "id": "child-delegation.carryover.status-correlation",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -4003,6 +4900,28 @@
      "surface": "signals"
     }
    ]
+  },
+  {
+   "id": "child-delegation.carryover.signals-correlation",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "lifecycle-event",
+   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
    "id": "cross-org.chain.presentation-closed",
@@ -18946,870 +19865,378 @@
    "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
   },
   {
-   "id": "status.operational.bound-sized-to-recovery",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "status-operational",
-   "text": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound.",
+   "id": "child-delegation.carryover.no-progressive-drawdown",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover",
+   "text": "Carryover requires a child-specific direct approval for each replacement. A policy-adjudicated progressive drawdown MUST NOT perform carryover.",
    "role": "AS",
-   "strength": "SHOULD",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "status.revocation-propagation"
-   },
-   "profiles": [],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
-  },
-  {
-   "id": "runtime.operational.ride-through-declared",
-   "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "ride-through",
-   "text": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
-   "role": "PEP",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
-  },
-  {
-   "id": "runtime.operational.replication-disclosed",
-   "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "runtime-replication",
-   "text": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound.",
-   "role": "PEP",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "A deployment using replica-served state sources SHOULD disclose, in its Enforcement Scope Statement, the replication model and lag counted inside each published staleness bound."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
-  },
-  {
-   "id": "runtime.operational.break-glass-declared",
-   "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "break-glass",
-   "text": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim.",
-   "role": "PEP",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "capability",
-    "capability": "runtime.break-glass"
-   },
-   "profiles": [],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "A deployment providing positive emergency authority SHOULD declare the mode in its Enforcement Scope Statement, require dual control and automatic expiry, retain truthful activation and action evidence, and identify the affected actions as excluded from its Mission enforcement claim."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
-  },
-  {
-   "id": "capability-binding.recording.validating-server-records-binding",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "conformance",
-   "text": "A validating server conforming to this document MUST record `tool_id`, `source_uri`, `source_digest`, `operation_ref`, and any `catalog_digest` for every consequential action sourced from a discovered catalog, at derivation",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The validating server records trusted resolved capability bindings before computing the authority commitment.",
-    "local": "This deployment's trust unit is the selected capability definition, so source_digest is recorded and no catalog_digest is. Configured local snapshots cover direct approval, newly established expansion actions, and template consent; child and template derivations inherit existing bindings."
+    "normative": "Carryover requires a child-specific direct approval for each replacement. A policy-adjudicated progressive drawdown MUST NOT perform carryover."
    },
    "level": "cross-component",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
-     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
-     "level": "cross-component",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
-     "name": "trusted capability recording > records source_digest and never a catalog_digest; the selected definition is the trust unit",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
-     "name": "trusted capability recording > resolves mixed actions individually and records a fresh expansion action without refreshing its predecessor binding",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
-     "name": "trusted capability recording > resolves the consented template ceiling before hashing and drawdown inherits it",
-     "level": "unit",
-     "surface": "derivation"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "capability-binding.presentation.pep-presents-context-member",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "conformance",
-   "text": "A PEP conforming to this document MUST present `context.capability_source` on a consequential request for a catalog-sourced action",
-   "role": "PEP",
+   "id": "child-delegation.carryover.manifest-committed",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-manifest",
+   "text": "The Mission Issuer MUST render and commit the exact Carryover Manifest, including its exclusion policy and replacement approval facts, at the expansion approval event.",
+   "role": "AS",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
-   "surface": "decision-request",
+   "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The PEP presents the current definition's binding from the catalog it serves, independent of whether the Mission has a recorded member."
+    "normative": "The Mission Issuer MUST render and commit the exact Carryover Manifest, including its exclusion policy and replacement approval facts, at the expansion approval event."
    },
    "level": "cross-component",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
-     "name": "one catalog snapshot from discovery to invocation > presents the current per-tool binding even on a Mission with no recorded member",
-     "level": "cross-component",
-     "surface": "decision-request"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "capability-binding.verification.pdp-verifies-and-refuses",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "conformance",
-   "text": "A PDP conforming to this document MUST verify the presented binding against the recorded one and return `capability_drift` on a mismatch",
-   "role": "PDP",
+   "id": "child-delegation.carryover.completion-cas",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-cas",
+   "text": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`.",
+   "role": "AS",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
-   "surface": "decision-request",
+   "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A recorded per-action binding requires a well-formed matching presentation; missing, malformed, substituted and drifted values refuse capability_drift."
+    "normative": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`."
    },
    "level": "cross-component",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
-     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
-     "level": "cross-component",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > denies capability_drift on a mismatched %s before resource policy",
-     "level": "unit",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > denies absent or malformed presentation: %s",
-     "level": "unit",
-     "surface": "decision-request"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "capability-binding.verification.applicability-from-policy-view",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "capability-verification",
-   "text": "not from the PEP's request; where no source binding was recorded, this check does not apply",
-   "role": "PDP",
+   "id": "child-delegation.carryover.generation-order",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-generations",
+   "text": "The Mission Issuer MUST re-derive and validate each carried child in generation order against its prospective parent's Effective Authority Set, using all ordinary strict-subset, actor, and children-control checks.",
+   "role": "AS",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
-   "surface": "decision-request",
-   "assertion": "ignore",
+   "surface": "derivation",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "Only bindings recorded for the requested action in the matched policy entry enable comparison; presentation neither creates applicability nor opts out."
+    "normative": "The Mission Issuer MUST re-derive and validate each carried child in generation order against its prospective parent's Effective Authority Set, using all ordinary strict-subset, actor, and children-control checks."
    },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > does not apply without recorded bindings, regardless of presentation",
-     "level": "unit",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > uses only bindings for the requested action in a mixed entry",
-     "level": "unit",
-     "surface": "decision-request"
-    }
-   ]
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "capability-binding.drift.reason-boundary",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "capability-drift-reason",
-   "text": "`capability_drift` applies only when a source binding was recorded and the digest comparison ran",
-   "role": "PDP",
-   "strength": "stated",
+   "id": "child-delegation.carryover.effective-set-basis",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-no-reset",
+   "text": "The Mission Issuer MUST use the old child's current Effective Authority Set as the replacement's authority ceiling and MUST NOT restore containment or discharge removed by that effective-set calculation.",
+   "role": "AS",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
-   "surface": "decision-request",
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST use the old child's current Effective Authority Set as the replacement's authority ceiling and MUST NOT restore containment or discharge removed by that effective-set calculation."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.no-expiry-extension",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-no-reset",
+   "text": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.budget-transfer",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-no-reset",
+   "text": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.fresh-direct-records",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-records",
+   "text": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.atomic-records-map-outbox",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-commit",
+   "text": "The Mission Issuer MUST commit successor activation, predecessor supersession, every replacement record, the required old-child cascades, the final old-to-new map, and durable publication/recovery work atomically.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "The Mission Issuer MUST commit successor activation, predecessor supersession, every replacement record, the required old-child cascades, the final old-to-new map, and durable publication/recovery work atomically."
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.authorized-idempotent-retrieval",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-commit",
+   "text": "The Mission Issuer MUST provide idempotent retrieval of the committed replacement result through the child-creation completion surface to the authenticated and authorized child actor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "Never-approved, contained and discharged authority preserve their existing refusal reasons; source verification applies only after those checks."
+    "normative": "The Mission Issuer MUST provide idempotent retrieval of the committed replacement result through the child-creation completion surface to the authenticated and authorized child actor."
    },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > preserves never-approved, contained and discharged reason precedence",
-     "level": "unit",
-     "surface": "decision-request"
-    }
-   ]
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "capability-binding.derivation.covered-by-authority-hash",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "capability-source-binding",
-   "text": "These values are part of the approved Mission's derived authority and are therefore covered by `authority_hash`",
+   "id": "child-delegation.carryover.no-token-rebind",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-commit",
+   "text": "A token for the terminated child MUST NOT be treated as a credential of its replacement.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
    "surface": "derivation",
-   "assertion": "output-bound",
+   "assertion": "refusal",
    "observation": {
-    "normative": "Recorded bindings are committed in the Authority Set under authority_hash.",
-    "local": "The implementation-defined committed per-action capability_sources member from #752 is inherited byte-identically on issuer-derived lineage; binding-neutral wire comparisons use the shared predicate."
+    "normative": "A token for the terminated child MUST NOT be treated as a credential of its replacement."
    },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
-     "name": "trusted capability recording > records source_digest and never a catalog_digest; the selected definition is the trust unit",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/capability-binding.test.ts",
-     "name": "child creation inherits the parent's recorded bindings > commits the inherited bindings under the child authority_hash",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/capability-binding.test.ts",
-     "name": "template dispatch inherits the ceiling's recorded bindings > commits the inherited bindings under the instance authority_hash",
-     "level": "unit",
-     "surface": "derivation"
-    }
-   ]
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "capability-binding.extraction.mcp-per-capability-definition",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "capability-extraction",
-   "text": "For an MCP tool catalog, the extracted definition is the single tool's definition object as retrieved (the member of the catalog's tool list whose name is the capability's), JCS-canonicalized",
+   "id": "child-delegation.carryover.authenticated-map",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "runtime.discovered-catalog"
-   },
-   "profiles": [],
-   "surface": "derivation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "MCP bindings hash one selected tool definition under JCS, not the whole catalog or an anchor envelope."
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/packages/mission-core/test/capability-binding.test.ts",
-     "name": "capabilitySourceDigest: spec vector (capability-binding.md) > reproduces the published write_document source_digest",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/packages/mission-core/test/capability-binding.test.ts",
-     "name": "extractMcpToolDefinition: per-capability scope > adding, removing, or renaming an unrelated tool leaves the digest unchanged",
-     "level": "unit",
-     "surface": "derivation"
-    }
-   ]
-  },
-  {
-   "id": "capability-binding.evidence.executor-recorded",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "capability-source-binding",
-   "text": "It is a request-time fact, not part of the derived authority recorded at derivation, and is recorded in Decision Evidence when present",
-   "role": "PDP",
-   "strength": "stated",
-   "applicability": {
-    "kind": "capability",
-    "capability": "runtime.discovered-catalog"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Well-formed capability presentation, including an optional executor, is copied field by field into PDP-signed evidence; malformed presentation is omitted."
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "validated capability evidence (#657) > carries catalog_digest and executor when present and signs only the closed normalized shape",
-     "level": "unit",
-     "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "validated capability evidence (#657) > records a structurally valid but mismatched binding on a capability_drift denial",
-     "level": "unit",
-     "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "validated capability evidence (#657) > omits malformed capability input (%s) while retaining drift reason and request-summary digest",
-     "level": "unit",
-     "surface": "evidence-emission"
-    }
-   ]
-  },
-  {
-   "id": "capability-binding.verification.catalog-digest-compared-where-recorded",
-   "spec": "draft-mcguinness-mission-capability-binding.md",
-   "anchor": "capability-verification",
-   "text": "where a `catalog_digest` was recorded, the presented `catalog_digest` MUST equal it likewise; otherwise the PDP returns `capability_drift`",
-   "role": "PDP",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "runtime.discovered-catalog"
-   },
-   "profiles": [],
-   "surface": "decision-request",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A recorded whole-catalog digest is required and compared in addition to the per-capability binding.",
-    "local": "No deployment approval surface here records a whole-catalog digest. Comparison is exercised with synthetic recorded fixtures at unit level; this deployment uses the selected capability definition as its trust unit."
+    "normative": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes."
    },
    "level": "cross-component",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-capability-binding.test.ts",
-     "name": "recorded per-action capability verification > compares catalog_digest where recorded, including omission",
-     "level": "unit",
-     "surface": "decision-request"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
-   "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "execution-reverification",
-   "text": "The executing PEP MUST verify the permit's bindings",
-   "role": "PEP",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "runtime.discovered-catalog"
-   },
-   "profiles": [],
-   "surface": "resource-operation",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "The executing PEP verifies the decision's binding to the capability before invocation.",
-    "local": "One read returns the presented binding and a local exact-octet snapshot identity. The snapshot is carried with the effective operation and compared immediately before invocation. This is the deployment's execution-reverification facet, not a separate MUST invented in the capability-drift section."
-   },
-   "level": "cross-component",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
-     "name": "one catalog snapshot from discovery to invocation > refuses a changed snapshot before a read executes",
-     "level": "cross-component",
-     "surface": "resource-operation"
-    },
-    {
-     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
-     "name": "one catalog snapshot from discovery to invocation > carries the snapshot into write and list effective operations and refuses a post-decision change",
-     "level": "cross-component",
-     "surface": "resource-operation"
-    },
-    {
-     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
-     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
-     "level": "cross-component",
-     "surface": "resource-operation"
-    }
-   ]
-  },
-  {
-   "id": "cross-domain.resource-as.local-policy-bound",
-   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
-   "anchor": "validation-at-resource-as",
-   "text": "MUST bound the issued `authorization_details` by what the cross-domain grant conveyed. It MUST apply its own local authorization policy in addition",
+   "id": "child-delegation.carryover.observation-correlation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
-   "surface": "token-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant."
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a covering ceiling preserves the delegated entry byte-identically",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a local resource ceiling drops the other resource",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > narrows one multi-action entry to the surviving action without dropping its constraints",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a split ceiling covers each retained action without requiring one entry to cover both",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a lower amount ceiling drops the too-broad entry rather than removing its restriction",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > an empty intersection refuses without consuming the grant, which remains redeemable after a policy change",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a binding-free ceiling preserves issuer bindings only for retained actions",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a continuation grant is narrowed by the same destination policy",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > entitlement then ceiling compose to an empty-set refusal",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > malformed or unsupported grant authority refuses rather than minting verbatim",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup",
-     "level": "unit",
-     "surface": "token-endpoint"
-    }
-   ]
-  },
-  {
-   "id": "cross-domain.resource-as.derivation-record",
-   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
-   "anchor": "validation-at-resource-as",
-   "text": "SHOULD record, per minted local token, both sides of the derivation: the consumed grant's `jti` and conveyed `authorization_details`, and the local token's own identifier or digest (`jti`), `iss`, `aud`, `iat`, `exp`, and issued `authorization_details`.",
-   "role": "AS",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [],
-   "surface": "token-endpoint",
+   "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Each minted local token has an input/output derivation record with consumed grant and local-token identifiers and authority."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#762 deliberately separates this from the ceiling fix: the mint currently supplies neither a local JTI nor this evidence record."
-  },
-  {
-   "id": "control-plane.consistency.serialization",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "serialization",
-   "text": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "concurrency",
-   "observation": {
-    "normative": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant. Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling."
-   },
-   "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.fresh-observation",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "fresh-observation",
-   "text": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "verification",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
+    "normative": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles."
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "control-plane.consistency.state-surfaces",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "state-surfaces",
-   "text": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol.",
-   "role": "Controller",
-   "strength": "MUST",
+   "id": "child-delegation.carryover.out-of-order-recovery",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "A consumer MUST NOT infer absence of a replacement from receiving a cascade before the replacement's creation event.",
+   "role": "verifier",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "control-plane.consistency"
+    "capability": "child-delegation.carryover"
    },
    "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.rollback",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "rollback",
-   "text": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "verification",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.tombstones",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "tombstones",
-   "text": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon. A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.partitions",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "partitions",
-   "text": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.emergency-deny",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "emergency-deny",
-   "text": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.emergency-authority",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "emergency-authority",
-   "text": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim.",
-   "role": "PEP",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.isolation",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "isolation",
-   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "lifecycle-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee."
-   },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.fanout",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "fanout",
-   "text": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition.",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "propagation",
+   "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition. An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology."
+    "normative": "A consumer MUST NOT infer absence of a replacement from receiving a cascade before the replacement's creation event."
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "control-plane.consistency.declaration",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "deployment-declaration",
-   "text": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
-   "role": "Controller",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "control-plane.consistency.claim",
-   "spec": "draft-mcguinness-mission-control-plane.md",
-   "anchor": "conformance",
-   "text": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
-   "role": "Controller",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "control-plane.consistency"
-   },
-   "profiles": [],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
-  },
-  {
-   "id": "runtime.conformance.perimeter-disposition-declared",
-   "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "runtime-conformance",
-   "text": "Each declared resource and excluded path MUST have exactly one perimeter disposition",
+   "id": "child-delegation.carryover.expansion-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "deferred-window",
+   "text": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "deployment-documentation",
+   "profiles": [],
+   "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every declared entry has one disposition, with the defined legacy-resource shorthand; invalid nested shapes and conflicting keys refuse.",
-    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+    "normative": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules"
    },
-   "level": "unit",
+   "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   },
   {
-   "id": "runtime.conformance.no-reconstructed-as-mediated",
-   "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "runtime-conformance",
-   "text": "A deployment MUST NOT represent reconstructed or unrecorded entries as mediation.",
+   "id": "child-delegation.carryover.expansion-expiry",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-expiry",
+   "text": "An approved successor extension MUST NOT extend a carried child's expiry",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "deployment-documentation",
-   "assertion": "refusal",
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "A claim must name a mediated resource and no excluded execution path.",
-    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+    "normative": "An approved successor extension MUST NOT extend a carried child's expiry"
    },
-   "level": "unit",
+   "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+  },
+  {
+   "id": "child-delegation.carryover.expansion-atomicity",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "superseded-state",
+   "text": "When the approved operation includes Child Mission Carryover, the Mission Issuer MUST include replacement records, required old-child cascades, the committed outcome map, and durable recovery work in the same atomic operation.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "When the approved operation includes Child Mission Carryover, the Mission Issuer MUST include replacement records, required old-child cascades, the committed outcome map, and durable recovery work in the same atomic operation."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
   }
  ]
 }
