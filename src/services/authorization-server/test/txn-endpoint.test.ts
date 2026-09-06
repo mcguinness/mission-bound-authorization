@@ -536,7 +536,7 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
       // @spec txn-authorization#resource-challenge — a challenge names ONE
       // operation, so the entry it carries names exactly one action.
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
     expect(requested.length).toBeGreaterThan(0);
 
     const txn = "txn_http_1";
@@ -691,7 +691,7 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
       // @spec txn-authorization#resource-challenge — a challenge names ONE
       // operation, so the entry it carries names exactly one action.
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
     const challenge = await signChallenge(
       {
         txn: "txn_http_cnf",
@@ -725,7 +725,7 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
       // @spec txn-authorization#resource-challenge — a challenge names ONE
       // operation, so the entry it carries names exactly one action.
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
     const txn = "txn_http_denied";
     const challenge = await signChallenge(
       {
@@ -760,7 +760,7 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[] };
     return record.authority_set
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
   };
 
   const challengeFor = async (txn: string, over: Record<string, unknown> = {}) =>
@@ -897,7 +897,7 @@ describe("challenge trust boundaries (@spec txn-authorization#two-phase-expiry)"
         txn: "txn_cross_issuer",
         authorization_details: record.authority_set
           .filter((e) => e.actions.includes("payments:remittance.send"))
-          .map((e) => ({ ...e, actions: ["payments:remittance.send"] })),
+          .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] })),
         iss: RESOURCE,
         aud: ISSUER,
         reason: "action_approval_required",
@@ -938,7 +938,7 @@ describe("challenge trust boundaries (@spec txn-authorization#two-phase-expiry)"
         txn: "txn_auth_guards",
         authorization_details: (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set
           .filter((e) => e.actions.includes("payments:remittance.send"))
-          .map((e) => ({ ...e, actions: ["payments:remittance.send"] })),
+          .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] })),
         iss: RESOURCE,
         aud: ISSUER,
         reason: "action_approval_required",
@@ -987,7 +987,7 @@ describe("approval bound to the whole transaction (@spec txn-authorization#chall
       // @spec txn-authorization#resource-challenge — a challenge names ONE
       // operation, so the entry it carries names exactly one action.
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
     const challenge = await signChallenge(
       {
         txn,
@@ -1187,7 +1187,7 @@ describe("terminal result ordering (@spec txn-authorization#failure-semantics)",
         txn,
         authorization_details: (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set
           .filter((e) => e.actions.includes("payments:remittance.send"))
-          .map((e) => ({ ...e, actions: ["payments:remittance.send"] })),
+          .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] })),
         iss: RESOURCE,
         aud: ISSUER,
         reason: "action_approval_required",
@@ -1237,7 +1237,7 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
     const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[]; expires_at: string };
     const requested = record.authority_set
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
     // The mission claim as a cross-domain credential carries it: the invariants
     // PLUS the issuer-qualified origin principal.
     const claim = { ...missionClaim, subject: ORIGIN };
@@ -1405,7 +1405,7 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
     const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[] };
     const requested = record.authority_set
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
 
     const subjectOrigin = opts.subjectTokenOrigin ?? ORIGIN;
     const challengeOrigin = opts.challengeOrigin ?? subjectOrigin;
@@ -1681,7 +1681,7 @@ describe("subject credential liveness and the post-decision fence (@spec txn-aut
   ): Promise<string> {
     const requested = (as.kernel.get(mission.missionId) as { authority_set: AuthorityEntry[] }).authority_set
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
     const challenge = await signChallenge(
       {
         txn,
@@ -1763,7 +1763,7 @@ describe("fresh decision at completion (@spec txn-authorization#challenge-redemp
   const requested = (): AuthorityEntry[] =>
     (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
 
   const admit = async (txn: string, over: Record<string, unknown> = {}) => {
     const challenge = await signChallenge(
@@ -1976,7 +1976,7 @@ async function freshMission(
 function remittanceEntry(id: string): AuthorityEntry[] {
   return (as.kernel.get(id) as { authority_set: AuthorityEntry[] }).authority_set
     .filter((e) => e.actions.includes("payments:remittance.send"))
-    .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+    .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
 }
 
 describe("the approval requirement under delegation (@spec txn-authorization#applicability)", () => {
@@ -2092,7 +2092,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
     const mission = await freshMission();
     const multi = (as.kernel.get(mission.missionId) as { authority_set: AuthorityEntry[] }).authority_set
       .filter((e) => e.actions.includes("payments:remittance.send"))
-      .map((e) => ({ ...e, actions: ["payments:invoice.read", "payments:remittance.send"] }));
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:invoice.read", "payments:remittance.send"] }));
     const res = await submit(await challengeFor(mission, "txn_profile_multi", multi), {
       token: mission.token,
     });
@@ -2106,7 +2106,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
 
   it("refuses an entry whose action is blank", async () => {
     const mission = await freshMission();
-    const blank = remittanceEntry(mission.missionId).map((e) => ({ ...e, actions: ["   "] }));
+    const blank = remittanceEntry(mission.missionId).map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["   "] }));
     const res = await submit(await challengeFor(mission, "txn_profile_blank", blank), {
       token: mission.token,
     });
@@ -2132,7 +2132,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
     // entry is unreadable. A TAS that fell back to `reason` would admit an
     // operation the resource never described.
     const mission = await freshMission();
-    const unreadable = remittanceEntry(mission.missionId).map((e) => ({ ...e, actions: [] }));
+    const unreadable = remittanceEntry(mission.missionId).map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: [] }));
     const res = await submit(await challengeFor(mission, "txn_profile_reason", unreadable), {
       token: mission.token,
     });

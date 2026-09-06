@@ -9,6 +9,9 @@
  */
 
 import {
+  type AuthorityEntry,
+  isAuthorityEntry,
+  narrowToCeiling,
   type EntitlementAuthorityEntry,
   type EntitlementResolver,
   type LocalMappingPolicy,
@@ -32,6 +35,9 @@ const FRESHNESS_SKEW_TOLERANCE_MS = 5_000;
 
 export interface RasConfig {
   issuer: string;
+  /** Required destination policy, applied on every redemption before one-time use. */
+  localCeiling: readonly AuthorityEntry[];
+  localPolicyVersion: string;
   /** Trusted originating Mission issuers -> their JWKS (issuer trust, local policy). */
   trustedIssuers: Record<string, { keys: JWK[] }>;
   signKey: CryptoKey;
@@ -93,6 +99,10 @@ export class ResourceAuthorizationServer {
   private now: () => Date;
   private readonly registeredClients: Map<string, string>;
   constructor(private readonly cfg: RasConfig) {
+    if (!Array.isArray(cfg.localCeiling) || cfg.localCeiling.length === 0 || !cfg.localCeiling.every(isAuthorityEntry) ||
+        cfg.localCeiling.some(e => e.capability_sources !== undefined) || typeof cfg.localPolicyVersion !== "string" || !cfg.localPolicyVersion) {
+      throw new Error("RAS local policy must have a version and a non-empty, supported, binding-free ceiling");
+    }
     this.db = openStore(redemptionSchema("jag_redemptions"));
     this.now = cfg.now ?? (() => new Date());
     this.registeredClients = new Map(Object.entries(cfg.registeredClients ?? {}));
@@ -295,15 +305,21 @@ export class ResourceAuthorizationServer {
     // the same non-oracular `invalid_grant` an unentitled principal already
     // gets. Computed before the one-time jti is consumed, for the same
     // reason the expiry clamp is.
-    let mintedAuthority: unknown = payload.authorization_details;
+    const delegated = payload.authorization_details;
+    if (!Array.isArray(delegated) || !delegated.length || !delegated.every(isAuthorityEntry)) {
+      throw new RasError("invalid_grant", "local policy check failed");
+    }
+    let mintedAuthority: AuthorityEntry[] = delegated;
     if (entitledAuthority !== undefined) {
-      const delegated = Array.isArray(payload.authorization_details)
-        ? (payload.authorization_details as Array<{ resource: string; actions: string[] }>)
-        : [];
       const narrowed = narrowToEntitledAuthority(delegated, entitledAuthority);
       if (narrowed.length === 0) throw new RasError("invalid_grant", "entitlement check failed");
       mintedAuthority = narrowed;
     }
+
+    // #762: the destination policy is an independent third bound, including
+    // continuation grants. Refusal must not burn the grant's one-time jti.
+    mintedAuthority = narrowToCeiling(mintedAuthority, this.cfg.localCeiling);
+    if (!mintedAuthority.length) throw new RasError("invalid_grant", "local policy check failed");
 
     // Compute the minted token's clamped expiry BEFORE consuming the
     // grant's one-time use (below): exp never outlives the grant lease, the

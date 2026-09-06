@@ -30,7 +30,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type DecisionEvidence,
   type TokenFacts,
   verifyEvidenceEnvelope,
@@ -96,7 +95,6 @@ function buildServer(missionView: MissionView, fga: Fga) {
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
@@ -105,7 +103,6 @@ function buildServer(missionView: MissionView, fga: Fga) {
     loadView,
     jwks: { keys: [] },
     issuer: ISSUER,
-    serverCard: { name: "payments" },
   });
   return { server, evidence };
 }
@@ -134,7 +131,6 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
@@ -143,7 +139,6 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       loadView,
       jwks: { keys: [] },
       issuer: ISSUER,
-      serverCard: { name: "payments" },
     });
 
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
@@ -189,7 +184,6 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
@@ -198,7 +192,6 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       loadView,
       jwks: { keys: [] },
       issuer: ISSUER,
-      serverCard: { name: "payments" },
     });
 
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
@@ -261,7 +254,6 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
@@ -270,7 +262,6 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
       loadView,
       jwks: { keys: [] },
       issuer: ISSUER,
-      serverCard: { name: "payments" },
     });
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
     expect(res.ok).toBe(true);

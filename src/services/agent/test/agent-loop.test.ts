@@ -36,7 +36,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   TransactionEngine,
 } from "@mission/mcp-payments";
 
@@ -124,7 +123,6 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
-  const card = { name: "payments" };
   // @spec runtime#state-freshness: a synchronous live read, freshness-
   // stamped at this read (Finding 1); "load_view" declared trusted below.
   // Implements the canonical (issuer, id) tuple contract (@spec
@@ -141,7 +139,6 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    sourceDigest: sourceDigestOf(card),
     allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
@@ -150,7 +147,6 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
     loadView,
     jwks: { keys: [pubJwk] },
     issuer: ISSUER,
-    serverCard: card,
     transaction: { engine, connectors, evidence },
   });
   return { server, connectors, evidence };

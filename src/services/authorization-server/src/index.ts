@@ -41,6 +41,7 @@ import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import { createTemplate } from "./kernel/template.js";
+import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
 import { TERMINAL_STATES } from "./kernel/types.js";
 import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
@@ -704,6 +705,7 @@ export async function buildAuthorizationServer(opts: {
   // declares.
   createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never, {
     authoritySourceCatalog: AUTHORITY_SOURCES as never,
+    capabilityResolver: trustedCapabilityResolver(),
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
@@ -711,6 +713,7 @@ export async function buildAuthorizationServer(opts: {
   // construction completes, and no lifecycle commit fires before then.
   let terminalProvider: Provider | undefined;
   const kernel = new MissionKernel({
+    capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;

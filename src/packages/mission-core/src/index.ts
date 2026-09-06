@@ -48,6 +48,23 @@ export {
   verifyAttenuationChain,
 } from "./attenuation-chain.js";
 export type {
+  AuthorityEntry,
+  ChildFanoutControls,
+  DelegateMatcher,
+  TerminalWhenCondition,
+} from "./authority-entry.js";
+export {
+  conditionCanonicalBytes,
+  conditionsNoBroader,
+  entryWithinCeiling,
+  isAuthorityEntry,
+  isSubsetEntry,
+  isSubsetSet,
+  isSubsetSetIgnoringCapabilitySources,
+  narrowToCeiling,
+  withoutCapabilitySources,
+} from "./authority-subset.js";
+export type {
   MissionBinding,
   MissionStatusLease,
   StateSource,

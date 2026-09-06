@@ -25,7 +25,6 @@ import {
   parameterDigest,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -67,7 +66,6 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
       modelId: "unused",
       loadView: () => undefined,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
     });
 
     const invoice = payments.getInvoice("inv-1");

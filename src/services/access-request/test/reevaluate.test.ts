@@ -18,7 +18,6 @@ import {
   EvidenceStore,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
 } from "@mission/mcp-payments";
 import { AccessRequestService } from "../src/index.js";
@@ -108,7 +107,6 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
           ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
           : undefined,
       instanceEpoch: "epoch-1",
-      sourceDigest: sourceDigestOf({ name: "payments" }),
       allowedFreshnessSources: new Set(["load_view"]),
       // Deployment policy: irreversible execute requires an action-bound approval.
       requiresActionApproval: (_action, cls) => cls === "irreversible_action",

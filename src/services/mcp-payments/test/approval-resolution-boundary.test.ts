@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Fga } from "@mission/pdp";
-import { createEphemeralEvidenceKeys, EvidenceStore, PaymentsStore, Pep, sourceDigestOf, type PepDeps, type TokenFacts } from "../src/index.js";
+import { createEphemeralEvidenceKeys, EvidenceStore, PaymentsStore, Pep, type PepDeps, type TokenFacts } from "../src/index.js";
 import { TOOLS } from "../src/server.js";
 
 function build() {
@@ -10,7 +10,6 @@ function build() {
     evidence, payments: new PaymentsStore(), decide: keys.decide,
     fga: { checkWithContext: async () => true } as unknown as Fga,
     modelId: "test", loadView: () => undefined, instanceEpoch: "test-759",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set(["load_view"]), requiresActionApproval: () => false, observe: () => {},
   };
   return { pep: new Pep(deps), evidence };

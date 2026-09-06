@@ -26,7 +26,7 @@
  * relationship cannot be established".
  */
 
-import { isSubsetSet } from "./derive.js";
+import { entryWithinCeiling } from "@mission/core";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, AuthoritySource, AuthoritySourceType } from "./types.js";
 
@@ -236,38 +236,19 @@ export function assertApproverMayActivate(
  * GATE 3 — the derived Authority Set lies wholly within the source's own
  * authority (for `organizational`, within the governed policy the entry
  * resolves). An assertion that REFUSES; it is never an input to derivation.
+ * @spec mission#approval-event (step 3) — the shared primitive compares
+ * authority, not approval-time provenance, against binding-free configuration.
  */
 export function assertWithinSourceCeiling(
   entry: AuthoritySourceCatalogEntry,
   authoritySet: readonly AuthorityEntry[],
 ): void {
-  if (!isSubsetSet(withoutCapabilitySources(authoritySet), entry.ceiling as AuthorityEntry[])) {
+  if (!authoritySet.every(candidate => entryWithinCeiling(candidate, entry.ceiling as AuthorityEntry[]))) {
     throw new IntentError(
       "access_denied",
       `the derived Authority Set exceeds the authority of the ${entry.type} source '${entry.id}'`,
     );
   }
-}
-
-/**
- * @spec mission#approval-event (step 3), capability-binding#capability-source-binding
- * — gate 3 compares AUTHORITY, so `capability_sources` is dropped from the
- * candidate before the comparison. A binding is per-action provenance recorded
- * at the approval that resolved it, not authority the source must hold: it
- * neither widens nor narrows what the Mission may do. The source ceiling is
- * trusted configuration, which by construction records none (a ceiling entry
- * cannot pre-seed a binding, see kernel/derive.ts `intersect`), and the subset
- * rule reads a candidate binding the grantor lacks as broader, so comparing
- * the two directly would refuse EVERY bound approval. Every other subset
- * dimension (`resource`, `actions`, `constraints`, `delegation`) is preserved
- * verbatim, so the gate still refuses a set that genuinely exceeds the source.
- */
-function withoutCapabilitySources(authoritySet: readonly AuthorityEntry[]): AuthorityEntry[] {
-  return authoritySet.map((entry) => {
-    if (!entry.capability_sources) return entry;
-    const { capability_sources: _dropped, ...rest } = entry;
-    return rest as AuthorityEntry;
-  });
 }
 
 /**

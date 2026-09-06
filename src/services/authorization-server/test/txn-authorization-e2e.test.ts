@@ -28,7 +28,6 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   TransactionEngine,
 } from "@mission/mcp-payments";
 import {
@@ -330,7 +329,6 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
     };
     evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-    const card = { name: "payments" };
     const pep = new Pep({
       decide: EVIDENCE_KEYS.decide,
       payments,
@@ -339,7 +337,6 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       modelId: conn.modelId,
       loadView,
       instanceEpoch: "e2e-epoch",
-      sourceDigest: sourceDigestOf(card),
       requiresActionApproval: (action) => action === "payments:remittance.send",
       maxApprovalAgeSeconds: 300,
       allowedFreshnessSources: new Set(["load_view"]),
@@ -352,7 +349,6 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       loadView,
       jwks: asJwks,
       issuer: ISSUER,
-      serverCard: card,
       transaction: { engine: new TransactionEngine("e2e-epoch"), connectors: new Connectors(), evidence },
       // The resource trusts the TAS's token-signing key through pre-established
       // federation metadata (this JWKS), never through the request.
