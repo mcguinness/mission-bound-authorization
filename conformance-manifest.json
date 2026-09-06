@@ -11,16 +11,16 @@
     "content_sha256": "48bdb4ec63bbc9fe1293a1c4b6c339bb327afbbc9ca3f0144e0acf5420ab3d7c"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "889e4294ab7d91469458b72a6da85593fcdd571f",
-    "content_sha256": "3dcdbc730422e4d361fd27c8d5d456bd327f1bc7f9571965602b35239a54555b"
+    "revision": "717e3e3f2786c938c9fc664cb88ffdfaa9f7ba89",
+    "content_sha256": "80c4951515ac57bda3047f645d257401a126e1568eb375e6ed2c495a2d97c552"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "dd7115f882e01828ef4dcba369fdf1d81f377acc",
-    "content_sha256": "246bdd384aa3b12d265d13b4988ae024f518e2619c8bdb56ac9d1cc723c7cb8e"
+    "revision": "717e3e3f2786c938c9fc664cb88ffdfaa9f7ba89",
+    "content_sha256": "55b175f4ec1b06ee3caaaa99242b7005c41d8d31c3296bca9b3262fd9d8b93f4"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "26d4b5ee641e274587030dee8e29b0eeb825a158",
-    "content_sha256": "7ec7af3047fa82f103d49280ec269c60c88e2ce7059d559e4a006d6ab5dbfd0d"
+    "revision": "ff7d8c5dc0b204b1b794781cadc036e0e4d3fbe9",
+    "content_sha256": "fa16f9469ae154cb284af261ce6d421c502830c4631cad11cd8c9130abdf910e"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -83,8 +83,8 @@
     "content_sha256": "559e25aeb0d2ccf66579f78b1ba5f8a2474dc1edf89fbfe810a5e0b25eefd3a2"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "406e4104f0834c7f154fd8337a9b8c3bc126c9ce",
-    "content_sha256": "0765d900afd8e8601bbf6aaffb357b7f19d9a540f86dbc048650d256050c0430"
+    "revision": "ff7d8c5dc0b204b1b794781cadc036e0e4d3fbe9",
+    "content_sha256": "ca234a207fe47e1df70547744c482a1797f752db6e139f99fb37b8babc452aa3"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "1c84c7455f4d97dbf871476ee5900ad3317ad095",
@@ -5740,7 +5740,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.issuance-required-high-consequence",
@@ -5761,7 +5762,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.no-silent-fallback",
@@ -5782,7 +5784,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.assertion-below-tier",
@@ -5803,7 +5806,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.issuance-grant-cnf",
@@ -5824,7 +5828,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered: a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string, and the issuance path in services/authorization-server carries no Enterprise-tier classification or key-binding requirement. The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.claim-isolation",
@@ -5845,7 +5850,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.redeemed-token-key",
@@ -5866,7 +5872,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered: a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string, and the issuance path in services/authorization-server carries no Enterprise-tier classification or key-binding requirement. The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.runtime-freshness-not-replaced",
@@ -5887,7 +5894,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.credential-mission-equality",
@@ -5908,7 +5916,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.no-repointing",
@@ -5929,7 +5938,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.baseline-join.reference-required",
@@ -8256,9 +8266,16 @@
     "normative": "an evidence-signing key's signature is never treated as authorizing an action or widening the Authority Set"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "An evidence-signing key exists per emitter role (#649), and the PDP signs the Decision Evidence it emits (#741), so this MUST NOT now has a code path to falsify. It is not falsified: no decision path reads a signature as authority. The record the PDP returns on the response context is retained evidence only, and the PEP acts on the decision itself; but nothing yet ASSERTS that, so this row stays todo rather than claiming a negative it does not observe."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > a genuinely signed Decision Evidence claiming permit does not flip an otherwise-DENY decision to executed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 wave 3: a genuinely signed permit record passes scoped verification and is retained, while the live DENY refuses with zero executor dispatches."
   },
   {
    "id": "runtime.evidence-emission.isolated-construction-condition",
@@ -11712,7 +11729,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. state_version appears nowhere under services/pdp/src: the PDP tracks no Mission state version to compare a presented one against, and its DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member to record the comparison in. The row needs PDP code, not a test."
   },
   {
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
@@ -12480,7 +12498,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. The PDP's DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no approval_id member, and approval_id appears nowhere under services/pdp/src, so there is no recorded value to observe. The row needs PDP record content, not a test."
   },
   {
    "id": "authzen.context-approval.deny-when-required-and-absent",
@@ -12601,7 +12620,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. The PDP's DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member for evaluated predicates or their outcomes, and predicates appears nowhere under services/pdp/src. The row needs PDP record content, not a test."
   },
   {
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
@@ -13131,8 +13151,16 @@
     "normative": "signed Decision Evidence is never accepted as authorization to act; it is retrospective evidence, not a live executable credential"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > a genuinely signed Decision Evidence claiming permit does not flip an otherwise-DENY decision to executed",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#594 wave 3: a genuinely signed permit record passes scoped verification and is retained, while the live DENY refuses with zero executor dispatches."
   },
   {
    "id": "authzen.permit-binding-split.cache-key-requirement",
@@ -15743,8 +15771,16 @@
     "normative": "evidence_id conforms to the ABNF and carries at least 128 bits of entropy"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 wave 3: full ABNF and canonical decoded random-segment length. Entropy is grounded in newRecordId's node:crypto randomBytes(20), not sampled uniqueness."
   },
   {
    "id": "evidence.decision.mission-reference-sub-members",
@@ -16700,7 +16736,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 wave 3: unrelated to #741 and still unimplemented. No audit-horizon or retention-window enforcement exists anywhere in src/: services/pdp/src/enforcement-scope.ts carries a declaration-shaped retention_window field on EnforcementExtensionDeclarations and nothing reads it, and no retention path compares a retained record's age against a Mission audit horizon."
   },
   {
    "id": "evidence.receipt.verify-before-relying-on-copied-fields",
@@ -19901,16 +19938,22 @@
     "normative": "The Mission Record gains no new member carrying approval_context_commitment; the commitment is never a Mission Record field."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
      "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699) > adds no Mission record member: a committed record carries no approval_context_commitment",
      "level": "unit",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-carriage.test.ts",
+     "name": "Approval Context Commitment carriage (@spec approval-governance#approval-context-computation, #699) > survives persistence and re-hydration: a fetched, re-hydrated record still carries no approval_context_commitment",
+     "level": "unit",
+     "surface": "commitment"
     }
    ],
-   "notes": "#699 asserts the AS kernel's committed MissionRecord, and the ungated issuer introspection view over it, carry no approval_context_commitment. That record type does not yet implement every core Mission Record member (authority_source is absent), so absence there is weaker than the row's own observation about the Mission Record, and coverage stays partial until the record type is complete."
+   "notes": "#594 wave 3: absence asserted on the created record, SQL-rehydrated kernel.get record, and ungated introspection projection. authority_source presence is supporting completeness coverage, not the absence assertion."
   },
   {
    "id": "approval-context.computation.cache-is-derived-state",
