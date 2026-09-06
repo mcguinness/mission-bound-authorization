@@ -2023,7 +2023,7 @@ where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.
 
-The core's informative Derivation Policy appendix
+The OAuth binding's informative Derivation Policy appendix
 ({{I-D.draft-mcguinness-oauth-mission}}) illustrates the versioned policy
 artifact, a worked narrowing rule, fixtures and ownership for this boundary.
 
@@ -3513,7 +3513,7 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
-- Linked the core's informative derivation-policy artifact and worked rule
+- Linked the OAuth binding's informative derivation-policy artifact and worked rule
   from the authority derivation boundary (#309).
 
 - Added the optional Control-Plane Consistency companion to the document
