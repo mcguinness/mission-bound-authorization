@@ -122,10 +122,10 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   // fact about that action with it rather than emitting the action unbound.
   // Actions the successor's own approval ADDS are not inherited: a binding
   // originates only in a trusted resolution at the approval that records it.
-  const authoritySet = inheritCapabilitySources(
+  const authoritySet = kernel.resolveFreshCapabilities(inheritCapabilitySources(
     kernel.derive(input.intent, proposal),
     predecessor.authority_set,
-  );
+  ));
   // @spec mission#approval-event (step 3), mission#authority-sources —
   // Expansion is a FRESH approval event with its own Approver (the
   // `approval_basis` built below is `direct`, exactly kernel.approve()'s
