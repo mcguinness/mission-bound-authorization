@@ -38,6 +38,8 @@
  *    Mission (and any sibling family) staying active;
  *  - Mission-bound refresh tokens introspect under the SAME composite rule.
  */
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import type { Server } from "node:http";
 import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
@@ -120,6 +122,7 @@ async function runFlow(input: {
       resource: input.resource,
       code_challenge: await pkceChallenge(),
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: input.intent }),
       ...(input.proposal ? { authorization_details: JSON.stringify(input.proposal) } : {}),
       client_assertion: await clientAssertion(),
@@ -148,8 +151,8 @@ async function runFlow(input: {
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader() },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res);
   location = res.headers.get("location") as string;
@@ -291,7 +294,7 @@ beforeAll(async () => {
   testSigningKey = testSigningKeys.privateKey;
   const testTokenSigningJwk = (await exportJWK(testSigningKeys.privateKey)) as JWK;
 
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, testTokenSigningJwk });
+  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS, testTokenSigningJwk });
   asServer = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   flow1 = await runFlow({

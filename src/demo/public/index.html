@@ -632,7 +632,14 @@
     const lbls = await api("/labels").catch(() => null);
     if (lbls && lbls.tools && lbls.actions && lbls.reasons) LABELS = lbls;
     renderActionsHelp();
+    const launchSecret = new URLSearchParams(location.hash.slice(1)).get("console-login");
+    if (launchSecret) {
+      history.replaceState(null, "", location.pathname + location.search);
+      const login = await fetch("/console/session", { method: "POST", credentials: "include", headers: { authorization: `Bearer ${launchSecret}` } });
+      if (!login.ok) throw new Error("Console login expired or invalid; restart the local demo for a new operator link.");
+    }
     const s = await api("/bff/session");
+    if (!s.roles) throw new Error("Open the operator-only login link printed when the demo started.");
     CSRF = s.csrf; MISSION = s.missionId;
     $("sess").dataset.who = `${esc(s.sub)} [${esc(s.roles.join(", "))}]`;
     logLine(`session as ${s.sub} [${s.roles.join(", ")}], mission ${s.missionId}`);

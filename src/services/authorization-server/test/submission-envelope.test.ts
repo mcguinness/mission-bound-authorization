@@ -28,6 +28,8 @@
  *    inputs with different evidence produce a MISMATCH, never a silent replay.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { computeAnchor, intentHash, MISSION_INTENT_EVIDENCE_TYP } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
@@ -418,14 +420,14 @@ async function pushPar(issuer: string, key: CryptoKey, params: Record<string, st
 }
 
 beforeAll(async () => {
-  e2eAs = await buildAuthorizationServer({ issuer: ISSUER_E2E, allowHeadlessAdjudication: true });
+  e2eAs = await buildAuthorizationServer({ issuer: ISSUER_E2E, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
   e2eServer = e2eAs.provider.listen(PORT);
   agentKey = (await importJWK(e2eAs.agentClientJwk as never, "ES256")) as CryptoKey;
   // A second AS whose GLOBAL policy REQUIRES the test evidence type (the
   // config-driven anti-downgrade hook).
   requiredAs = await buildAuthorizationServer({
     issuer: REQUIRED_ISSUER,
-    allowHeadlessAdjudication: true,
+    allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     requiredIntentEvidenceTypes: [TEST_TYPE],
   });
   requiredServer = requiredAs.provider.listen(REQUIRED_PORT);
@@ -451,6 +453,7 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     };
 
     const par = await pushPar(ISSUER_E2E, agentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT, evidence: [TEST_ENTRY] }),
     });
     expect(par.status, await par.clone().text()).toBe(201);
@@ -476,8 +479,8 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     res = await fetch(`${ISSUER_E2E}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      body: JSON.stringify({ decision: "approve" }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
 
@@ -508,6 +511,7 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
   it("anti-downgrade on the wire: a required type absent refuses the PAR submission; presenting it proceeds", async () => {
     verifierMode = "ok";
     const absent = await pushPar(REQUIRED_ISSUER, requiredAgentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
     });
     expect(absent.status).toBe(400);
@@ -516,6 +520,7 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     expect(body.error_description).toContain(`required evidence type absent: ${TEST_TYPE}`);
 
     const present = await pushPar(REQUIRED_ISSUER, requiredAgentKey, {
+      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT, evidence: [TEST_ENTRY] }),
     });
     expect(present.status, await present.clone().text()).toBe(201);

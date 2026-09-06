@@ -6,6 +6,8 @@
  * result is the fresh decision at completion.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { AccessRequestService, txnTaskId } from "@mission/access-request";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
@@ -260,6 +262,7 @@ async function issueBaseMissionToken(
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: intent,
       authorization_details: authorizationDetails,
       client_assertion: await clientAssertion(),
@@ -277,8 +280,8 @@ async function issueBaseMissionToken(
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -468,7 +471,7 @@ beforeAll(async () => {
 
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    allowHeadlessAdjudication: true,
+    allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     transactionAuthorization: {
       challengeIssuers,
       ars: txnArs,

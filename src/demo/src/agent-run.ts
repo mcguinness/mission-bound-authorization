@@ -15,7 +15,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { buildScopeStatement, createMediatedHarness, EgressGate, type MissionState, runAgentLoop } from "@mission/agent";
 import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, TOPOLOGY } from "@mission/demo-data";
 import { composeStack } from "./stack.js";
-import { issueMissionToken } from "./oauth-client.js";
+import { issueMissionToken } from "./approval-console.js";
 
 const C = { dim: "\x1b[2m", green: "\x1b[32m", red: "\x1b[31m", cyan: "\x1b[36m", bold: "\x1b[1m", reset: "\x1b[0m" };
 
@@ -63,7 +63,9 @@ async function main(): Promise<void> {
   // hand-duplicated one that could silently drift from it. See the constant's
   // doc comment for why it is split money/non-money.
   const authorizationDetails = JSON.stringify(DEMO_AGENT_PROPOSAL);
-  const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
+  // Trusted CLI bootstrap, before creating the agent. Only issued credentials
+  // and mediated dependencies are handed to runAgentLoop below.
+  const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" }, as.approverServiceToken);
   const missionClaim = decodeClaims(issued.accessToken).mission as { id: string; authority_hash: string };
   const missionId = missionClaim.id;
 

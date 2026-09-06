@@ -23,7 +23,8 @@ import {
   type DemoStack,
 } from "./stack.js";
 import { label as humanName } from "./labels.js";
-import { clientAssertionSigner, dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
+import { clientAssertionSigner, dpopProofFor, tokenGrantRequest } from "./oauth-client.js";
+import { issueMissionToken } from "./approval-console.js";
 
 /**
  * The AAM grant-type URNs are NOT re-exported from @mission/authorization-server
@@ -829,7 +830,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the Mission carries remittance.send with a direct approval_basis, distinct approver bob != subject alice, and NO template lineage.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (ordinary human approval)", "HTTP");
-  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent(), scope: "payments" });
+  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent(), scope: "payments" }, as.approverServiceToken);
   const humanClaims = decodeClaims(humanIssued.accessToken);
   const humanMissionId = (humanClaims.mission as { id: string }).id;
   const humanRecord = stack.kernel.get(humanMissionId);
@@ -936,7 +937,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the fresh task carries remittance.send again; the contained mission never regains it mid-run.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (a fresh human approval)", "HTTP");
-  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent(), scope: "payments" });
+  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent(), scope: "payments" }, as.approverServiceToken);
   const restoreClaims = decodeClaims(restoreIssued.accessToken);
   const restoredHumanMissionId = (restoreClaims.mission as { id: string }).id;
   const restoredRecord = stack.kernel.get(restoredHumanMissionId);
@@ -1132,7 +1133,7 @@ async function main() {
     "The agent runs the real OAuth dance (PAR, authorize, Bob approves, token) to mint a mission-bound token pair.",
     "the issuer narrows the proposal to the policy ceiling: bogus vendor.delete dropped, vendors reduced to acme, cap 999999 to 500; a real access token and id_token are issued.",
   );
-  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "openid profile email payments" });
+  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "openid profile email payments" }, as.approverServiceToken);
 
   // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
   hop("Agent", "AS", "POST /request", "HTTP");

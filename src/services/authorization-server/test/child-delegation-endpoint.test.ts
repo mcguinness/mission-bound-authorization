@@ -25,6 +25,8 @@
  *     client_id security gate, lazy Grant binding, and single-derivation gating.
  */
 
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
@@ -200,6 +202,7 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      login_hint: "alice",
       mission_intent: intent,
       authorization_details: JSON.stringify(parentAuthority()),
       client_assertion: await clientAssertion(),
@@ -218,8 +221,8 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
-    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -288,6 +291,7 @@ async function createChildViaExchange(fields: {
     requested_token_type: JWT_TOKEN_TYPE,
     // @spec child-delegation#creation-request-id — REQUIRED on every creation.
     creation_request_id: crypto.randomUUID(),
+    login_hint: "alice",
     mission_intent: JSON.stringify({
       intent: fields.intent ?? {
         goal: "Extract Acme invoices",
@@ -308,7 +312,7 @@ let parent: { missionId: string; refreshToken: string };
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    allowHeadlessAdjudication: true,
+    allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     // subagent-extractor / subagent-invoice-extractor are shipped in config;
     // these are the endpoint suite's additional child actors.
     actorProfiles: aiAgents("subagent-actor-ok", "subagent-other", "subagent-a", "subagent-b"),
@@ -431,6 +435,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token: parent.refreshToken,
       subject_token_type: REFRESH_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
           goal: "Extract Acme invoices",
@@ -454,6 +459,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
       creation_request_id: crypto.randomUUID(),
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         goal: "Extract Acme invoices",
         target_resources: [RESOURCE],
@@ -475,6 +481,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
       creation_request_id: crypto.randomUUID(),
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
           goal: "Extract Acme invoices",
@@ -521,6 +528,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token: parent.accessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
+      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
           goal: "Extract Acme invoices",
@@ -546,6 +554,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         subject_token: parent.accessToken,
         subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
         requested_token_type: JWT_TOKEN_TYPE,
+        login_hint: "alice",
         mission_intent: JSON.stringify({
           intent: {
             goal: "Extract Acme invoices",
