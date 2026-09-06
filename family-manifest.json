@@ -84,8 +84,41 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 46,
+ "count": 47,
  "drafts": [
+  {
+   "file": "draft-mcguinness-mission-control-plane.md",
+   "slug": "draft-mcguinness-mission-control-plane",
+   "title": "Mission Control-Plane Consistency",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "lab-best-effort",
+   "group": "lifecycle",
+   "verbs": [
+    "govern"
+   ],
+   "summary": "Topology-neutral issuer serialization, authoritative observation, rollback resistance, durable fan-out, and emergency-authority separation.",
+   "pull_when": "A deployment claims testable control-plane consistency across replication, partition, and recovery.",
+   "normative_references": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ],
+   "references": [
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-signals",
+    "draft-mcguinness-oauth-mission-status"
+   ]
+  },
   {
    "file": "draft-mcguinness-aauth-mission-expiry.md",
    "slug": "draft-mcguinness-aauth-mission-expiry",
@@ -653,7 +686,8 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-progressive"
+    "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-work-products"
    ]
   },
   {
@@ -1121,6 +1155,7 @@
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-capability-binding",
+    "draft-mcguinness-mission-control-plane",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-metering",
@@ -2185,12 +2220,14 @@
    "references": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
+    "draft-mcguinness-mission-discovery",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-continuation",
-    "draft-mcguinness-oauth-mission-cross-domain"
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-resource-access"
    ]
   },
   {

@@ -102,7 +102,6 @@ export interface McpServerDeps {
   loadView: (ref: MissionReference) => LoadedView | undefined;
   jwks: { keys: Record<string, unknown>[] };
   issuer: string;
-  serverCard: unknown;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
   /**
@@ -175,6 +174,7 @@ export interface TransactionToolResult {
 }
 
 export class McpPaymentsServer {
+  get capabilityCatalog() { return this.deps.pep.capabilityCatalog; }
   private readonly resolveKey;
   private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
@@ -742,8 +742,11 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
+    beforeReverify?.();
+    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, TOOL_ACTIONS[tool]?.action ?? tool))) {
+      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+    }
     if (res.listEffective) {
-      beforeReverify?.();
       // @spec runtime#read-binding: reverify the bound list read's
       // normalized parameters immediately before execution, exactly as
       // callWriteTool/callTransactionTool already do for a write.
@@ -784,6 +787,11 @@ export class McpPaymentsServer {
       };
     }
     beforeReverify?.();
+    // A moved catalog snapshot is its own refusal, not a parameter mismatch:
+    // check it first so the caller-visible reason matches the Refusal Record.
+    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, res.effective.action))) {
+      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+    }
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     if (!(await this.deps.pep.reverify(res.effective, digest, token))) {
       return { ok: false, refusal_reason: "parameter_mismatch" };
@@ -864,6 +872,11 @@ export class McpPaymentsServer {
 
     beforeCommit?.();
 
+    // A moved catalog snapshot is its own refusal, not a parameter mismatch.
+    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, res.effective.action))) {
+      tx.engine.advance(opKey, "abandoned");
+      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+    }
     // TOCTOU re-verify inside the lease, before commit.
     if (!tx.engine.leaseValid(opKey) || !(await this.deps.pep.reverify(res.effective, digest, token))) {
       tx.engine.advance(opKey, "abandoned");

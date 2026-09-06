@@ -13,6 +13,7 @@ import {
   type EntitlementResolver,
   type LocalMappingPolicy,
   narrowToEntitledAuthority,
+  narrowToCeiling,
   parseChainPresentation,
   resolveLocalPrincipal,
 } from "@mission/core";
@@ -27,7 +28,6 @@ import {
 } from "jose";
 import { randomBytes } from "node:crypto";
 import { mapToolsToAuthority } from "../kernel/attenuation.js";
-import { isSubsetSet } from "../kernel/derive.js";
 import {
   verifyCrossOrgChain,
   ChainVerificationError,
@@ -252,9 +252,7 @@ export async function handleCrossOrgChainExchange(
   // Dual-axis: the verified delegated authority intersected with the local
   // ceiling; entries the destination does not permit are narrowed out.
   const inputAuthority = mapToolsToAuthority(verified.leaf.tools);
-  let outputAuthority = inputAuthority.filter((e) =>
-    isSubsetSet([e], crossOrg.localCeiling as AuthorityEntry[]),
-  );
+  let outputAuthority = narrowToCeiling(inputAuthority, crossOrg.localCeiling as AuthorityEntry[]);
   // @spec cross-domain#dual-axis (#744): the third bound of the same
   // intersection, when the entitlement observation carries the action- and
   // resource-scoped grain. An audience-scoped observation leaves the

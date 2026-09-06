@@ -23,6 +23,8 @@
 import { createHash } from "node:crypto";
 import { AUTHORITY_ENTRY_TYP, canonicalize, computeAnchor, type JsonValue } from "@mission/core";
 import { IntentError } from "./intent.js";
+import { conditionCanonicalBytes } from "@mission/core";
+export { conditionCanonicalBytes, conditionsNoBroader } from "@mission/core";
 import type { AuthorityEntry, TerminalWhenCondition } from "./types.js";
 
 /**
@@ -64,16 +66,6 @@ export function entryDigest(iss: string, entry: AuthorityEntry): string {
  * value. Total: a structurally invalid condition yields `undefined` rather than
  * throwing, so the non-throwing subset predicate can fail closed on it.
  */
-export function conditionCanonicalBytes(condition: unknown): string | undefined {
-  if (condition === null || typeof condition !== "object" || Array.isArray(condition)) return undefined;
-  const c = condition as Record<string, unknown>;
-  if (typeof c.event_type !== "string") return undefined;
-  if (c.discharge_policy !== undefined && typeof c.discharge_policy !== "string") return undefined;
-  for (const k of Object.keys(c)) {
-    if (k !== "event_type" && k !== "discharge_policy") return undefined;
-  }
-  return canonicalize(condition as JsonValue);
-}
 
 /**
  * @spec discharge#terminal-when — `condition_digest`: a canonical-object digest
@@ -387,29 +379,4 @@ function cloneCondition(condition: TerminalWhenCondition): TerminalWhenCondition
       ? { discharge_policy: condition.discharge_policy }
       : {}),
   };
-}
-
-/**
- * @spec discharge#subset-extension — a candidate condition array is NO BROADER
- * than a reference array when it contains every reference condition, compared
- * structurally after canonicalization; it MAY add further conditions. Total and
- * non-throwing (a malformed condition on either side fails closed), so
- * `isSubsetEntry` stays a plain predicate.
- */
-export function conditionsNoBroader(
-  candidate: readonly TerminalWhenCondition[] | undefined,
-  reference: readonly TerminalWhenCondition[] | undefined,
-): boolean {
-  if (!reference?.length) return true; // the reference constrains nothing
-  if (!candidate?.length) return false; // dropping a parent condition WIDENS
-  const held = new Set<string>();
-  for (const c of candidate) {
-    const bytes = conditionCanonicalBytes(c);
-    if (bytes === undefined) return false;
-    held.add(bytes);
-  }
-  return reference.every((r) => {
-    const bytes = conditionCanonicalBytes(r);
-    return bytes !== undefined && held.has(bytes);
-  });
 }

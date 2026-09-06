@@ -19,7 +19,6 @@ import {
   type MissionReference,
   PaymentsStore,
   Pep,
-  sourceDigestOf,
   type TokenFacts,
   TransactionEngine,
 } from "@mission/mcp-payments";
@@ -109,7 +108,6 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     modelId: deps.modelId,
     loadView: (ref) => loadHarnessView(deps.view, ref),
     instanceEpoch: "epoch-eval",
-    sourceDigest: sourceDigestOf({ name: "payments" }),
     allowedFreshnessSources: new Set([EVAL_FRESHNESS_SOURCE]),
     ...(deps.revokedInstances ? { revokedInstances: deps.revokedInstances } : {}),
   });
@@ -119,7 +117,6 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     loadView: (ref) => loadHarnessView(deps.view, ref),
     jwks: { keys: [] },
     issuer: "https://as.test",
-    serverCard: { name: "payments" },
     transaction: { engine, connectors, evidence },
   });
 

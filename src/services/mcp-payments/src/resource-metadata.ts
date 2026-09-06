@@ -28,6 +28,16 @@ export function serveResourceMetadata(
 ): boolean {
   if (req.method !== "GET") return false;
   const path = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).pathname;
+  if (path === "/.well-known/mcp") {
+    try {
+      const text = server.capabilityCatalog.text();
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+      res.end(text);
+    } catch {
+      res.writeHead(503); res.end();
+    }
+    return true;
+  }
   if (path === PROTECTED_RESOURCE_METADATA_PATH) {
     return json(res, server.protectedResourceMetadata());
   }
