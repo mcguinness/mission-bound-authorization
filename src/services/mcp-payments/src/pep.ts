@@ -28,6 +28,7 @@ import {
   type Decision,
   type EntitlementResolver,
   evaluate,
+  isDecisionChannelRefusal,
   type EvaluationRequest,
   type Fga,
   type Freshness,
@@ -982,6 +983,16 @@ export class Pep {
       ...(this.deps.masJoin?.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
     };
     const decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
+    // @spec authzen#failure-condition-coverage — a local channel failure is
+    // not a PDP decision. It has no PDP evidence/evaluation identifier, and
+    // must take the PEP's own pre-decision Refusal Record path. Do not catch
+    // arbitrary errors from an in-process decision function as policy denial.
+    if (isDecisionChannelRefusal(decision)) {
+      const cause = String(decision.context.denial_reason);
+      const reason = cause === "decision_channel_timeout" || cause === "decision_channel_unreachable"
+        ? "pdp_unreachable" : "channel_failure";
+      return this.refuse(token, reason, mapping.action, view);
+    }
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
 

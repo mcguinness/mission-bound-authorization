@@ -26,10 +26,20 @@ export interface RemotePdpClientConfig {
   fetchImpl?: typeof fetch;
   /** Abort the request if the PDP has not responded within this many milliseconds. Default 5000. */
   timeoutMs?: number;
+  /** Maximum response bytes, including a signed denial. Default 1 MiB. */
+  maxResponseBytes?: number;
 }
 
+// Local failures retain the legacy false/context shape for existing callers,
+// but are branded by origin, never by a string a remote PDP can supply.
+const localRefusals = new WeakSet<object>();
+export function isDecisionChannelRefusal(value: unknown): boolean {
+  return value !== null && typeof value === "object" && localRefusals.has(value);
+}
 function channelDeny(denial_reason: string, extra: Record<string, unknown> = {}): Decision {
-  return { decision: false, context: { denial_reason, ...extra } };
+  const result = { decision: false, context: { denial_reason, ...extra } };
+  localRefusals.add(result);
+  return result;
 }
 
 /**
@@ -47,12 +57,25 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
   const signature = macHex(cfg.secret, REQUEST_MAC_DOMAIN, [cfg.pepId, nonce, issuedAt, body]);
 
   const timeoutMs = cfg.timeoutMs ?? 5000;
+  const maxBytes = cfg.maxResponseBytes ?? 1024 * 1024;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || !Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+    throw new Error("remote PDP timeout and response limit must be positive integers");
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const deadline = Date.now() + timeoutMs;
+  let timer: ReturnType<typeof setTimeout>;
+  const expired = new Promise<Decision>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve(channelDeny("decision_channel_timeout"));
+    }, timeoutMs);
+  });
 
-  let res: Response;
-  try {
-    res = await doFetch(cfg.url, {
+  const exchange = async (): Promise<Decision> => {
+    let res: Response;
+    let raw: string;
+    try {
+      res = await doFetch(cfg.url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -63,16 +86,33 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
       },
       body,
       signal: controller.signal,
-    });
-  } catch (err) {
-    return channelDeny(
-      err instanceof Error && err.name === "AbortError" ? "decision_channel_timeout" : "decision_channel_unreachable",
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-
-  const raw = await res.text();
+      });
+      if (res.body) {
+        const reader = res.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let bytes = 0;
+        try {
+          for (;;) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+            bytes += chunk.value.byteLength;
+            if (bytes > maxBytes) {
+              void reader.cancel().catch(() => {});
+              controller.abort();
+              return channelDeny("decision_channel_response_too_large");
+            }
+            chunks.push(chunk.value);
+          }
+          raw = Buffer.concat(chunks).toString("utf8");
+        } finally { reader.releaseLock(); }
+      } else {
+        raw = await res.text();
+        if (Buffer.byteLength(raw) > maxBytes) return channelDeny("decision_channel_response_too_large");
+      }
+    } catch (err) {
+      return channelDeny(controller.signal.aborted || (err instanceof Error && err.name === "AbortError")
+        ? "decision_channel_timeout" : "decision_channel_unreachable");
+    }
   if (!res.ok) {
     return channelDeny("decision_channel_refused", { channel_status: res.status });
   }
@@ -99,8 +139,19 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
   }
 
   try {
-    return JSON.parse(raw) as Decision;
+    const parsed: unknown = JSON.parse(raw);
+    const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
+    if (!object(parsed) || typeof parsed.decision !== "boolean" || !object(parsed.context)
+      || (parsed.decision && !object(parsed.context.conditions))
+      || (!parsed.decision && typeof parsed.context.reason !== "string" && typeof parsed.context.denial_reason !== "string")) {
+      return channelDeny("decision_channel_malformed_response");
+    }
+    if (Date.now() >= deadline) return channelDeny("decision_channel_timeout");
+    return parsed as unknown as Decision;
   } catch {
     return channelDeny("decision_channel_malformed_response");
   }
+  };
+  try { return await Promise.race([exchange(), expired]); }
+  finally { clearTimeout(timer!); }
 }

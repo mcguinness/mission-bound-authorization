@@ -7789,9 +7789,15 @@
      "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > an empty remote_decision_channels array is valid (a wholly co-resident deployment)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/remote-pdp-stack.test.ts",
+     "name": "demo configured remote PDP route > wires a real decision hop behind the flag and fails closed when that PDP stops",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "src/services/pdp/src/enforcement-scope.ts's validateEnforcementScopeStatement checks this baseline member: a statement omitting remote_decision_channels entirely fails validation, while an explicit empty array (a wholly co-resident deployment declaring no non-co-resident boundary) is valid. Kept partial, not tested: the row's declared level/surface (endpoint/resource-operation) wants a mapping wiring a REAL deployment's published statement to its actual boundaries, which this unit-level validator test does not reach."
+   "notes": "Configured demo now publishes its actual remote decision boundary and exercises it across HTTP, or declares no boundary in co-resident mode. The fixture is a same-process loopback hop, not TLS/key isolation. Keep partial: the broader deployment's complete mediation and production trust establishment remain audit properties."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -12010,8 +12016,16 @@
     "normative": "the PEP bounds every evaluation call with a timeout inside the action class's staleness budget and treats an expired call as pdp_unreachable, failing closed rather than permitting"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/remote-client-boundaries.test.ts",
+     "name": "remote PDP full-response boundaries > bounds a stalled body after headers even when the transport ignores abort",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The configured remote client bounds the complete response, capped by the declared action-class budget, and the PEP emits pdp_unreachable on transport failure. Partial: this is the remote path, not a timeout wrapper for arbitrary co-resident decision functions."
   },
   {
    "id": "authzen.transport.no-double-charge-on-retry",
@@ -16240,8 +16254,16 @@
     "normative": "denial_reason names a pre-evaluation condition (PEP-side: token_invalid, mission_claim_missing, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > a real remote hop verifies and retains PDP evidence; a stopped PDP refuses locally without a fabricated decision",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Proves the local pdp_unreachable refusal versus authenticated PDP Decision boundary end to end. Other enumerated refusal reasons remain for #594 wave 4; this is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",

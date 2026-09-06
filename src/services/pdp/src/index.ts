@@ -75,7 +75,8 @@ export {
   type PdpHttpServerHandle,
   type PdpRemoteServerConfig,
 } from "./server.js";
-export { evaluateRemote, type RemotePdpClientConfig } from "./client.js";
+export { evaluateRemote, isDecisionChannelRefusal, type RemotePdpClientConfig } from "./client.js";
+export { createDecisionChannel } from "./decision-channel.js";
 export {
   claimsWithinScope,
   resourceDispositions,
