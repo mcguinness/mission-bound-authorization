@@ -98,8 +98,12 @@ export function catalogDigest(retrieved: string | Uint8Array): string {
 }
 
 /**
- * Reject an unrecognized algorithm prefix on a recorded digest, mirroring the
- * integrity-anchor verifier rule: never treat an unknown prefix as sha-256.
+ * Reject a recorded digest that is not canonical sha-256, in three distinct
+ * refusals: a value that is not a string, an unrecognized algorithm prefix
+ * (mirroring the integrity-anchor verifier rule, never treat an unknown prefix
+ * as sha-256), and a body that is not the 43-character unpadded base64url
+ * encoding of 32 bytes. `capability-binding.md` fixes that encoded form, so a
+ * supported prefix over any other body is refused rather than recorded.
  */
 export function assertSupportedDigest(value: unknown, member: string): asserts value is string {
   if (typeof value !== "string") {

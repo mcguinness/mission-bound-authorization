@@ -183,13 +183,34 @@ describe("normalizeCapabilitySources: committed-array validation", () => {
         new URL("../../../test-fixtures/capability-digests.json", import.meta.url),
         "utf8",
       ),
-    ) as Array<{ label: string; value: unknown; valid: boolean }>;
+    ) as Array<{
+      label: string;
+      value: unknown;
+      valid: boolean;
+      refusal?: "algorithm" | "body" | "type";
+    }>;
+    // Each refusal class keeps its own message: an unrecognized algorithm is
+    // never reported as a malformed body, and neither is reported as the
+    // funnel's non-string guard, so a collapsed diagnostic fails here.
+    const message = (member: string, refusal: string) =>
+      refusal === "algorithm"
+        ? new RegExp(`^unrecognized ${member} algorithm prefix: `)
+        : refusal === "body"
+          ? new RegExp(`^malformed ${member}: expected canonical unpadded sha-256 bytes$`)
+          : new RegExp(
+              `^(capability source ${member} must be a non-empty string|malformed ${member}: expected a sha-256 digest string)$`,
+            );
     for (const vector of vectors)
       for (const member of ["source_digest", "catalog_digest"] as const) {
         const run = () =>
           normalizeCapabilitySources([{ ...binding, [member]: vector.value } as never]);
-        if (vector.valid) expect(run, `${member}: ${vector.label}`).not.toThrow();
-        else expect(run, `${member}: ${vector.label}`).toThrow(CapabilityBindingError);
+        const at = `${member}: ${vector.label}`;
+        if (vector.valid) {
+          expect(run, at).not.toThrow();
+          continue;
+        }
+        expect(run, at).toThrow(CapabilityBindingError);
+        expect(run, at).toThrow(message(member, vector.refusal as string));
       }
   });
 
