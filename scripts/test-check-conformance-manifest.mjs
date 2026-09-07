@@ -109,7 +109,7 @@ test('the real CLI exits nonzero for a fabricated punctuation mapping', () => {
     const run = () => {
       fs.writeFileSync(path.join(dir, 'conformance-manifest.json'), JSON.stringify(manifest));
       return spawnSync(process.execPath, [path.join(dir, 'scripts/check-conformance-manifest.mjs')], {
-        cwd: dir, encoding: 'utf8', env: { ...process.env, CI: '' },
+        cwd: dir, encoding: 'utf8',
       });
     };
     const good = run();
