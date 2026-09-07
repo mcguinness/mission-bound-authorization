@@ -189,6 +189,7 @@ export interface DecisionEvidenceObject {
   conditions?: RuntimeConditions;
   decision: "permit" | "deny";
   denial_reason?: string;
+  contributing_constraints?: string[];
   entry_digest?: string;
   sequence: number;
   emitter: { id: string; role: "pdp" };
@@ -250,6 +251,7 @@ export interface DecisionEvidenceEmissionInput {
   parameter_digest?: string;
   conditions?: RuntimeConditions;
   denial_reason?: string;
+  contributing_constraints?: readonly string[];
   entry_digest?: string;
 }
 
@@ -364,6 +366,9 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         } } : {}),
         decision: input.decision,
         ...(input.denial_reason !== undefined ? { denial_reason: input.denial_reason } : {}),
+        ...(input.contributing_constraints?.length ? {
+          contributing_constraints: [...new Set(input.contributing_constraints.map(requiredString))],
+        } : {}),
         ...(input.entry_digest !== undefined ? { entry_digest: input.entry_digest } : {}),
         sequence: nextSequence(mission),
         emitter: { id: config.emitterId, role: "pdp" as const },

@@ -41,6 +41,70 @@ const EMITTER = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 
+describe("Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object)", () => {
+  async function recorded(request: EvaluationRequest, v: MissionView, extra: Partial<EvaluateOptions> = {}) {
+    const fixture = emitterFixture();
+    const decision = await evaluate(request, opts({ view: v, evidence: fixture.emitter, ...extra }));
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, fixture.resolve)).toEqual({ valid: true });
+    return { record, decision };
+  }
+
+  it("a permit lists each evaluated entry type and constraint key, never caller-supplied text", async () => {
+    const v = view();
+    v.authority_set[0]!.constraints = { vendors: ["acme"], max_amount: { amount: "500", currency: "USD" }, requires_action_approval: false };
+    const r = req(); r.context.amount = { amount: "20", currency: "USD" };
+    Object.assign(r.context, { contributing_constraints: ["caller-invented"] });
+    const { record, decision } = await recorded(r, v);
+    expect(decision.decision).toBe(true);
+    expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors", "max_amount", "requires_action_approval"]);
+    expect(record).not.toHaveProperty("denial_reason");
+  });
+
+  it("a constraint deny keeps parameter_violation separate from the evaluated keys and omits unvisited checks", async () => {
+    const v = view();
+    v.authority_set[0]!.constraints = { vendors: ["acme"], max_amount: { amount: "500", currency: "USD" }, requires_action_approval: true };
+    // A later entry is not evaluated after the first matching entry's denial.
+    v.authority_set.push({ type: "not-visited-entry", resource: RESOURCE, actions: ["payments:invoice.read"] } as never);
+    const r = req(); r.context.amount = { amount: "501", currency: "USD" };
+    const { record, decision } = await recorded(r, v);
+    expect(decision.context.reason).toBe("parameter_violation");
+    expect(record.denial_reason).toBe("parameter_violation");
+    expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors", "max_amount"]);
+  });
+
+  it("a vendor-constraint failure is distinguished from a later independent resource-policy refusal", async () => {
+    const v = view(); v.authority_set[0]!.constraints = { vendors: ["globex"], max_amount: { amount: "500", currency: "USD" } };
+    const throwingFga = { checkWithContext: async () => { throw new Error("must not reach FGA"); } } as unknown as Fga;
+    const denied = await recorded(req(), v, { fga: throwingFga });
+    expect(denied.record.denial_reason).toBe("parameter_violation");
+    expect(denied.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+    v.authority_set[0]!.constraints!.vendors = ["acme"];
+    const refused = await recorded(req(), v, { fga: { checkWithContext: async () => false } as unknown as Fga });
+    expect(refused.record.denial_reason).toBe("out_of_authority");
+    expect(refused.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+  });
+
+  it("an early lifecycle denial records no authority entries and an unsupported type records only its evaluated identifier", async () => {
+    const early = await recorded(req(), view({ state: "suspended" }));
+    expect(early.record).not.toHaveProperty("contributing_constraints");
+    const v = view(); v.authority_set[0]!.type = "future-entry" as never;
+    const unsupported = await recorded(req(), v);
+    expect(unsupported.record.denial_reason).toBe("unsupported_authorization_type");
+    expect(unsupported.record.contributing_constraints).toEqual(["future-entry"]);
+  });
+
+  it("a delegate narrowing failure records the loaded entry types without inventing checks of their constraints", async () => {
+    const v = view(); v.authority_set[0]!.join_delegation = { max_depth: 0 };
+    v.authority_set[0]!.constraints = { max_amount: { amount: "0", currency: "USD" } };
+    const r = req(); r.subject.properties = { iss: v.subject.iss };
+    r.context.actor = { client_id: "delegate" }; r.context.mission_join = { delegate_depth: 1 };
+    const { record } = await recorded(r, v, { delegatePolicy: { delegates: { delegate: {} } } });
+    expect(record.denial_reason).toBe("mission_mismatch");
+    expect(record.contributing_constraints).toEqual(["mission_resource_access"]);
+  });
+});
+
 describe("validated capability evidence (#657)", () => {
   const presented: RuntimeCapabilitySource = { tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };
   const recorded: CapabilitySourceBinding = { action: "payments:invoice.read", ...presented };

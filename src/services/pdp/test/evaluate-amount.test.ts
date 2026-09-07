@@ -125,7 +125,7 @@ describe("PDP per-action max_amount cap compares by exact decimal value (@spec m
     expect(within.decision, JSON.stringify(within.context)).toBe(true);
     const over = await evaluate(request("500.01"), opts("500.00"));
     expect(over.decision).toBe(false);
-    expect(over.context.denial_reason).toBe("constraint_exceeded");
+    expect(over.context.denial_reason).toBe("parameter_violation");
   });
 
   it("an amount exactly at the cap permits (the comparison is <=, not <)", async () => {
@@ -136,7 +136,7 @@ describe("PDP per-action max_amount cap compares by exact decimal value (@spec m
   it("a cap denominated in a different currency than the request refuses as incomparable, never converted", async () => {
     const decision = await evaluate(request("100.00", "EUR"), opts("500.00"));
     expect(decision.decision, JSON.stringify(decision.context)).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 
   it("a value that float-compares wrong compares correctly under exact decimal comparison", async () => {
@@ -147,19 +147,19 @@ describe("PDP per-action max_amount cap compares by exact decimal value (@spec m
     expect(Number.parseFloat(overCap)).toBe(Number.parseFloat(cap));
     const decision = await evaluate(request(overCap), opts(cap));
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 
   it("a malformed request amount is denied (fail closed), never silently permitted", async () => {
     const decision = await evaluate(request("NaN"), opts("500.00"));
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 
   it("a malformed cap in the Mission view is denied (fail closed), never treated as unbounded", async () => {
     const decision = await evaluate(request("100.00"), opts("1e300"));
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 });
 
@@ -167,7 +167,7 @@ describe("a bound max_amount the PDP cannot supply an amount input for refuses, 
   it("a bound max_amount with no context.amount at all is denied, never permitted for lack of an input to check", async () => {
     const decision = await evaluate(requestWithoutAmount(), opts("500.00"));
     expect(decision.decision, JSON.stringify(decision.context)).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 
   it("a max_amount bound to an action the deployment's own mapping marks needsAmount: false is still enforced, not silently unenforceable", async () => {
@@ -180,7 +180,7 @@ describe("a bound max_amount the PDP cannot supply an amount input for refuses, 
       optsFor(viewCapOnNonAmountAction("500.00")),
     );
     expect(decision.decision, JSON.stringify(decision.context)).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 });
 

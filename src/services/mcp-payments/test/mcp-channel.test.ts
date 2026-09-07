@@ -315,7 +315,7 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const { client } = await build();
     const jwt = await signMissionToken({});
     const overCap = await client.callTool("execute_wire_transfer", { invoice_id: "inv-2" }, jwt);
-    expect(overCap.denial_reason).toBe("constraint_exceeded");
+    expect(overCap.denial_reason).toBe("parameter_violation");
     const wrongVendor = await client.callTool("execute_wire_transfer", { invoice_id: "inv-3" }, jwt);
     expect(wrongVendor.denial_reason).toBe("out_of_authority");
   });

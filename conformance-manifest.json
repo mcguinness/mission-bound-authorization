@@ -8996,7 +8996,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny parameter_violation (contextual tuple withheld)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -16027,8 +16027,40 @@
     "normative": "contributing_constraints, required when the decision turned on one or more authority or constraint entries, lists every relied-on entry for a permit and every failing entry for a deny; omitting an entry the decision turned on is non-conforming"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a permit lists each evaluated entry type and constraint key, never caller-supplied text",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a constraint deny keeps parameter_violation separate from the evaluated keys and omits unvisited checks",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor-constraint failure is distinguished from a later independent resource-policy refusal",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > an early lifecycle denial records no authority entries and an unsupported type records only its evaluated identifier",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a delegate narrowing failure records the loaded entry types without inventing checks of their constraints",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries."
   },
   {
    "id": "evidence.decision.sequence-monotonic-per-emitter",
@@ -16085,8 +16117,22 @@
     "normative": "a consumer treats an unrecognized denial_reason value as a deny and attaches no other semantics to it; a constraint-violation deny records `parameter_violation` in denial_reason with the specific failing keys in contributing_constraints, so the reason enum and the open constraint-key space never mix in one field"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a constraint deny keeps parameter_violation separate from the evaluated keys and omits unvisited checks",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unknown denial reason remains a deny and can never become an execution authorization",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Wire and evidence use parameter_violation for evaluated constraints; keys are separate. The real receipt verifier preserves a future denial code as denial and refuses an execution join."
   },
   {
    "id": "evidence.decision.permit-must-carry-entry-or-digest",

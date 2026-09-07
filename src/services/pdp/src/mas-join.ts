@@ -52,6 +52,8 @@ export interface DelegatePolicy {
 
 export interface BaselineJoinInput {
   view: MissionView;
+  /** PDP-owned evidence trace, called only for entries actually evaluated. */
+  onEntryEvaluated?: (entry: AuthorityEntry) => void;
   /** The credential's authenticated subject (issuer-qualified). */
   subject: { iss: string; sub: string };
   /** The credential's authenticated client identifier. */
@@ -126,6 +128,7 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   // even where the deployment-wide policy would otherwise permit it (#557
   // review point 3 -- the entry-level bound was previously never checked).
   const narrowed = input.view.authority_set.filter((e) => {
+    input.onEntryEvaluated?.(e);
     if (!e.join_delegation) return false;
     if (e.join_delegation.allowed_delegates && !e.join_delegation.allowed_delegates.includes(input.clientId)) return false;
     if (e.join_delegation.max_depth !== undefined && depth > e.join_delegation.max_depth) {

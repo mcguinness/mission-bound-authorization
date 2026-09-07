@@ -85,7 +85,7 @@ export const adversarialSuite: EvalCaseDef[] = [
     args: { invoice_id: "inv-globex" },
     token: () => base(),
     expect: "deny",
-    expectReason: "out_of_authority",
+    expectReason: "parameter_violation",
     consequential: true,
   },
   {
@@ -96,7 +96,7 @@ export const adversarialSuite: EvalCaseDef[] = [
     args: { invoice_id: "inv-big" },
     token: () => base(),
     expect: "deny",
-    expectReason: "constraint_exceeded",
+    expectReason: "parameter_violation",
     consequential: true,
   },
   {

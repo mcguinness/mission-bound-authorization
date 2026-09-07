@@ -179,6 +179,19 @@ describe("Mission Receipt build + verify", () => {
     expect(resolve).not.toHaveBeenCalled();
   });
 
+  it("an unknown denial reason remains a deny and can never become an execution authorization", async () => {
+    const decision = await signedDecision({ decision: "deny", denial_reason: "future-reason-with-no-local-semantics" });
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), resolveReceiptKey, resolveEvidenceKey)).toEqual({ valid: true });
+    expect(receipt.decision?.result).toBe("deny");
+    const execution = await signedExecution();
+    await expect(buildAndSignMissionReceipt({ kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution }, "receipts.example.com", RECEIPT_SIGNER)).rejects.toThrow("requires a permit");
+    const invalid = await resigned(receipt, { kind: "execution", outcome: "completed", evidence: [...receipt.evidence, {
+      type: EXECUTION_EVIDENCE_MEDIA_TYPE, digest: canonicalDigest(execution as never), evidence_id: execution.execution_id, emitter: execution.emitter,
+    }] });
+    expect(await verifyMissionReceipt(invalid, resolverFor({ decision, execution }), resolveReceiptKey, resolveEvidenceKey)).toMatchObject({ valid: false });
+  });
+
   it("an unknown receipt kind cannot fall through into a valid refusal combination", async () => {
     const refusal = await signedRefusal();
     const base = await buildAndSignMissionReceipt({ kind: "refusal", mission: MISSION, refusalRecord: refusal }, "receipts.example.com", RECEIPT_SIGNER);
