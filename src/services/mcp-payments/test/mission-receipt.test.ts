@@ -302,6 +302,17 @@ describe("Mission Receipt build + verify", () => {
       .toEqual({ valid: false, reason: "referenced_record_invalid" });
   });
 
+  it("an unimplemented chain refuses at its own step, after the steps before it and never as a pass", async () => {
+    const decision = await signedDecision();
+    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const chain = { stream: "https://receipts.example.com/stream", sequence: 1, previous: [{ digest: canonicalDigest({ predecessor: true }) }] };
+    expect(await verifyMissionReceipt(await resigned(base, { chain }), resolverFor({ decision }), resolveReceiptKey, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "chain_not_supported" });
+    // An earlier step still owns its own reason: the chain refusal never masks it.
+    expect(await verifyMissionReceipt(await resigned(base, { chain, evidence: [{ ...base.evidence[0], evidence_id: "another-id" }] }), resolverFor({ decision }), resolveReceiptKey, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "identifier_mismatch" });
+  });
+
   it("joins issuer-qualified Mission identity and reports an unauthorized completed parameter deviation without discarding evidence", async () => {
     const decision = await signedDecision();
     const execution = await signedExecution({ effective_parameter_digest: "sha-256:changed" });

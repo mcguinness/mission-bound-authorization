@@ -16674,7 +16674,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-5: configured key-set lookup binds exact kid/emitter/role/audience for all three producer roles and refuses malformed audience wildcards. Partial: this does not exercise deployment-published JWKS discovery or retained-key availability; in-memory key registration is not proof of that publication/retention requirement."
+   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
@@ -17032,7 +17032,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here. The transparency limb is not exercised: this receipt verifier checks no transparency commitment, and no receipt path in this deployment claims transparency for a referenced record, so that conditional clause is inapplicable here rather than proved."
   },
   {
    "id": "evidence.receipt.decision-kind-no-execution-claim",
@@ -17448,9 +17448,15 @@
      "name": "Mission Receipt build + verify > rejects signed but structurally invalid referenced records rather than treating integrity as content validation",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unimplemented chain refuses at its own step, after the steps before it and never as a pass",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested. Partial: chain verification and the richer source-content/profile families remain incomplete; unsupported chains and issuer assertions refuse. No complete receipt-verifier bar is claimed."
+   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested, and the unimplemented chain step refusing in its own position without masking an earlier reason. Partial: chain verification and the richer source-content/profile families remain incomplete; unsupported chains and issuer assertions refuse. No complete receipt-verifier bar is claimed."
   },
   {
    "id": "evidence.receipt.step1-envelope-and-no-binding-by-key-alone",
