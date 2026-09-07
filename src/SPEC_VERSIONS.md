@@ -90,6 +90,9 @@ this matrix and the `@spec` tags to the affected code and tests.
 
 | Spec | Pinned version | Lands in |
 |---|---|---|
+| `draft-mcguinness-mission-runtime` (Evaluation-Context Binding) | `fcd8d489` | #773 optional per-class extension: descriptor-bound authoritative context, persistent salt state, existing approval/operation binding preservation and verified/enforced distinction; implementation pending |
+| `draft-mcguinness-mission-authzen` (evaluation-context carriers) | `fcd8d489` | #773 request descriptor/context digest and live permit condition; implementation pending |
+| `draft-mcguinness-mission-runtime-evidence` (evaluation-context projection) | `fcd8d489` | #773 context digest/descriptor, execution digest pair and target_drift; implementation pending, no claim enabled |
 | `draft-mcguinness-mission-authzen` (PEP evidence, requestable denials) | `02d53dd` | M4/M6 PEP |
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable; deliberately not advanced to 2026-07-28, disposition in Notes, #533) | M4/M8/M9 |
