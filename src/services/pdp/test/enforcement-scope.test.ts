@@ -56,19 +56,36 @@ describe("Perimeter dispositions inside mediated_scope (@spec runtime#runtime-co
     expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
     expect(resourceDispositions(stmt).get(RESOURCE)).toBe("mediated");
   });
-  it.each([
-    ["missing disposition", [{ resource: RESOURCE }], []],
-    ["unknown disposition", [{ resource: RESOURCE, disposition: "other" }], []],
-    ["bare excluded path", [RESOURCE], ["notebook_interpreter"]],
-    ["mediated excluded path", [RESOURCE], [{ path: "notebook_interpreter", disposition: "mediated" }]],
-    ["conflicting resource dispositions", [RESOURCE, { resource: RESOURCE, disposition: "reconstructed" }], []],
-    ["conflicting excluded dispositions", [RESOURCE], [{ path: "notebook_interpreter", disposition: "unrecorded" }, { path: "notebook_interpreter", disposition: "reconstructed" }]],
-  ])("refuses %s and names the offending entry", (_label, resources, excluded) => {
-    const stmt = statement(resources, excluded);
+  // One named `it` per case rather than `it.each`: the ledger cites these by
+  // exact name, and a template name is neither in the source the manifest
+  // checker greps nor in what the runner collects.
+  const refuses = (resources: unknown, excluded_paths: unknown) => {
+    const stmt = statement(resources, excluded_paths);
     expect(validateEnforcementScopeStatement(stmt)).toEqual(expect.arrayContaining([
       expect.objectContaining({ member: expect.stringMatching(/^mediated_scope\.(resources|excluded_paths)\[\d+\]$/) }),
     ]));
     expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(false);
+  };
+  it("refuses missing disposition and names the offending entry", () => {
+    refuses([{ resource: RESOURCE }], []);
+  });
+  it("refuses unknown disposition and names the offending entry", () => {
+    refuses([{ resource: RESOURCE, disposition: "other" }], []);
+  });
+  it("refuses bare excluded path and names the offending entry", () => {
+    refuses([RESOURCE], ["notebook_interpreter"]);
+  });
+  it("refuses mediated excluded path and names the offending entry", () => {
+    refuses([RESOURCE], [{ path: "notebook_interpreter", disposition: "mediated" }]);
+  });
+  it("refuses conflicting resource dispositions and names the offending entry", () => {
+    refuses([RESOURCE, { resource: RESOURCE, disposition: "reconstructed" }], []);
+  });
+  it("refuses conflicting excluded dispositions and names the offending entry", () => {
+    refuses([RESOURCE], [
+      { path: "notebook_interpreter", disposition: "unrecorded" },
+      { path: "notebook_interpreter", disposition: "reconstructed" },
+    ]);
   });
   it("identical repeated keys normalize to one entry and validate", () => {
     const stmt = statement([RESOURCE, { resource: RESOURCE, disposition: "mediated" }], [
@@ -77,10 +94,16 @@ describe("Perimeter dispositions inside mediated_scope (@spec runtime#runtime-co
     expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
     expect(resourceDispositions(stmt).size).toBe(1);
   });
-  it.each(["reconstructed", "unrecorded"])("a claim naming a %s resource is rejected", (disposition) => {
+  const rejectsClaimOn = (disposition: string) => {
     const stmt = statement([{ resource: RESOURCE, disposition }]);
     expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
     expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(false);
+  };
+  it("a claim naming a reconstructed resource is rejected", () => {
+    rejectsClaimOn("reconstructed");
+  });
+  it("a claim naming an unrecorded resource is rejected", () => {
+    rejectsClaimOn("unrecorded");
   });
   it("an excluded execution path refuses even when it is also declared", () => {
     const stmt = statement([RESOURCE], [{ path: "mcp:tools/call", disposition: "unrecorded" }]);

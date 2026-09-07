@@ -9,26 +9,32 @@
  * This is a declaration/validation artifact, not a second policy
  * language: `validateEnforcementScopeStatement` checks the statement's own
  * internal completeness (every baseline member present, every claimed
- * extension carrying its attached declaration); `claimsWithinScope` checks
- * one candidate claim against an already-valid statement's declared
- * baseline. Neither evaluates a live decision; that remains `evaluate()`'s
+ * extension carrying its attached declaration); `claimsWithinScope` runs
+ * that same validation and then checks one candidate claim against the
+ * declared baseline. Neither evaluates a live decision; that remains `evaluate()`'s
  * job. A real deployment's own resource/action-class/path coverage against
  * what it actually mediates stays an audit property this module does not
  * reach.
  */
 
 /**
- * The baseline declaration every conforming deployment carries, whether or
- * not it also claims a named assurance extension (the six MUST members of
- * {{runtime-conformance}}).
+ * The per-entry perimeter disposition inside `mediated_scope`: whether an
+ * entry is mediated at the point of use, reconstructed after the fact, or
+ * not recorded at all ({{runtime-conformance}}).
  */
 export type PerimeterDisposition = "mediated" | "reconstructed" | "unrecorded";
+/** An excluded path is outside the mediated perimeter, so it is never `mediated`. */
 export type ExcludedPathDisposition = Exclude<PerimeterDisposition, "mediated">;
 export interface ResourceEntry { resource: string; disposition: PerimeterDisposition }
 export interface ExcludedPathEntry { path: string; disposition: ExcludedPathDisposition }
 /** A bare excluded path is representable at intake, but never validates. */
 export type DeclaredExcludedPath = ExcludedPathEntry | string;
 
+/**
+ * The baseline declaration every conforming deployment carries, whether or
+ * not it also claims a named assurance extension (the six MUST members of
+ * {{runtime-conformance}}).
+ */
 export interface EnforcementScopeBaseline {
   mediated_scope: {
     resources: ReadonlyArray<string | ResourceEntry>;
@@ -113,8 +119,14 @@ function indexEntries(entries: unknown[], kind: "resources" | "excluded_paths") 
   const findings: EnforcementScopeFinding[] = [];
   entries.forEach((entry, i) => {
     const member = `mediated_scope.${kind}[${i}]`;
-    const key = typeof entry === "string" ? entry : object(entry) ? entry[kind === "resources" ? "resource" : "path"] : undefined;
-    const disposition = typeof entry === "string" && kind === "resources" ? "mediated" : object(entry) ? entry.disposition : undefined;
+    const keyMember = kind === "resources" ? "resource" : "path";
+    const key = typeof entry === "string" ? entry : object(entry) ? entry[keyMember] : undefined;
+    const disposition =
+      typeof entry === "string" && kind === "resources"
+        ? "mediated"
+        : object(entry)
+          ? entry.disposition
+          : undefined;
     const fail = (problem: string) => findings.push({ member, problem });
     if (!isNonEmptyString(key)) {
       fail("entry requires a non-empty resource or path identifier");
@@ -140,7 +152,12 @@ function indexEntries(entries: unknown[], kind: "resources" | "excluded_paths") 
   return { index, findings };
 }
 
-/** Fail-closed projection of an untrusted declared resource array. */
+/**
+ * Fail-closed projection of an untrusted statement's declared resources:
+ * an empty map when `mediated_scope.resources` is absent or malformed, and
+ * an empty map when any entry produced a finding, so an unvalidated
+ * statement can never widen a claim.
+ */
 export function resourceDispositions(input: unknown): ReadonlyMap<string, PerimeterDisposition> {
   if (!object(input) || !object(input.mediated_scope) || !Array.isArray(input.mediated_scope.resources)) return new Map();
   return indexEntries(input.mediated_scope.resources, "resources").index;
@@ -238,8 +255,8 @@ export function validateEnforcementScopeStatement(
 }
 
 /**
- * One candidate claim of runtime-enforcement conformance, checked against
- * an already-valid statement's declared scope.
+ * One candidate claim of runtime-enforcement conformance, checked against a
+ * statement's declared scope.
  */
 export interface EnforcementClaim {
   resource: string;
@@ -273,6 +290,11 @@ export function claimsWithinScope(input: unknown, claim: EnforcementClaim): bool
   if (claim.execution_path !== undefined && !stmt.mediated_scope.execution_paths.includes(claim.execution_path)) {
     return false;
   }
-  if (claim.execution_path !== undefined && indexEntries([...stmt.mediated_scope.excluded_paths], "excluded_paths").index.has(claim.execution_path)) return false;
+  if (
+    claim.execution_path !== undefined &&
+    indexEntries([...stmt.mediated_scope.excluded_paths], "excluded_paths").index.has(claim.execution_path)
+  ) {
+    return false;
+  }
   return true;
 }
