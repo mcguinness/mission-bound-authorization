@@ -476,9 +476,8 @@ canonicalization, and integrity envelope a deployment emits.
   `parameter_digest` member; the producer MUST ensure that value
   equals the binding carried by the wire conditions. The phase binding
   is likewise recorded once in `action_phase`, under that member's
-  equality rule. A binding maps
-  its wire members onto this form (for example the AuthZEN binding's
-  `conditions` response member,
+  equality rule. A binding maps its wire members onto this form (for
+  example the AuthZEN binding's `conditions` response member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `evaluation_request_digest`:
@@ -1079,9 +1078,10 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   executing PEP found the effective parameters differ from those the
   permit bound), `phase_mismatch` (the permit's phase differs from the
   executing crossing, is missing or malformed where required, or
-  cannot be established at use), `permit_expired` (the permit's validity window had
-  passed at execution), `permit_consumed` (re-presentation of an
-  already-consumed single-use evaluation identifier),
+  cannot be established at use), `permit_expired` (the permit's
+  validity window had passed at execution), `permit_consumed`
+  (re-presentation of an already-consumed single-use evaluation
+  identifier),
   `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
   named in `obligation_outcomes`), and `kill_switch` (execution

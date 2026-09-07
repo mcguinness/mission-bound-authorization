@@ -853,7 +853,8 @@ from the closed set `preflight`, `prepare`, `commit`, or `compensate`.
 The PEP MUST derive the value from that profile, never from an
 agent-supplied argument. The PDP MUST reject a value outside this set
 and MUST return the validated phase as `conditions.action_phase` on a
-permit. Invalid input MUST NOT be copied into a typed evidence phase.
+permit. Decision Evidence records the validated phase and omits
+malformed input ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 The request member communicates the phase being evaluated; it is not a
 permit binding. Neither this member nor Decision Evidence's
@@ -2205,9 +2206,11 @@ carrier's extensibility rule.
 An at-use phase failure is recorded as Execution Evidence with
 `outcome` `suppressed` and `error` `phase_mismatch`, with no effect
 released. A phase unestablishable before the decision request is
-instead a local configuration failure, recorded using a
-deployment-defined Refusal Record reason; it does not invent a PDP
-denial or an Execution Evidence record for a permit never obtained.
+instead a local configuration failure at the PEP, refused before any
+decision request and recorded as a Refusal Record
+({{I-D.draft-mcguinness-mission-runtime-evidence}}); it does not
+invent a PDP denial or an Execution Evidence record for a permit
+never obtained.
 
 The `duplicate_suppressed` and `idempotency_conflict` rows key on the
 same (idempotency scope, `idempotency_key`) claim
@@ -2413,7 +2416,8 @@ A PEP conforming to the Decision Base MUST:
   unfulfillable (an effective deny on a permit), and advertise what
   it can perform in `supported_obligations` ({{obligations}});
 - honor every decision condition present (`parameter_digest`,
-  `valid_until`, `use_limit`) at every use of the permit,
+  `valid_until`, `use_limit`, `action_phase`) at every use of the
+  permit,
   applying its own deployment classification floor to that duty
   independent of any class the PDP applied internally
   ({{response-context}}), fulfill every obligation attached to a
