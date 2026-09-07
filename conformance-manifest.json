@@ -368,7 +368,7 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
-   "id": "runtime.evaluation-context.request-carriers",
+   "id": "authzen.context-evaluation-binding.pep-supplies-digest-and-descriptor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-evaluation-binding",
    "text": "the PEP MUST supply `context.evaluation_context_digest` and `context.evaluation_context_binding`.",
@@ -390,7 +390,7 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
-   "id": "runtime.evaluation-context.request-validation",
+   "id": "authzen.context-evaluation-binding.pdp-validates-or-refuses-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-evaluation-binding",
    "text": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration.",
@@ -412,7 +412,7 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
-   "id": "runtime.evaluation-context.condition-binding",
+   "id": "authzen.response-context.evaluation-context-digest-equals-request",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "response-context",
    "text": "MUST equal the validated request's context digest.",
@@ -434,7 +434,7 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
-   "id": "runtime.evaluation-context.decision-projection",
+   "id": "evidence.decision.evaluation-context-digest-equals-condition",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "decision-evidence-object",
    "text": "On a permit the digest MUST equal the live permit condition.",
@@ -456,7 +456,7 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
-   "id": "runtime.evaluation-context.malformed-input-omission",
+   "id": "evidence.decision.evaluation-context-malformed-input-omitted",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "decision-evidence-object",
    "text": "Malformed input MUST be omitted, never copied into signed evidence as an established binding.",
@@ -478,7 +478,7 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
-   "id": "runtime.evaluation-context.unresolvable-execution-evidence",
+   "id": "evidence.execution.effective-evaluation-context-absent-when-unresolvable",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
    "text": "If context cannot be established, this member MUST be absent rather than populated with a fabricated digest, and execution MUST be suppressed with `error` `target_drift`.",
