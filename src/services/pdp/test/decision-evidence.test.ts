@@ -32,7 +32,7 @@ import {
   type MissionView,
   relationForAction,
   RUNTIME_EVIDENCE_JWS_TYP,
-  stalenessBoundSeconds,
+  stalenessBound,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 
@@ -142,7 +142,7 @@ function opts(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     now: () => NOW,
-    stalenessBoundSeconds,
+    stalenessBound,
     relationForAction,
     ...over,
   } as EvaluateOptions;

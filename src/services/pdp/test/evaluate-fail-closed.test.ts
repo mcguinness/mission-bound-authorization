@@ -47,7 +47,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
-import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
+import { relationForAction, stalenessBound } from "../src/policy.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -60,7 +60,7 @@ const opts = (v: MissionView) => ({
   fga: alwaysAllowFga,
   modelId: "unit-test-model",
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
 });

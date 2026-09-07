@@ -18,7 +18,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
-import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBoundSeconds } from "../src/index.js";
+import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -62,7 +62,7 @@ const optsFor = (actionClass: string) => ({
   fga: alwaysAllowFga,
   modelId: "unit-test-model",
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   // Models a deployment claiming agent-compromise-resistant enforcement: the
   // predicate requires approval for exactly the requested high-consequence
   // class, and no other.
