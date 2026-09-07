@@ -199,7 +199,7 @@ are referenced, not duplicated, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 91 conformance rows in conformance-manifest.json (9 tested, 9 partial, 73 todo).
+Implementation: 94 conformance rows in conformance-manifest.json (9 tested, 9 partial, 76 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).
@@ -459,6 +459,17 @@ canonicalization, and integrity envelope a deployment emits.
 : OPTIONAL. A string. The parameter digest the decision was bound to
   ({{I-D.draft-mcguinness-mission-runtime}}); REQUIRED for a
   parameter-bound action.
+
+`evaluation_context_digest`, `evaluation_context_binding`:
+: CONDITIONAL. REQUIRED for a decision on an operation covered by the
+  runtime profile's Evaluation-Context Binding extension, when the
+  corresponding validated input was established. The digest is a
+  string and the binding is the versioned descriptor reference
+  `{id, version, digest}`. On a permit the digest MUST equal the live
+  permit condition. Malformed input MUST be omitted, never copied into
+  signed evidence as an established binding. The secret salt is never
+  recorded. This digest commits the declared resolved context, not
+  `evaluation_request_digest`, which identifies the decision request.
 
 `obligations`:
 : REQUIRED whenever the decision response contained obligations, on
@@ -1064,6 +1075,24 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   gone ahead despite the mismatch, is equally representable, and a
   consumer MUST flag it as an unauthorized execution.
 
+`authorized_evaluation_context_digest`:
+: CONDITIONAL. A string. REQUIRED when the linked Decision Evidence
+  carries `evaluation_context_digest`; MUST equal it, and MUST be
+  absent when the linked record carries no such digest.
+
+`effective_evaluation_context_digest`:
+: CONDITIONAL. A string. REQUIRED when an authorized context digest
+  is present and the executing PEP successfully re-resolved that
+  context. It commits the attempted context under the same descriptor
+  and salt version. If context cannot be established, this member
+  MUST be absent rather than populated with a fabricated digest, and
+  execution MUST be suppressed with `error` `target_drift`. An
+  unequal digest also requires suppression before an effect. A record
+  of an executor that nevertheless acted remains valid evidence; a
+  consumer MUST flag the unauthorized deviation, not discard it.
+  The pair reveals equality or inequality without disclosing the
+  underlying fact values, but still permits correlation.
+
 `outcome`:
 : REQUIRED. A string. One of `completed`, `failed`, or `suppressed`;
   a final outcome, recorded once one exists. `suppressed` means the
@@ -1079,7 +1108,9 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   executing PEP found the effective parameters differ from those the
   permit bound), `phase_mismatch` (the permit's phase differs from the
   executing crossing, is missing or malformed where required, or
-  cannot be established at use), `permit_expired` (the permit's validity window had
+  cannot be established at use), `target_drift` (a declared bound
+  evaluation context differs or cannot be established at use),
+  `permit_expired` (the permit's validity window had
   passed at execution), `permit_consumed` (re-presentation of an
   already-consumed single-use evaluation identifier),
   `obligation_unfulfilled` (a permit suppressed before release because

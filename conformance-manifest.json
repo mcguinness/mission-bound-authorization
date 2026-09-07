@@ -178,6 +178,7 @@
    "runtime.trifecta-containment",
    "runtime.semantic-evaluator",
    "runtime.history-input",
+   "runtime.evaluation-context-binding",
    "runtime.discovered-catalog",
    "containment.narrowing",
    "cross-domain.origin-principal",
@@ -212,6 +213,292 @@
   "runtime-enforced"
  ],
  "requirements": [
+  {
+   "id": "runtime.evaluation-context.declaration",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "A claiming deployment MUST publish the covered classes and operations, each operation's versioned binding descriptor, and whether it reaches the verified or enforced property below.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A claiming deployment MUST publish the covered classes and operations, each operation's versioned binding descriptor, and whether it reaches the verified or enforced property below."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.descriptor-binding",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "The PEP MUST commit the descriptor reference with the facts in `evaluation_context_digest`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The PEP MUST commit the descriptor reference with the facts in `evaluation_context_digest`"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.capture-authoritative",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "The enforcing PEP MUST capture the declared facts from their authoritative interfaces and MUST NOT accept agent-supplied values as those observations.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The enforcing PEP MUST capture the declared facts from their authoritative interfaces and MUST NOT accept agent-supplied values as those observations."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.preserve-approval-and-operation-bindings",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "Adoption MUST preserve existing approval-to-decision, transaction-token, parameter, and operation-idempotency bindings.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Adoption MUST preserve existing approval-to-decision, transaction-token, parameter, and operation-idempotency bindings."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.salt-recovery",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "a deployment MUST fail closed for a binding whose salt or descriptor cannot be recovered, rather than silently replacing either.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment MUST fail closed for a binding whose salt or descriptor cannot be recovered, rather than silently replacing either."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.reverify-and-fail-closed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "A missing binding, changed descriptor, unequal digest, or unavailable fact MUST cause refusal before any effect.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A missing binding, changed descriptor, unequal digest, or unavailable fact MUST cause refusal before any effect."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.atomic-enforced-property",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "The **enforced** property MUST NOT be claimed without an atomic resource-side comparison coupled to the effect.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The **enforced** property MUST NOT be claimed without an atomic resource-side comparison coupled to the effect."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.request-carriers",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-evaluation-binding",
+   "text": "the PEP MUST supply `context.evaluation_context_digest` and `context.evaluation_context_binding`.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PEP MUST supply `context.evaluation_context_digest` and `context.evaluation_context_binding`."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.request-validation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-evaluation-binding",
+   "text": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.condition-binding",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "MUST equal the validated request's context digest.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "MUST equal the validated request's context digest."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.decision-projection",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "On a permit the digest MUST equal the live permit condition.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "On a permit the digest MUST equal the live permit condition."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.malformed-input-omission",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "Malformed input MUST be omitted, never copied into signed evidence as an established binding.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Malformed input MUST be omitted, never copied into signed evidence as an established binding."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.unresolvable-execution-evidence",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "If context cannot be established, this member MUST be absent rather than populated with a fabricated digest, and execution MUST be suppressed with `error` `target_drift`.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "If context cannot be established, this member MUST be absent rather than populated with a fabricated digest, and execution MUST be suppressed with `error` `target_drift`."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
   {
    "id": "runtime.action-approval.resolution-not-agent-invocable",
    "spec": "draft-mcguinness-mission-runtime.md",

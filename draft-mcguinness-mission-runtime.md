@@ -1034,7 +1034,8 @@ or state observation as the commit authorization.
 A fresh commit-phase Decision binds the request as presented: where a
 resource-resolved fact moved between prepare and commit, the parameter
 digest can still match. Capturing target state at decision time is a
-separate runtime extension, outside this section.
+separate, optionally claimed extension ({{evaluation-context-binding}}),
+outside this section.
 
 A permit for a phase MUST bind that phase. Where phases already have
 distinct action identifiers, the action binding also distinguishes
@@ -1091,6 +1092,7 @@ refusal.
 | Token validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
 | Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
+| A fact covered by a claimed Evaluation-Context Binding cannot be re-resolved, or differs at use | Refuse before releasing an effect ({{evaluation-context-binding}}) |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | A policy-required history predicate cannot be established, or the evidence store cannot be consulted ({{input-history}}) | Fail closed |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit MAY execute during a PDP outage: executing-PEP reverification needs no PDP |
@@ -1170,7 +1172,7 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 142 conformance rows in conformance-manifest.json (34 tested, 22 partial, 83 todo, 3 blocked).
+Implementation: 149 conformance rows in conformance-manifest.json (34 tested, 22 partial, 90 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
@@ -1462,7 +1464,8 @@ its flow.
 A named assurance extension or enforcement claim attaches its own
 declaration requirement to the baseline statement, rather than adding a
 universal item every deployment carries whether or not it claims the
-extension: the credential custody mode for a mediated class
+extension: the per-class Evaluation-Context Binding declaration
+({{evaluation-context-binding}}); the credential custody mode for a mediated class
 ({{custody}}); the transaction-assurance tier's Exact idempotency-claim
 domain per mediated action class or idempotency scope
 ({{idempotency}}); the runtime enforcement evidence mechanism,
@@ -2289,6 +2292,9 @@ implementers of the same operation bind the same bytes:
 - set-like array handling and any other canonicalization beyond the
   issuance profile's rules;
 - exactly which fields enter the `parameter_digest`;
+- where Evaluation-Context Binding is claimed, the versioned descriptor
+  of decision-relevant resource-resolved facts and their granularity
+  ({{evaluation-context-binding}});
 - for each Common Constraint or other registered constraint the
   operation's authority entries can carry
   ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative
@@ -2363,6 +2369,94 @@ aggregation level. Ordinary reads that do not change the resource set
 or disclosure risk can remain unbound.
 
 # Named Assurance Extensions {#named-assurance-extensions}
+
+## Evaluation-Context Binding {#evaluation-context-binding}
+
+Evaluation-Context Binding is an OPTIONAL Named Assurance Extension,
+claimed per mediated action class in the Enforcement Scope Statement.
+It does not add a requirement to Runtime-Enforced conformance for a
+deployment that does not claim it. The Operation Profile owns its
+declaration; an approval-time resource contract can reference that
+declaration but supplies no dispatch-time observation.
+
+A claiming deployment MUST publish the covered classes and operations,
+each operation's versioned binding descriptor, and whether it reaches
+the verified or enforced property below. The descriptor MUST identify
+each decision-relevant fact, its authoritative resolution interface,
+normalization, and granularity: `revision` (an opaque version or entity
+tag) or `effective_values` (the enumerated resolved fields). Mixed
+granularities are represented per fact, never by an ambiguous scalar
+mode. An enumerated target set commits every selected identity in the
+declared canonical order; a predicate or cardinality bound MUST NOT be
+represented as equivalent to that set commitment.
+
+The descriptor's reference is an object with `id` (a URI), `version`
+(a non-empty string), and `digest` (the canonical-object digest of the
+descriptor). Published descriptor bytes MUST remain immutable for that
+reference. The bound evaluation-context object contains that reference,
+the qualified Mission identity, operation and resolved target identities,
+the normalized facts, and a secret salt with its version. The PEP MUST
+commit the descriptor reference with the facts in
+`evaluation_context_digest`, using the existing canonical-object digest
+construction and `sha-256:` encoding; this extension defines no second
+canonicalization or hashing algorithm.
+
+The enforcing PEP MUST capture the declared facts from their authoritative
+interfaces and MUST NOT accept agent-supplied values as those observations.
+Requester and executor remain one enforcement identity. Agent arguments
+remain bound as parameters; authoritative facts remain available to the
+PDP wherever policy needs their values. The context digest is a
+PEP-supplied observation, not a value the PDP can independently recompute,
+and does not attest that a compromised PEP is honest.
+
+Adoption MUST preserve existing approval-to-decision, transaction-token,
+parameter, and operation-idempotency bindings. Moving a fact to the new
+context MUST NOT permit an old approval or operation identity to authorize
+changed effect parameters after fresh context capture. Overlapping
+commitments are permitted where they preserve these distinct properties;
+adoption does not require shrinking an existing parameter digest. The
+Operation Profile identifies every consumer of a changed digest form and
+its migration rule, including vendor/target identity, amount/currency and
+destination facts where applicable.
+
+The salt MUST be unpredictable, secret, qualified by Mission and version,
+and retained for the lifetime of every outstanding binding that uses it.
+It never appears in decision requests or evidence. It MUST survive restart
+and be consistently available to the PEP replicas that can use those
+bindings; a deployment MUST fail closed for a binding whose salt or
+descriptor cannot be recovered, rather than silently replacing either.
+This is persistent secret-state coordination, not a stateless digest
+scheme. Salting limits guessing of low-entropy values; digest-only
+evidence still exposes equality and linkability.
+
+The PDP MUST return the supplied context digest as a permit condition
+for a covered operation. The executing PEP MUST re-resolve the declared
+facts and recompute the bound context with its own applicable descriptor
+immediately before releasing the effect. A missing binding, changed
+descriptor, unequal digest, or unavailable fact MUST cause refusal before
+any effect. A condition on an operation outside the declared binding is
+invalid there. The normal invalid-condition and permit-binding rules
+still apply; the request or retrospective evidence cannot replace the
+permit condition.
+
+An inability to capture context before requesting a Decision produces a
+pre-decision Refusal Record. After a permit exists, failure to re-resolve
+or match the context produces Execution Evidence with `outcome`
+`suppressed` and `error` `target_drift`, not a new PDP denial reason.
+The extension changes neither single-use consumption nor retained-permit
+retry semantics. Every consequential phase captures and checks its own
+context; a fact declared prepare-stable SHOULD also be compared across
+prepare and commit, without reusing either phase's permit.
+
+The **verified** property is a successful reread and comparison. It leaves
+a possible resource change between that comparison and the effect. Where
+the authoritative resource supports a conditional effect, the PEP SHOULD
+carry the bound revision as a precondition (for example `If-Match` or an
+expected-version compare-and-swap). The **enforced** property MUST NOT be
+claimed without an atomic resource-side comparison coupled to the effect.
+These are declared properties of this extension, not new Mission
+Assurance Levels. Neither covers undeclared facts, arbitrary set-valued
+targets, or all policy changes; non-adopters retain the TOCTOU residual.
 
 ## Single-Use Identifiers {#single-use-identifiers}
 
@@ -2922,6 +3016,7 @@ claim, and a deployment SHOULD retain evidence that it ran them.
 | Agent resumes background work after Mission state went stale | Paused or refused on resume re-check |
 | Agent delegates to a sub-agent with no explicit delegation | Blocked (no inheritance by session ancestry) |
 | Agent alters action parameters after the permit is issued | Blocked by parameter-digest reverification |
+| Target record changes under an unaltered request, for a class claiming Evaluation-Context Binding | Blocked by context reverification; post-permit suppression is `target_drift` |
 | Agent invokes approval resolution, or supplies the resolving principal, to satisfy required approval | Refused; the approval does not count and the action fails closed |
 | Agent requests or receives context outside the active Mission's scope | Refused or withheld |
 | Agent egresses over a secondary channel (DNS, logs, shared store) | Blocked if the channel is in the mediated set; otherwise declared outside the claim |
@@ -3194,10 +3289,6 @@ work and are not required to enforce it:
 - action-hierarchy and resource-containment subset extensions (this
   profile uses the flat subset rule of
   {{I-D.draft-mcguinness-oauth-mission}});
-- evaluation-context binding: an extension letting a high-assurance
-  permit commit the resource version, policy-view version, and
-  decision time it was evaluated against, hardening the
-  target-drift residual of the TOCTOU considerations;
 - risk-signal and semantic intent-alignment inputs to the decision,
   which are advisory and deployment-defined ({{inspection-controls}});
   and
@@ -3389,10 +3480,12 @@ and the mitigations are operational: keep permit validity windows
 tight ({{parameter-binding}}), re-evaluate rather than re-present a
 permit on retry, and, where the resource exposes a version or
 revision identifier, bind it as a parameter so the permit commits
-the target state it was decided against. An extension letting a
-high-assurance permit commit its evaluation context (resource
-version, policy-view version, decision time) is deferred to
-implementation demand ({{deferred}}).
+the target state it was decided against. Evaluation-Context Binding
+({{evaluation-context-binding}}) declares and checks selected resolved
+facts for adopting classes. A reread does not close a remote check-to-act
+window; only a coupled resource-side precondition earns its enforced
+property. Uncovered facts and deployments not claiming the extension
+retain this residual and the operational mitigations above.
 
 ## Confused Deputy Across Resources
 
