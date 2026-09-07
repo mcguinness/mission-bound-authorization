@@ -1129,7 +1129,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant."
+    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant. A ceiling-declared `child_creation_policy` binds under the same comparison, and a surviving entry keeps that reference with its retained-action provenance."
    },
    "level": "unit",
    "coverage": "tested",
@@ -1196,11 +1196,30 @@
     },
     {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a declared child-creation policy binds, and the mint preserves the reference with its retained-action provenance",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a candidate lacking or altering the declared child-creation policy refuses before minting",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a ceiling declaring no children grant drops the entry carrying one, minting no child-creation authority",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
      "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup",
      "level": "unit",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#787 item 1 settles the child-creation term of this comparison. `delegation.children.child_creation_policy` is an issuer-recorded reference that becomes a policy-adjudicated child's approval-basis `root_commitment`, so the destination ceiling compares it rather than setting it aside: where the ceiling entry and the candidate both retain the `children` grant the reference has equal presence and is byte-identical, and a candidate that lacks it, alters it, or drops it while keeping the grant is refused. A ceiling declaring no `children` grant drops the entry carrying one, exactly as an introduced delegation is dropped, so the minted set conveys no child-creation authority. `capability_sources` stays the only member set aside at this config boundary (mission-core withoutCapabilitySources), so a surviving entry carries the reference and its retained-action bindings verbatim into the minted `authorization_details`, and a child creation drawing on that entry records the reference in the existing `approval_basis.activation.policy_id` and `root_commitment` (ApprovalBasisPolicyDrawdown), with no member invented for it. A client cannot inject the reference: derivation carries unrecognized `children` members from the policy ceiling and never from the proposal (derive.ts narrowChildren)."
   },
   {
    "id": "cross-domain.resource-as.derivation-record",
@@ -19044,7 +19063,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. Per-token derivation evidence remains separately tracked as SHOULD/todo."
+   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. #787 settles the ceiling's child-creation term: a ceiling-declared `child_creation_policy` binds under the lineage rule instead of being stripped, and the minted entry keeps the reference with its retained-action provenance (see cross-domain.resource-as.local-policy-bound). Per-token derivation evidence remains separately tracked as SHOULD/todo."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
