@@ -236,6 +236,28 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
+   "id": "runtime.evaluation-context.descriptor-bytes-immutable",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "Published descriptor bytes MUST remain immutable for that reference.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "re-resolving a published `{id, version}` reference returns byte-identical descriptor content whose digest still equals the reference's `digest`; a revised descriptor is published under a new version rather than replacing those bytes"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
    "id": "runtime.evaluation-context.descriptor-binding",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "evaluation-context-binding",
@@ -324,6 +346,28 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
+   "id": "runtime.evaluation-context.pdp-returns-supplied-digest",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "The PDP MUST return the supplied context digest as a permit condition for a covered operation.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a covered permit carries as its context condition the digest the request supplied, echoed from the PEP's observation rather than derived by the PDP, which holds neither the salt nor the authoritative facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
    "id": "runtime.evaluation-context.reverify-and-fail-closed",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "evaluation-context-binding",
@@ -339,6 +383,28 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a missing binding, a changed descriptor, an unequal digest, or an unavailable fact refuses before any effect is released"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+  },
+  {
+   "id": "runtime.evaluation-context.per-phase-capture",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "Every consequential phase captures and checks its own context; a fact declared prepare-stable SHOULD also be compared across prepare and commit, without reusing either phase's permit.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "each consequential phase captures and checks context under its own permit, and a fact declared prepare-stable is compared across prepare and commit, refusing on a difference, with no phase reusing another phase's permit"
    },
    "level": "cross-component",
    "coverage": "todo",
