@@ -228,7 +228,7 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A claiming deployment MUST publish the covered classes and operations, each operation's versioned binding descriptor, and whether it reaches the verified or enforced property below."
+    "normative": "a deployment claiming the extension publishes the covered classes and operations, each operation's versioned binding descriptor, and which of the verified or enforced property it reaches"
    },
    "level": "unit",
    "coverage": "todo",
@@ -250,7 +250,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The PEP MUST commit the descriptor reference with the facts in `evaluation_context_digest`"
+    "normative": "the descriptor reference is committed inside the context digest, so an Operation Profile update cannot reinterpret an outstanding permit"
    },
    "level": "unit",
    "coverage": "todo",
@@ -272,7 +272,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The enforcing PEP MUST capture the declared facts from their authoritative interfaces and MUST NOT accept agent-supplied values as those observations."
+    "normative": "every declared fact is read from the resource's authoritative interface; an agent-supplied value is never accepted as one of those observations"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -294,7 +294,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "Adoption MUST preserve existing approval-to-decision, transaction-token, parameter, and operation-idempotency bindings."
+    "normative": "adopting the extension leaves the approval-to-decision, transaction-token, parameter, and operation-idempotency bindings intact, so no earlier approval or operation identity authorizes changed effect parameters"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -316,7 +316,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a deployment MUST fail closed for a binding whose salt or descriptor cannot be recovered, rather than silently replacing either."
+    "normative": "a binding whose salt or descriptor cannot be recovered fails closed; neither is silently replaced with a fresh value"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -338,7 +338,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "A missing binding, changed descriptor, unequal digest, or unavailable fact MUST cause refusal before any effect."
+    "normative": "a missing binding, a changed descriptor, an unequal digest, or an unavailable fact refuses before any effect is released"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -360,7 +360,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "The **enforced** property MUST NOT be claimed without an atomic resource-side comparison coupled to the effect."
+    "normative": "the enforced property is claimed only where an atomic resource-side comparison is coupled to the effect; a reread followed by dispatch reaches the verified property at most"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -382,7 +382,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the PEP MUST supply `context.evaluation_context_digest` and `context.evaluation_context_binding`."
+    "normative": "a decision request for a covered operation carries both the context digest and the versioned descriptor reference"
    },
    "level": "unit",
    "coverage": "todo",
@@ -404,7 +404,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration."
+    "normative": "the PDP checks both inputs against the declared operation binding and issues no covered permit when either is missing, malformed, or incompatible with that declaration"
    },
    "level": "unit",
    "coverage": "todo",
@@ -416,7 +416,7 @@
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "response-context",
    "text": "MUST equal the validated request's context digest.",
-   "role": "PEP",
+   "role": "PDP",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
@@ -426,7 +426,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "MUST equal the validated request's context digest."
+    "normative": "the permit's context-digest condition equals the digest the request supplied and the PDP validated"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -448,7 +448,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "On a permit the digest MUST equal the live permit condition."
+    "normative": "Decision Evidence for a permit records the same context digest the live permit condition carries"
    },
    "level": "unit",
    "coverage": "todo",
@@ -470,7 +470,7 @@
    "surface": "evidence-emission",
    "assertion": "refusal",
    "observation": {
-    "normative": "Malformed input MUST be omitted, never copied into signed evidence as an established binding."
+    "normative": "malformed binding input is left out of the signed record rather than recorded as an established binding"
    },
    "level": "unit",
    "coverage": "todo",
@@ -492,7 +492,7 @@
    "surface": "evidence-emission",
    "assertion": "refusal",
    "observation": {
-    "normative": "If context cannot be established, this member MUST be absent rather than populated with a fabricated digest, and execution MUST be suppressed with `error` `target_drift`."
+    "normative": "an unestablishable context leaves the effective digest absent rather than fabricated, and execution is suppressed with error target_drift"
    },
    "level": "cross-component",
    "coverage": "todo",

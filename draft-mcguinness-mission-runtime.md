@@ -1092,7 +1092,6 @@ refusal.
 | Token validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
 | Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
-| A fact covered by a claimed Evaluation-Context Binding cannot be re-resolved, or differs at use | Refuse before releasing an effect ({{evaluation-context-binding}}) |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | A policy-required history predicate cannot be established, or the evidence store cannot be consulted ({{input-history}}) | Fail closed |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit MAY execute during a PDP outage: executing-PEP reverification needs no PDP |
@@ -1104,6 +1103,7 @@ refusal.
 | Consumption bound would be exceeded | Refuse |
 | `parameter_digest` mismatch at the executing PEP | Refuse |
 | Permit phase differs from the crossing, is absent where required, or cannot be established | Refuse before releasing an effect ({{compound-actions}}) |
+| A fact covered by a claimed Evaluation-Context Binding cannot be re-resolved, or differs at use | Refuse before releasing an effect ({{evaluation-context-binding}}) |
 | Re-presentation of a consumed single-use decision identifier | Refuse (fail closed) |
 | Required actor-delegation chain missing or malformed | Refuse |
 | Invoked capability identity outside the approved `actions` | Refuse |
@@ -1465,9 +1465,9 @@ A named assurance extension or enforcement claim attaches its own
 declaration requirement to the baseline statement, rather than adding a
 universal item every deployment carries whether or not it claims the
 extension: the per-class Evaluation-Context Binding declaration
-({{evaluation-context-binding}}); the credential custody mode for a mediated class
-({{custody}}); the transaction-assurance tier's Exact idempotency-claim
-domain per mediated action class or idempotency scope
+({{evaluation-context-binding}}); the credential custody mode for a
+mediated class ({{custody}}); the transaction-assurance tier's Exact
+idempotency-claim domain per mediated action class or idempotency scope
 ({{idempotency}}); the runtime enforcement evidence mechanism,
 retention window, and the locations of the deployment-published
 evidence signing key sets (the runtime evidence companion's PDP and
@@ -2397,9 +2397,9 @@ reference. The bound evaluation-context object contains that reference,
 the qualified Mission identity, operation and resolved target identities,
 the normalized facts, and a secret salt with its version. The PEP MUST
 commit the descriptor reference with the facts in
-`evaluation_context_digest`, using the existing canonical-object digest
-construction and `sha-256:` encoding; this extension defines no second
-canonicalization or hashing algorithm.
+`evaluation_context_digest`, using the canonical-object digest
+construction and `sha-256:` encoding of {{parameter-digest}}; this
+extension defines no second canonicalization or hashing algorithm.
 
 The enforcing PEP MUST capture the declared facts from their authoritative
 interfaces and MUST NOT accept agent-supplied values as those observations.
@@ -2410,9 +2410,10 @@ PEP-supplied observation, not a value the PDP can independently recompute,
 and does not attest that a compromised PEP is honest.
 
 Adoption MUST preserve existing approval-to-decision, transaction-token,
-parameter, and operation-idempotency bindings. Moving a fact to the new
-context MUST NOT permit an old approval or operation identity to authorize
-changed effect parameters after fresh context capture. Overlapping
+parameter, and operation-idempotency bindings. Moving a fact into the
+evaluation context MUST NOT permit an earlier approval or operation
+identity to authorize changed effect parameters after fresh context
+capture. Overlapping
 commitments are permitted where they preserve these distinct properties;
 adoption does not require shrinking an existing parameter digest. The
 Operation Profile identifies every consumer of a changed digest form and
@@ -2423,8 +2424,10 @@ The salt MUST be unpredictable, secret, qualified by Mission and version,
 and retained for the lifetime of every outstanding binding that uses it.
 It never appears in decision requests or evidence. It MUST survive restart
 and be consistently available to the PEP replicas that can use those
-bindings; a deployment MUST fail closed for a binding whose salt or
-descriptor cannot be recovered, rather than silently replacing either.
+bindings, on the terms {{single-use-identifiers}} sets for the
+consumed-identifier store; a deployment MUST fail closed for a binding
+whose salt or descriptor cannot be recovered, rather than silently
+replacing either.
 This is persistent secret-state coordination, not a stateless digest
 scheme. Salting limits guessing of low-entropy values; digest-only
 evidence still exposes equality and linkability.
@@ -2432,7 +2435,8 @@ evidence still exposes equality and linkability.
 The PDP MUST return the supplied context digest as a permit condition
 for a covered operation. The executing PEP MUST re-resolve the declared
 facts and recompute the bound context with its own applicable descriptor
-immediately before releasing the effect. A missing binding, changed
+immediately before releasing the effect, in the same step as the
+`parameter_digest` recomputation of {{execution-reverification}}. A missing binding, changed
 descriptor, unequal digest, or unavailable fact MUST cause refusal before
 any effect. A condition on an operation outside the declared binding is
 invalid there. The normal invalid-condition and permit-binding rules
@@ -2443,8 +2447,9 @@ An inability to capture context before requesting a Decision produces a
 pre-decision Refusal Record. After a permit exists, failure to re-resolve
 or match the context produces Execution Evidence with `outcome`
 `suppressed` and `error` `target_drift`, not a new PDP denial reason.
-The extension changes neither single-use consumption nor retained-permit
-retry semantics. Every consequential phase captures and checks its own
+The extension composes with the single-use rule
+({{single-use-identifiers}}) and never substitutes for it, changing
+neither single-use consumption nor retained-permit retry semantics. Every consequential phase captures and checks its own
 context; a fact declared prepare-stable SHOULD also be compared across
 prepare and commit, without reusing either phase's permit.
 
@@ -3725,6 +3730,16 @@ worked example shows the concrete record
   ride-through, the declared positive break-glass mode with truthful
   emergency evidence, and the replication disclosure. The three operator
   declarations carry no implementation coverage.
+
+- Added the Evaluation-Context Binding named assurance extension (#773),
+  claimed per mediated action class: a versioned descriptor of
+  decision-relevant resource-resolved facts, a salted PEP-computed
+  context digest committed with that descriptor, reverification at use,
+  and the declared verified and enforced properties. The deferred
+  evaluation-context bullet is struck and the TOCTOU considerations point
+  at the extension, keeping the residual for uncovered facts and
+  non-adopters. The wire condition, the evidence members, and conformance
+  coverage are specified separately.
 
 # Acknowledgments
 {:numbered="false"}

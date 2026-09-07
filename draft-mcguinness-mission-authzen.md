@@ -2453,8 +2453,8 @@ A PEP conforming to the Decision Base MUST:
   unfulfillable (an effective deny on a permit), and advertise what
   it can perform in `supported_obligations` ({{obligations}});
 - honor every decision condition present (`parameter_digest`,
-  `valid_until`, `use_limit`, `action_phase`) at every use of the
-  permit,
+  `valid_until`, `use_limit`, `action_phase`,
+  `evaluation_context_digest`) at every use of the permit,
   applying its own deployment classification floor to that duty
   independent of any class the PDP applied internally
   ({{response-context}}), fulfill every obligation attached to a
