@@ -11,7 +11,7 @@ import {
   intentHash,
   proposalHash,
 } from "@mission/core";
-import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
+import { afterCommit, openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
   attachCapabilitySources,
@@ -669,7 +669,9 @@ export class MissionKernel {
 
   /** Insert a full record (shared by approve, expansion, template dispatch, and
    *  child creation): the single Mission-record creation funnel. */
-  insertRecord(record: MissionRecord): void {
+  insertRecord(record: MissionRecord, precondition?: () => void): void {
+    // @spec control-plane#isolation — one issuer owns a kernel store.
+    if (record.issuer !== this.opts.issuer) throw new Error("record issuer does not own this kernel");
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
     // AS resolves and validates every selector here, whatever built the set
@@ -693,6 +695,7 @@ export class MissionKernel {
       // record the core forbids. Inside the transaction, so the check and the
       // INSERT are one atomic commit: a requested ceiling that passes while an
       // approval pends completes as no Mission at all.
+      precondition?.();
       const createdMs = Date.parse(record.created_at);
       const expiresMs = Date.parse(record.expires_at);
       const requestedMs = Date.parse(record.intent.expires_at);
@@ -855,8 +858,8 @@ export class MissionKernel {
       // trigger; the successor does NOT inherit the predecessor's children (their
       // strict-subset proof was against the predecessor's Authority Set). This
       // funnel bypasses setState, so the cascade is invoked explicitly here,
-      // outside the withTransaction block above (cascadeChildren -> setState uses
-      // a bare UPDATE, so there is no nested transaction).
+      // outside the withTransaction block above. setState now nests safely and
+      // delays publication until any enclosing transaction commits (#250).
     this.cascadeChildren(predecessorId);
   }
 
@@ -1774,13 +1777,16 @@ export class MissionKernel {
       }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
-    if (record.derivation_limit !== null && record.derivation_count >= record.derivation_limit) {
+    // @spec control-plane#serialization — count admission is conditional in
+    // the write. Callers still must couple it to artifact issuance; this CAS
+    // alone does not complete that broader atomic domain.
+    const changed = this.db
+      .prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? AND (derivation_limit IS NULL OR derivation_count < derivation_limit)")
+      .run(id);
+    if (changed.changes !== 1) {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
-    this.db
-      .prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ?")
-      .run(id);
-    return { ...record, derivation_count: record.derivation_count + 1 };
+    return this.mustGet(id);
   }
 
   /**
@@ -1987,46 +1993,52 @@ export class MissionKernel {
   }
 
   private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {
-    if (TERMINAL_STATES.has(record.state)) {
-      throw new LifecycleConflictError(`mission ${record.id} is terminal (${record.state})`);
-    }
-    // @spec child-delegation#child-state — the `projected_from` marker records a
-    // child's pre-suspension state while it is held under a suspended parent. It
-    // is SET when a suspend projection passes `projectedFrom` (always the held-from
-    // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
-    // resume or a restore), so it is present only for the duration of the hold.
-    if (projectedFrom !== undefined || to === "active") {
-      this.db
-        .prepare("UPDATE missions SET state = ?, version = version + 1, projected_from = ? WHERE id = ?")
-        .run(to, projectedFrom ?? null, record.id);
-    } else {
-      this.db
-        .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ?")
-        .run(to, record.id);
-    }
-    // Commit from the persisted row, not the in-memory spread: transition()
-    // discards applyExpiry()'s return, so the spread `version` can be off by one.
-    const fresh = this.get(record.id);
-    if (fresh) this.emitCommit(fresh, record.state);
-    // @spec child-delegation#cascade — a terminal transition cascades to
-    // dependent Child Missions. Gating here (after the commit) covers every
-    // terminal funnel that flows through setState: transition(revoke/complete)
-    // and applyExpiry(-> expired). It also carries cascade transitivity: setting
-    // a child to `cascaded` re-enters this gate for the grandchildren.
-    if (TERMINAL_STATES.has(to)) {
-      this.cascadeChildren(record.id);
-    } else if (to === "suspended") {
-      // @spec child-delegation#cascade (reversible trigger) — a SUSPEND projects
-      // active descendants to a reversible `suspended` hold. Transitivity rides
-      // the same re-entry as the terminal cascade, in generation order.
-      this.projectSuspendedChildren(record.id);
-    } else if (to === "active") {
-      // @spec child-delegation#cascade (reversible trigger) — a RESUME restores
-      // the descendants this parent's suspend projected; re-entry carries the
-      // restore down the tree.
-      this.restoreProjectedChildren(record.id);
-    }
-    return { ...record, state: to, version: record.version + 1 };
+    // State/version and descendant projection commit together. emitCommit
+    // queues publication until the OUTERMOST transaction commits.
+      return withTransaction(this.db, () => {
+      if (TERMINAL_STATES.has(record.state)) {
+        throw new LifecycleConflictError(`mission ${record.id} is terminal (${record.state})`);
+      }
+      // @spec child-delegation#child-state — the `projected_from` marker records a
+      // child's pre-suspension state while it is held under a suspended parent. It
+      // is SET when a suspend projection passes `projectedFrom` (always the held-from
+      // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
+      // resume or a restore), so it is present only for the duration of the hold.
+      if (projectedFrom !== undefined || to === "active") {
+        const changed = this.db
+          .prepare("UPDATE missions SET state = ?, version = version + 1, projected_from = ? WHERE id = ? AND version = ? AND state = ?")
+          .run(to, projectedFrom ?? null, record.id, record.version, record.state);
+        if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+      } else {
+        const changed = this.db
+          .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?")
+          .run(to, record.id, record.version, record.state);
+        if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+      }
+      // Commit from the persisted row, not the in-memory spread: transition()
+      // discards applyExpiry()'s return, so the spread `version` can be off by one.
+      const fresh = this.get(record.id);
+      if (fresh) this.emitCommit(fresh, record.state);
+      // @spec child-delegation#cascade — a terminal transition cascades to
+      // dependent Child Missions. Gating here (inside the transaction) covers every
+      // terminal funnel that flows through setState: transition(revoke/complete)
+      // and applyExpiry(-> expired). It also carries cascade transitivity: setting
+      // a child to `cascaded` re-enters this gate for the grandchildren.
+      if (TERMINAL_STATES.has(to)) {
+        this.cascadeChildren(record.id);
+      } else if (to === "suspended") {
+        // @spec child-delegation#cascade (reversible trigger) — a SUSPEND projects
+        // active descendants to a reversible `suspended` hold. Transitivity rides
+        // the same re-entry as the terminal cascade, in generation order.
+        this.projectSuspendedChildren(record.id);
+      } else if (to === "active") {
+        // @spec child-delegation#cascade (reversible trigger) — a RESUME restores
+        // the descendants this parent's suspend projected; re-entry carries the
+        // restore down the tree.
+        this.restoreProjectedChildren(record.id);
+      }
+      return this.mustGet(record.id);
+    });
   }
 
   /**
@@ -2129,6 +2141,10 @@ export class MissionKernel {
    * redemption or recovery poll.
    */
   drainExpansionOutbox(): void {
+    if (this.db.inTransaction) {
+      afterCommit(this.db, () => this.drainExpansionOutbox());
+      return;
+    }
     const jobs = this.db
       .prepare(
         "SELECT job_id, mission_id, successor_id, activation_json, supersession_json FROM lifecycle_outbox WHERE done = 0 AND kind = 'expansion-finalize' ORDER BY job_id",
@@ -2161,7 +2177,7 @@ export class MissionKernel {
     if (this.emitSuppressed) return;
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
-    onCommit({
+    const event = Object.freeze({
       id: record.id,
       issuer: record.issuer,
       state: record.state,
@@ -2179,6 +2195,7 @@ export class MissionKernel {
         ? { containment_version: record.containment.containment_version }
         : {}),
     });
+    afterCommit(this.db, () => onCommit(event));
   }
 
   private mustGet(id: string): MissionRecord {

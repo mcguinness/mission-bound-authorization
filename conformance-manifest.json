@@ -1223,9 +1223,46 @@
     "normative": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant. Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling."
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > a stale lifecycle snapshot cannot overwrite a committed version",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > an outer rollback restores lifecycle state and emits no transition",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > a counter reservation rolls back with its caller transaction and never exceeds its cap",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > checks fanout in the insertion transaction and a post-check fault leaves no child or publication",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > rolls back a parent transition and its whole child cascade without publishing either",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a deferral-retirement fault rolls back successor, supersession and outbox as one transaction",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Single-process fault coverage: conditional state/version and counter writes, rollback-safe nested publication, child fanout admission in the creation transaction, and expansion deferral retirement with successor/supersession/outbox. Durable generalized fan-out and asynchronous artifact issuance remain incomplete; the counter test proves a synchronous caller transaction, not provider/continuation token issuance. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -1399,9 +1436,22 @@
     "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > one-issuer stores refuse foreign records and independent issuers can retain the same local id",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > equal Mission ids and event ids from distinct issuers keep separate delivery jobs and state",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers and with migration preserving signed bytes. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
   },
   {
    "id": "control-plane.consistency.fanout",

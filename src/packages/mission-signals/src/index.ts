@@ -32,7 +32,7 @@
 import { randomBytes } from "node:crypto";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import type { MissionStatusLease, StateSource } from "@mission/core";
-import { type Database, openStore, type StoreOptions } from "@mission/store";
+import { type Database, openStore, type StoreOptions, withTransaction } from "@mission/store";
 import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
 
 /**
@@ -199,7 +199,8 @@ export interface ReceiverOptions {
  * performed it, clears the latch.
  */
 export class MissionSignalReceiver {
-  /** @spec status/harness — the ONE status shape a consumer relies on, keyed by Mission. */
+  /** @spec status/harness, control-plane#isolation — state, gap, narrowing and
+   * replay keys use unambiguous [registered issuer, local identifier] tuples. */
   private readonly cache = new Map<string, CachedState>();
   /** Recently seen `jti` values for duplicate suppression (unbounded in-process;
    *  a bounded iat-relative window is deferred). */
@@ -268,15 +269,16 @@ export class MissionSignalReceiver {
     // 4. Redelivery (step 4): a duplicate `jti` is not an error and is not reprocessed.
     const jti = payload.jti;
     if (typeof jti !== "string") return { status: "refused", reason: "malformed" };
-    if (this.seen.has(jti)) return { status: "duplicate" };
+    if (this.seen.has(JSON.stringify([this.opts.issuer, jti]))) return { status: "duplicate" };
 
     const parsed = parseEvent(payload);
     if (!parsed) return { status: "refused", reason: "malformed" };
-    this.seen.add(jti);
+    if (parsed.missionIssuer !== this.opts.issuer) return { status: "refused", reason: "issuer" };
+    this.seen.add(JSON.stringify([this.opts.issuer, jti]));
 
     const { missionId, state, version, expires_at, authority_changed, containment_version } =
       parsed;
-    const current = this.cache.get(missionId);
+    const current = this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
     // Anti-revive: a version at or below the last applied never regresses state.
     if (current !== undefined && version <= current.version) {
       return { status: "stale", version: current.version };
@@ -323,7 +325,7 @@ export class MissionSignalReceiver {
     // rides every commit once ever present, but the cache must not forget it
     // on an event that happens not to carry it).
     const nextContainmentVersion = containment_version ?? priorContainmentVersion;
-    this.cache.set(missionId, {
+    this.cache.set(JSON.stringify([this.opts.issuer, missionId]), {
       state,
       version,
       expires_at,
@@ -338,7 +340,7 @@ export class MissionSignalReceiver {
     // marker to THIS event's own version/containment_version: the new
     // high-water mark a markRematerialized baseline must cover to clear it.
     if (rematerialize) {
-      this.rematerializeNeeded.set(missionId, {
+      this.rematerializeNeeded.set(JSON.stringify([this.opts.issuer, missionId]), {
         version,
         ...(nextContainmentVersion !== undefined
           ? { containment_version: nextContainmentVersion }
@@ -346,16 +348,16 @@ export class MissionSignalReceiver {
       });
     }
     if (isGap) {
-      this.gapped.add(missionId);
+      this.gapped.add(JSON.stringify([this.opts.issuer, missionId]));
       return { status: "gap", expected, received: version, state, version, rematerialize };
     }
-    this.gapped.delete(missionId);
+    this.gapped.delete(JSON.stringify([this.opts.issuer, missionId]));
     return { status: "applied", state, version, rematerialize };
   }
 
   /** The last state established for a Mission, for a consumer's `loadView`. */
   viewState(missionId: string): CachedState | undefined {
-    return this.cache.get(missionId);
+    return this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
   }
 
   /**
@@ -365,7 +367,7 @@ export class MissionSignalReceiver {
    * for the Mission. `status_checked_at` is the instant the consumer read it.
    */
   lease(missionId: string, checkedAt: string): MissionStatusLease | undefined {
-    const s = this.cache.get(missionId);
+    const s = this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
     if (!s) return undefined;
     return {
       state: s.state,
@@ -378,7 +380,7 @@ export class MissionSignalReceiver {
 
   /** Whether a Mission has an unresolved `version` gap (refetch before reliance). */
   hasGap(missionId: string): boolean {
-    return this.gapped.has(missionId);
+    return this.gapped.has(JSON.stringify([this.opts.issuer, missionId]));
   }
 
   /**
@@ -390,7 +392,7 @@ export class MissionSignalReceiver {
    * `hasGap`); clears only via {@link markRematerialized}.
    */
   needsRematerialization(missionId: string): boolean {
-    return this.rematerializeNeeded.has(missionId);
+    return this.rematerializeNeeded.has(JSON.stringify([this.opts.issuer, missionId]));
   }
 
   /**
@@ -416,7 +418,7 @@ export class MissionSignalReceiver {
    * stale baseline left it latched.
    */
   markRematerialized(missionId: string, observedBaseline: RematerializationBaseline): boolean {
-    const marker = this.rematerializeNeeded.get(missionId);
+    const marker = this.rematerializeNeeded.get(JSON.stringify([this.opts.issuer, missionId]));
     if (!marker) return true; // nothing outstanding
     const coversVersion = observedBaseline.version >= marker.version;
     const coversContainment =
@@ -424,7 +426,7 @@ export class MissionSignalReceiver {
       (observedBaseline.containment_version !== undefined &&
         observedBaseline.containment_version >= marker.containment_version);
     if (coversVersion && coversContainment) {
-      this.rematerializeNeeded.delete(missionId);
+      this.rematerializeNeeded.delete(JSON.stringify([this.opts.issuer, missionId]));
       return true;
     }
     return false;
@@ -440,6 +442,7 @@ function audienceMatches(aud: JWTPayload["aud"], self: string): boolean {
 
 interface ParsedEvent {
   missionId: string;
+  missionIssuer: string;
   state: string;
   version: number;
   expires_at: string;
@@ -457,13 +460,15 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   const raw = events?.[LIFECYCLE_CHANGE_EVENT_URI];
   if (raw === null || typeof raw !== "object") return undefined;
   const ev = raw as Record<string, unknown>;
-  const mission = ev.mission as { id?: unknown } | undefined;
+  const mission = ev.mission as { id?: unknown; issuer?: unknown } | undefined;
   const missionId = typeof mission?.id === "string" ? mission.id : undefined;
+  const missionIssuer = typeof mission?.issuer === "string" ? mission.issuer : undefined;
   const state = typeof ev.state === "string" ? ev.state : undefined;
   const version = typeof ev.version === "number" ? ev.version : undefined;
   const expires_at = typeof ev.expires_at === "string" ? ev.expires_at : undefined;
   if (
     missionId === undefined ||
+    missionIssuer === undefined ||
     state === undefined ||
     version === undefined ||
     expires_at === undefined
@@ -472,6 +477,7 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   }
   return {
     missionId,
+    missionIssuer,
     state,
     version,
     expires_at,
@@ -547,7 +553,7 @@ export interface EmitterOptions {
  * acknowledged the hand-off. `set_jwt` persists the signed bytes before the
  * first delivery attempt, so every redelivery is the identical SET (same
  * `jti`, same bytes), never a re-signed sibling assertion. UNIQUE(event_id,
- * audience) makes a kernel-outbox replay of the same commit re-enqueue
+ * audience), with the storage event_id qualified by issuer, makes a kernel-outbox replay of the same commit re-enqueue
  * nothing.
  */
 const OUTBOX_SCHEMA = `
@@ -603,6 +609,24 @@ export class MissionSignalEmitter {
 
   constructor(private readonly opts: EmitterOptions) {
     this.db = openStore(OUTBOX_SCHEMA, opts.store);
+    // @spec control-plane#isolation — event_id is an issuer-qualified storage
+    // key; the original wire jti stays in commit_json. Upgrade existing jobs
+    // atomically without changing signed bytes, delivery state or timestamps.
+    withTransaction(this.db, () => {
+      const rows = this.db
+        .prepare("SELECT job_id, event_id, commit_json FROM signal_outbox")
+        .all() as Array<{ job_id: number; event_id: string; commit_json: string }>;
+      for (const row of rows) {
+        const commit = JSON.parse(row.commit_json) as LifecycleCommit;
+        if (typeof commit.issuer !== "string" || typeof commit.event_id !== "string")
+          throw new Error("signal outbox has no issuer-qualified event identity");
+        const key = JSON.stringify([commit.issuer, commit.event_id]);
+        if (row.event_id !== key)
+          this.db
+            .prepare("UPDATE signal_outbox SET event_id = ? WHERE job_id = ?")
+            .run(key, row.job_id);
+      }
+    });
     this.nowFn = opts.now ?? (() => new Date());
     this.retryBaseMs = opts.retry?.baseMs ?? 250;
     this.retryCapMs = opts.retry?.capMs ?? 30_000;
@@ -664,7 +688,11 @@ export class MissionSignalEmitter {
       // @spec signals#discharge-compatibility — an undeclared stream is not
       // delivered an event whose narrowing rides `authority_changed` alone.
       if (!this.deliverable(commit, consumer)) continue;
-      insert.run(eventId, consumer.audience, JSON.stringify(journaled));
+      insert.run(
+        JSON.stringify([commit.issuer, eventId]),
+        consumer.audience,
+        JSON.stringify(journaled),
+      );
     }
     this.inflight.push(this.dispatchOnce());
   };

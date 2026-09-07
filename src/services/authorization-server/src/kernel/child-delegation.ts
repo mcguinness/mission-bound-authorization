@@ -417,11 +417,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // @spec child-delegation#fanout-accounting — max_children: a per-entry cap on
   // concurrently non-terminal children. Count existing children bucketed by
   // justifying entry, then refuse if THIS child would push any bucket over its
-  // cap. The in-process kernel is single-threaded and createChildMission is fully
-  // synchronous, so this count -> check -> insertRecord runs with no interleaving
-  // (no await between the count and the insert): count-then-insert is effectively
-  // atomic and the "no bucket exceeds max_children" invariant holds without a lock.
-  const buckets = countChildBuckets(kernel, parent);
+  // cap. Admission runs inside the same transaction as insertion.
+  let buckets: ReturnType<typeof countChildBuckets>;
+  const assertFanout = () => {
+  buckets = countChildBuckets(kernel, parent);
   for (const pi of drawnOn) {
     const maxChildren = asNum(childrenOf(parentEntry(pi))?.max_children);
     const active = buckets.get(pi) ?? 0;
@@ -436,6 +435,8 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
       );
     }
   }
+
+  };
 
   // @spec child-delegation#attenuation — the child's expires_at MUST NOT be later
   // than the parent's. Established through the single effective-expiry hook, so
@@ -535,14 +536,14 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     status_list_idx: null,
     parent: parentRef,
   };
-  kernel.insertRecord(child);
+  kernel.insertRecord(child, assertFanout);
 
   // @spec child-delegation#child-evidence — permit record. `fanout` is recorded
   // for the PRIMARY justifying entry (the child's first Authority Set entry);
   // active_children is the bucket count AFTER this insert.
   const primaryMax = asNum(primaryChildren?.max_children);
   const evidence = makeEvidence("created", "strict_subset", undefined, {
-    active_children: (buckets.get(primaryPi) ?? 0) + 1,
+    active_children: (buckets!.get(primaryPi) ?? 0) + 1,
     ...(primaryMax !== undefined ? { max_children: primaryMax } : {}),
   });
 
