@@ -2413,12 +2413,11 @@ Adoption MUST preserve existing approval-to-decision, transaction-token,
 parameter, and operation-idempotency bindings. Moving a fact into the
 evaluation context MUST NOT permit an earlier approval or operation
 identity to authorize changed effect parameters after fresh context
-capture. Overlapping
-commitments are permitted where they preserve these distinct properties;
-adoption does not require shrinking an existing parameter digest. The
-Operation Profile identifies every consumer of a changed digest form and
-its migration rule, including vendor/target identity, amount/currency and
-destination facts where applicable.
+capture. Overlapping commitments are permitted where they preserve these
+distinct properties; adoption does not require shrinking an existing
+parameter digest. The Operation Profile identifies every consumer of a
+changed digest form and its migration rule, including vendor/target
+identity, amount/currency and destination facts where applicable.
 
 The salt MUST be unpredictable, secret, qualified by Mission and version,
 and retained for the lifetime of every outstanding binding that uses it.
@@ -2427,21 +2426,20 @@ and be consistently available to the PEP replicas that can use those
 bindings, on the terms {{single-use-identifiers}} sets for the
 consumed-identifier store; a deployment MUST fail closed for a binding
 whose salt or descriptor cannot be recovered, rather than silently
-replacing either.
-This is persistent secret-state coordination, not a stateless digest
-scheme. Salting limits guessing of low-entropy values; digest-only
-evidence still exposes equality and linkability.
+replacing either. This is persistent secret-state coordination, not a
+stateless digest scheme. Salting limits guessing of low-entropy values;
+digest-only evidence still exposes equality and linkability.
 
 The PDP MUST return the supplied context digest as a permit condition
 for a covered operation. The executing PEP MUST re-resolve the declared
 facts and recompute the bound context with its own applicable descriptor
 immediately before releasing the effect, in the same step as the
-`parameter_digest` recomputation of {{execution-reverification}}. A missing binding, changed
-descriptor, unequal digest, or unavailable fact MUST cause refusal before
-any effect. A condition on an operation outside the declared binding is
-invalid there. The normal invalid-condition and permit-binding rules
-still apply; the request or retrospective evidence cannot replace the
-permit condition.
+`parameter_digest` recomputation of {{execution-reverification}}. A
+missing binding, changed descriptor, unequal digest, or unavailable fact
+MUST cause refusal before any effect. A condition on an operation outside
+the declared binding is invalid there. The normal invalid-condition and
+permit-binding rules still apply; the request or retrospective evidence
+cannot replace the permit condition.
 
 An inability to capture context before requesting a Decision produces a
 pre-decision Refusal Record. After a permit exists, failure to re-resolve
@@ -2449,9 +2447,10 @@ or match the context produces Execution Evidence with `outcome`
 `suppressed` and `error` `target_drift`, not a new PDP denial reason.
 The extension composes with the single-use rule
 ({{single-use-identifiers}}) and never substitutes for it, changing
-neither single-use consumption nor retained-permit retry semantics. Every consequential phase captures and checks its own
-context; a fact declared prepare-stable SHOULD also be compared across
-prepare and commit, without reusing either phase's permit.
+neither single-use consumption nor retained-permit retry semantics.
+Every consequential phase captures and checks its own context; a fact
+declared prepare-stable SHOULD also be compared across prepare and
+commit, without reusing either phase's permit.
 
 The **verified** property is a successful reread and comparison. It leaves
 a possible resource change between that comparison and the effect. Where
