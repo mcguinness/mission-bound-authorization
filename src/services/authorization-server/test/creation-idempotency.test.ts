@@ -261,7 +261,10 @@ describe("child-creation idempotency (@spec child-delegation#creation-request-id
       expect(body).toMatchObject({ error: "invalid_request" });
       expect(as.creationIdempotency.find("ap-agent", requestId)?.state).toBe("failed");
       expect(as.kernel.findChildren(parent.missionId)).toHaveLength(0);
+      // The first attempt DID derive, so the retry's unchanged count below is a
+      // real witness that the replay never re-entered derivation.
       const calls = derive.mock.calls.length;
+      expect(calls).toBeGreaterThan(0);
       // The one-shot insert fault is gone: executing creation again would work.
       const retry = await tokenRequest(childParams(parent.accessToken, requestId));
       expect(retry.status).toBe(first.status);
