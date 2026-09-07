@@ -204,12 +204,12 @@ d("M4 core enforcement tier", () => {
     expect(res.denial_reason).toBe("parameter_violation");
   });
 
-  it("vendor outside constraint denied parameter_violation", async () => {
+  it("vendor outside constraint denied out_of_authority", async () => {
     build();
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("parameter_violation");
-    // @spec I-D.draft-zehavi-oauth-rar-metadata §4: this constraint violation is NOT
+    expect(res.denial_reason).toBe("out_of_authority");
+    // @spec I-D.draft-zehavi-oauth-rar-metadata §4: this out_of_authority is NOT
     // a genuine absence -- payments:payment.schedule IS in the Authority Set,
     // only this vendor is excluded by the constraint -- so the remediation
     // grain must NOT fire (proposing the same entry back would be a false hint).

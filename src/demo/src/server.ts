@@ -35,7 +35,7 @@ const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
 /**
  * The seeded payable invoices the deterministic /agent/run planner attempts, in
  * order: inv-1 (acme $125, within cap -> commits), inv-2 (acme $900, over the
- * $500 cap -> parameter_violation), inv-3 (globex, off-vendor -> parameter_violation).
+ * $500 cap -> parameter_violation), inv-3 (globex, off-vendor -> out_of_authority).
  * inv-seed is excluded (already wired at boot). Reading the store would pull it
  * in as already-paid noise, so the demo set is fixed.
  */

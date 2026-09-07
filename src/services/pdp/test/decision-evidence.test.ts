@@ -73,11 +73,14 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors", "max_amount"]);
   });
 
-  it("a vendor-constraint failure is distinguished from a later independent resource-policy refusal", async () => {
+  it("a vendor constraint that excludes the target records the key it evaluated and never reaches resource policy", async () => {
     const v = view(); v.authority_set[0]!.constraints = { vendors: ["globex"], max_amount: { amount: "500", currency: "USD" } };
     const throwingFga = { checkWithContext: async () => { throw new Error("must not reach FGA"); } } as unknown as Fga;
+    // The excluded target withholds the contextual tuple, so this is the
+    // boundary reason, not a parameter violation; the evaluated constraint key
+    // is recorded either way, and max_amount is never visited.
     const denied = await recorded(req(), v, { fga: throwingFga });
-    expect(denied.record.denial_reason).toBe("parameter_violation");
+    expect(denied.record.denial_reason).toBe("out_of_authority");
     expect(denied.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
     v.authority_set[0]!.constraints!.vendors = ["acme"];
     const refused = await recorded(req(), v, { fga: { checkWithContext: async () => false } as unknown as Fga });

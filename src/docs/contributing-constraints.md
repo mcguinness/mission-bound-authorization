@@ -12,11 +12,14 @@ wire member names types/keys rather than individual entry instances. An early
 lifecycle or credential refusal has no invented authority contributions. A
 constraint denial does not claim that later gates or later entries ran.
 
-Numeric and vendor constraint failures now return `parameter_violation` on
-both the response and signed evidence. This replaces the deployment's old
-`constraint_exceeded` amount code and distinguishes a vendor-constraint failure
-from an independent FGA resource-policy denial (`out_of_authority`). Failing
-constraint keys are carried separately in `contributing_constraints`.
+A constraint the PDP evaluated and whose parameters the request violates
+returns `parameter_violation` on both the response and the signed evidence; the
+deployment carries no `constraint_exceeded` code. A constraint that excludes the
+target instead withholds the contextual relationship entirely, so it keeps the
+boundary reason `out_of_authority`, which an independent FGA resource-policy
+denial also carries. Failing constraint keys are carried separately in
+`contributing_constraints`, so the reason enum and the open constraint-key space
+never mix in one field.
 
 Receipt verification accepts an unfamiliar nonempty denial-reason value as a
 deny without assigning new semantics or allowing it to authorize execution.

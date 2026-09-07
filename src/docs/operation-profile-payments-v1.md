@@ -50,10 +50,10 @@ merely because the mapped action's own schema declares one.
 | Case | Outcome |
 |---|---|
 | amount exactly at the cap | permits |
-| amount over the cap | refuses (`constraint_exceeded`) |
-| amount absent from the request context | refuses (`constraint_exceeded`) |
-| amount not a valid decimal string | refuses (`constraint_exceeded`) |
-| cap denominated in a different currency than the invoice's | refuses (`constraint_exceeded`), never converted |
+| amount over the cap | refuses (`parameter_violation`) |
+| amount absent from the request context | refuses (`parameter_violation`) |
+| amount not a valid decimal string | refuses (`parameter_violation`) |
+| cap denominated in a different currency than the invoice's | refuses (`parameter_violation`), never converted |
 
 ## Parameter schemas and normalization
 

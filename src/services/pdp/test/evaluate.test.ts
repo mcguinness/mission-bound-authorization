@@ -242,13 +242,13 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.context.denial_reason).toBe("view_inconsistent");
   });
 
-  it("vendor outside the constraint -> deny parameter_violation (contextual tuple withheld)", async () => {
+  it("vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)", async () => {
     const dec = await evaluate(
       req({ resource: { type: "invoice", id: "inv-3", properties: { vendor_id: "globex" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
-    expect(dec.context.denial_reason).toBe("parameter_violation");
+    expect(dec.context.denial_reason).toBe("out_of_authority");
   });
 
   it("over-cap execute -> deny parameter_violation", async () => {

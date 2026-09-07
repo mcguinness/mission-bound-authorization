@@ -1716,7 +1716,7 @@ async function main() {
     decision: "DENY",
     reason: gloss("reason", globex.denial_reason ?? globex.refusal_reason ?? ""),
     observed: `${gloss("tool", "execute_wire_transfer")}(inv-3, globex) denied ${globex.denial_reason ?? globex.refusal_reason ?? ""} (vendor not in the mission's allowlist)`,
-    ok: !globex.ok && globex.denial_reason === "parameter_violation",
+    ok: !globex.ok && globex.denial_reason === "out_of_authority",
   });
 
   act(

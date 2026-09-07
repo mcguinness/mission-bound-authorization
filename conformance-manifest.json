@@ -8996,7 +8996,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny parameter_violation (contextual tuple withheld)",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -16043,7 +16043,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor-constraint failure is distinguished from a later independent resource-policy refusal",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor constraint that excludes the target records the key it evaluated and never reaches resource policy",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -16060,7 +16060,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries."
+   "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries. The identifiers are authorization_details entry types and constraints keys, as the member's definition and its worked example require, not per-entry instance identifiers; a permit's individual entry stays identified by authorizing_entry or entry_digest. The evaluated key is recorded whichever reason the deny carries, so a target excluded by a vendors constraint records vendors under out_of_authority."
   },
   {
    "id": "evidence.decision.sequence-monotonic-per-emitter",
@@ -16132,7 +16132,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Wire and evidence use parameter_violation for evaluated constraints; keys are separate. The real receipt verifier preserves a future denial code as denial and refuses an execution join."
+   "notes": "The wire response and the signed evidence both carry parameter_violation when the PDP evaluated a constraint and the request's parameters violated it (the max_amount cap, including an absent, malformed or incomparable amount), and the failing keys stay in contributing_constraints rather than in denial_reason. A constraint that excludes the target withholds the contextual relationship entirely and keeps the established boundary reason out_of_authority (@spec authzen#failure-condition-coverage), so the two reasons remain distinct enum values rather than one reason carrying constraint keys. The deployment carries no constraint_exceeded code. The real receipt verifier preserves a future denial code as denial and refuses an execution join."
   },
   {
    "id": "evidence.decision.permit-must-carry-entry-or-digest",

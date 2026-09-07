@@ -829,7 +829,12 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
     },
     relation: mapping.relation,
   });
-  if (tuples.length === 0) return deny("parameter_violation"); // constraint excluded target
+  // A constraint that excludes the target withholds the contextual tuple, so
+  // no relationship to the target exists at all: the established boundary
+  // reason (@spec authzen#failure-condition-coverage, "Action outside the
+  // Authority Set ... or the request would broaden it"). The evaluated
+  // constraint key is still recorded in contributing_constraints.
+  if (tuples.length === 0) return deny("out_of_authority");
   const allowed = await fga.checkWithContext(
     { user: `mission:${view.id}`, relation: mapping.relation, object: `${req.resource.type}:${req.resource.id}` },
     tuples,
@@ -859,7 +864,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
         target: { objectType: "vendor", objectId: memberVendorId, vendorId: memberVendorId },
         relation: mapping.relation,
       });
-      if (memberTuples.length === 0) return deny("parameter_violation");
+      if (memberTuples.length === 0) return deny("out_of_authority");
       const memberAllowed = await fga.checkWithContext(
         { user: `mission:${view.id}`, relation: mapping.relation, object: `vendor:${memberVendorId}` },
         memberTuples,
