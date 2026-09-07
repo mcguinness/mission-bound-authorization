@@ -5875,41 +5875,65 @@ output is the Authority Set committed by `authority_hash`; `policy_version`
 identifies the policy used. The policy does not travel. Its identifier and
 published Intent-to-Authority-Set fixtures let a partner review outcomes.
 
-Reproducing a derivation requires the same inputs and retained policy and
-catalog versions, not just the identifier of a mutable configuration.
-Derivation is mechanical: a model may suggest an Intent or proposal, but
-does not make the approval-time narrowing decision. The issuer establishes
-recorded provenance and issuance bounds. For example, it derives
-`derivation_limit` from policy and the requested limit, rather than treating
-the client's requested limit as an independently established grant.
+Reproducing a derivation requires the same inputs and the retained
+policy and catalog versions, not just the identifier of a mutable
+configuration. Derivation is mechanical: a model may suggest an Intent
+or a proposal, and does not make the approval-time narrowing decision.
 
-## Properties Illustrated by the Contract
+## Properties a Derivation Policy Holds
 
-In narrowing mode, a useful fixture checks that each output fragment is
-within both the proposed authority and the applicable ceilings, using the
-entry type's own relation. Merely retaining fewer JSON fields is not
-narrowing: dropping a restriction can grant more. In configured-mapping
-mode, the configured candidates supply the comparison input instead.
+The five properties below restate, for a policy author, what
+{{authorization-derivation}} and the rules it cites already require of
+a derivation. They add no requirement of their own.
 
-For `mission_resource_access`, differing currencies have no intersection;
-there is no implicit conversion and no "ceiling wins" exception. The
-Common Constraints and their intersection rules are defined by
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}. Likewise, a policy
-cannot demonstrate narrowing for a constraint its engine does not
-understand. Refusal preserves the boundary; silently discarding such a key
-does not. A deployment-defined constraint needs its own implemented
-comparison, not merely a name absent from the common registry.
-
-Grant-shaped members need their own direction rule. A proposal cannot
-introduce a delegation or child-creation grant the ceiling lacks;
-restriction lists inside an already-granted delegation narrow in the
-ordinary direction. Issuer-established provenance is distinct from these
-client proposals.
+- **Deterministic.** The same Intent, proposal, ceiling, and catalog
+  derive the same Authority Set, which is what makes `policy_version`
+  an audit correlator at all ({{authorization-derivation}}).
+- **Narrowing only.** Every derived entry is a subset of some proposed
+  entry of the same type, under that type's own relation
+  ({{authority-proposal}}, {{subset}}); in configured-mapping mode the
+  configured candidates supply that comparison input. Retaining fewer
+  JSON fields is not narrowing: dropping a restriction can grant more.
+  Where the relation cannot decide, because two bounds are
+  incomparable, the posture is conservative refusal ({{subset}}). For
+  `mission_resource_access`, two amount caps naming different
+  currencies have no intersection, with no implicit conversion and no
+  "ceiling wins" exception; the Common Constraints and their
+  intersection rules are defined by
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}.
+- **Refusal over silent drop.** A policy demonstrates narrowing only
+  for a constraint its engine compares. An entry of an unsupported
+  type, or one that fails its schema, is refused, and a validation
+  failure is never repaired by omitting the entry
+  ({{authority-proposal}}). An entry carrying a constraint the engine
+  cannot compare is refused rather than derived with that constraint
+  dropped ({{subset}}, {{error-mapping}}): a narrowing intent that
+  vanishes silently is a widening. An entry the engine compares and
+  policy cannot accept is the distinct case, narrowed or omitted with
+  the granted echo reflecting it ({{authority-proposal}}). A
+  deployment-defined constraint carries the same obligation as a
+  registered one, its own implemented comparison, and a name absent
+  from the common registry does not relieve it.
+- **Issuer-established members are not client-supplied.**
+  `policy_version` ({{authorization-derivation}}), `authority_source`
+  and `approval_basis` ({{authority-sources}}, {{mission-record}}), and
+  the effective `derivation_limit` ({{derivation-issuance-policy}}) are
+  established by the issuer at the approval event, and no proposal
+  member sets them. A client's `requested_derivation_limit` is an input
+  the issuer clamps, never an independently established ceiling
+  ({{derivation-issuance-policy}}).
+- **No member the ceiling never granted.** A grant-shaped member absent
+  from the ceiling, such as a per-entry `delegation` policy, stays
+  absent from the derived entry, so a proposal introduces no capability
+  the policy never conferred. A restriction nested inside an
+  already-granted delegation, such as `allowed_delegates`, narrows in
+  the ordinary direction.
 
 ## A Worked Rule
 
-Consider a catalog in which invoice and journal reads are not amount-bearing,
-but a journal write supplies an amount. The ceiling separates those actions:
+Consider a catalog whose read actions supply no amount for a cap to
+compare against, while a journal write does. The ceiling separates
+those actions:
 
 ~~~ json
 [
@@ -5945,13 +5969,17 @@ narrowed to `500.00 USD`. The ceiling's unrequested `journal-entries.read`
 does not appear. Each proposal intersects the same-resource ceiling
 fragments; disjoint action intersections contribute no authority.
 
-Attaching the amount cap to a single mixed read/write proposal is not a
-shortcut to that result: the read has no amount against which to enforce
-it. Admission rejects that modeling error instead of derivation silently
-dropping the cap from a read fragment. A write proposal naming a different
-currency likewise cannot produce the shown USD intersection. These are
-negative fixtures alongside the positive result, not special cases that
-relax the type's relation.
+Attaching the amount cap to a single mixed read and write proposal is
+not a shortcut to that result: the read supplies no amount for the cap
+to compare against. A deployment applying one entry-admission rule at
+intake refuses that modeling error, rather than leaving derivation to
+drop the cap from a read fragment. A write proposal naming a different
+currency likewise cannot produce the USD intersection shown. And a
+proposal carrying a Common Constraint this deployment does not compare
+is refused with `invalid_authorization_details` ({{error-mapping}}),
+not derived with the constraint dropped. These are negative fixtures
+alongside the positive result, not special cases that relax the type's
+relation.
 
 ## Fixtures and Authoring Discipline
 
@@ -5967,11 +5995,12 @@ An additional tripwire runs the configuration actually shipped through
 intake, derivation and a real decision path. A successful configuration
 load alone does not prove that it can authorize its intended workload.
 Using the same entry-admission rule at configuration load and client intake
-helps prevent those two surfaces from disagreeing. The reference
-implementation's split action ceiling and shipped-configuration tests are
-one realization of this discipline; this illustration does not certify
-every current implementation branch, including unknown-constraint handling
-or currency-mismatch behavior.
+helps prevent those two surfaces from disagreeing. A reference
+implementation's split action ceiling and shipped-configuration tests
+realize this discipline. This appendix states the contract and
+certifies no implementation's handling of a constraint it does not
+compare or of mismatched currencies; a deployment establishes that with
+its own fixtures.
 
 ## Ownership and Operational Signals
 
