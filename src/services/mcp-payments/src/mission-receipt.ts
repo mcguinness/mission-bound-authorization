@@ -30,6 +30,7 @@ import {
   type EvidenceSigningKey,
   MISSION_RECEIPT_MEDIA_TYPE,
   REFUSAL_RECORD_MEDIA_TYPE,
+  RUNTIME_EVIDENCE_JWS_TYP,
   signEvidenceEnvelope,
   verifyEvidenceEnvelope,
   type EnforcementScopeStatement,
@@ -39,40 +40,110 @@ import {
 
 export type MissionReceiptKind = "decision" | "execution" | "refusal";
 
-type PublishedReceiptKey = EvidenceVerificationKey & { status?: SigningKeyStatus };
-const receiptScopes = new WeakMap<EvidenceKeyResolver, EnforcementScopeStatement>();
+export type PublishedReceiptKey = EvidenceVerificationKey & { status?: SigningKeyStatus };
+
+/**
+ * One designated `{emitter, key_set}` binding of the evidence extension,
+ * carrying the keys published for that key set AND bound to that emitter.
+ * A key reaches verification only through the issuer that designates it.
+ */
+export interface ReceiptIssuerBinding {
+  readonly emitter: string;
+  readonly key_set: string;
+  readonly keys: readonly PublishedReceiptKey[];
+}
+
+/**
+ * The trusted receipt-issuer scope: an immutable snapshot of the designated
+ * `receipt_issuers` and their key bindings, plus the Enforcement Scope
+ * Statement the designation came from. A verifier takes this as an explicit
+ * parameter, so a caller that has no designated scope cannot reach receipt
+ * verification at all.
+ */
+export interface ReceiptIssuerScope {
+  readonly statement: EnforcementScopeStatement;
+  readonly issuers: readonly ReceiptIssuerBinding[];
+}
+
+/** Freezes the statement's own data. Key material is referenced, never traversed. */
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    for (const inner of Object.values(value as Record<string, unknown>)) deepFreeze(inner);
+    Object.freeze(value);
+  }
+  return value;
+}
 
 /** Trusted assembly seam: locations are resolved by the deployment, never from a receipt. */
-export function createReceiptIssuerKeyResolver(
+export function createReceiptIssuerScope(
   statement: EnforcementScopeStatement,
   publishedKeySets: ReadonlyMap<string, readonly PublishedReceiptKey[]>,
-): EvidenceKeyResolver {
+): ReceiptIssuerScope {
   if (validateEnforcementScopeStatement(statement).length) throw new Error("invalid receipt enforcement scope");
   const declaration = statement.extensions?.evidence;
   if (!statement.claims?.includes("evidence") || !declaration || !Array.isArray(declaration.receipt_issuers)) {
     throw new Error("scope does not declare receipt issuers");
   }
   const components = new Set([...statement.pdps, ...statement.mediated_scope.pep_locations]);
-  const keys: PublishedReceiptKey[] = [];
+  const issuers: ReceiptIssuerBinding[] = [];
   for (const binding of declaration.receipt_issuers) {
     if (!components.has(binding.emitter) || !declaration.signing_key_locations.includes(binding.key_set)) {
       throw new Error("receipt issuer or key set is not named by the scope");
     }
+    const keys: PublishedReceiptKey[] = [];
     for (const key of publishedKeySets.get(binding.key_set) ?? []) {
       if (key.role === "receipt_issuer" && key.emitterId === binding.emitter) {
-        keys.push({ ...key, ...(key.status ? { status: { ...key.status } } : {}) });
+        keys.push(Object.freeze({ ...key, ...(key.status ? { status: Object.freeze({ ...key.status }) } : {}) }));
       }
     }
+    issuers.push(Object.freeze({ emitter: binding.emitter, key_set: binding.key_set, keys: Object.freeze(keys) }));
   }
-  const resolve: EvidenceKeyResolver = ({ kid, emitter, audience }) => {
-    const matches = keys.filter((key) => key.kid === kid && key.emitterId === emitter.id &&
-      emitter.role === "receipt_issuer" && (key.audience === undefined || key.audience === audience));
-    if (matches.length !== 1) return undefined;
-    const key = matches[0]!;
-    return { key: key.publicKey, ...(key.status ? { status: { ...key.status } } : {}) };
-  };
-  receiptScopes.set(resolve, structuredClone(statement));
-  return resolve;
+  // The snapshot is frozen through every level verification reads: a later
+  // mutation of the caller's statement, of the published key sets, or of the
+  // returned scope itself cannot broaden a scope that already exists. Each
+  // key entry is frozen; the key material it names is referenced as is.
+  return Object.freeze({ statement: deepFreeze(structuredClone(statement)), issuers: Object.freeze(issuers) });
+}
+
+/** The snapshot shape verification requires; anything else designates nothing. */
+function snapshotOf(value: unknown): ReceiptIssuerScope | undefined {
+  const scope = objectOf(value);
+  if (!scope || !objectOf(scope.statement) || !Array.isArray(scope.issuers)) return undefined;
+  const issuers = scope.issuers as readonly unknown[];
+  if (!issuers.every((entry) => {
+    const binding = objectOf(entry);
+    return !!binding && nonempty(binding.emitter) && nonempty(binding.key_set) && Array.isArray(binding.keys);
+  })) {
+    return undefined;
+  }
+  return scope as unknown as ReceiptIssuerScope;
+}
+
+/**
+ * Minimal structural validation of the receipt envelope: a well-formed
+ * compact JWS, the registered `typ`, a `kid`, and the receipt's own issuer
+ * (its `emitter`). The protected header is read here UNAUTHENTICATED, to
+ * name the claimed issuer before any trust decision is taken. The
+ * authoritative `typ`/`cty`, byte-equality and signature checks stay in
+ * `verifyEvidenceEnvelope`, after the issuer is designated and its key is
+ * looked up.
+ */
+function claimedIssuer(input: unknown): { issuer: string; kid: string } | undefined {
+  const record = objectOf(input);
+  const envelope = objectOf(record?.evidence_envelope);
+  const emitter = objectOf(record?.emitter);
+  if (!record || !envelope || envelope.format !== "jws-compact" || typeof envelope.value !== "string") return undefined;
+  const parts = envelope.value.split(".");
+  if (parts.length !== 3 || parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) return undefined;
+  let header: Record<string, unknown> | undefined;
+  try {
+    header = objectOf(JSON.parse(Buffer.from(parts[0]!, "base64url").toString("utf8")));
+  } catch {
+    return undefined;
+  }
+  if (!header || header.typ !== RUNTIME_EVIDENCE_JWS_TYP || !nonempty(header.kid)) return undefined;
+  if (!emitter || !nonempty(emitter.id) || emitter.role !== "receipt_issuer") return undefined;
+  return { issuer: emitter.id, kid: header.kid };
 }
 
 function objectOf(value: unknown): Record<string, unknown> | undefined {
@@ -293,33 +364,58 @@ const CTY_FOR: Record<ReceiptResolvedRecord["type"], string> = {
 /**
  * Verify a Mission Receipt end to end, per {{receipt-verification}} steps
  * 1-5 and 7 (step 6, chain verification, is not implemented: see the file
- * header). `resolveReceiptKey` resolves the receipt issuer's own key;
- * `resolveEvidenceKey` resolves the referenced records' emitter keys (the
- * same resolver a caller already uses to verify Decision/Execution/Refusal
- * records directly).
+ * header). `issuerScope` is the trusted receipt-issuer scope snapshot
+ * ({@link createReceiptIssuerScope}): it designates the issuers and holds
+ * the keys bound to each, so the receipt issuer's key is never supplied by
+ * an arbitrary callback. `resolveEvidenceKey` resolves the referenced
+ * records' emitter keys (the same resolver a caller already uses to verify
+ * Decision/Execution/Refusal records directly).
  */
 export async function verifyMissionReceipt(
   receipt: unknown,
   resolveRecord: ReceiptRecordResolver,
-  resolveReceiptKey: EvidenceKeyResolver,
+  issuerScope: ReceiptIssuerScope,
   resolveEvidenceKey: EvidenceKeyResolver,
   recoveryProof?: RecoveryProof,
 ): Promise<ReceiptVerifyResult> {
   try {
-    return await verifyReceipt(structuredClone(receipt), resolveRecord, resolveReceiptKey, resolveEvidenceKey, recoveryProof);
+    return await verifyReceipt(structuredClone(receipt), resolveRecord, issuerScope, resolveEvidenceKey, recoveryProof);
   } catch {
     return { valid: false, reason: "malformed" };
   }
 }
 
 async function verifyReceipt(
-  input: unknown, resolveRecord: ReceiptRecordResolver, resolveReceiptKey: EvidenceKeyResolver,
+  input: unknown, resolveRecord: ReceiptRecordResolver, issuerScope: ReceiptIssuerScope,
   resolveEvidenceKey: EvidenceKeyResolver, recoveryProof?: RecoveryProof,
 ): Promise<ReceiptVerifyResult> {
-  const scope = receiptScopes.get(resolveReceiptKey);
-  if (!scope) return { valid: false, reason: "issuer_not_authorized" };
+  // Step 1 (lines 1490-1503), in its own order. Minimal structural
+  // validation of the envelope comes first: an envelope that is not a
+  // well-formed JWS carrying `typ`, a `kid` and a receipt issuer names no
+  // issuer to check.
+  const claimed = claimedIssuer(input);
+  if (!claimed) return { valid: false, reason: "envelope_invalid" };
 
-  // Step 1 (lines 1490-1503): the receipt's own envelope.
+  // The issuer designation is checked against the trusted scope BEFORE any
+  // key lookup, so an issuer the scope does not designate (or one removed
+  // from it) refuses under its own reason rather than as an absent key.
+  const scope = snapshotOf(issuerScope);
+  const designated = scope?.issuers.filter((binding) => binding.emitter === claimed.issuer) ?? [];
+  if (!scope || designated.length === 0) return { valid: false, reason: "issuer_not_authorized" };
+
+  // The key lookup is bound to THAT issuer inside THAT scope: a key
+  // published for another designated issuer, or in a key set the scope does
+  // not bind, resolves to nothing. An authorized issuer plus an arbitrary
+  // key never suffices.
+  const resolveReceiptKey: EvidenceKeyResolver = ({ kid, emitter, audience }) => {
+    if (kid !== claimed.kid || emitter.id !== claimed.issuer || emitter.role !== "receipt_issuer") return undefined;
+    const matches = designated.flatMap((binding) => binding.keys).filter((key) =>
+      key.kid === kid && key.role === "receipt_issuer" && key.emitterId === claimed.issuer &&
+      (key.audience === undefined || key.audience === audience));
+    if (matches.length !== 1) return undefined;
+    const key = matches[0]!;
+    return { key: key.publicKey, ...(key.status ? { status: { ...key.status } } : {}) };
+  };
   const envelopeResult = await verifyEvidenceEnvelope(
     input,
     MISSION_RECEIPT_MEDIA_TYPE,
@@ -380,7 +476,7 @@ async function verifyReceipt(
     if (!v.valid) {
       return { valid: false, reason: "referenced_record_invalid" };
     }
-    if (!recordShape(r.type, r.record) || !claimsWithinScope(scope, {
+    if (!recordShape(r.type, r.record) || !claimsWithinScope(scope.statement, {
       resource: r.record.audience,
       ...(r.type === "decision" ? { action_class: r.record.action_class } : {}),
     })) {

@@ -17140,19 +17140,31 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "receipt issuance is limited to components the deployment's enforcement scope statement names; a verifier rejects an emitter the statement does not name as a receipt issuer, and a self-published key presenting role receipt_issuer establishes nothing on its own"
+    "normative": "receipt issuance is limited to components the deployment's enforcement scope statement names; a verifier checks that designation against the trusted scope before any key lookup and rejects an emitter the statement does not name as a receipt issuer with issuer_not_authorized, including an emitter removed from the scope's receipt_issuers; a self-published key presenting role receipt_issuer establishes nothing on its own, and a key bound to another issuer or published in a key set the scope does not bind resolves to nothing even when the claimed issuer is designated"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > a public key alone cannot designate a receipt issuer, and the declaration limits component and resource scope",
+     "name": "Mission Receipt build + verify > an issuer the trusted scope does not designate refuses as issuer_not_authorized, before any key lookup",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an authorized issuer refuses a key bound to another issuer or published outside the scope",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > a scope snapshot cannot be broadened after it is created, and the declaration limits component and resource scope",
      "level": "unit",
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. The trusted receipt-issuer scope is an explicit parameter of verifyMissionReceipt, an immutable snapshot of the designated receipt_issuers and their key bindings; the cited tests cover a non-designated issuer, an issuer removed from the scope, a key bound to another designated issuer (with the same key material verifying for its own issuer), a key published outside the scope's bound key sets, and a snapshot that a later mutation cannot broaden. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.outcome-required-for-execution-kind",
@@ -17474,14 +17486,14 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "step 1 verifies the receipt's own evidence_envelope (byte equality, typ, and signature against the scope statement's published keys, confirming the statement names the emitter as a receipt issuer) but the receipt's Mission binding itself rests on the verified referenced records and their joins, never on key publication alone"
+    "normative": "step 1 validates the receipt's own evidence_envelope structurally (a well-formed compact JWS carrying typ, a kid and the claimed receipt issuer), checks that issuer's designation against the trusted scope, looks up the key bound to that issuer within that scope, and then requires byte equality and a valid signature; the receipt's Mission binding itself rests on the verified referenced records and their joins, never on key publication alone"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > a public key alone cannot designate a receipt issuer, and the declaration limits component and resource scope",
+     "name": "Mission Receipt build + verify > an issuer the trusted scope does not designate refuses as issuer_not_authorized, before any key lookup",
      "level": "unit",
      "surface": "verification"
     },
@@ -17492,7 +17504,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Step 1's own order is exercised: structural envelope validation, then the issuer-designation check against the explicit scope parameter (issuer_not_authorized), then the issuer-bound key lookup, then byte equality and signature. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.step3-resolve-and-recompute-digest",
