@@ -86,6 +86,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const MANIFEST_PATH = path.join(ROOT, "conformance-manifest.json");
 
+// The existing no-install CI step invokes this command. Exercise its matcher
+// regressions there too without requiring a new workflow or any dependencies.
+// The CLI fixture explicitly clears CI in its child process, avoiding recursion.
+if (process.env.CI && process.env.CI !== "false") {
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, "test-check-conformance-manifest.mjs")], {
+      cwd: ROOT, stdio: "inherit",
+    });
+  } catch {
+    console.error("conformance matcher regression tests failed");
+    process.exit(1);
+  }
+}
+
 const errors = [];
 const fail = (check, msg) => errors.push(`[${check}] ${msg}`);
 const normalize = (s) => s.replace(/\s+/g, " ").trim();
