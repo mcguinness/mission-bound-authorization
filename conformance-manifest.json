@@ -17402,9 +17402,15 @@
      "name": "Mission Receipt build + verify > rejects signed but structurally invalid referenced records rather than treating integrity as content validation",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unimplemented chain refuses at its own step, after the steps before it and never as a pass",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested. Partial: chain verification and the richer source-content/profile families remain incomplete; unsupported chains and issuer assertions refuse. No complete receipt-verifier bar is claimed."
+   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested, and the unimplemented chain step refusing in its own position without masking an earlier reason. Partial: chain verification and the richer source-content/profile families remain incomplete; unsupported chains and issuer assertions refuse. No complete receipt-verifier bar is claimed."
   },
   {
    "id": "evidence.receipt.step1-envelope-and-no-binding-by-key-alone",
