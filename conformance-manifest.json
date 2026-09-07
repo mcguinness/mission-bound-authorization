@@ -16264,7 +16264,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#594 W4-1: required base members, closed runtime projections, verified credential metadata, normalized conditions and permit entry commitment are exercised on actual decisions. Partial remains: contributing_constraints and returned obligations are not yet constructed. Per-action capability_source already shipped in #782; its malformed-input omission tests remain mapped separately."
+   "notes": "#594 W4-1: required base members, closed runtime projections, verified credential metadata, normalized conditions and permit entry commitment are exercised on actual decisions. #594 W4-2 adds the constructed contributing_constraints member. Partial remains: returned obligations are not constructed, so the conditional obligations member of this row's member set is unexercised. Per-action capability_source already shipped in #782; its malformed-input omission tests remain mapped separately."
   },
   {
    "id": "evidence.decision.actor-minimized-never-raw-claims",
