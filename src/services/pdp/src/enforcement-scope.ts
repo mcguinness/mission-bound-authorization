@@ -67,6 +67,8 @@ export interface EnforcementExtensionDeclarations {
     mechanism: string;
     retention_window: string;
     signing_key_locations: readonly string[];
+    /** Receipt issuers must already be named PDPs or executing PEPs in this scope. */
+    receipt_issuers?: ReadonlyArray<{ emitter: string; key_set: string }>;
     agent_isolated_evidence_emission?: ReadonlyArray<{ emitter: string; declaration: string }>;
   };
   high_assurance_agent?: ReadonlyArray<{ row: string; eat_selection: string }>;

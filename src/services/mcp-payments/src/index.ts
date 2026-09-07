@@ -98,6 +98,7 @@ export {
   type MissionReceiptKind,
   type MissionReceiptObject,
   type ReceiptRecordResolver,
+  createReceiptIssuerKeyResolver,
   type ReceiptResolvedRecord,
   type ReceiptVerifyFailure,
   type ReceiptVerifyResult,

@@ -13,7 +13,8 @@
  * `verifyMissionReceipt`'s `chain_not_supported` reason).
  */
 
-import { canonicalDigest, type JsonValue } from "@mission/core";
+import { canonicalDigest, type JsonValue, type RecoveryProof, type SigningKeyStatus } from "@mission/core";
+import type { EvidenceVerificationKey } from "./evidence.js";
 import type {
   DecisionEvidenceObject,
   ExecutionEvidenceObject,
@@ -31,9 +32,123 @@ import {
   REFUSAL_RECORD_MEDIA_TYPE,
   signEvidenceEnvelope,
   verifyEvidenceEnvelope,
+  type EnforcementScopeStatement,
+  validateEnforcementScopeStatement,
+  claimsWithinScope,
 } from "@mission/pdp";
 
 export type MissionReceiptKind = "decision" | "execution" | "refusal";
+
+type PublishedReceiptKey = EvidenceVerificationKey & { status?: SigningKeyStatus };
+const receiptScopes = new WeakMap<EvidenceKeyResolver, EnforcementScopeStatement>();
+
+/** Trusted assembly seam: locations are resolved by the deployment, never from a receipt. */
+export function createReceiptIssuerKeyResolver(
+  statement: EnforcementScopeStatement,
+  publishedKeySets: ReadonlyMap<string, readonly PublishedReceiptKey[]>,
+): EvidenceKeyResolver {
+  if (validateEnforcementScopeStatement(statement).length) throw new Error("invalid receipt enforcement scope");
+  const declaration = statement.extensions?.evidence;
+  if (!statement.claims?.includes("evidence") || !declaration || !Array.isArray(declaration.receipt_issuers)) {
+    throw new Error("scope does not declare receipt issuers");
+  }
+  const components = new Set([...statement.pdps, ...statement.mediated_scope.pep_locations]);
+  const keys: PublishedReceiptKey[] = [];
+  for (const binding of declaration.receipt_issuers) {
+    if (!components.has(binding.emitter) || !declaration.signing_key_locations.includes(binding.key_set)) {
+      throw new Error("receipt issuer or key set is not named by the scope");
+    }
+    for (const key of publishedKeySets.get(binding.key_set) ?? []) {
+      if (key.role === "receipt_issuer" && key.emitterId === binding.emitter) {
+        keys.push({ ...key, ...(key.status ? { status: { ...key.status } } : {}) });
+      }
+    }
+  }
+  const resolve: EvidenceKeyResolver = ({ kid, emitter, audience }) => {
+    const matches = keys.filter((key) => key.kid === kid && key.emitterId === emitter.id &&
+      emitter.role === "receipt_issuer" && (key.audience === undefined || key.audience === audience));
+    if (matches.length !== 1) return undefined;
+    const key = matches[0]!;
+    return { key: key.publicKey, ...(key.status ? { status: { ...key.status } } : {}) };
+  };
+  receiptScopes.set(resolve, structuredClone(statement));
+  return resolve;
+}
+
+function objectOf(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+const nonempty = (value: unknown): value is string => typeof value === "string" && value.length > 0;
+function timestamp(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.exec(value);
+  if (!parts || !Number.isFinite(Date.parse(value))) return false;
+  const year = Number(parts[1]), month = Number(parts[2]), day = Number(parts[3]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]!;
+}
+const integer = (value: unknown): boolean => Number.isSafeInteger(value) && (value as number) >= 0;
+const terminal = (value: unknown): boolean => ["completed", "failed", "suppressed"].includes(value as string);
+
+function missionShape(value: unknown, exact = false): boolean {
+  const p = objectOf(value);
+  return !!p && nonempty(p.id) && nonempty(p.issuer) && (p.authority_hash === undefined || nonempty(p.authority_hash)) &&
+    (!exact || Object.keys(p).every((key) => ["id", "issuer", "authority_hash"].includes(key)));
+}
+
+function receiptShape(value: unknown): value is MissionReceiptObject {
+  const p = objectOf(value), emitter = objectOf(p?.emitter);
+  if (!p || !["decision", "execution", "refusal"].includes(p.kind as string) || !missionShape(p.mission, true) ||
+      !emitter || !nonempty(emitter.id) || emitter.role !== "receipt_issuer" || !timestamp(p.issued_at) || !Array.isArray(p.evidence)) return false;
+  if (p.kind === "execution" ? !terminal(p.outcome) : p.outcome !== undefined) return false;
+  if (p.profile !== undefined && !nonempty(p.profile)) return false;
+  if (p.issuer_assertions !== undefined && (!nonempty(p.profile) || !objectOf(p.issuer_assertions))) return false;
+  if (p.decision !== undefined) {
+    const decision = objectOf(p.decision);
+    if (!decision || !nonempty(decision.id) || !["permit", "deny"].includes(decision.result as string)) return false;
+  }
+  return p.evidence.every((value) => {
+    const ref = objectOf(value), emitter = objectOf(ref?.emitter);
+    return !!ref && nonempty(ref.type) && nonempty(ref.digest) && nonempty(ref.evidence_id) &&
+      !!emitter && nonempty(emitter.id) && nonempty(emitter.role);
+  });
+}
+
+/** Base content checks are distinct from envelope integrity and later cross-record joins. */
+function recordShape(type: ReceiptResolvedRecord["type"], value: unknown): boolean {
+  const p = objectOf(value), emitter = objectOf(p?.emitter);
+  if (!p || !emitter || !nonempty(emitter.id) || !nonempty(p.audience)) return false;
+  for (const field of ["actor", "credential", "capability_source", "principal_mapping", "hop_reference"]) {
+    if (p[field] !== undefined && !objectOf(p[field])) return false;
+  }
+  if (type === "decision") {
+    const mission = objectOf(p.mission), subject = objectOf(p.subject), resource = objectOf(p.resource), action = objectOf(p.action);
+    const conditions = objectOf(p.conditions);
+    if (p.conditions !== undefined && (!conditions || !timestamp(conditions.valid_until) ||
+      (conditions.use_limit !== undefined && (!integer(conditions.use_limit) || conditions.use_limit === 0)) ||
+      (conditions.parameter_digest !== undefined && conditions.parameter_digest !== p.parameter_digest))) return false;
+    if (p.decision === "permit" && (!conditions || !timestamp(conditions.valid_until) ||
+      (!nonempty(p.entry_digest) && !objectOf(p.authorizing_entry)) ||
+      (["irreversible_action", "external_commitment", "privileged_administration"].includes(p.action_class as string) && conditions.use_limit !== 1))) return false;
+    if (p.decision === "deny" && !nonempty(p.denial_reason)) return false;
+    if (p.parameter_digest === undefined ? !nonempty(p.evaluation_request_digest) : !nonempty(p.parameter_digest) || p.evaluation_request_digest !== undefined) return false;
+    return emitter.role === "pdp" && missionShape(mission) && nonempty(mission?.policy_view_id) &&
+      nonempty(p.evidence_id) && nonempty(p.evaluation_id) && integer(p.sequence) && timestamp(p.evaluated_at) &&
+      !!subject && nonempty(subject.id) && !!resource && nonempty(resource.type) && nonempty(resource.id) && !!action && nonempty(action.name) &&
+      ["permit", "deny"].includes(p.decision as string) &&
+      ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"].includes(p.action_class as string) &&
+      ["default", "resource_floor", "deployment"].includes(p.class_source as string);
+  }
+  if (type === "execution") return ["pep", "executor"].includes(emitter.role as string) &&
+    nonempty(p.execution_id) && nonempty(p.evaluation_id) && nonempty(p.mission_id) && terminal(p.outcome) && integer(p.sequence) && timestamp(p.outcome_at) &&
+    (p.outcome === "completed" || nonempty(p.error)) && (p.error === undefined || nonempty(p.error));
+  const action = objectOf(p.action);
+  return ["pep", "pdp"].includes(emitter.role as string) && nonempty(p.refusal_id) && p.decision === "deny" &&
+    nonempty(p.denial_reason) && !!action && nonempty(action.name) && timestamp(p.evaluated_at) &&
+    (p.mission === undefined || missionShape(p.mission) && integer(p.sequence)) &&
+    (p.parameter_digest === undefined ? nonempty(p.evaluation_request_digest) : nonempty(p.parameter_digest) && p.evaluation_request_digest === undefined);
+}
 
 /** @spec runtime-evidence#receipt-evidence (lines 1405-1449): one evidence reference. */
 export interface MissionReceiptEvidenceRef {
@@ -90,6 +205,8 @@ export async function buildAndSignMissionReceipt(
   emitterId: string,
   signer: EvidenceSigningKey,
 ): Promise<MissionReceiptObject> {
+  if (!["decision", "execution", "refusal"].includes(input.kind)) throw new Error("unknown Mission Receipt kind");
+  if (input.kind === "execution" && !terminal(input.executionEvidence?.outcome)) throw new Error("execution receipt requires a final outcome");
   const evidence: MissionReceiptEvidenceRef[] = [];
 
   if (input.kind === "decision" || input.kind === "execution") {
@@ -147,6 +264,8 @@ export type ReceiptRecordResolver = (
 ) => ReceiptResolvedRecord | undefined | Promise<ReceiptResolvedRecord | undefined>;
 
 export type ReceiptVerifyFailure =
+  | "malformed"
+  | "issuer_not_authorized"
   | "envelope_invalid"
   | "combination_invalid"
   | "reference_unresolvable"
@@ -158,11 +277,11 @@ export type ReceiptVerifyFailure =
   | "emitter_mismatch"
   | "join_failure"
   | "copied_member_mismatch"
-  /** The receipt carries an optional copied-member projection (`policy`, `executor`, `target`) this verifier does not implement a comparison for (#739 review point 4). */
+  /** Issuer assertions require a separately authorized profile/policy path not implemented here. */
   | "unimplemented_projection"
   | "chain_not_supported";
 
-export type ReceiptVerifyResult = { valid: true } | { valid: false; reason: ReceiptVerifyFailure };
+export type ReceiptVerifyResult = { valid: true; unauthorized_execution?: true } | { valid: false; reason: ReceiptVerifyFailure };
 
 const CTY_FOR: Record<ReceiptResolvedRecord["type"], string> = {
   decision: DECISION_EVIDENCE_MEDIA_TYPE,
@@ -179,24 +298,38 @@ const CTY_FOR: Record<ReceiptResolvedRecord["type"], string> = {
  * records directly).
  */
 export async function verifyMissionReceipt(
-  receipt: MissionReceiptObject,
+  receipt: unknown,
   resolveRecord: ReceiptRecordResolver,
   resolveReceiptKey: EvidenceKeyResolver,
   resolveEvidenceKey: EvidenceKeyResolver,
+  recoveryProof?: RecoveryProof,
 ): Promise<ReceiptVerifyResult> {
-  if ("chain" in receipt) {
-    return { valid: false, reason: "chain_not_supported" };
+  try {
+    return await verifyReceipt(structuredClone(receipt), resolveRecord, resolveReceiptKey, resolveEvidenceKey, recoveryProof);
+  } catch {
+    return { valid: false, reason: "malformed" };
   }
+}
+
+async function verifyReceipt(
+  input: unknown, resolveRecord: ReceiptRecordResolver, resolveReceiptKey: EvidenceKeyResolver,
+  resolveEvidenceKey: EvidenceKeyResolver, recoveryProof?: RecoveryProof,
+): Promise<ReceiptVerifyResult> {
+  const scope = receiptScopes.get(resolveReceiptKey);
+  if (!scope) return { valid: false, reason: "issuer_not_authorized" };
 
   // Step 1 (lines 1490-1503): the receipt's own envelope.
   const envelopeResult = await verifyEvidenceEnvelope(
-    receipt as unknown as Parameters<typeof verifyEvidenceEnvelope>[0],
+    input,
     MISSION_RECEIPT_MEDIA_TYPE,
     resolveReceiptKey,
+    recoveryProof,
   );
   if (!envelopeResult.valid) {
     return { valid: false, reason: "envelope_invalid" };
   }
+  if (!receiptShape(input)) return { valid: false, reason: "malformed" };
+  const receipt = input;
 
   // Step 2 (line 1504-1505, {{receipt-kinds}}, {{receipt-evidence}}): the
   // required evidence combination for this `kind`, no more, no less.
@@ -218,7 +351,9 @@ export async function verifyMissionReceipt(
   // recompute the digest, and require the identifier and emitter to match.
   const resolved: Partial<Record<ReceiptResolvedRecord["type"], ReceiptResolvedRecord["record"]>> = {};
   for (const ref of receipt.evidence) {
-    const r = await resolveRecord(ref);
+    let r: ReceiptResolvedRecord | undefined;
+    try { r = structuredClone(await resolveRecord(ref)); }
+    catch { return { valid: false, reason: "reference_unresolvable" }; }
     if (!r) {
       return { valid: false, reason: "reference_unresolvable" };
     }
@@ -233,7 +368,7 @@ export async function verifyMissionReceipt(
     // digest compare, so this exact substitution is rejected under its own
     // specific reason rather than incidentally caught (and masked) by a
     // later digest mismatch.
-    if (CTY_FOR[r.type] !== ref.type) {
+    if (!["decision", "execution", "refusal"].includes(r.type) || CTY_FOR[r.type] !== ref.type) {
       return { valid: false, reason: "reference_type_mismatch" };
     }
     const v = await verifyEvidenceEnvelope(
@@ -242,6 +377,12 @@ export async function verifyMissionReceipt(
       resolveEvidenceKey,
     );
     if (!v.valid) {
+      return { valid: false, reason: "referenced_record_invalid" };
+    }
+    if (!recordShape(r.type, r.record) || !claimsWithinScope(scope, {
+      resource: r.record.audience,
+      ...(r.type === "decision" ? { action_class: r.record.action_class } : {}),
+    })) {
       return { valid: false, reason: "referenced_record_invalid" };
     }
     const digest = canonicalDigest(r.record as unknown as JsonValue);
@@ -322,13 +463,9 @@ export async function verifyMissionReceipt(
     // `authorized_parameter_digest` the Decision Evidence never carried at
     // all). `!==` on two `string | undefined` values covers presence and
     // equality together: both absent is not a failure, exactly one present
-    // is, and both present-but-different is. Note: the spec's own member
-    // text (lines 1020-1023) only states the "Decision Evidence carries it
-    // -> Execution Evidence MUST equal it" direction; it does not itself
-    // forbid Execution Evidence carrying one the Decision Evidence lacks.
-    // Rejecting that reverse case is stricter than the draft's literal
-    // text, following the review's explicit instruction; possibly a spec
-    // gap worth its own finding, not merely an implementation gap.
+    // is, and both present-but-different is. The current draft states
+    // this biconditional explicitly; the former reverse-direction gap
+    // has been closed.
     if (executionRec.authorized_parameter_digest !== decisionRec.parameter_digest) {
       return { valid: false, reason: "join_failure" };
     }
@@ -336,6 +473,8 @@ export async function verifyMissionReceipt(
   if (receipt.kind === "execution" && executionRec && receipt.outcome !== executionRec.outcome) {
     return { valid: false, reason: "join_failure" };
   }
+  if (receipt.kind === "execution" && decisionRec?.decision !== "permit") return { valid: false, reason: "join_failure" };
+  if (receipt.kind === "refusal" && receipt.decision !== undefined) return { valid: false, reason: "copied_member_mismatch" };
 
   // Step 5 (line 1520): every copied optional member equals its source.
   // @spec runtime-evidence#mission-receipt Members (lines 1361-1383, #739
@@ -346,15 +485,21 @@ export async function verifyMissionReceipt(
   // "structurally separate from the projections above", issuer-asserted
   // facts with profile-defined semantics, never a copy step 5 checks
   // against a source record; `chain` is step 6, separately unimplemented).
-  // This verifier does not implement the `policy`/`executor`/`target`
-  // comparisons, and nothing in this deployment builds a receipt carrying
-  // any of them (`buildAndSignMissionReceipt` only ever projects
-  // `decision`/`outcome`), so per the review, a receipt carrying one is
-  // REJECTED here rather than silently accepted with that member
-  // unverified. Implement the comparison instead of removing this guard if
-  // a future profile needs to carry one.
-  if ("policy" in receipt || "executor" in receipt || "target" in receipt) {
+  if ("issuer_assertions" in receipt) {
     return { valid: false, reason: "unimplemented_projection" };
+  }
+  const projections: Record<string, unknown> = decisionRec ? {
+    policy: { pdp_policy_view: decisionRec.mission.policy_view_id,
+      ...(decisionRec.mission.policy_version !== undefined ? { mission_policy_version: decisionRec.mission.policy_version } : {}) },
+    executor: decisionRec.actor,
+    target: { resource: decisionRec.resource, audience: decisionRec.audience },
+  } : {};
+  for (const member of ["policy", "executor", "target"]) {
+    const claimed = (receipt as unknown as Record<string, unknown>)[member];
+    if (claimed !== undefined && (!objectOf(claimed) || projections[member] === undefined ||
+      canonicalDigest(claimed as JsonValue) !== canonicalDigest(projections[member] as JsonValue))) {
+      return { valid: false, reason: "copied_member_mismatch" };
+    }
   }
   if (receipt.decision && decisionRec) {
     if (receipt.decision.id !== decisionRec.evidence_id || receipt.decision.result !== decisionRec.decision) {
@@ -364,5 +509,9 @@ export async function verifyMissionReceipt(
 
   // Step 6 (chain) intentionally not implemented; step 7 (reject on any
   // failure) is realized by every early return above.
-  return { valid: true };
+  if ("chain" in receipt) return { valid: false, reason: "chain_not_supported" };
+  const deviation = executionRec && executionRec.outcome !== "suppressed" &&
+    executionRec.authorized_parameter_digest !== undefined &&
+    executionRec.authorized_parameter_digest !== executionRec.effective_parameter_digest;
+  return { valid: true, ...(deviation ? { unauthorized_execution: true as const } : {}) };
 }
