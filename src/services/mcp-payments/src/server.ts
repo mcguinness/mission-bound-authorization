@@ -27,13 +27,6 @@ import {
 import type { ActObject } from "@mission/actor-chain";
 import type { Decision, MissionView } from "@mission/pdp";
 
-/** Called only after this path's signature, issuer/chain and expiry checks. */
-function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
-  return {
-    ...(typeof payload.iss === "string" ? { issuer: payload.iss } : {}),
-    ...(typeof payload.exp === "number" ? { expires_at: new Date(payload.exp * 1000).toISOString() } : {}),
-  };
-}
 import {
   type ActionApprovalInput,
   CANONICAL_RESOURCE,
@@ -63,6 +56,13 @@ import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
 import { buildEffectiveParams, parameterDigest } from "./effective-params.js";
 
+/** Called only after this path's signature, issuer/chain and expiry checks. */
+function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
+  return {
+    ...(typeof payload.iss === "string" ? { issuer: payload.iss } : {}),
+    ...(typeof payload.exp === "number" ? { expires_at: new Date(payload.exp * 1000).toISOString() } : {}),
+  };
+}
 
 /**
  * @spec txn-authorization#transaction-token — a transaction token authorizes
