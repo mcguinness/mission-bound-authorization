@@ -384,9 +384,10 @@ function capNoBroader(candidate: number | undefined, granted: number | undefined
 
 /**
  * @spec child-delegation#fanout, child-delegation#child-creation — the
- * recorded drawdown policy reference. It is neither a cap nor a restriction list: it becomes the child's
- * approval-basis `root_commitment`, so a verifier cannot rank two references,
- * and a reference the grantor never recorded is not narrower than one it did.
+ * recorded drawdown policy reference. It is neither a cap nor a restriction
+ * list: it becomes the child's approval-basis `root_commitment`, so a verifier
+ * cannot rank two references, and a reference the grantor never recorded is
+ * not narrower than one it did.
  * Where both sides retain the `children` grant, presence is EQUAL and a present
  * value is byte-identical: introducing it, altering it, or dropping the
  * reference while keeping the grant each fail. A non-string on either side
