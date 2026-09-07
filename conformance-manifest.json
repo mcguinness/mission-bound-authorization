@@ -402,9 +402,9 @@
    },
    "profiles": [],
    "surface": "resource-operation",
-   "assertion": "refusal",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "each consequential phase captures and checks context under its own permit, and a fact declared prepare-stable is compared across prepare and commit, refusing on a difference, with no phase reusing another phase's permit"
+    "normative": "each consequential phase captures and checks context under its own permit, never carrying another phase's permit or context, and a fact declared prepare-stable is also compared across prepare and commit"
    },
    "level": "cross-component",
    "coverage": "todo",
