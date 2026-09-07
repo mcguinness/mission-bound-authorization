@@ -31,6 +31,7 @@ import type {
   RuntimeConditions,
   RuntimePrincipalMapping,
   RuntimeCapabilitySource,
+  RuntimeCredentialRef,
 } from "./decision-evidence.js";
 import { runtimeCapabilitySourceOf } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
@@ -131,6 +132,8 @@ export interface EvaluationRequest {
        */
       authority_hash?: string;
       policy_view_id?: string;
+      /** Retrospective policy reference supplied by the trusted PEP, when known. */
+      policy_version?: string;
       /**
        * @spec cross-domain#mission-subject, authzen#pdp-request rule 10 —
        * the immutable origin principal, REQUIRED for a request claiming the
@@ -141,6 +144,8 @@ export interface EvaluationRequest {
       subject?: OriginPrincipal;
     };
     actor?: ContextActor;
+    /** Already verified by the authenticated PEP; never populated from tool arguments. */
+    credential?: RuntimeCredentialRef;
     capability_source?: RuntimeCapabilitySource;
     freshness?: Freshness;
     parameter_digest?: string;
@@ -414,10 +419,13 @@ async function emitDecisionEvidence(
   return emitter.emit({
     ...(capability_source ? { capability_source } : {}),
     mission: {
-      id: view.id,
-      issuer: view.issuer,
+      id: req.context.mission.id,
+      issuer: req.context.mission.issuer,
       policy_view_id: decision.context.policy_view_id as string,
-      authority_hash: view.authority_hash,
+      // A view-mismatch denial must not attach another Mission's anchor.
+      ...(req.context.mission.id === view.id && req.context.mission.issuer === view.issuer
+        ? { authority_hash: view.authority_hash } : {}),
+      ...(typeof req.context.mission.policy_version === "string" ? { policy_version: req.context.mission.policy_version } : {}),
     },
     subject: {
       id: req.subject.id,
@@ -433,6 +441,7 @@ async function emitDecisionEvidence(
       ? { action_class: req.context.action_class as RuntimeActionClass }
       : {}),
     ...(req.context.actor !== undefined ? { actor: req.context.actor } : {}),
+    ...(req.context.credential !== undefined ? { credential: req.context.credential } : {}),
     ...(principal_mapping !== undefined ? { principal_mapping } : {}),
     ...(req.context.parameter_digest !== undefined ? { parameter_digest: req.context.parameter_digest } : {}),
     ...(decision.context.conditions !== undefined
@@ -947,7 +956,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // on. Previously this checked only "irreversible_action", so a
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
-  const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment";
+  const highConsequence = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "");
   return {
     decision: true,
     context: base({

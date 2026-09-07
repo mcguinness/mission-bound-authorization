@@ -29,6 +29,7 @@ import {
   stalenessBoundSeconds,
 } from "@mission/pdp";
 import { generateKeyPairSync } from "node:crypto";
+import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import {
   buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
@@ -89,7 +90,7 @@ function seededPayments(): PaymentsStore {
 }
 
 /** One PEP/server pair; `keys` supplies the store's resolver and (optionally) the decision function. */
-function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withDecisionPoint: boolean) {
+function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withDecisionPoint: boolean, jwks: { keys: Record<string, unknown>[] } = { keys: [] }) {
   const payments = seededPayments();
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const missionView = view();
@@ -111,13 +112,36 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     pep,
     payments,
     loadView,
-    jwks: { keys: [] },
+    jwks,
     issuer: ISSUER,
   });
   return { server, evidence };
 }
 
 describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence#decision-evidence-object, #741)", () => {
+  it("carries issuer and expiry only from a verified credential through the PEP into signed Decision Evidence", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("ES256");
+    const jwk = await exportJWK(publicKey); jwk.kid = "credential-test";
+    const { keys } = decisionPointAndKeys();
+    const { server, evidence } = buildServer(keys, true, { keys: [jwk] });
+    const exp = Math.floor(Date.now() / 1000) + 600;
+    const sign = (key: CryptoKey) => new SignJWT({ sub: "alice", client_id: "ap-agent", mission: TOKEN.mission, cnf: { jkt: "jkt-1" }, raw_claim: "PRIVATE-CREDENTIAL-CLAIM" })
+      .setProtectedHeader({ alg: "ES256", kid: jwk.kid }).setIssuer(ISSUER).setAudience(CANONICAL_RESOURCE).setExpirationTime(exp).sign(key);
+    const other = await generateKeyPair("ES256");
+    await expect(server.validateMissionToken(await sign(other.privateKey))).rejects.toThrow();
+    expect(evidence.all()).toEqual([]);
+    const credential = await sign(privateKey);
+    const facts = await server.validateMissionToken(credential);
+    const result = await server.callReadTool("get_invoice", { invoice_id: "inv-1", credential: { issuer: "https://attacker.test", expires_at: "2099-01-01T00:00:00Z" } }, facts);
+    expect(result.isError).not.toBe(true);
+    const record = evidence.all().find((e): e is DecisionEvidence => e.kind === "decision")!.content;
+    expect(record.credential).toEqual({ issuer: ISSUER, expires_at: new Date(exp * 1000).toISOString() });
+    const signed = Buffer.from(record.evidence_envelope.value.split(".")[1]!, "base64url").toString("utf8");
+    expect(signed).not.toContain("PRIVATE-CREDENTIAL-CLAIM");
+    expect(signed).not.toContain("attacker.test");
+    expect(signed).not.toContain(credential);
+  });
+
   it("the signer configuration has no `pdp` role to configure", () => {
     const keys = createEphemeralEvidenceKeys();
     expect(Object.keys(keys.signing).sort()).toEqual(["executor", "pep", "receipt_issuer"]);
@@ -155,6 +179,8 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_impostor",
       decision: "permit",
+      entry_digest: "sha-256:fixture-entry",
+      conditions: { valid_until: NOW.toISOString() },
       evaluated_at: NOW.toISOString(),
     });
     const evidence = new EvidenceStore(keys.signing, keys.resolver);
@@ -180,6 +206,8 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       audience: "https://other-scope.example.com",
       evaluation_id: "dec_scope",
       decision: "permit",
+      entry_digest: "sha-256:fixture-entry",
+      conditions: { valid_until: NOW.toISOString() },
       evaluated_at: NOW.toISOString(),
     });
     const evidence = new EvidenceStore(deploymentKeys.signing, deploymentKeys.resolver);
@@ -199,6 +227,8 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_nokeys",
       decision: "permit",
+      entry_digest: "sha-256:fixture-entry",
+      conditions: { valid_until: NOW.toISOString() },
       evaluated_at: NOW.toISOString(),
     });
     const evidence = new EvidenceStore(keys.signing);
@@ -218,6 +248,8 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_verbatim",
       decision: "permit",
+      entry_digest: "sha-256:fixture-entry",
+      conditions: { valid_until: NOW.toISOString() },
       evaluated_at: NOW.toISOString(),
     });
     const evidence = new EvidenceStore(keys.signing, keys.resolver);

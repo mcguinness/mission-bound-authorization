@@ -15801,8 +15801,22 @@
     "normative": "the record's mission object always carries the request's id/issuer/authority_hash (REQUIRED) and the PDP's own policy_view_id (REQUIRED, always populated whatever the request carried); intent_hash, policy_version, and a consent-disclosure commitment are OPTIONAL and recorded only when known; these hashes are the issuing AS's own commitments cited as anchors, never recomputed by the PDP"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > returns a signed record on a PERMIT that an independent verifier accepts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > a view-mismatch denial names the request Mission and the PDP view separately, never another Mission's authority anchor",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.action-no-raw-parameters",
@@ -15823,8 +15837,16 @@
     "normative": "the action member never carries raw request parameters under any name; only parameter_digest carries the parameter binding"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.action-class-and-source",
@@ -15845,8 +15867,16 @@
     "normative": "action_class names one of the five runtime classes and is always present since every record here is on a consequential action; class_source (REQUIRED when action_class is present, i.e. always) records how the class was assigned: default, resource_floor, or deployment"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > records the applied class, a permit entry digest and one matching parameter binding for every action class",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.credential-verified-claims-only",
@@ -15867,8 +15897,22 @@
     "normative": "the credential member never carries a claim the PEP did not itself verify before invoking the PDP"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "the enforcement path holds no PDP evidence key (@spec runtime-evidence#decision-evidence-object, #741) > carries issuer and expiry only from a verified credential through the PEP into signed Decision Evidence",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.parameter-binding-digest-xor",
@@ -15889,8 +15933,22 @@
     "normative": "parameter_digest is REQUIRED for a parameter-bound action; evaluation_request_digest is REQUIRED whenever parameter_digest is absent, so every decision record carries one digest or the other, present whether the decision was a permit or a deny"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > records the applied class, a permit entry digest and one matching parameter binding for every action class",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > uses only the documented request-summary digest without a parameter binding on permit and deny, and omits absent credential",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: permit/deny digest exclusivity and live-condition equality tested. Partial: the existing no-parameter fallback commits only the documented request summary, not the whole evaluation request. No whole-input binding claim."
   },
   {
    "id": "evidence.decision.obligations-recorded-as-returned",
@@ -15933,8 +15991,22 @@
     "normative": "conditions is REQUIRED when decision is permit for a consequential action, recording valid_until and use_limit; the PDP sets use_limit to exactly 1 for a high-consequence-class permit, and the producer ensures the record's parameter_digest equals the parameter binding carried by the wire conditions"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > records the applied class, a permit entry digest and one matching parameter binding for every action class",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses an inconsistent binding or unbounded high-consequence permit before signing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.contributing-constraints-completeness",
@@ -16035,8 +16107,22 @@
     "normative": "every permit record carries authorizing_entry (the full entry) or entry_digest (its integrity-anchor encoded digest), the issuance profile's Authority Set entry commitment"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > records the applied class, a permit entry digest and one matching parameter binding for every action class",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses an inconsistent binding or unbounded high-consequence permit before signing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.subject-minimized-never-raw-claims",
@@ -16057,8 +16143,16 @@
     "normative": "the record's subject member carries subject identifiers and assurance metadata only, never a raw claim set, minimized per the deployment's audit policy"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.resource-properties-minimized",
@@ -16079,8 +16173,16 @@
     "normative": "the record's resource member carries the resource identifier and type, and any further resource properties are minimized to what the deployment's audit policy declares"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.object-required-members-and-types",
@@ -16116,7 +16218,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Partial. The emitted record carries the REQUIRED members and class_source, asserted against a decision the PDP actually reached rather than a hand-built object, and conditions ride a permit. Not witnessed: obligations (this deployment attaches none) and contributing_constraints (the PDP does not track which entries a decision turned on). capability_source is deliberately absent from the record (#741): the member left the decision request envelope with #657/#730, so no validated PDP-side input carries it, and a PEP-supplied copy would be caller-asserted record content. It returns once #657's per-action capability-binding resolver supplies it from the PDP's own verified inputs."
+   "notes": "#594 W4-1: required base members, closed runtime projections, verified credential metadata, normalized conditions and permit entry commitment are exercised on actual decisions. Partial remains: contributing_constraints and returned obligations are not yet constructed. Per-action capability_source already shipped in #782; its malformed-input omission tests remain mapped separately."
   },
   {
    "id": "evidence.decision.actor-minimized-never-raw-claims",
@@ -16137,8 +16239,16 @@
     "normative": "when present, the record's actor member carries actor-chain identifiers and assurance metadata only, never a raw claim set, minimized per the deployment's audit policy"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.decision.credential-minimized-never-raw-claims",
@@ -16159,8 +16269,16 @@
     "normative": "when present, the record's credential member carries credential-derived identifiers and assurance metadata only, never a raw claim set, minimized per the deployment's audit policy"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
    "id": "evidence.refusal.refusal-id-entropy-and-format",

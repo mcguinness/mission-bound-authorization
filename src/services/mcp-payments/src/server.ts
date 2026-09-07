@@ -26,6 +26,14 @@ import {
 } from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import type { Decision, MissionView } from "@mission/pdp";
+
+/** Called only after this path's signature, issuer/chain and expiry checks. */
+function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
+  return {
+    ...(typeof payload.iss === "string" ? { issuer: payload.iss } : {}),
+    ...(typeof payload.exp === "number" ? { expires_at: new Date(payload.exp * 1000).toISOString() } : {}),
+  };
+}
 import {
   type ActionApprovalInput,
   CANONICAL_RESOURCE,
@@ -289,6 +297,7 @@ export class McpPaymentsServer {
       // @spec authzen#pdp-request rule 10 — this resource's own verified
       // issuer, never the mission's origin issuer.
       iss: this.deps.issuer,
+      credential: verifiedCredentialRef(payload),
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: {
         id: mission.id,
@@ -320,6 +329,7 @@ export class McpPaymentsServer {
       // @spec authzen#pdp-request rule 10 — this resource's own verified
       // issuer, never a claim on the (nonexistent) mission.
       iss: this.deps.issuer,
+      credential: verifiedCredentialRef(payload),
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       cnfJkt,
       ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
@@ -419,6 +429,7 @@ export class McpPaymentsServer {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
       iss: this.deps.issuer,
+      credential: verifiedCredentialRef(payload),
       ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: {
@@ -574,6 +585,7 @@ export class McpPaymentsServer {
         // issuer: the subject the challenge was opened for is a principal in
         // ITS namespace regardless of which credential class retrieved it.
         iss: this.deps.issuer,
+        credential: verifiedCredentialRef(payload),
         ...(payload.act ? { act: payload.act as ActObject } : {}),
         mission: {
           id: mission.id,
@@ -680,6 +692,7 @@ export class McpPaymentsServer {
       sub: (leafPayload.sub ?? rootPayload.sub) as string,
       clientId: rootPayload.client_id as string,
       iss: this.deps.issuer,
+      credential: verifiedCredentialRef(leafPayload),
       mission: {
         id: rootMission.id,
         issuer: rootMission.issuer,
