@@ -3,7 +3,22 @@ import { evaluateRemote } from "./client.js";
 import type { DecisionPoint } from "./decision-point.js";
 import type { DecisionOptions, EvaluationRequest } from "./evaluate.js";
 import { createPdpHttpServer } from "./server.js";
-import { stalenessBoundSeconds } from "./policy.js";
+import { stalenessBound } from "./policy.js";
+
+/**
+ * @spec authzen#transport-behavior — "A PEP MUST bound each evaluation call
+ * with a timeout inside the action class's staleness budget." A class
+ * declared with a window caps the configured deadline. A class declared with
+ * no active freshness requirement, and a label the statement does not
+ * declare, carry no window to cap it, so the configured deadline stands: the
+ * transport does not classify the action, and the PDP refuses an undeclared
+ * class on its own (@spec authzen#runtime-denial-classification).
+ */
+export function channelDeadlineMs(actionClass: string | undefined, configuredMs?: number): number {
+  const configured = Math.max(1, configuredMs ?? 5000);
+  const declared = stalenessBound(actionClass);
+  return declared.kind === "bounded" ? Math.max(1, Math.min(configured, declared.seconds * 1000)) : configured;
+}
 
 /** Trusted assembly seam: the remote server owns the options resolver and
  * the decision point (including its closed-over evidence signer). The PEP
@@ -31,7 +46,7 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
     // Caller's options are deliberately not forwarded across this boundary.
     decide: (request: EvaluationRequest) => evaluateRemote(request, {
       url: server.url, pepId: config.pepId, secret,
-      timeoutMs: Math.max(1, Math.min(config.timeoutMs ?? 5000, stalenessBoundSeconds(request.context.action_class) * 1000)),
+      timeoutMs: channelDeadlineMs(request.context.action_class, config.timeoutMs),
     }),
     remoteDecisionChannels: [{ boundary: `${config.pepId} -> ${server.url}`, trust_mode: "per-PEP MAC request/response; scope-authorized PEP; PDP-signed Decision Evidence" }],
     close: () => closing ??= server.close(),

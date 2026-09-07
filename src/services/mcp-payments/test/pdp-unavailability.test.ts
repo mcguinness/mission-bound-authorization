@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionFn, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBoundSeconds } from "@mission/pdp";
+import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionFn, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
 
@@ -18,7 +18,7 @@ async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
   };
   const fga = { checkWithContext: async () => true } as unknown as Fga;
   const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
-  const getOptions = vi.fn(() => ({ view, fga, modelId: "test", now: () => new Date(), stalenessBoundSeconds, relationForAction, allowedFreshnessSources: new Set(["load_view"]) }));
+  const getOptions = vi.fn(() => ({ view, fga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, allowedFreshnessSources: new Set(["load_view"]) }));
   const channel = await createDecisionChannel(point, { mode, pepId: "payments-pep", audience: CANONICAL_RESOURCE, getOptions });
   const observe = vi.fn();
   const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe, allowedFreshnessSources: new Set(["load_view"]) });
@@ -143,21 +143,22 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
   });
 
   // @spec authzen#transport-behavior — "A PEP MUST bound each evaluation call
-  // with a timeout inside the action class's staleness budget": the configured
-  // channel deadline cannot outlive the declared budget for the class, so a
-  // class the statement declares no bound for cannot wait out that deadline.
-  it("caps the configured channel deadline by the declared action-class budget", async () => {
+  // with a timeout inside the action class's staleness budget": a PDP that
+  // never answers refuses locally when the deadline elapses, and never waits
+  // past the class's declared budget (the cap arithmetic itself is asserted
+  // in services/pdp/test/remote-channel.test.ts).
+  it("bounds the call inside the declared action-class budget and refuses locally when the deadline elapses", async () => {
     const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     const channel = await createDecisionChannel(point, {
-      mode: "remote", pepId: "payments-pep", audience: CANONICAL_RESOURCE, timeoutMs: 120_000,
+      mode: "remote", pepId: "payments-pep", audience: CANONICAL_RESOURCE, timeoutMs: 40,
       getOptions: () => new Promise(() => {}),
     });
     try {
-      expect(stalenessBoundSeconds("unpublished_class")).toBe(0);
+      expect(stalenessBound("irreversible_action")).toEqual({ kind: "bounded", seconds: 30 });
       const started = Date.now();
       const decision = await channel.decide({
-        subject: { id: "alice" }, resource: { type: "invoice", id: "one" }, action: { name: "payments:invoice.read" },
-        context: { audience: CANONICAL_RESOURCE, mission: { id: "msn_remote", issuer: "https://as.test" }, action_class: "unpublished_class" },
+        subject: { id: "alice" }, resource: { type: "invoice", id: "one" }, action: { name: "payments:payment.execute" },
+        context: { audience: CANONICAL_RESOURCE, mission: { id: "msn_remote", issuer: "https://as.test" }, action_class: "irreversible_action" },
       });
       expect(Date.now() - started).toBeLessThan(5_000);
       expect(decision.decision).toBe(false);

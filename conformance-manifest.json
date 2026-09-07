@@ -12082,7 +12082,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the PEP bounds every evaluation call with a timeout inside the action class's staleness budget and treats an expired call as pdp_unreachable, failing closed rather than permitting",
-    "local": "`createDecisionChannel` sets the remote client's deadline to min(configured timeout, `stalenessBoundSeconds(action_class)`), and the PEP turns every branded local channel outcome other than an authentication or integrity failure into a `pdp_unreachable` Refusal Record with no retained Decision."
+    "local": "`channelDeadlineMs` caps the remote client's deadline at the window the statement declares for the action class (leaving it where the class declares no window), and the PEP turns every branded local channel outcome other than an authentication or integrity failure into a `pdp_unreachable` Refusal Record with no retained Decision."
    },
    "level": "unit",
    "coverage": "partial",
@@ -12094,8 +12094,14 @@
      "surface": "decision-request"
     },
     {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "channel deadline inside the action class's staleness budget (@spec authzen#transport-behavior) > caps the configured deadline at the declared window for the class, and leaves it where the class declares none",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
      "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
-     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > caps the configured channel deadline by the declared action-class budget",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > bounds the call inside the declared action-class budget and refuses locally when the deadline elapses",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -12112,7 +12118,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "The configured remote client bounds the complete response and `createDecisionChannel` floors the configured deadline at the class budget, so a class the statement publishes no bound for cannot wait out the configured timeout. Timeout, transport failure and any non-2xx status reach the PEP as pdp_unreachable. Partial: this is the remote path, not a timeout wrapper for arbitrary co-resident decision functions."
+   "notes": "The configured remote client bounds the complete response and `channelDeadlineMs` caps the configured deadline at the class budget, so a call for a class with a tighter declared window cannot wait out the configured timeout. Timeout, transport failure and any non-2xx status reach the PEP as pdp_unreachable. Partial: this is the remote path, not a timeout wrapper for arbitrary co-resident decision functions."
   },
   {
    "id": "authzen.transport.no-double-charge-on-retry",

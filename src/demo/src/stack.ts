@@ -27,7 +27,7 @@ import {
   createDecisionChannel,
   loadRuntimePosture,
   RUNTIME_POSTURE,
-  stalenessBoundSeconds,
+  stalenessBound,
   deriveJoinDelegation,
   Fga,
   type MissionView,
@@ -589,7 +589,7 @@ export async function composeStack(opts: {
       const ref = request.context.mission;
       const loaded = ref ? loadView(ref) : undefined;
       if (!loaded) throw new Error("PDP cannot establish the Mission view");
-      return { view: loaded.view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction, ...runtimeDecisionPolicy };
+      return { view: loaded.view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, ...runtimeDecisionPolicy };
     },
   });
   const enforcementScopeStatement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: decisionChannel.remoteDecisionChannels });
