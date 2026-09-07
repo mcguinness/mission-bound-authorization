@@ -988,9 +988,20 @@ export class Pep {
     // must take the PEP's own pre-decision Refusal Record path. Do not catch
     // arbitrary errors from an in-process decision function as policy denial.
     if (isDecisionChannelRefusal(decision)) {
+      // @spec authzen#failure-condition-coverage, authzen#transport-behavior —
+      // the table scopes `channel_failure` to "PEP-PDP channel authentication
+      // or integrity fails", so only an unauthenticated, malformed or
+      // oversized response takes it. A reachable PDP that returned no decision
+      // (timeout, transport failure, or any non-2xx status, 429 and 503
+      // included) is "no decision obtainable within its policy window":
+      // `pdp_unreachable`, per the same document's overload rule.
       const cause = String(decision.context.denial_reason);
-      const reason = cause === "decision_channel_timeout" || cause === "decision_channel_unreachable"
-        ? "pdp_unreachable" : "channel_failure";
+      const integrityFailures = new Set([
+        "decision_channel_unauthenticated_response",
+        "decision_channel_malformed_response",
+        "decision_channel_response_too_large",
+      ]);
+      const reason = integrityFailures.has(cause) ? "channel_failure" : "pdp_unreachable";
       return this.refuse(token, reason, mapping.action, view);
     }
 

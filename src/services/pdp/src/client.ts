@@ -36,6 +36,8 @@ const localRefusals = new WeakSet<object>();
 export function isDecisionChannelRefusal(value: unknown): boolean {
   return value !== null && typeof value === "object" && localRefusals.has(value);
 }
+const object = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
 function channelDeny(denial_reason: string, extra: Record<string, unknown> = {}): Decision {
   const result = { decision: false, context: { denial_reason, ...extra } };
   localRefusals.add(result);
@@ -76,16 +78,16 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
     let raw: string;
     try {
       res = await doFetch(cfg.url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-pdp-pep-id": cfg.pepId,
-        "x-pdp-signature": signature,
-        "x-pdp-nonce": nonce,
-        "x-pdp-issued-at": issuedAt,
-      },
-      body,
-      signal: controller.signal,
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-pdp-pep-id": cfg.pepId,
+          "x-pdp-signature": signature,
+          "x-pdp-nonce": nonce,
+          "x-pdp-issued-at": issuedAt,
+        },
+        body,
+        signal: controller.signal,
       });
       if (res.body) {
         const reader = res.body.getReader();
@@ -113,44 +115,49 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
       return channelDeny(controller.signal.aborted || (err instanceof Error && err.name === "AbortError")
         ? "decision_channel_timeout" : "decision_channel_unreachable");
     }
-  if (!res.ok) {
-    return channelDeny("decision_channel_refused", { channel_status: res.status });
-  }
+    if (!res.ok) {
+      return channelDeny("decision_channel_refused", { channel_status: res.status });
+    }
 
-  // @spec runtime#decision-channel: "the parties MUST authenticate each
-  // other" -- the PEP authenticates the PDP, and verifies response
-  // integrity, before accepting the permit/deny it carries. The expected
-  // MAC is recomputed from THIS call's own outstanding request (its
-  // pepId, nonce, issuedAt, and request digest, never values read off the
-  // response): a response correctly signed for a different request cannot
-  // satisfy it, so a captured, validly signed reply cannot be replayed
-  // onto this one.
-  const responseSignature = res.headers.get("x-pdp-signature");
-  const expected = macHex(cfg.secret, RESPONSE_MAC_DOMAIN, [
-    cfg.pepId,
-    nonce,
-    issuedAt,
-    sha256Hex(body),
-    String(res.status),
-    raw,
-  ]);
-  if (responseSignature === null || !macEqualHex(responseSignature, expected)) {
-    return channelDeny("decision_channel_unauthenticated_response");
-  }
+    // @spec runtime#decision-channel: "the parties MUST authenticate each
+    // other" -- the PEP authenticates the PDP, and verifies response
+    // integrity, before accepting the permit/deny it carries. The expected
+    // MAC is recomputed from THIS call's own outstanding request (its
+    // pepId, nonce, issuedAt, and request digest, never values read off the
+    // response): a response correctly signed for a different request cannot
+    // satisfy it, so a captured, validly signed reply cannot be replayed
+    // onto this one.
+    const responseSignature = res.headers.get("x-pdp-signature");
+    const expected = macHex(cfg.secret, RESPONSE_MAC_DOMAIN, [
+      cfg.pepId,
+      nonce,
+      issuedAt,
+      sha256Hex(body),
+      String(res.status),
+      raw,
+    ]);
+    if (responseSignature === null || !macEqualHex(responseSignature, expected)) {
+      return channelDeny("decision_channel_unauthenticated_response");
+    }
 
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
-    if (!object(parsed) || typeof parsed.decision !== "boolean" || !object(parsed.context)
-      || (parsed.decision && !object(parsed.context.conditions))
-      || (!parsed.decision && typeof parsed.context.reason !== "string" && typeof parsed.context.denial_reason !== "string")) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        !object(parsed) ||
+        typeof parsed.decision !== "boolean" ||
+        !object(parsed.context) ||
+        (parsed.decision && !object(parsed.context.conditions)) ||
+        (!parsed.decision &&
+          typeof parsed.context.reason !== "string" &&
+          typeof parsed.context.denial_reason !== "string")
+      ) {
+        return channelDeny("decision_channel_malformed_response");
+      }
+      if (Date.now() >= deadline) return channelDeny("decision_channel_timeout");
+      return parsed as unknown as Decision;
+    } catch {
       return channelDeny("decision_channel_malformed_response");
     }
-    if (Date.now() >= deadline) return channelDeny("decision_channel_timeout");
-    return parsed as unknown as Decision;
-  } catch {
-    return channelDeny("decision_channel_malformed_response");
-  }
   };
   try { return await Promise.race([exchange(), expired]); }
   finally { clearTimeout(timer!); }
