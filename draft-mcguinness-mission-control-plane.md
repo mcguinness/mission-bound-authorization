@@ -87,7 +87,7 @@ Runtime owns point-of-use bounded reliance
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Implementation: 12 conformance rows in conformance-manifest.json (2 partial, 10 todo).
+Implementation: 12 conformance rows in conformance-manifest.json (3 partial, 9 todo).
 Adopt when: A deployment claims testable control-plane consistency across replication, partition, and recovery.
 Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 <!-- family-status: END -->

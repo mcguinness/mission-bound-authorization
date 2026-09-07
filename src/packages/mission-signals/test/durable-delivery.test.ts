@@ -14,9 +14,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import type { Database } from "@mission/store";
-import { decodeJwt, exportJWK, generateKeyPair } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { MissionSignalEmitter, MissionSignalReceiver } from "../src/index.js";
+import {
+  LIFECYCLE_CHANGE_EVENT_URI,
+  MissionSignalEmitter,
+  MissionSignalReceiver,
+  SET_TYP,
+} from "../src/index.js";
 
 const ISS = "https://as.test";
 const AUD = "https://erp.consumer.test";
@@ -91,6 +96,36 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     } finally {
       emitter.close();
     }
+  });
+  it("refuses a SET whose embedded mission issuer is not the receiver's own", async () => {
+    // @spec control-plane#isolation — the SET `iss` and the event's
+    // `mission.issuer` are one identity. A signer trusted for this issuer
+    // cannot move another issuer's Mission through this receiver's state.
+    const { privateKey, jwks } = await statusKeyPair();
+    const receiver = makeReceiver(jwks);
+    const missionId = "msn_durable_0000000000000001";
+    const set = await new SignJWT({
+      sub_id: { format: "opaque", id: missionId },
+      events: {
+        [LIFECYCLE_CHANGE_EVENT_URI]: {
+          mission: { id: missionId, issuer: "https://second-issuer.test" },
+          state: "revoked",
+          prior_state: "active",
+          version: 2,
+          committed_at: "2026-08-02T12:00:00Z",
+          expires_at: "2027-01-01T00:00:00Z",
+        },
+      },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "as-status", typ: SET_TYP })
+      .setIssuer(ISS)
+      .setAudience(AUD)
+      .setIssuedAt()
+      .setJti("cross-issuer-event")
+      .sign(privateKey);
+    expect(await receiver.verifyAndApply(set)).toEqual({ status: "refused", reason: "issuer" });
+    expect(receiver.viewState(missionId)).toBeUndefined();
+    expect(receiver.hasGap(missionId)).toBe(false);
   });
   it("journals a failed hand-off and redelivers the identical SET (same jti, same bytes)", async () => {
     const { privateKey, jwks } = await statusKeyPair();

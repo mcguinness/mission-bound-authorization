@@ -854,12 +854,12 @@ export class MissionKernel {
   finalizeSupersession(predecessorId: string, successorId: string): void {
     const fresh = this.get(predecessorId);
     if (fresh) this.emitCommit(fresh, "active", successorId);
-      // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
-      // trigger; the successor does NOT inherit the predecessor's children (their
-      // strict-subset proof was against the predecessor's Authority Set). This
-      // funnel bypasses setState, so the cascade is invoked explicitly here,
-      // outside the withTransaction block above. setState now nests safely and
-      // delays publication until any enclosing transaction commits (#250).
+    // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
+    // trigger; the successor does NOT inherit the predecessor's children (their
+    // strict-subset proof was against the predecessor's Authority Set). This
+    // funnel bypasses setState, so the cascade is invoked explicitly here,
+    // outside the withTransaction block above: setState nests safely inside an
+    // enclosing transaction and holds its publication until that commit.
     this.cascadeChildren(predecessorId);
   }
 
@@ -1098,8 +1098,10 @@ export class MissionKernel {
    * from `suspended`; anything else is a conflict.
    */
   transition(id: string, op: LifecycleOperation): MissionRecord {
-    const record = this.mustGet(id);
-    this.applyExpiry(record);
+    // @spec control-plane#serialization — the expiry clock may materialize a
+    // terminal transition here, so the legality check reads the record that
+    // materialization left behind, never the pre-expiry snapshot.
+    const record = this.applyExpiry(this.mustGet(id));
     const rule = LEGAL_TRANSITIONS[op];
     if (record.state === rule.to && op !== "resume") return record;
     if (!rule.from.includes(record.state)) {
@@ -1993,9 +1995,11 @@ export class MissionKernel {
   }
 
   private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {
-    // State/version and descendant projection commit together. emitCommit
-    // queues publication until the OUTERMOST transaction commits.
-      return withTransaction(this.db, () => {
+    // @spec control-plane#serialization — state/version and descendant
+    // projection commit together, and the CAS on (version, state) admits the
+    // transition from the stored row rather than the caller's snapshot.
+    // emitCommit queues publication until the OUTERMOST transaction commits.
+    return withTransaction(this.db, () => {
       if (TERMINAL_STATES.has(record.state)) {
         throw new LifecycleConflictError(`mission ${record.id} is terminal (${record.state})`);
       }

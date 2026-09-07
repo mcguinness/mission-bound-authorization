@@ -420,22 +420,21 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // cap. Admission runs inside the same transaction as insertion.
   let buckets: ReturnType<typeof countChildBuckets>;
   const assertFanout = () => {
-  buckets = countChildBuckets(kernel, parent);
-  for (const pi of drawnOn) {
-    const maxChildren = asNum(childrenOf(parentEntry(pi))?.max_children);
-    const active = buckets.get(pi) ?? 0;
-    if (maxChildren !== undefined && active + 1 > maxChildren) {
-      throw new ChildDelegationError(
-        "fanout_exceeded",
-        `creating this child would exceed max_children ${maxChildren} for a justifying parent entry`,
-        makeEvidence("denied", "strict_subset", "fanout_exceeded", {
-          active_children: active,
-          max_children: maxChildren,
-        }),
-      );
+    buckets = countChildBuckets(kernel, parent);
+    for (const pi of drawnOn) {
+      const maxChildren = asNum(childrenOf(parentEntry(pi))?.max_children);
+      const active = buckets.get(pi) ?? 0;
+      if (maxChildren !== undefined && active + 1 > maxChildren) {
+        throw new ChildDelegationError(
+          "fanout_exceeded",
+          `creating this child would exceed max_children ${maxChildren} for a justifying parent entry`,
+          makeEvidence("denied", "strict_subset", "fanout_exceeded", {
+            active_children: active,
+            max_children: maxChildren,
+          }),
+        );
+      }
     }
-  }
-
   };
 
   // @spec child-delegation#attenuation — the child's expires_at MUST NOT be later

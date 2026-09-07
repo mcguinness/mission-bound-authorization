@@ -553,8 +553,8 @@ export interface EmitterOptions {
  * acknowledged the hand-off. `set_jwt` persists the signed bytes before the
  * first delivery attempt, so every redelivery is the identical SET (same
  * `jti`, same bytes), never a re-signed sibling assertion. UNIQUE(event_id,
- * audience), with the storage event_id qualified by issuer, makes a kernel-outbox replay of the same commit re-enqueue
- * nothing.
+ * audience), over a storage `event_id` qualified by the commit's issuer, makes
+ * a kernel-outbox replay of the same commit re-enqueue nothing.
  */
 const OUTBOX_SCHEMA = `
 CREATE TABLE IF NOT EXISTS signal_outbox (
