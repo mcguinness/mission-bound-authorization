@@ -75,13 +75,36 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
     } finally { await x.channel.close(); x.payments.db.close(); }
   });
 
-  it("does not disguise an internal decision-function programming error as an ordinary policy denial", async () => {
-    const error = new Error("programming defect");
-    const x = await build("co-resident", async () => { throw error; });
+  // @spec authzen#failure-condition-coverage, runtime#outage-radius — a
+  // decision call that threw obtained no decision, so it fails closed as
+  // `pdp_unreachable` on the PEP's own refusal path: a structured refusal, one
+  // Refusal Record, no attributed PDP decision, and nothing executed. It is
+  // still not disguised as an ordinary policy denial, which would carry a
+  // `denial_reason` and a retained Decision Evidence record.
+  const refusesAThrow = async (decide: DecisionFn) => {
+    const x = await build("co-resident", decide);
     try {
-      await expect(x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token)).rejects.toBe(error);
-      expect(x.evidence.all()).toHaveLength(0);
+      const refused = await x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token);
+      expect(refused.ok).toBe(false);
+      expect(refused.result).toBeUndefined();
+      expect(refused.refusal_reason).toBe("pdp_unreachable");
+      expect(refused.denial_reason).toBeUndefined();
+      expect(x.observe).not.toHaveBeenCalled();
+      expect(x.payments.getInvoice("one")?.status).toBe("payable");
+      const records = x.evidence.all();
+      expect(records.filter(e => e.kind === "decision")).toHaveLength(0);
+      expect(records.filter(e => e.kind === "execution")).toHaveLength(0);
+      const refusals = records.filter(e => e.kind === "refusal");
+      expect(refusals).toHaveLength(1);
+      expect(refusals[0]!.content).toMatchObject({ emitter: { role: "pep" }, denial_reason: "pdp_unreachable", decision: "deny" });
+      expect(refusals[0]!.content).not.toHaveProperty("evaluation_id");
     } finally { await x.channel.close(); x.payments.db.close(); }
+  };
+  it("refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect", async () => {
+    await refusesAThrow((() => { throw new Error("programming defect"); }) as unknown as DecisionFn);
+  });
+  it("refuses a decision function that rejects asynchronously as pdp_unreachable, with one Refusal Record and no effect", async () => {
+    await refusesAThrow(() => Promise.reject(new Error("unclassified transport failure")));
   });
 
   // @spec authzen#failure-condition-coverage, authzen#transport-behavior — a

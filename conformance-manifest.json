@@ -16312,9 +16312,21 @@
      "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that rejects asynchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers two of the enumerated PEP reasons on the remote path: `pdp_unreachable` for a timeout, transport failure or non-2xx status, `channel_failure` for a response failing authentication or integrity, each emitting a Refusal Record carrying no PDP-derived member. `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` and `state_unavailable` remain for #594 wave 4; this is not full Refusal Record conformance."
+   "notes": "Covers two of the enumerated PEP reasons on the remote path: `pdp_unreachable` for a timeout, transport failure or non-2xx status, `channel_failure` for a response failing authentication or integrity, each emitting a Refusal Record carrying no PDP-derived member. `pdp_unreachable` also carries an unclassified failure of the decision call itself, thrown or rejected: the PEP records the refusal rather than letting the failure escape uncarried. `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` and `state_unavailable` remain for #594 wave 4; this is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
