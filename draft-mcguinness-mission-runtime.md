@@ -2372,6 +2372,10 @@ or disclosure risk can remain unbound.
 
 ## Evaluation-Context Binding {#evaluation-context-binding}
 
+The **evaluation context** of a decision is the set of
+resource-resolved facts, declared decision-relevant by the Operation
+Profile, whose values the decision depended on.
+
 Evaluation-Context Binding is an OPTIONAL Named Assurance Extension,
 claimed per mediated action class in the Enforcement Scope Statement.
 It does not add a requirement to Runtime-Enforced conformance for a
@@ -2413,8 +2417,8 @@ Adoption MUST preserve existing approval-to-decision, transaction-token,
 parameter, and operation-idempotency bindings. Moving a fact into the
 evaluation context MUST NOT permit an earlier approval or operation
 identity to authorize changed effect parameters after fresh context
-capture. Overlapping commitments are permitted where they preserve these
-distinct properties; adoption does not require shrinking an existing
+capture. Overlapping commitments are permitted where each preserves
+its distinct property; adoption does not require shrinking an existing
 parameter digest. The Operation Profile identifies every consumer of a
 changed digest form and its migration rule, including vendor/target
 identity, amount/currency and destination facts where applicable.

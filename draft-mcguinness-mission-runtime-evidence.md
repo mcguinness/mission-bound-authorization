@@ -1288,7 +1288,11 @@ Decision Evidence retains the phase the permit actually authorized.
 Whatever the recorded `outcome`, when the two digests diverge the
 audit consumer MUST classify the execution as a parameter deviation
 and treat it as equivalent to an unauthorized action for compliance
-purposes.
+purposes. The record can carry two digest pairs, and the
+classification follows the pair: divergence of the parameter pair is
+a parameter deviation, the refusal identifier `parameter_mismatch`;
+divergence of the evaluation-context pair is context drift, the
+refusal identifier `target_drift`.
 
 ## Retention
 
