@@ -46,8 +46,11 @@ export function loadRuntimePosture(input: unknown): RuntimePosture {
 
 export const RUNTIME_POSTURE = loadRuntimePosture(RUNTIME_SCOPE_CONFIG);
 
-/** Missing class is the existing consequential-read default; unknown labels
- * refuse (zero bound) rather than inheriting the least restrictive class. */
+/**
+ * @spec runtime#ride-through — missing class is the existing consequential-read
+ * default; unknown labels refuse (zero bound) rather than inheriting the least
+ * restrictive class.
+ */
 export function postureStalenessBound(posture: RuntimePosture, actionClass: string | undefined): number {
   const name = actionClass ?? "consequential_read";
   return Object.hasOwn(posture.state_source.per_class, name)

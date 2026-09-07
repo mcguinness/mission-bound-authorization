@@ -29,7 +29,12 @@ export function relationForAction(action: string) {
   return PAYMENTS_RELATIONS[action] ?? null;
 }
 
-/** Published staleness bounds (O-8): tight for high-consequence, looser for reads. */
+/**
+ * @spec runtime#ride-through — the enforced bound per action class IS the
+ * `max_staleness_seconds` the Enforcement Scope Statement publishes, so the
+ * ride-through a caller reads and the window the PDP applies are one number.
+ * Published bounds (O-8): tight for high-consequence, looser for reads.
+ */
 export function stalenessBoundSeconds(actionClass: string | undefined): number {
   return postureStalenessBound(RUNTIME_POSTURE, actionClass);
 }
