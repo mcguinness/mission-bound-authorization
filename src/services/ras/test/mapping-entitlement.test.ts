@@ -223,11 +223,14 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
     expect(details(result.access_token)).toEqual([{ ...withChildPolicy(childPolicy), actions: ["invoices.read"], capability_sources: [bindings[0]] }]);
   });
 
-  it("a candidate lacking or altering the declared child-creation policy refuses before minting", async () => {
+  it("a candidate retaining the children grant without the declared policy refuses before minting", async () => {
     const server = await ras({ localCeiling: [withChildPolicy(childPolicy)] });
-    for (const authority of [withChildPolicy(), withChildPolicy("urn:policy:child-drawdown:v2")]) {
-      await expect(server.redeem(await mintGrant({ authorizationDetails: [authority] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
-    }
+    await expect(server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy()] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("a candidate altering the declared policy reference refuses before minting", async () => {
+    const server = await ras({ localCeiling: [withChildPolicy(childPolicy)] });
+    await expect(server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy("urn:policy:child-drawdown:v2")] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
   });
 
   it("a ceiling declaring no children grant drops the entry carrying one, minting no child-creation authority", async () => {

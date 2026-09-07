@@ -1202,7 +1202,13 @@
     },
     {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a candidate lacking or altering the declared child-creation policy refuses before minting",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a candidate retaining the children grant without the declared policy refuses before minting",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a candidate altering the declared policy reference refuses before minting",
      "level": "unit",
      "surface": "token-endpoint"
     },
