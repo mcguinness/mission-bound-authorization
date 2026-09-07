@@ -9,4 +9,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: node scripts/check-family-manifest.mjs
+      # Node builtins only, so it runs in this no-install job.
+      - run: node scripts/test-check-conformance-manifest.mjs
       - run: node scripts/check-conformance-manifest.mjs
