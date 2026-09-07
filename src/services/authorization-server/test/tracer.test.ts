@@ -8,7 +8,7 @@
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { createServer, type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, INVOICES } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, INVOICES, MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -296,6 +296,12 @@ describe("M1 tracer slice", () => {
     const mission = payload.mission as { state: string; fresh_until: string };
     expect(mission.state).toBe("active");
     expect(payload.nonce).toBe("n-1");
+    // @spec status#mission-status-caching freshness cap, status#status-operational —
+    // the advertised `mission_max_stale_seconds` ceiling is consumed here:
+    // `fresh_until` is never later than `iat` plus that value.
+    const ceiling = Number(MISSION_MAX_STALE_SECONDS);
+    expect(Date.parse(mission.fresh_until)).toBeLessThanOrEqual((Number(payload.iat) + ceiling) * 1000);
+    expect(Number(payload.exp)).toBeLessThanOrEqual(Number(payload.iat) + ceiling);
   });
 
   it("suspend gates refresh with invalid_grant; resume restores issuance", async () => {
@@ -363,7 +369,7 @@ describe("M1 tracer slice", () => {
     expect(body.mission?.state).toBe("revoked");
   });
 
-  it("AS metadata advertises mission_bound_authorization_supported and the adapter introspection endpoint", async () => {
+  it("AS metadata advertises mission_bound_authorization_supported, the adapter introspection endpoint, and the mission_max_stale_seconds ceiling", async () => {
     const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<
       string,
       unknown

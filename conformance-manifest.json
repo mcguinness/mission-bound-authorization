@@ -681,7 +681,8 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
+    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected.",
+    "local": "`mission_max_stale_seconds` is served on the AS metadata document from config/enforcement-scope.json, and it caps every signed Status response's `fresh_until`. The same file's `state_source.per_class[*].recovery_objective_seconds`, `beyond_bound` and `availability_consequence` (whose text says an outage never restarts observation age) are served in `enforcement_scope_statement` on the protected-resource metadata document."
    },
    "level": "unit",
    "coverage": "tested",
@@ -696,6 +697,18 @@
      "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
      "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
      "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > AS metadata advertises mission_bound_authorization_supported, the adapter introspection endpoint, and the mission_max_stale_seconds ceiling",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the signed Status endpoint returns a verifiable mission-status-response+jwt",
+     "level": "endpoint",
      "surface": "deployment-documentation"
     }
    ],
@@ -715,7 +728,8 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
+    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
+    "local": "`enforcement_scope_statement.state_source.per_class` on the protected-resource metadata document carries `max_staleness_seconds`, `recovery_objective_seconds` and `beyond_bound` for each of the five governed action classes, with one shared `availability_consequence` string. The published `max_staleness_seconds` is the number `stalenessBoundSeconds` enforces, asserted class by class."
    },
    "level": "unit",
    "coverage": "tested",
