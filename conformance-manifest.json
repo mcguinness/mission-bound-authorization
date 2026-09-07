@@ -16628,7 +16628,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-5: configured key-set lookup binds exact kid/emitter/role/audience for all three producer roles and refuses malformed audience wildcards. Partial: this does not exercise deployment-published JWKS discovery or retained-key availability; in-memory key registration is not proof of that publication/retention requirement."
+   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
