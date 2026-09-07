@@ -89,6 +89,14 @@ describe("runtime-evidence-integrity: sign/verify", () => {
     expect(await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE, () => { throw new Error("key registry unavailable"); })).toEqual({ valid: false, reason: "key_not_resolvable" });
   });
 
+  it("does not accept an outer record mutated after the first byte-equality check", async () => {
+    const signed = await sign();
+    expect(await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE, (params) => {
+      signed.decision = "deny";
+      return resolvePdpKey(params);
+    })).toEqual({ valid: false, reason: "byte_mismatch" });
+  });
+
   it("no asserted timestamp or proof at or after the authenticated compromise boundary rescues a record", async () => {
     const signed = await sign();
     for (const authenticatedTime of ["2026-11-01T00:00:00Z", "2026-11-02T00:00:00Z"]) {

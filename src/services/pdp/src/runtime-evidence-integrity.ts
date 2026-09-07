@@ -185,7 +185,8 @@ async function verifyEnvelope(
     return { valid: false, reason: "unsupported_format" };
   }
 
-  const parts = envelope.value.split(".");
+  const value = envelope.value;
+  const parts = value.split(".");
   if (parts.length !== 3 || parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) {
     return { valid: false, reason: "malformed" };
   }
@@ -240,7 +241,7 @@ async function verifyEnvelope(
   // 834-836 fixes it mandatory-to-implement).
   let verified: CompactVerifyResult;
   try {
-    verified = await compactVerify(envelope.value, resolution.key, { algorithms: ["ES256"] });
+    verified = await compactVerify(value, resolution.key, { algorithms: ["ES256"] });
   } catch {
     return { valid: false, reason: "signature_invalid" };
   }
@@ -249,6 +250,15 @@ async function verifyEnvelope(
   }
   if (verified.protectedHeader.cty !== cty) {
     return { valid: false, reason: "cty_mismatch" };
+  }
+
+  // Key lookup/crypto can yield to caller code. Do not report a mutated outer
+  // record as verified under the earlier byte-equality observation.
+  const currentEnvelope = objectOf(record.evidence_envelope);
+  const { evidence_envelope: _currentDrop, ...currentContent } = record;
+  if (currentEnvelope?.format !== "jws-compact" || currentEnvelope.value !== value ||
+      canonicalize(currentContent as JsonValue) !== new TextDecoder().decode(recomputed)) {
+    return { valid: false, reason: "byte_mismatch" };
   }
 
   return { valid: true };
