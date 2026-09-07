@@ -15,7 +15,7 @@
 import { generateKeyPairSync } from "node:crypto";
 import { canonicalize, evaluateCompromiseBoundary } from "@mission/core";
 import { CompactSign } from "jose";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
@@ -49,11 +49,68 @@ async function sign() {
 }
 
 const resolvePdpKey = ({ kid, emitter, audience }: { kid: string; emitter: { id: string; role: string }; audience?: string }) => {
-  if (kid !== "pdp-key-1" || emitter.role !== "pdp" || audience !== "https://erp.example.com") return undefined;
+  if (kid !== "pdp-key-1" || emitter.id !== "pdp.example.com" || emitter.role !== "pdp" || audience !== "https://erp.example.com") return undefined;
   return { key: publicKey };
 };
 
 describe("runtime-evidence-integrity: sign/verify", () => {
+  it("totally refuses malformed outer records, envelopes, protected headers and non-JSON values", async () => {
+    const signed = await sign();
+    for (const malformed of [null, undefined, true, 1, "record", [], {},
+      { ...signed, evidence_envelope: null }, { ...signed, evidence_envelope: [] },
+      { ...signed, evidence_envelope: { format: "jws-compact", value: 5 } }]) {
+      expect(await verifyEvidenceEnvelope(malformed, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey)).toEqual({ valid: false, reason: "malformed" });
+    }
+    const [header, payload, signature] = signed.evidence_envelope.value.split(".");
+    for (const badHeader of [null, [], "header", {}, { kid: "" }]) {
+      const value = `${Buffer.from(JSON.stringify(badHeader)).toString("base64url")}.${payload}.${signature}`;
+      expect(await verifyEvidenceEnvelope({ ...signed, evidence_envelope: { format: "jws-compact", value } }, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey)).toEqual({ valid: false, reason: "malformed" });
+    }
+    for (const value of [`${header}..${signature}`, `${header}.${payload}=.${signature}`, `${header}.${payload}.!`]) {
+      expect(await verifyEvidenceEnvelope({ ...signed, evidence_envelope: { format: "jws-compact", value } }, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey)).toEqual({ valid: false, reason: "malformed" });
+    }
+    const cycle: Record<string, unknown> = { ...signed }; cycle.loop = cycle;
+    expect(await verifyEvidenceEnvelope(cycle, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey)).toEqual({ valid: false, reason: "malformed" });
+    expect(await verifyEvidenceEnvelope({ ...signed, invalid: Number.NaN }, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey)).toEqual({ valid: false, reason: "malformed" });
+  });
+
+  it("requires byte equality before resolving keys and gates signature processing on compromise recovery", async () => {
+    const signed = await sign();
+    const resolve = vi.fn(() => undefined);
+    expect(await verifyEvidenceEnvelope({ ...signed, decision: "deny" }, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).toEqual({ valid: false, reason: "byte_mismatch" });
+    expect(resolve).not.toHaveBeenCalled();
+    let signatureKeyReads = 0;
+    const compromised = () => ({
+      get key() { signatureKeyReads++; throw new Error("signature must not run"); },
+      status: { compromised: true, boundary: "2026-11-01T00:00:00Z" },
+    });
+    expect(await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE, compromised)).toEqual({ valid: false, reason: "compromised_key_unproven" });
+    expect(signatureKeyReads).toBe(0);
+    expect(await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE, () => { throw new Error("key registry unavailable"); })).toEqual({ valid: false, reason: "key_not_resolvable" });
+  });
+
+  it("no asserted timestamp or proof at or after the authenticated compromise boundary rescues a record", async () => {
+    const signed = await sign();
+    for (const authenticatedTime of ["2026-11-01T00:00:00Z", "2026-11-02T00:00:00Z"]) {
+      const result = await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE,
+        () => ({ key: publicKey, status: { compromised: true, boundary: "2026-11-01T00:00:00Z" } }),
+        { presented: true, valid: true, commits: "complete-artifact", authenticatedTime, proofKey: { compromised: false } });
+      expect(result).toEqual({ valid: false, reason: "compromised_key_unproven" });
+    }
+    for (const boundary of [undefined, "not-a-time"]) {
+      expect(await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE,
+        () => ({ key: publicKey, status: { compromised: true, ...(boundary ? { boundary } : {}) } })))
+        .toEqual({ valid: false, reason: "compromised_key_unproven" });
+    }
+  });
+
+  it("the published-key resolver binds the complete emitter identity, not just its kid and role", async () => {
+    const changed = { ...RECORD, emitter: { ...RECORD.emitter, id: "impostor.example.com" } };
+    const envelope = await signEvidenceEnvelope(changed, DECISION_EVIDENCE_MEDIA_TYPE, { kid: "pdp-key-1", key: privateKey });
+    expect(await verifyEvidenceEnvelope({ ...changed, evidence_envelope: envelope }, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey))
+      .toEqual({ valid: false, reason: "key_not_resolvable" });
+  });
+
   it("verifies a genuinely signed record (positive vector)", async () => {
     const signed = await sign();
     const result = await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey);

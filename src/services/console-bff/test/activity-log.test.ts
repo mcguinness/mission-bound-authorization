@@ -507,6 +507,7 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     expect(run.mission_id).toBe(missionId);
     expect(run.entries).toHaveLength(2);
     expect(new Set(run.entries.map((e) => e.role))).toEqual(new Set(["pdp", "egress"]));
+    expect(run.entries.find((entry) => entry.kind === "decision")).toMatchObject({ decision: true, outcome: "undetermined-outcome" });
     // The trace method reads the same injected sources; an unmatched trace joins
     // to nothing (record() stamps trace_id only under an active span, absent here).
     expect(bff.activityByTrace(op, "no-such-trace")).toEqual([]);

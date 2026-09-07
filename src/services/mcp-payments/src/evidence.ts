@@ -992,7 +992,7 @@ export function buildEvidenceKeyResolver(keys: readonly EvidenceVerificationKey[
       if (k.role === "receipt_issuer") {
         return k.audience === undefined || k.audience === audience;
       }
-      return k.audience === audience;
+      return typeof k.audience === "string" && k.audience.length > 0 && k.audience === audience;
     });
     return match ? { key: match.publicKey } : undefined;
   };
