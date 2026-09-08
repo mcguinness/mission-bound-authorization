@@ -14,9 +14,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import type { Database } from "@mission/store";
-import { decodeJwt, exportJWK, generateKeyPair } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { MissionSignalEmitter, MissionSignalReceiver } from "../src/index.js";
+import {
+  LIFECYCLE_CHANGE_EVENT_URI,
+  MissionSignalEmitter,
+  MissionSignalReceiver,
+  SET_TYP,
+} from "../src/index.js";
 
 const ISS = "https://as.test";
 const AUD = "https://erp.consumer.test";
@@ -59,6 +64,69 @@ afterAll(() => {
 });
 
 describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
+  it("equal Mission ids and event ids from distinct issuers keep separate delivery jobs and state", async () => {
+    const { privateKey, jwks } = await statusKeyPair();
+    const secondIssuer = "https://second-issuer.test";
+    const first = makeReceiver(jwks);
+    const second = new MissionSignalReceiver({ jwks, issuer: secondIssuer, audience: AUD });
+    const emitter = new MissionSignalEmitter({
+      key: privateKey,
+      kid: "as-status",
+      consumers: [{ audience: AUD }],
+    });
+    const delivered: string[] = [];
+    emitter.onDeliver(AUD, async (set) => {
+      delivered.push(set);
+      await (decodeJwt(set).iss === ISS ? first : second).verifyAndApply(set);
+    });
+    try {
+      const a = commitFixture({ state: "active", version: 1, event_id: "same-event" });
+      const b = { ...a, issuer: secondIssuer, state: "revoked" as const };
+      emitter.onCommit(a);
+      emitter.onCommit(b);
+      await emitter.drain();
+      expect(delivered).toHaveLength(2);
+      expect(delivered.map((set) => decodeJwt(set).jti)).toEqual(["same-event", "same-event"]);
+      expect(first.viewState(a.id)?.state).toBe("active");
+      expect(second.viewState(a.id)?.state).toBe("revoked");
+      emitter.onCommit(a);
+      emitter.onCommit(b);
+      await emitter.drain();
+      expect(delivered).toHaveLength(2);
+    } finally {
+      emitter.close();
+    }
+  });
+  it("refuses a SET whose embedded mission issuer is not the receiver's own", async () => {
+    // @spec control-plane#isolation — the SET `iss` and the event's
+    // `mission.issuer` are one identity. A signer trusted for this issuer
+    // cannot move another issuer's Mission through this receiver's state.
+    const { privateKey, jwks } = await statusKeyPair();
+    const receiver = makeReceiver(jwks);
+    const missionId = "msn_durable_0000000000000001";
+    const set = await new SignJWT({
+      sub_id: { format: "opaque", id: missionId },
+      events: {
+        [LIFECYCLE_CHANGE_EVENT_URI]: {
+          mission: { id: missionId, issuer: "https://second-issuer.test" },
+          state: "revoked",
+          prior_state: "active",
+          version: 2,
+          committed_at: "2026-08-02T12:00:00Z",
+          expires_at: "2027-01-01T00:00:00Z",
+        },
+      },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "as-status", typ: SET_TYP })
+      .setIssuer(ISS)
+      .setAudience(AUD)
+      .setIssuedAt()
+      .setJti("cross-issuer-event")
+      .sign(privateKey);
+    expect(await receiver.verifyAndApply(set)).toEqual({ status: "refused", reason: "issuer" });
+    expect(receiver.viewState(missionId)).toBeUndefined();
+    expect(receiver.hasGap(missionId)).toBe(false);
+  });
   it("journals a failed hand-off and redelivers the identical SET (same jti, same bytes)", async () => {
     const { privateKey, jwks } = await statusKeyPair();
     let clock = T0;
@@ -123,6 +191,14 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     await before.drain();
     expect(attempted).toHaveLength(1);
     expect(before.pending()).toBe(1);
+    // Simulate the pre-#250 storage-key format. Reopening must qualify the
+    // key without re-signing the already persisted event or resetting retry.
+    const legacyDb = (before as unknown as { db: Database }).db;
+    const legacy = legacyDb.prepare("SELECT commit_json FROM signal_outbox").get() as {
+      commit_json: string;
+    };
+    const identity = JSON.parse(legacy.commit_json) as LifecycleCommit;
+    legacyDb.prepare("UPDATE signal_outbox SET event_id = ?").run(identity.event_id);
     before.close(); // the process dies with the job pending
 
     const after = new MissionSignalEmitter({
@@ -135,6 +211,9 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     });
     const receiver = makeReceiver(jwks);
     const redelivered: string[] = [];
+    expect(
+      (after as unknown as { db: Database }).db.prepare("SELECT event_id FROM signal_outbox").get(),
+    ).toEqual({ event_id: JSON.stringify([identity.issuer, identity.event_id]) });
     after.onDeliver(AUD, async (set) => {
       redelivered.push(set);
       await receiver.verifyAndApply(set);

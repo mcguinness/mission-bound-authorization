@@ -5,6 +5,7 @@
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
@@ -2593,6 +2594,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (ctx.path === "/.well-known/openid-configuration" && ctx.status === 200) {
       const meta = ctx.body as Record<string, unknown>;
       meta.mission_bound_authorization_supported = true;
+      // @spec status#as-metadata, status#status-operational — issuer ceiling
+      // shared with the runtime's published, enforced per-class bounds.
+      meta.mission_max_stale_seconds = MISSION_MAX_STALE_SECONDS;
       // @spec attenuation#request-discovery: this AS issues Mission-bound
       // attenuation roots and derives their authority from the Authority Set.
       meta.mission_attenuation_supported = true;

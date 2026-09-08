@@ -234,7 +234,7 @@ export class DeferralStore {
 // ---------------------------------------------------------------------------
 
 const EXPANSION_SCHEMA = `
-CREATE TABLE expansion_deferrals (
+CREATE TABLE IF NOT EXISTS expansion_deferrals (
   deferral_code TEXT PRIMARY KEY,
   state TEXT NOT NULL,
   predecessor_id TEXT NOT NULL,
@@ -248,6 +248,7 @@ CREATE TABLE expansion_deferrals (
   approval_event_id TEXT,
   approved_until TEXT,
   redeemed INTEGER NOT NULL DEFAULT 0,
+  completion_released INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   last_polled_at INTEGER
 ) STRICT;
@@ -307,7 +308,10 @@ export class ExpansionDeferralStore {
     private readonly kernel: MissionKernel,
     private readonly now: () => Date = () => new Date(),
   ) {
-    this.db = openStore(EXPANSION_SCHEMA);
+    // @spec control-plane#serialization — retiring this row and activating
+    // its successor must share the kernel transaction, not two databases.
+    this.db = kernel.db;
+    this.db.exec(EXPANSION_SCHEMA);
     this.creationIdempotency = new CreationIdempotencyStore(kernel);
   }
 
@@ -454,10 +458,13 @@ export class ExpansionDeferralStore {
     // Round-5 (#640 review): a COMMITTED operation is recognized BEFORE the
     // deferral-code lifetime check: a sufficiently delayed restart must
     // recover the committed successor, never report expired_token, and
-    // never convert the operation to access_denied. Guarded on
-    // redeemed !== 1 so the handle stays single-use.
+    // never convert the operation to access_denied. Activation retires the
+    // deferral in its transaction; release to the token adapter is a separate
+    // boundary. A crash before finalization can recover that committed result,
+    // but a result already released stays single-use. This marker is not proof
+    // of token delivery and does not claim cross-store issuance atomicity.
     if (
-      row.redeemed !== 1 &&
+      row.completion_released !== 1 &&
       typeof row.approval_event_id === "string" &&
       row.approval_event_id
     ) {
@@ -468,7 +475,7 @@ export class ExpansionDeferralStore {
       if (linked) {
         this.kernel.drainExpansionOutbox();
         this.db
-          .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
+          .prepare("UPDATE expansion_deferrals SET redeemed = 1, completion_released = 1 WHERE deferral_code = ?")
           .run(deferralCode);
         const recoveredCreationRequestId =
           typeof row.creation_request_id === "string" && row.creation_request_id
@@ -577,9 +584,7 @@ export class ExpansionDeferralStore {
       return { error: "access_denied" };
     }
     this.kernel.drainExpansionOutbox();
-    this.db
-      .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
-      .run(deferralCode);
+    this.db.prepare("UPDATE expansion_deferrals SET completion_released = 1 WHERE deferral_code = ?").run(deferralCode);
     return {
       successor: txOut.successor,
       approvedUntil: row.approved_until as string,
@@ -634,6 +639,10 @@ export class ExpansionDeferralStore {
       // this transaction, emitted only after it (and replayable after a
       // crash), so no event ever describes state that was rolled back.
       this.kernel.enqueueExpansionFinalize(cas.predecessorId, res.successor.id);
+      const retired = this.db
+        .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ? AND redeemed = 0 AND state = 'approved'")
+        .run(row.deferral_code as string);
+      if (retired.changes !== 1) throw new Error("expansion deferral retirement conflicted");
       return { successor: res.successor, predecessorId: cas.predecessorId };
     }));
   }

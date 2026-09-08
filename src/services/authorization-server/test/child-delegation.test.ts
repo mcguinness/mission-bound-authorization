@@ -1,7 +1,8 @@
 import { authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { withTransaction } from "@mission/store";
 import {
   type AuthorityEntry,
   CHILD_EVIDENCE_MEDIA_TYPE,
@@ -134,6 +135,43 @@ const probeOf = (child: { authority_set: AuthorityEntry[] }, actions: string[]):
 ];
 
 describe("child mission creation (@spec child-delegation#child-creation, #parent-member)", () => {
+  it("checks fanout in the insertion transaction and a post-check fault leaves no child or publication", () => {
+    const parent = approveParent();
+    commits.length = 0;
+    const original = kernel.insertRecord.bind(kernel);
+    const insertion = vi.spyOn(kernel, "insertRecord").mockImplementationOnce((record, precondition) => {
+      expect(precondition).toBeTypeOf("function");
+      return original(record, () => {
+        expect(kernel.db.inTransaction).toBe(true);
+        precondition!();
+        throw new Error("fault after fanout admission");
+      });
+    });
+    try {
+      expect(() => createChild(parent.id, ["payments:invoice.read"])).toThrow("fault after fanout admission");
+      expect(kernel.db.prepare("SELECT count(*) AS n FROM missions").get()).toEqual({ n: 1 });
+      expect(commits).toEqual([]);
+    } finally { insertion.mockRestore(); }
+    expect(createChild(parent.id, ["payments:invoice.read"]).child.state).toBe("active");
+    expect(kernel.db.prepare("SELECT count(*) AS n FROM missions").get()).toEqual({ n: 2 });
+  });
+
+  it("rolls back a parent transition and its whole child cascade without publishing either", () => {
+    const parent = approveParent();
+    const { child } = createChild(parent.id, ["payments:invoice.read"]);
+    commits.length = 0;
+    expect(() => withTransaction(kernel.db, () => {
+      kernel.transition(parent.id, "revoke");
+      expect(kernel.get(child.id)?.state).toBe("cascaded");
+      expect(commits).toEqual([]);
+      throw new Error("outer cascade fault");
+    })).toThrow("outer cascade fault");
+    expect(kernel.get(parent.id)).toEqual(parent);
+    expect(kernel.get(child.id)).toEqual(child);
+    expect(commits).toEqual([]);
+    kernel.transition(parent.id, "revoke");
+    expect(commits.map(c => [c.id, c.state])).toEqual([[parent.id, "revoked"], [child.id, "cascaded"]]);
+  });
   it("creates an active child scoped to a subset, with parent lineage and a fresh actor", () => {
     const parent = approveParent();
     const { child, parent: parentId } = createChild(parent.id, ["payments:invoice.read"]);
