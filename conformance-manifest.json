@@ -47,8 +47,8 @@
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "cbbdcd7e56efc3c4eafed2a617c0941889f0b830",
-    "content_sha256": "0eb68691c6a357c38ebe25852d5de6d0fa0d62678e0ba08f48e79d88eeab2b69"
+    "revision": "d29d3e2771cfad5a68909d835939d7c858c12378",
+    "content_sha256": "e63abd62f11beb37d5941e16bda2dfc83cfc30166c94c6f3cd29fc73fa59be9f"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -9645,9 +9645,21 @@
      "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > rejects disabling freshness for every consequential class at configuration load",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",

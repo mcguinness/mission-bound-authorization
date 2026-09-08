@@ -43,7 +43,7 @@ import {
   type MissionView,
   policyViewId,
 } from "./policy-view.js";
-import type { StalenessBound } from "./runtime-posture.js";
+import { allowsNoActiveFreshness, type StalenessBound } from "./runtime-posture.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -545,6 +545,9 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // below. Neither is `stale_state`, which asserts a freshness fact.
   const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
   const declaredStaleness = opts.stalenessBound(actionClass);
+  // A custom/injected policy cannot opt a consequential class out of the
+  // freshness floor even if it bypasses the deployment config loader.
+  if (declaredStaleness.kind === "none" && !allowsNoActiveFreshness(actionClass)) return deny("out_of_authority");
   // @spec authzen#runtime-denial-classification, authzen#failure-condition-coverage
   // ("Action outside the Authority Set ..., or the request would broaden it"):
   // the PDP cannot place an undeclared class under any gate the deployment

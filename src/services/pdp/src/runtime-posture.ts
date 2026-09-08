@@ -36,6 +36,12 @@ export type StalenessBound =
   | { kind: "none" }
   | { kind: "undeclared" };
 
+/** @spec runtime#state-freshness, runtime#classification — only these
+ * non-consequential postures may omit an active-freshness window. */
+export function allowsNoActiveFreshness(actionClass: string | undefined): boolean {
+  return actionClass === "audit_only" || actionClass === "non_consequential";
+}
+
 /** Fail-fast load-time configuration error (demo-data's ConfigError style). */
 export class PostureConfigError extends Error {
   constructor(why: string) {
@@ -80,6 +86,7 @@ export function loadRuntimePosture(input: unknown): RuntimePosture {
     // the state bound: a class lacking a bound where one is required refuses
     // at load rather than resolving to zero.
     if (declared.freshness_posture === "none") {
+      if (!allowsNoActiveFreshness(name)) fail(`consequential class requires a freshness bound: ${name}`);
       if (declared.max_staleness_seconds !== undefined || declared.beyond_bound !== undefined) fail(`class with no active freshness carries a bound: ${name}`);
       continue;
     }
