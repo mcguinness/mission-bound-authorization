@@ -39,7 +39,7 @@ import {
   RAS_LOCAL_POLICY,
   TOPOLOGY,
 } from "@mission/demo-data";
-import { evaluate, relationForAction, stalenessBoundSeconds, type Fga, type MissionView } from "@mission/pdp";
+import { evaluate, relationForAction, stalenessBound, type Fga, type MissionView } from "@mission/pdp";
 import { narrowToCeiling } from "@mission/core";
 import {
   buildAuthorizationServer,
@@ -130,7 +130,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
         fga: alwaysAllowFga,
         modelId: "unit-test-model",
         now: () => new Date("2026-07-22T12:00:00Z"),
-        stalenessBoundSeconds,
+        stalenessBound,
         relationForAction,
       },
     );
@@ -157,7 +157,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
         fga: alwaysAllowFga,
         modelId: "unit-test-model",
         now: () => new Date("2026-07-22T12:00:00Z"),
-        stalenessBoundSeconds,
+        stalenessBound,
         relationForAction,
       },
     );

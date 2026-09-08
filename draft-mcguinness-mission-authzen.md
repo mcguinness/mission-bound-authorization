@@ -439,7 +439,7 @@ Batch:
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 84 conformance rows in conformance-manifest.json (15 tested, 5 partial, 64 todo).
+Implementation: 87 conformance rows in conformance-manifest.json (15 tested, 6 partial, 66 todo).
 Adopt when: The PDP speaks AuthZEN and needs the decision-contract wire mapping.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected credentials are evaluated); Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set); Mission Runtime Evidence (when the deployment claims the Runtime Evidence feature profile, rather than the Decision Base alone).
@@ -843,6 +843,50 @@ following action-scoped members:
   evaluate against. A constraint the PDP cannot evaluate from
   `parameter_digest`, `parameter_attributes`, or local state MUST fail
   closed ({{pdp-request}}).
+
+## Action Phase Context {#context-action-phase}
+
+`context.action_phase` is CONDITIONAL: REQUIRED when the PEP's trusted
+Operation Profile identifies the operation as a phase of a compound
+action ({{I-D.draft-mcguinness-mission-runtime}}). Its value is a string
+from the closed set `preflight`, `prepare`, `commit`, or `compensate`.
+The PEP MUST derive the value from that profile, never from an
+agent-supplied argument. The PDP MUST reject a value outside this set
+and MUST return the validated phase as `conditions.action_phase` on a
+permit. Decision Evidence records the validated phase and omits
+malformed input ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+The request member communicates the phase being evaluated; it is not a
+permit binding. Neither this member nor Decision Evidence's
+`action_phase` substitutes for the live permit condition in
+{{response-context}}. If the PEP cannot establish the phase before
+requesting a decision, it MUST refuse locally without requesting or
+using a permit; {{failure-condition-coverage}} defines the carrier.
+
+## Evaluation-Context Binding {#context-evaluation-binding}
+
+For an operation covered by the runtime profile's optional
+Evaluation-Context Binding extension, the PEP MUST supply
+`context.evaluation_context_digest` and
+`context.evaluation_context_binding`. The former is the prefixed
+canonical-object digest of the captured context; the latter is the
+versioned descriptor reference `{id, version, digest}` defined by
+{{I-D.draft-mcguinness-mission-runtime}}. Granularity belongs to the
+referenced descriptor's individual facts, not a scalar wire mode.
+The descriptor reference is committed inside the context digest.
+
+These inputs come from the authenticated PEP authorized for the
+enforcement scope, never from agent arguments. The PDP MUST validate
+their shape and applicability against the declared operation binding,
+and MUST NOT issue a covered permit when either is missing, malformed
+or incompatible with that declaration. The digest is an observation
+the PDP echoes, not one it can recompute without the PEP's secret salt
+and authoritative resolved facts. Policy-evaluable values still travel
+in the appropriate existing parameter or attribute inputs.
+
+This extension is claimed per class; neither input becomes mandatory
+for an operation outside its declared scope. Existing permit lifetime,
+single-use, phase and parameter bindings are unchanged.
 
 ## Audience and Mission State Observation {#context-audience-freshness}
 
@@ -1605,6 +1649,30 @@ This profile defines the following AuthZEN response `context` members:
       consumed-identifier store and refuses a re-presented consumed
       `evaluation_id`.
 
+    `evaluation_context_digest`:
+    : CONDITIONAL. A string. REQUIRED on a permit for an operation
+      covered by {{context-evaluation-binding}}; MUST equal the
+      validated request's context digest. The executing PEP MUST
+      recompute with its own applicable descriptor and authoritative
+      facts and MUST refuse before an effect on a missing or unequal
+      binding, unknown descriptor or unavailable fact. A mismatch or
+      inability to re-resolve after a permit is Execution Evidence
+      `suppressed` / `target_drift`, not a PDP denial reason. The
+      existing unknown-condition and established-PEP rules below apply.
+
+    `action_phase`:
+    : CONDITIONAL. A string from `preflight`, `prepare`, `commit`, or
+      `compensate`; REQUIRED on a permit for an operation that is a
+      phase of a compound action. It MUST equal the validated request
+      phase ({{context-action-phase}}). At every use, the PEP MUST
+      compare this condition with the phase from its own trusted
+      Operation Profile and MUST NOT release an effect on inequality,
+      a missing or malformed condition where a phase is required, or a
+      phase it cannot establish. A phase condition on a crossing whose
+      profile declares no phase is invalid there. The request context
+      and retrospective evidence phase never substitute for this
+      condition.
+
   The PEP MUST honor every condition present, at every use of the
   permit. A permit carrying a condition member the PEP does not
   recognize is invalid: the PEP MUST NOT release the action's effect
@@ -2165,10 +2233,21 @@ carrier's extensibility rule.
 | Unrecognized or unmetered constraint | PDP denial | `constraint_unsupported` |
 | Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
 | Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
+| Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
+| A claimed evaluation-context binding differs or cannot be established at use | Execution Evidence | `target_drift` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
 | Obligation attached to a permit could not be fulfilled | Execution Evidence | `obligation_unfulfilled` |
 | Operator or safety control suppressed execution | Execution Evidence | `kill_switch` |
+
+An at-use phase failure is recorded as Execution Evidence with
+`outcome` `suppressed` and `error` `phase_mismatch`, with no effect
+released. A phase unestablishable before the decision request is
+instead a local configuration failure at the PEP, refused before any
+decision request and recorded as a Refusal Record
+({{I-D.draft-mcguinness-mission-runtime-evidence}}); it does not
+invent a PDP denial or an Execution Evidence record for a permit
+never obtained.
 
 The `duplicate_suppressed` and `idempotency_conflict` rows key on the
 same (idempotency scope, `idempotency_key`) claim
@@ -2374,7 +2453,8 @@ A PEP conforming to the Decision Base MUST:
   unfulfillable (an effective deny on a permit), and advertise what
   it can perform in `supported_obligations` ({{obligations}});
 - honor every decision condition present (`parameter_digest`,
-  `valid_until`, `use_limit`) at every use of the permit,
+  `valid_until`, `use_limit`, `action_phase`,
+  `evaluation_context_digest`) at every use of the permit,
   applying its own deployment classification floor to that duty
   independent of any class the PDP applied internally
   ({{response-context}}), fulfill every obligation attached to a
@@ -2623,7 +2703,9 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 - Comments: none
 
 The `context.mission`, `context.mission_state_observation`,
-`context.actor`, `context.credential`, and `context.approval` members
+`context.actor`, `context.credential`, `context.approval`, and
+`context.action_phase`, `context.evaluation_context_digest`, and
+`context.evaluation_context_binding` members
 carried inside the AuthZEN request `context` object
 ({{pdp-request}}) are AuthZEN extension data and are not registered
 in an IETF registry. The `context.capability_source` member a

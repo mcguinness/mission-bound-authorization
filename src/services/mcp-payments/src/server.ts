@@ -25,7 +25,7 @@ import {
   jwtVerify,
 } from "jose";
 import type { ActObject } from "@mission/actor-chain";
-import type { Decision, MissionView } from "@mission/pdp";
+import { RUNTIME_POSTURE, loadRuntimePosture, type RuntimePosture, type Decision, type MissionView } from "@mission/pdp";
 
 import {
   type ActionApprovalInput,
@@ -105,6 +105,8 @@ export const TOOLS: ToolDef[] = [
 ];
 
 export interface McpServerDeps {
+  /** Trusted assembly's effective topology declaration, never a tool input. */
+  enforcementScopeStatement?: RuntimePosture;
   pep: Pep;
   payments: PaymentsStore;
   loadView: (ref: MissionReference) => LoadedView | undefined;
@@ -192,6 +194,7 @@ export class McpPaymentsServer {
   /** @spec RFC 9449 §11.1 — this resource's DPoP proof `jti` replay window. */
   private readonly dpopReplay: DpopProofReplay;
   constructor(private readonly deps: McpServerDeps) {
+    if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
     this.resolveKey = createLocalJWKSet(deps.jwks as never);
     if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
     const stores = deps.txnStores ?? openTxnStores();
@@ -228,6 +231,8 @@ export class McpPaymentsServer {
       bearer_methods_supported: ["dpop"],
       mission_bound_authorization_required: true,
       mission_constraints_supported: ["max_amount", "vendors"],
+      // Deployment-local publication, not a new protocol baseline member.
+      enforcement_scope_statement: this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
       // @spec txn-authorization#two-phase-expiry — key discovery rides the
       // upstream metadata: this is where a TAS resolves this resource's
       // challenge-signing keys, and nowhere else.

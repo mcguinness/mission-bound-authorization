@@ -199,7 +199,7 @@ are referenced, not duplicated, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 91 conformance rows in conformance-manifest.json (43 tested, 10 partial, 38 todo).
+Implementation: 94 conformance rows in conformance-manifest.json (43 tested, 11 partial, 40 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).
@@ -400,6 +400,18 @@ canonicalization, and integrity envelope a deployment emits.
   evidence projection of the decision request rather than a
   pass-through of it.
 
+`action_phase`:
+: CONDITIONAL. A string from `preflight`, `prepare`, `commit`, or
+  `compensate`; REQUIRED when the evaluated operation is a phase of a
+  compound action ({{I-D.draft-mcguinness-mission-runtime}}). The phase
+  is recorded once here, not inside this record's normalized
+  `conditions`. On a permit, the producer MUST ensure it equals the
+  live permit's phase condition. On a denial, it records the phase
+  from the validated evaluation context, without requiring a permit
+  condition that does not exist. Malformed or unvalidated phase input
+  MUST be omitted. This is retrospective evidence, never a substitute
+  for the live permit condition or the PEP's comparison at use.
+
 `audience`:
 : REQUIRED. A string. The audience the PDP evaluated: the runtime
   profile's audience input to the Decision Output
@@ -448,6 +460,17 @@ canonicalization, and integrity envelope a deployment emits.
   ({{I-D.draft-mcguinness-mission-runtime}}); REQUIRED for a
   parameter-bound action.
 
+`evaluation_context_digest`, `evaluation_context_binding`:
+: CONDITIONAL. REQUIRED for a decision on an operation covered by the
+  runtime profile's Evaluation-Context Binding extension, when the
+  corresponding validated input was established. The digest is a
+  string and the binding is the versioned descriptor reference
+  `{id, version, digest}`. On a permit the digest MUST equal the live
+  permit condition. Malformed input MUST be omitted, never copied into
+  signed evidence as an established binding. The secret salt is never
+  recorded. This digest commits the declared resolved context, not
+  `evaluation_request_digest`, which identifies the decision request.
+
 `obligations`:
 : REQUIRED whenever the decision response contained obligations, on
   either decision. An array of obligation objects, recorded as
@@ -462,9 +485,10 @@ canonicalization, and integrity envelope a deployment emits.
   set `use_limit: 1` for a permit in the high-consequence classes).
   The parameter binding is recorded once, in this record's
   `parameter_digest` member; the producer MUST ensure that value
-  equals the binding carried by the wire conditions. A binding maps
-  its wire members onto this form (for example the AuthZEN binding's
-  `conditions` response member,
+  equals the binding carried by the wire conditions. The phase binding
+  is likewise recorded once in `action_phase`, under that member's
+  equality rule. A binding maps its wire members onto this form (for
+  example the AuthZEN binding's `conditions` response member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `evaluation_request_digest`:
@@ -481,10 +505,15 @@ canonicalization, and integrity envelope a deployment emits.
   or a deny.
 
 `compensates_evaluation_id`:
-: OPTIONAL. A string. The `evaluation_id` of the action this decision
+: CONDITIONAL. A string; REQUIRED for a compensate-phase decision.
+  The `evaluation_id` of the committed action this decision
   compensates, carrying the runtime profile's compensation link
   ({{I-D.draft-mcguinness-mission-runtime}}) so a compensating
-  action reconciles against the action it reverses.
+  action reconciles against the action it reverses. The trusted
+  execution path MUST establish this link from retained, verified
+  evidence of the original evaluation, never merely copy an
+  agent-supplied identifier. The link confers no authority and does
+  not authorize compensation under the original action's permit.
 
 `decision`:
 : REQUIRED. A string. One of `permit` or `deny`.
@@ -1045,6 +1074,24 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   gone ahead despite the mismatch, is equally representable, and a
   consumer MUST flag it as an unauthorized execution.
 
+`authorized_evaluation_context_digest`:
+: CONDITIONAL. A string. REQUIRED when the linked Decision Evidence
+  carries `evaluation_context_digest`; MUST equal it, and MUST be
+  absent when the linked record carries no such digest.
+
+`effective_evaluation_context_digest`:
+: CONDITIONAL. A string. REQUIRED when an authorized context digest
+  is present and the executing PEP successfully re-resolved that
+  context. It commits the attempted context under the same descriptor
+  and salt version. If context cannot be established, this member
+  MUST be absent rather than populated with a fabricated digest, and
+  execution MUST be suppressed with `error` `target_drift`. An
+  unequal digest also requires suppression before an effect. A record
+  of an executor that nevertheless acted remains valid evidence; a
+  consumer MUST flag the unauthorized deviation, not discard it.
+  The pair reveals equality or inequality without disclosing the
+  underlying fact values, but still permits correlation.
+
 `outcome`:
 : REQUIRED. A string. One of `completed`, `failed`, or `suppressed`;
   a final outcome, recorded once one exists. `suppressed` means the
@@ -1058,8 +1105,12 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 : CONDITIONAL. A string. Error identifier when `outcome` is `failed` or
   `suppressed`, from this closed set: `parameter_mismatch` (the
   executing PEP found the effective parameters differ from those the
-  permit bound), `permit_expired` (the permit's validity window had
-  passed at execution), `permit_consumed` (re-presentation of an
+  permit bound), `phase_mismatch` (the permit's phase differs from the
+  executing crossing, is missing or malformed where required, or
+  cannot be established at use), `target_drift` (a declared bound
+  evaluation context differs or cannot be established at use),
+  `permit_expired` (the permit's validity window had passed at
+  execution), `permit_consumed` (re-presentation of an
   already-consumed single-use evaluation identifier),
   `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
@@ -1227,10 +1278,21 @@ recorded against an `outcome` of `completed` or `failed`, a buggy or
 compromised executor having gone ahead despite the mismatch, is
 equally representable and is never grounds to reject the record.
 
+A phase binding failure detected before acting likewise requires
+Execution Evidence with `outcome` `suppressed` and `error`
+`phase_mismatch`. Its distinct identifier records a phase failure,
+not a parameter deviation; the parameter digests can be identical
+when phases share an action identifier and inputs. The original
+Decision Evidence retains the phase the permit actually authorized.
+
 Whatever the recorded `outcome`, when the two digests diverge the
 audit consumer MUST classify the execution as a parameter deviation
 and treat it as equivalent to an unauthorized action for compliance
-purposes.
+purposes. The record can carry two digest pairs, and the
+classification follows the pair: divergence of the parameter pair is
+a parameter deviation, the refusal identifier `parameter_mismatch`;
+divergence of the evaluation-context pair is context drift, the
+refusal identifier `target_drift`.
 
 ## Retention
 
