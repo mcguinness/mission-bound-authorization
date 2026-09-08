@@ -34,6 +34,25 @@ pnpm -C src install
 pnpm -C src demo              # scenarios 0-14 + scorecard
 ```
 
+## Decision-channel mode
+
+The default is co-resident. Set `MISSION_PDP_MODE=remote` (or pass
+`pdpMode: "remote"` to `composeStack`) to route the same PEP through a real
+loopback HTTP PDP listener. The PDP owns its policy/view resolver and its
+Decision Evidence signer; the PEP receives only the client closure and public
+evidence-verification material. Resource metadata declares the effective
+boundary and its per-PEP authenticated request/response mechanism.
+
+This is a network-hop fixture in the same process, not process/key isolation
+or a production TLS deployment. Its only supported outage posture is `deny`:
+timeouts, unavailable or unauthenticated responses produce a local PEP
+Refusal Record, never a fabricated PDP Decision. The request deadline covers
+headers, body, signature verification and parsing, and response size is capped.
+No permit cache, bounded outage reuse, replica mode or break-glass is enabled.
+Trusted test/operator code can stop the listener with
+`await stack.decisionChannel.close()`; callers composing a stack must close it
+alongside its other service listeners. The agent tool surface has no such hook.
+
 ## Scenarios
 
 | # | Scenario | Milestone |

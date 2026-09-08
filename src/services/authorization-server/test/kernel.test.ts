@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { authorityHash, intentHash } from "@mission/core";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -872,5 +872,42 @@ describe("signed status (@spec status#mission-status-response)", () => {
     expect(payload.mission.fresh_until).toBeDefined();
     expect(payload.nonce).toBe("n1");
     expect(payload.authorization_details[0].resource).toBe(RESOURCE);
+  });
+});
+
+describe("signed status freshness cap (@spec status#mission-status-caching)", () => {
+  // "When the AS advertises `mission_max_stale_seconds` ({{as-metadata}}), it
+  // MUST NOT set `mission.fresh_until` later than the response `iat` plus
+  // that value." The cap is enforced inside `signedStatus`, so it holds for
+  // every caller, not only the HTTP surfaces that pass a lifetime.
+  const ceiling = Number(MISSION_MAX_STALE_SECONDS);
+  const claims = async (freshnessSeconds?: number) => {
+    const r = approve(intent(), 40 + (freshnessSeconds ?? 0));
+    const jws = await kernel.signedStatus(r.id, {
+      requester: "svc:test",
+      ...(freshnessSeconds === undefined ? {} : { freshnessSeconds }),
+    });
+    const payload = JSON.parse(Buffer.from(jws.split(".")[1] as string, "base64url").toString());
+    return { iat: Number(payload.iat), exp: Number(payload.exp), freshUntil: Date.parse(payload.mission.fresh_until) };
+  };
+
+  it("never publishes fresh_until or exp beyond the advertised ceiling on a direct call", async () => {
+    const { iat, exp, freshUntil } = await claims();
+    expect(freshUntil).toBeLessThanOrEqual((iat + ceiling) * 1000);
+    expect(exp).toBeLessThanOrEqual(iat + ceiling);
+  });
+
+  it("honors a requested lifetime shorter than the ceiling", async () => {
+    const requested = Math.max(1, Math.floor(ceiling / 10));
+    const { iat, exp, freshUntil } = await claims(requested);
+    expect(exp).toBe(iat + requested);
+    expect(freshUntil).toBe((iat + requested) * 1000);
+    expect(exp).toBeLessThan(iat + ceiling);
+  });
+
+  it("caps a requested lifetime longer than the ceiling at the ceiling", async () => {
+    const { iat, exp, freshUntil } = await claims(ceiling * 10 + 600);
+    expect(exp).toBe(iat + ceiling);
+    expect(freshUntil).toBe((iat + ceiling) * 1000);
   });
 });

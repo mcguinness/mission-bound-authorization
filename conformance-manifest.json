@@ -11,16 +11,16 @@
     "content_sha256": "48bdb4ec63bbc9fe1293a1c4b6c339bb327afbbc9ca3f0144e0acf5420ab3d7c"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "717e3e3f2786c938c9fc664cb88ffdfaa9f7ba89",
-    "content_sha256": "80c4951515ac57bda3047f645d257401a126e1568eb375e6ed2c495a2d97c552"
+    "revision": "6710fb07dbc208a1f8d76463cfbbd4487cee9e1e",
+    "content_sha256": "985a171a550142b48e4e4d661ea1afb80c6bba8d69488521be418ae9177b3bfb"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "717e3e3f2786c938c9fc664cb88ffdfaa9f7ba89",
-    "content_sha256": "55b175f4ec1b06ee3caaaa99242b7005c41d8d31c3296bca9b3262fd9d8b93f4"
+    "revision": "6710fb07dbc208a1f8d76463cfbbd4487cee9e1e",
+    "content_sha256": "dda5a12b5b92fef7c86e6b1e07eb2cd457c2e8667dca7ed9510b8e1f576eb18f"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "ff7d8c5dc0b204b1b794781cadc036e0e4d3fbe9",
-    "content_sha256": "fa16f9469ae154cb284af261ce6d421c502830c4631cad11cd8c9130abdf910e"
+    "revision": "cbbdcd7e56efc3c4eafed2a617c0941889f0b830",
+    "content_sha256": "33a07cddf7d3af9d5bf53cf661d3ce7ef4ca0f917696778c8268f64f5548cb8c"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -47,8 +47,8 @@
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "302ba47bc49d8e8e1a27c745528c0221412e4a73",
-    "content_sha256": "85a7c474869de53e8965086d5f41f142ccfaa030f01e5f0dc1502879cadef33a"
+    "revision": "d29d3e2771cfad5a68909d835939d7c858c12378",
+    "content_sha256": "e63abd62f11beb37d5941e16bda2dfc83cfc30166c94c6f3cd29fc73fa59be9f"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -620,11 +620,22 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "Every declared entry has one disposition, with the defined legacy-resource shorthand; invalid nested shapes and conflicting keys refuse.",
-    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+    "local": "Unit tests validate the published declaration shape and reject ambiguous JSON; correspondence to a live deployment remains an audit property."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > the draft's nested resources and excluded paths validate", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a bare resource string is the mediated shorthand and validates", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses missing disposition and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses unknown disposition and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses bare excluded path and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses mediated excluded path and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting resource dispositions and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting excluded dispositions and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > identical repeated keys normalize to one entry and validate", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > malformed JSON containers and entries yield findings rather than throwing or widening claims", "level": "unit", "surface": "deployment-documentation" }
+   ]
   },
   {
    "id": "runtime.conformance.no-reconstructed-as-mediated",
@@ -643,11 +654,17 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A claim must name a mediated resource and no excluded execution path.",
-    "local": "#758 spec slice only; enforcement-scope.ts normalizer/validator and claim tests follow separately."
+    "local": "Claims are checked against a validated declaration, including conflicting duplicates and exclusions; this does not audit live mediation."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming a reconstructed resource is rejected", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming an unrecorded resource is rejected", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > an excluded execution path refuses even when it is also declared", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a mediated resource on a declared nonexcluded path is accepted", "level": "unit", "surface": "deployment-documentation" },
+    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate", "level": "unit", "surface": "deployment-documentation" }
+   ]
   },
   {
    "id": "status.operational.bound-sized-to-recovery",
@@ -664,12 +681,86 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
+    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected.",
+    "local": "`mission_max_stale_seconds` is served on the AS metadata document from config/enforcement-scope.json, and `signedStatus` caps every signed Status response's `fresh_until` at it. The same file's per-bounded-class `recovery_objective_seconds` and `beyond_bound`, and its `availability_consequence` (whose text says an outage never restarts observation age), are served in `enforcement_scope_statement` on the protected-resource metadata document."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "published runtime posture (@spec runtime#runtime-operational, status#status-operational) > publishes the enforced per-class bounds, issuer ceiling, recovery objective and beyond-bound refusal",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > AS metadata advertises mission_bound_authorization_supported, the adapter introspection endpoint, and the mission_max_stale_seconds ceiling",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the signed Status endpoint returns a verifiable mission-status-response+jwt",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "PR A of #310: declaration/publication and shared configuration consumption only. The reference deployment denies immediately on PDP unavailability; remote wiring belongs to PR B. No bounded-reuse, replication, or positive break-glass capability is claimed."
+  },
+  {
+   "id": "status.caching.freshness-cap",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "When the AS advertises `mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set `mission.fresh_until` later than the response `iat` plus that value.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "When the AS advertises `mission_max_stale_seconds`, it MUST NOT set `mission.fresh_until` later than the response `iat` plus that value.",
+    "local": "The cap is applied inside `MissionKernel.signedStatus`, the one place that stamps `fresh_until` and `exp`, against the same `MISSION_MAX_STALE_SECONDS` the AS metadata document advertises. It holds for a direct call with no requested lifetime, honors a shorter requested lifetime, and caps a longer one; the HTTP Status and discharge surfaces pass no lifetime of their own."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until or exp beyond the advertised ceiling on a direct call",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > honors a requested lifetime shorter than the ceiling",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > caps a requested lifetime longer than the ceiling at the ceiling",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the signed Status endpoint returns a verifiable mission-status-response+jwt",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it."
   },
   {
    "id": "runtime.operational.ride-through-declared",
@@ -685,12 +776,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
+    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
+    "local": "`enforcement_scope_statement.state_source.per_class` on the protected-resource metadata document carries a `freshness_posture` for every declared action class, with `max_staleness_seconds`, `recovery_objective_seconds` and `beyond_bound` on each bounded class and one shared `availability_consequence` string. The published `max_staleness_seconds` is the window `stalenessBound` enforces, asserted class by class; the class declared with no active freshness resolves to no window rather than to zero."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "published runtime posture (@spec runtime#runtime-operational, status#status-operational) > publishes the enforced per-class bounds, issuer ceiling, recovery objective and beyond-bound refusal",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "PR A of #310: declaration/publication and shared configuration consumption only. The reference deployment denies immediately on PDP unavailability; remote wiring belongs to PR B. No bounded-reuse, replication, or positive break-glass capability is claimed."
   },
   {
    "id": "runtime.operational.replication-disclosed",
@@ -779,6 +884,24 @@
      "name": "trusted capability recording > resolves the consented template ceiling before hashing and drawdown inherits it",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/capability-resolver.test.ts",
+     "name": "trusted capability recording > refuses mixed resolver modes before derivation or resolution and preserves empty or injected-only modes",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/capability-binding.test.ts",
+     "name": "normalizeCapabilitySources: committed-array validation > applies the shared canonical digest vectors to source and optional catalog recording",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "validated capability evidence (#657) > applies the shared recording digest vectors independently at the evidence boundary",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ]
   },
@@ -1111,7 +1234,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant."
+    "normative": "RAS-issued authority is a subset of the conveyed grant and the required destination policy; entitlement and local ceiling compose on every base and continuation redemption, with an empty intersection refused before consuming the grant. A ceiling-declared `child_creation_policy` binds under the same comparison, and a surviving entry keeps that reference with its retained-action provenance."
    },
    "level": "unit",
    "coverage": "tested",
@@ -1178,11 +1301,36 @@
     },
     {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a declared child-creation policy binds, and the mint preserves the reference with its retained-action provenance",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a candidate retaining the children grant without the declared policy refuses before minting",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a candidate altering the declared policy reference refuses before minting",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a ceiling declaring no children grant drops the entry carrying one, minting no child-creation authority",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
      "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup",
      "level": "unit",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#787 item 1 settles the child-creation term of this comparison. `delegation.children.child_creation_policy` is an issuer-recorded reference that becomes a policy-adjudicated child's approval-basis `root_commitment`, so the destination ceiling compares it rather than setting it aside: where the ceiling entry and the candidate both retain the `children` grant the reference has equal presence and is byte-identical, and a candidate that lacks it, alters it, or drops it while keeping the grant is refused. A ceiling declaring no `children` grant drops the entry carrying one, exactly as an introduced delegation is dropped, so the minted set conveys no child-creation authority. `capability_sources` stays the only member set aside at this config boundary (mission-core withoutCapabilitySources), so a surviving entry carries the reference and its retained-action bindings verbatim into the minted `authorization_details`, and a child creation drawing on that entry records the reference in the existing `approval_basis.activation.policy_id` and `root_commitment` (ApprovalBasisPolicyDrawdown), with no member invented for it. A client cannot inject the reference: derivation carries unrecognized `children` members from the policy ceiling and never from the proposal (derive.ts narrowChildren)."
   },
   {
    "id": "cross-domain.resource-as.derivation-record",
@@ -3144,6 +3292,12 @@
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "child-creation idempotency (@spec child-delegation#creation-request-id) > replays a definitive IntentError verbatim after its creation invariant failure has been removed",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -7863,9 +8017,15 @@
      "name": "Enforcement Scope Statement validation (@spec runtime#runtime-conformance) > an empty remote_decision_channels array is valid (a wholly co-resident deployment)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/remote-pdp-stack.test.ts",
+     "name": "demo configured remote PDP route > wires a real decision hop behind the flag and fails closed when that PDP stops",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "src/services/pdp/src/enforcement-scope.ts's validateEnforcementScopeStatement checks this baseline member: a statement omitting remote_decision_channels entirely fails validation, while an explicit empty array (a wholly co-resident deployment declaring no non-co-resident boundary) is valid. Kept partial, not tested: the row's declared level/surface (endpoint/resource-operation) wants a mapping wiring a REAL deployment's published statement to its actual boundaries, which this unit-level validator test does not reach."
+   "notes": "Configured demo now publishes its actual remote decision boundary and exercises it across HTTP, or declares no boundary in co-resident mode. The fixture is a same-process loopback hop, not TLS/key isolation. Keep partial: the broader deployment's complete mediation and production trust establishment remain audit properties."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -9645,9 +9805,21 @@
      "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > rejects disabling freshness for every consequential class at configuration load",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",
@@ -12081,11 +12253,44 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PEP bounds every evaluation call with a timeout inside the action class's staleness budget and treats an expired call as pdp_unreachable, failing closed rather than permitting"
+    "normative": "the PEP bounds every evaluation call with a timeout inside the action class's staleness budget and treats an expired call as pdp_unreachable, failing closed rather than permitting",
+    "local": "`channelDeadlineMs` caps the remote client's deadline at the window the statement declares for the action class (leaving it where the class declares no window), and the PEP turns every branded local channel outcome other than an authentication or integrity failure into a `pdp_unreachable` Refusal Record with no retained Decision."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/remote-client-boundaries.test.ts",
+     "name": "remote PDP full-response boundaries > bounds a stalled body after headers even when the transport ignores abort",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "channel deadline inside the action class's staleness budget (@spec authzen#transport-behavior) > caps the configured deadline at the declared window for the class, and leaves it where the class declares none",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > bounds the call inside the declared action-class budget and refuses locally when the deadline elapses",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a 429 overload shed as pdp_unreachable, with no PDP decision retained",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The configured remote client bounds the complete response and `channelDeadlineMs` caps the configured deadline at the class budget, so a call for a class with a tighter declared window cannot wait out the configured timeout. Timeout, transport failure and any non-2xx status reach the PEP as pdp_unreachable. Partial: this is the remote path, not a timeout wrapper for arbitrary co-resident decision functions."
   },
   {
    "id": "authzen.transport.no-double-charge-on-retry",
@@ -16314,8 +16519,40 @@
     "normative": "denial_reason names a pre-evaluation condition (PEP-side: token_invalid, mission_claim_missing, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > a real remote hop verifies and retains PDP evidence; a stopped PDP refuses locally without a fabricated decision",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses an unsigned 200 response as channel_failure, with no PDP decision retained",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that rejects asynchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Covers two of the enumerated PEP reasons on the remote path: `pdp_unreachable` for a timeout, transport failure or non-2xx status, `channel_failure` for a response failing authentication or integrity, each emitting a Refusal Record carrying no PDP-derived member. `pdp_unreachable` also carries an unclassified failure of the decision call itself, thrown or rejected: the PEP records the refusal rather than letting the failure escape uncarried. `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` and `state_unavailable` remain for #594 wave 4; this is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -18939,7 +19176,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance. RAS minting additionally intersects the result per action with its REQUIRED configured ceiling, preserves constraints and retained-action provenance, and refuses an empty result before consuming the grant."
+    "normative": "both origin-principal-mapping entry points (Cross-Org grant adapter, ID-JAG RAS) consult the mapped local principal's current entitlement unconditionally on every redemption (RAS: base AND continuation grants alike) via the shared EntitlementResolver contract, independently of the static authority-ceiling intersection and of the mapping's own validity bound; a missing, negative, stale-beyond-bound, future-dated, or resolver-exception result each refuse the same way as the other dual-axis failures, and never proceeds as entitled. The observation carries two grains. A bare Boolean is audience-scoped: it authorizes the complete already-intersected authorization_details set for that audience, unmodified. An observation carrying the OPTIONAL authority member is action- and resource-scoped: all three consumers (Cross-Org grant adapter, ID-JAG RAS, PDP) intersect the delegated set with it on exact (resource, action) matching, mint or evaluate the surviving subset when the match is partial, and refuse with the existing non-oracular error only when the intersection is empty, so the quoted text's per-entry intersection is exercised, not only its audience-wide instance. RAS minting additionally intersects the result per action with its REQUIRED configured ceiling, preserves constraints and retained-action provenance, and refuses an empty result before consuming the grant. The PDP additionally requires current resource policy to permit an action even when both Mission authority and entitlement cover it."
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -19123,9 +19360,15 @@
      "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a continuation grant is narrowed by the same destination policy",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > resource policy independently narrows a Mission action covered by fresh entitlement",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The existing SaaS cross-component read-permits/write-refuses test below demonstrates the resource-policy term at this lifetime-bounded token-only estate. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. Per-token derivation evidence remains separately tracked as SHOULD/todo."
+   "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. #787 settles the ceiling's child-creation term: a ceiling-declared `child_creation_policy` binds under the lineage rule instead of being stripped, and the minted entry keeps the reference with its retained-action provenance (see cross-domain.resource-as.local-policy-bound). Per-token derivation evidence remains separately tracked as SHOULD/todo."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

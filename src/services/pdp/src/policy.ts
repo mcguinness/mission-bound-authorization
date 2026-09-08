@@ -1,3 +1,5 @@
+import { postureStalenessBound, RUNTIME_POSTURE, type StalenessBound } from "./runtime-posture.js";
+
 /**
  * Deployment policy for the payments estate: action -> FGA relation mapping
  * and per-class staleness bounds (payments-runtime-profile-v1; O-8 numbers).
@@ -27,14 +29,15 @@ export function relationForAction(action: string) {
   return PAYMENTS_RELATIONS[action] ?? null;
 }
 
-/** Published staleness bounds (O-8): tight for high-consequence, looser for reads. */
-export function stalenessBoundSeconds(actionClass: string | undefined): number {
-  switch (actionClass) {
-    case "irreversible_action":
-      return 30;
-    case "external_commitment":
-      return 60;
-    default:
-      return 300;
-  }
+/**
+ * @spec runtime#ride-through — the enforced bound per action class IS the
+ * `max_staleness_seconds` the Enforcement Scope Statement publishes, so the
+ * ride-through a caller reads and the window the PDP applies are one number.
+ * Published bounds (O-8): tight for high-consequence, looser for reads. A
+ * class the statement declares with no active freshness requirement resolves
+ * to `none`, and a label the statement does not declare at all resolves to
+ * `undeclared`: neither is a zero-second window.
+ */
+export function stalenessBound(actionClass: string | undefined): StalenessBound {
+  return postureStalenessBound(RUNTIME_POSTURE, actionClass);
 }

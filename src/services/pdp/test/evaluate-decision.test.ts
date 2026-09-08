@@ -25,7 +25,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
-import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBoundSeconds } from "../src/index.js";
+import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -73,7 +73,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       now: () => NOW,
-      stalenessBoundSeconds,
+      stalenessBound,
       relationForAction,
       // Even a deployment policy that ALWAYS requires approval, satisfied by
       // a fresh, correctly-bound approval, must not rescue a missing entry.
@@ -126,7 +126,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       now: () => NOW,
-      stalenessBoundSeconds,
+      stalenessBound,
       relationForAction,
       maxApprovalAgeSeconds: 300,
     };
@@ -177,7 +177,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
           freshness: { observed_at: "2026-07-22T11:58:00Z", source: "status" }, // 120s stale
         },
       }),
-      { view: view(), fga: alwaysAllowFga, modelId: "unit-test-model", now: () => NOW, stalenessBoundSeconds, relationForAction },
+      { view: view(), fga: alwaysAllowFga, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction },
     );
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("stale_state");
@@ -241,7 +241,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
     fga,
     modelId: "unit-test-model",
     now: () => NOW,
-    stalenessBoundSeconds,
+    stalenessBound,
     relationForAction,
   });
 
