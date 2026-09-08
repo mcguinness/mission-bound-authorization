@@ -5,7 +5,12 @@ import { canonicalize, type JsonValue } from "./canonicalize.js";
 import { type CapabilitySourceBinding, capabilitySourceIdentity } from "./capability-binding.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
-/** Provenance is compared between issuer-derived lineage sets, not config ceilings. */
+/**
+ * Provenance is compared between issuer-derived lineage sets, not config
+ * ceilings. `capability_sources` is the ONLY member set aside at a config
+ * boundary: every other recorded member, `delegation.children`'s
+ * `child_creation_policy` included, is compared and carried by the caller.
+ */
 export function withoutCapabilitySources(entries: readonly AuthorityEntry[]): AuthorityEntry[] {
   return entries.map(({ capability_sources: _bindings, ...authority }) => authority);
 }
@@ -122,9 +127,15 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       for (const k of ["max_children", "max_child_depth"])
         if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
       if (c.allowed_child_actors !== undefined && !matchers(c.allowed_child_actors)) return false;
-      // The strict engine does not compare this opaque policy identifier.
-      // Do not claim an intersection that could erase or substitute it.
-      if (c.child_creation_policy !== undefined) return false;
+      // @spec child-delegation#fanout — an opaque recorded reference,
+      // compared for equal presence and byte identity ({@link
+      // childrenNoBroader}), never intersected, substituted, or dropped to
+      // manufacture a fit.
+      if (
+        c.child_creation_policy !== undefined &&
+        (typeof c.child_creation_policy !== "string" || !c.child_creation_policy.length)
+      )
+        return false;
     }
   }
   if (
@@ -146,7 +157,12 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
 /**
  * Narrow per action, including a multi-action entry or a split ceiling. Other
  * dimensions remain byte-identical: an unsupported or too-broad restriction
- * is refused, never dropped or relaxed to manufacture an intersection.
+ * is refused, never dropped or relaxed to manufacture an intersection. A
+ * ceiling declaring a `child_creation_policy` binds it under the lineage rule,
+ * so a candidate lacking or altering that reference is refused; a ceiling
+ * declaring no `children` grant refuses the entry carrying one, exactly as an
+ * introduced delegation is refused. A surviving entry keeps the reference and
+ * its retained-action `capability_sources` verbatim.
  */
 export function narrowToCeiling(
   entries: readonly AuthorityEntry[],
@@ -366,8 +382,30 @@ function capNoBroader(candidate: number | undefined, granted: number | undefined
   return candidate <= granted;
 }
 
+/**
+ * @spec child-delegation#fanout, child-delegation#child-creation — the
+ * recorded drawdown policy reference. It is neither a cap nor a restriction
+ * list: it becomes the child's approval-basis `root_commitment`, so a verifier
+ * cannot rank two references, and a reference the grantor never recorded is
+ * not narrower than one it did.
+ * Where both sides retain the `children` grant, presence is EQUAL and a present
+ * value is byte-identical: introducing it, altering it, or dropping the
+ * reference while keeping the grant each fail. A non-string on either side
+ * matches nothing (fail closed), keeping this predicate total.
+ */
+function childPolicyIdentical(
+  candidate: JsonValue | undefined,
+  granted: JsonValue | undefined,
+): boolean {
+  if (candidate === undefined && granted === undefined) return true;
+  if (typeof candidate !== "string" || typeof granted !== "string") return false;
+  return candidate === granted;
+}
+
 /** `children` is a GRANT: candidate introducing it where the grantor has none
- *  FAILS; candidate omitting it PASSES; both present narrow member-wise. */
+ *  FAILS; candidate omitting the whole grant PASSES (strictly narrower, and the
+ *  only narrowing form once a policy reference is retained); both present
+ *  narrow member-wise, carrying the policy reference byte-identically. */
 function childrenNoBroader(
   candidate: JsonObject | undefined,
   granted: JsonObject | undefined,
@@ -376,6 +414,8 @@ function childrenNoBroader(
   if (!candidate) return true; // omits -> strictly narrower
   if (!capNoBroader(asNum(candidate.max_children), asNum(granted?.max_children))) return false;
   if (!capNoBroader(asNum(candidate.max_child_depth), asNum(granted?.max_child_depth)))
+    return false;
+  if (!childPolicyIdentical(candidate.child_creation_policy, granted?.child_creation_policy))
     return false;
   return matchersSubset(
     readMatchers(candidate.allowed_child_actors),

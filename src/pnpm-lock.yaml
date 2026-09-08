@@ -374,6 +374,9 @@ importers:
       '@mission/core':
         specifier: workspace:*
         version: link:../../packages/mission-core
+      '@mission/demo-data':
+        specifier: workspace:*
+        version: link:../../packages/demo-data
       '@mission/store':
         specifier: workspace:*
         version: link:../../packages/store

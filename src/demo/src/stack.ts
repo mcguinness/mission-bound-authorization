@@ -24,6 +24,10 @@ import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POL
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
+  createDecisionChannel,
+  loadRuntimePosture,
+  RUNTIME_POSTURE,
+  stalenessBound,
   deriveJoinDelegation,
   Fga,
   type MissionView,
@@ -130,6 +134,8 @@ export interface DemoStack {
    * channels are untouched. Close it with `masGovernedChannel.close()`.
    */
   masGovernedChannel?: HttpMcpChannel;
+  /** Trusted operator shutdown/fault-injection seam, never agent-accessible. */
+  decisionChannel: { close: () => Promise<void> };
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -153,7 +159,11 @@ export async function composeStack(opts: {
    */
   withAuthServer?: boolean;
   asPort?: number;
+  /** Default co-resident; MISSION_PDP_MODE=remote selects a real loopback hop. */
+  pdpMode?: "co-resident" | "remote";
 }): Promise<DemoStack> {
+  const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
+  if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
   const conn = await Fga.connect({ apiUrl: opts.openfgaUrl, presharedKey: opts.presharedKey, ...(opts.caCertPath ? { caCertPath: opts.caCertPath } : {}) });
   const fga = conn.fga;
   const modelId = conn.modelId;
@@ -527,8 +537,8 @@ export async function composeStack(opts: {
   };
 
   // @spec runtime#state-freshness: this deployment's trusted state sources
-  // (its Enforcement Scope Statement would publish this list formally; none
-  // exists yet, so it is declared here instead). The demo stack has exactly
+  // (published in config/enforcement-scope.json and resource metadata).
+  // The demo stack has exactly
   // one: `loadView`'s own synchronous live read of the kernel via `viewFor`,
   // named after the `loadView` dependency it fulfills. A deployment adding
   // Mission Status or Lifecycle Signals would list those sources here too.
@@ -565,11 +575,29 @@ export async function composeStack(opts: {
     return [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions }];
   };
 
+  const runtimeDecisionPolicy = {
+    requiresActionApproval: (action: string) => action === "payments:remittance.send",
+    maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
+    allowedFreshnessSources: ALLOWED_FRESHNESS_SOURCES,
+    delegatePolicy: {
+      delegates: Object.fromEntries(Object.entries(MAS_JOIN.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
+    },
+  };
+  const decisionChannel = await createDecisionChannel(decisionPoint, {
+    mode, pepId: "mcp-payments-pep", audience: CANONICAL_RESOURCE,
+    getOptions: (request) => {
+      const ref = request.context.mission;
+      const loaded = ref ? loadView(ref) : undefined;
+      if (!loaded) throw new Error("PDP cannot establish the Mission view");
+      return { view: loaded.view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, ...runtimeDecisionPolicy };
+    },
+  });
+  const enforcementScopeStatement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: decisionChannel.remoteDecisionChannels });
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
     evidence,
-    decide: decisionPoint.decide,
+    decide: decisionChannel.decide,
     fga,
     modelId,
     loadView,
@@ -581,9 +609,7 @@ export async function composeStack(opts: {
     // server path the denial carries an RS-signed txn-challenge (AROP); the
     // client presents it to the AS transaction endpoint, which vouches the
     // approval and issues a txn-token. The approval is never an agent input.
-    requiresActionApproval: (action) => action === "payments:remittance.send",
-    maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
-    allowedFreshnessSources: ALLOWED_FRESHNESS_SOURCES,
+    ...runtimeDecisionPolicy,
     // @spec authority-server#mission-join (#557) — this deployment's Join
     // configuration, from config/mas-join.json. It is one of the two keys the
     // joined path needs; the other is a route that validates an ordinary
@@ -607,6 +633,7 @@ export async function composeStack(opts: {
 
   const { TransactionEngine } = await import("@mission/mcp-payments");
   const server = new McpPaymentsServer({
+    enforcementScopeStatement,
     pep,
     payments,
     loadView,
@@ -669,6 +696,7 @@ export async function composeStack(opts: {
 
   return {
     kernel,
+    decisionChannel,
     fga,
     modelId,
     payments,

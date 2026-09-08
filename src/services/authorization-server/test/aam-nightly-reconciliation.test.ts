@@ -51,7 +51,7 @@ import {
   Fga,
   type MissionView,
   relationForAction,
-  stalenessBoundSeconds,
+  stalenessBound,
 } from "@mission/pdp";
 import {
   calculateJwkThumbprint,
@@ -416,7 +416,7 @@ const evalAction = async (missionId: string, action: string) => {
         amount: { amount: "125.00", currency: "USD" },
       },
     },
-    { view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction },
+    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction },
   );
 };
 

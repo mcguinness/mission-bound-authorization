@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { evaluate, type EvaluationRequest, type EvaluateOptions } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
-import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
+import { relationForAction, stalenessBound } from "../src/policy.js";
 
 const resource = "https://payments.test/mcp", action = "payments:invoice.read";
 const binding: CapabilitySourceBinding = { action, tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };
@@ -15,7 +15,7 @@ const makeRequest = (): EvaluationRequest => ({ subject: { id: "alice" }, resour
   audience: resource, mission: { id: "msn_cap", issuer: "https://as.test", authority_hash: "sha-256:test" }, capability_source: { ...presented },
 } });
 function options(view = makeView()): EvaluateOptions {
-  return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, stalenessBoundSeconds };
+  return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, stalenessBound };
 }
 
 describe("recorded per-action capability verification", () => {

@@ -6,7 +6,7 @@
  * higher it MUST be gated and bound as the table requires."
  *
  * evaluateInner treats `context.action_class` as an opaque label: it is read
- * only to pick a staleness bound, a permit TTL and `conditions.use_limit`
+ * only to pick a freshness posture, a permit TTL and `conditions.use_limit`
  * (@spec authzen#response-context), and to decide whether an action-bound
  * approval is required (which only ever ADDS a gate).
  * No branch in evaluateInner skips or loosens the authority-entry-match,
@@ -18,7 +18,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
-import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBoundSeconds } from "../src/index.js";
+import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -55,17 +55,68 @@ const reqFor = (actionClass: string): EvaluationRequest => ({
   },
 });
 
+// The deployment's own bound function, unwrapped: every declared class
+// resolves to a window or to no active freshness, so the gate cases below run
+// against the real policy and still reach the gate they name.
 const opts = {
   view,
   fga: alwaysAllowFga,
   modelId: "unit-test-model",
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
 };
 
 describe("classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification)", () => {
+  it("privileged administration uses the declared 30-second bound and a single-use permit", async () => {
+    const request = reqFor("privileged_administration");
+    request.action.name = "payments:invoice.read";
+    request.context.parameter_digest = "sha-256:params";
+    const permit = await evaluate(request, opts);
+    expect(permit.decision).toBe(true);
+    expect((permit.context.conditions as Record<string, unknown>).use_limit).toBe(1);
+    request.context.freshness!.observed_at = new Date(NOW.getTime() - 31_000).toISOString();
+    expect((await evaluate(request, opts)).context.denial_reason).toBe("stale_state");
+  });
+
+  it("a class declared with no active freshness requirement is evaluated with no observation window, never refused as stale", async () => {
+    // @spec runtime#state-freshness — the draft's Audit-only row: "No active
+    // freshness required". The remaining gates still run, so the refusal is
+    // the entry-match one and never `stale_state`.
+    const request = reqFor("audit_only");
+    delete request.context.freshness;
+    const dec = await evaluate(request, opts);
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("out_of_authority");
+    const permitted = reqFor("audit_only");
+    delete permitted.context.freshness;
+    permitted.action.name = "payments:invoice.read";
+    expect((await evaluate(permitted, opts)).decision).toBe(true);
+  });
+
+  it("an action class the deployment does not declare refuses as a request fault, with any observation or none", async () => {
+    // @spec authzen#runtime-denial-classification — the label reaches no
+    // declared gate, so the refusal is `out_of_authority` ("Action outside
+    // the Authority Set ..., or the request would broaden it"), never
+    // `stale_state`, which would assert a freshness fact the PDP never
+    // established.
+    for (const mutate of [
+      (_r: EvaluationRequest) => {},
+      (r: EvaluationRequest) => { delete r.context.freshness; },
+      (r: EvaluationRequest) => { r.context.freshness = { observed_at: new Date(NOW.getTime() - 10_000_000).toISOString(), source: "status" }; },
+    ]) {
+      const request = reqFor("some_unrecognized_label");
+      // An action inside the entry, so only the class rule can refuse it.
+      request.action.name = "payments:invoice.read";
+      mutate(request);
+      const dec = await evaluate(request, opts);
+      expect(dec.decision).toBe(false);
+      expect(dec.context.denial_reason).toBe("out_of_authority");
+      expect(dec.context.reason).toBe("out_of_authority");
+    }
+  });
+
   it("no action_class label, including the high-consequence and unrecognized ones, opens a bypass around the authority-entry-match gate", async () => {
     for (const actionClass of [
       "non_consequential",
@@ -74,6 +125,7 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
       "irreversible_action",
       "external_commitment",
       "privileged_administration",
+      "audit_only",
       "some_unrecognized_label",
     ]) {
       const dec = await evaluate(reqFor(actionClass), opts);
