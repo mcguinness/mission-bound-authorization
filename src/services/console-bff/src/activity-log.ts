@@ -45,7 +45,8 @@ export type ActivityKind = Evidence["kind"] | "containment";
 /**
  * One row in the joined timeline: the per-record projection the consoles/SIEM
  * render, flattened to the members AAM's activity log needs. Every field is
- * copied from a producer record; nothing is invented. `role` for a
+ * copied from a producer record except the explicit decision-only
+ * undetermined-outcome classification. `role` for a
  * `containment` row is SYNTHESIZED as `issuer` (Containment Evidence is
  * issuer-committed and carries no `emitter` on the contract).
  */
@@ -66,7 +67,7 @@ export interface ActivityEntry {
   scope_statement_digest?: string;
   /** Present on a `decision` row: the permit/deny verdict. */
   decision?: boolean;
-  /** execution/egress/ingestion outcome (committed/deduped/permitted/refused/applied/rejected). */
+  /** Execution/egress/ingestion outcome; a Decision row alone is always undetermined-outcome. */
   outcome?: string;
   /** Normalized failure reason (denial_reason / refusal_reason / rejection_reason). */
   denial_reason?: string;
@@ -160,6 +161,11 @@ function toEntry(e: Evidence): ActivityEntry {
         ...emitterFields(d.content.emitter),
         action: d.content.action.name,
         decision: d.content.decision === "permit",
+        // This read-side projection never promotes a Decision into evidence
+        // that an action occurred, even when its result is permit. A separate
+        // execution row must establish the disposition; no elapsed time turns
+        // an orphan decision into a completed action.
+        outcome: "undetermined-outcome",
         ...(d.content.denial_reason !== undefined ? { denial_reason: d.content.denial_reason } : {}),
         ...(d.content.entry_digest !== undefined ? { entry_digest: d.content.entry_digest } : {}),
         decision_id: d.content.evaluation_id,

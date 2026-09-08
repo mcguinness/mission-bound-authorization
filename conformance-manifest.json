@@ -15,8 +15,8 @@
     "content_sha256": "e1cf9287664b311c191d0e75cca2bad541c3bac15afecd2da5148243e793097e"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "134d2423a5fab3595035e16aa6fb72b3e2cff227",
-    "content_sha256": "9361584273091170e7d0b6ba53e775ab54406ff307538b49b97af6f1c96e8850"
+    "revision": "3078ca1313845d977897cd1d163532d56b48a21c",
+    "content_sha256": "aeeba8e6a3ec7702cc94c1dc278656801a069079db65dfc3281254250501bdbd"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
@@ -17206,8 +17206,28 @@
     "normative": "the four-step verification procedure (decode payload; recompute JCS canonical bytes with evidence_envelope removed; require byte equality; verify the JWS signature and header) runs in order, and a record is treated as verified only if every step succeeds"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > totally refuses malformed outer records, envelopes, protected headers and non-JSON values",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > requires byte equality before resolving keys and gates signature processing on compromise recovery",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > verifies a genuinely signed record (positive vector)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.integrity.byte-equality-required",
@@ -17228,8 +17248,16 @@
     "normative": "byte-for-byte equality between the decoded JWS payload and the recomputed canonical bytes of the outer record (envelope removed) is required; any difference rejects the record even if the embedded signature itself verifies, since the signature authenticates only its own payload"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects a modified outer object even though the embedded JWS is still independently valid (ordered-total-verification: byte-mismatch, not a signature failure)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.integrity.key-bound-to-scope-and-audience",
@@ -17287,9 +17315,21 @@
      "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses to sign for an audience its published key does not serve",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evidence-key-resolution.test.ts",
+     "name": "configured evidence key-set scope resolution > resolves PDP, PEP and executor records by key, exact emitter role and audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evidence-key-resolution.test.ts",
+     "name": "configured evidence key-set scope resolution > never treats an absent or empty enforcement-point audience as a wildcard",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
+   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
@@ -17310,8 +17350,22 @@
     "normative": "when the selected signing key is identified as compromised, the compromise-boundary rule gates the signature-verification step itself: it applies before the signature can be treated as verified, not as a separate check after the fact"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > requires byte equality before resolving keys and gates signature processing on compromise recovery",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > a compromised key WITH a qualifying pre-boundary proof still verifies",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.integrity.header-kid-and-alg",
@@ -17332,8 +17386,28 @@
     "normative": "the protected header's kid resolves in the emitter's published JWKS, and ES256 is mandatory to implement (other JOSE algorithms may additionally be offered)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > embeds the mandatory-to-implement alg, typ, and cty in the protected header",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects a signature using a non-ES256 algorithm even when the header and payload are otherwise well-formed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > totally refuses malformed outer records, envelopes, protected headers and non-JSON values",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.integrity.typ-rejects-cross-use",
@@ -17354,8 +17428,22 @@
     "normative": "the protected typ names the secured runtime-evidence representation and the protected cty names the record kind; a wrong value in either position is rejected, so cross-kind signature reuse is foreclosed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects a wrong typ in the protected header (typ is the ONE fixed value; a JWS built for a different envelope kind is never valid here even with matching cty)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects cty cross-use: a Decision Evidence signature is not valid for Execution Evidence",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.integrity.reject-unsupported-format",
@@ -17376,9 +17464,16 @@
     "normative": "an evidence_envelope whose format is not jws-compact, or another format a future specification defines and the implementation recognizes, is rejected rather than accepted unverified"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Line 1849 (\"Implementations MUST reject evidence whose format is unsupported rather than accepting it unverified\") restates this rule under evidence-integrity-signing-keys; treated as duplicate-of-another-row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > rejects an unsupported envelope format before touching the signature",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.execution.execution-id-entropy-and-format",
@@ -18410,8 +18505,16 @@
     "normative": "a recovery proof whose authenticated time is at or after the compromise boundary does not permit the ordinary verification algorithm to continue; the boundary is strict, so only a proof strictly before it rescues an artifact under a compromised key"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-evidence-integrity.test.ts",
+     "name": "runtime-evidence-integrity: sign/verify > no asserted timestamp or proof at or after the authenticated compromise boundary rescues a record",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: unknown-safe verification, exact ordered refusal reasons and compromise-boundary vectors at the shared primitive. This verifies envelope integrity, not the required content/receipt combination of each record kind."
   },
   {
    "id": "evidence.security.orphaned-decision-evidence-classification",
@@ -18432,8 +18535,16 @@
     "normative": "implementations emit Execution Evidence to record outcomes, and auditors never treat Decision Evidence alone as evidence of action; an audit consumer classifies orphaned Decision Evidence (no matching Execution Evidence within the reconciliation window) as undetermined-outcome or, per policy, action-attempted, and never as proof of action"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/console-bff/test/activity-log.test.ts",
+     "name": "ConsoleBff.activityLog read surface (operator role + join) > joins the injected producer stores into the Mission's timeline",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: the operator read surface conservatively marks every Decision-only row undetermined-outcome, from first observation onward. Neither a permit nor elapsed time becomes proof of action; separate Execution Evidence carries outcomes. This raw read model does not claim cryptographic cross-record reconciliation."
   },
   {
    "id": "evidence.security.key-resolvable-in-published-set",
@@ -18454,8 +18565,22 @@
     "normative": "the PDP's jws-compact signing key is resolvable by kid in the PDP's published JWKS, and the PEP/executor signing key used for Execution Evidence and Refusal Records is resolvable the same way through a deployment-published key set"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evidence-key-resolution.test.ts",
+     "name": "configured evidence key-set scope resolution > resolves PDP, PEP and executor records by key, exact emitter role and audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evidence-key-resolution.test.ts",
+     "name": "configured evidence key-set scope resolution > never treats an absent or empty enforcement-point audience as a wildcard",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-5: configured key-set lookup binds exact kid/emitter/role/audience for all three producer roles and refuses malformed audience wildcards. Partial: this does not exercise deployment-published JWKS discovery or retained-key availability; in-memory key registration is not proof of that publication/retention requirement."
   },
   {
    "id": "evidence.security.retired-key-resolvable-during-retention",
@@ -18499,7 +18624,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#594 W4-5 correction: these are MUST requirements, not merely a deployment SHOULD. The loopback reference channel is HTTP and retained in-memory evidence has no encrypted persistent audit store; no positive TLS/encryption test exists. Remains todo, not partial or waived. Production audit transport and data-at-rest protection are still required."
   },
   {
    "id": "evidence.receipt.compromised-issuer-key-governed-by-boundary-rule",

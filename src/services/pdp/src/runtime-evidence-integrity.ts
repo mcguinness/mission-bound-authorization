@@ -142,9 +142,8 @@ function base64UrlDecode(segment: string): Uint8Array {
  * signature is checked (line 792-797: "The signature authenticates only its
  * own embedded payload; an outer object that differs from that payload is
  * unauthenticated, regardless of whether the signature itself verifies"),
- * then verify the signature and the protected header (`kid` resolution,
- * `alg`, `typ`, `cty`), then apply the compromise-boundary rule if the
- * resolved key is flagged compromised (lines 820-827).
+ * then resolve the scoped key, apply its compromise-boundary gate, and
+ * verify the signature and protected header (`alg`, `typ`, `cty`).
  *
  * `record` is the COMPLETE outer object, `evidence_envelope` included.
  * `cty` is the media type this call expects for the record kind being
@@ -153,53 +152,88 @@ function base64UrlDecode(segment: string): Uint8Array {
  * for another (line 850-851).
  */
 export async function verifyEvidenceEnvelope(
-  record: { emitter: EvidenceEmitterRef; audience?: string; evidence_envelope: EvidenceEnvelope } & Record<
-    string,
-    unknown
-  >,
+  record: unknown,
   cty: string,
   resolveKey: EvidenceKeyResolver,
   recoveryProof?: RecoveryProof,
 ): Promise<EvidenceVerifyResult> {
-  const envelope = record.evidence_envelope;
+  try {
+    return await verifyEnvelope(record, cty, resolveKey, recoveryProof);
+  } catch {
+    // Total refusal for malformed in-memory/non-JSON values as well as wire JSON.
+    return { valid: false, reason: "malformed" };
+  }
+}
+
+function objectOf(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : undefined;
+}
+
+async function verifyEnvelope(
+  input: unknown,
+  cty: string,
+  resolveKey: EvidenceKeyResolver,
+  recoveryProof?: RecoveryProof,
+): Promise<EvidenceVerifyResult> {
+  const record = objectOf(input);
+  const envelope = objectOf(record?.evidence_envelope);
+  if (!record || !envelope || typeof envelope.format !== "string" || typeof envelope.value !== "string") {
+    return { valid: false, reason: "malformed" };
+  }
   if (envelope.format !== "jws-compact") {
     return { valid: false, reason: "unsupported_format" };
   }
 
-  const parts = envelope.value.split(".");
-  if (parts.length !== 3) {
+  const value = envelope.value;
+  const parts = value.split(".");
+  if (parts.length !== 3 || parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) {
     return { valid: false, reason: "malformed" };
   }
   const [protectedB64, payloadB64] = parts as [string, string, string];
 
-  let header: { kid?: unknown; alg?: unknown; typ?: unknown; cty?: unknown };
+  // Steps 1-3 precede key lookup and signature acceptance.
+  const decodedPayload = base64UrlDecode(payloadB64);
+  const { evidence_envelope: _drop, ...withoutEnvelope } = record;
+  const recomputed = new TextEncoder().encode(canonicalize(withoutEnvelope as JsonValue));
+  if (!timingSafeEqualBytes(decodedPayload, recomputed)) {
+    return { valid: false, reason: "byte_mismatch" };
+  }
+
+  let header: Record<string, unknown> | undefined;
   try {
-    header = JSON.parse(Buffer.from(base64UrlDecode(protectedB64)).toString("utf8"));
+    header = objectOf(JSON.parse(Buffer.from(base64UrlDecode(protectedB64)).toString("utf8")));
   } catch {
     return { valid: false, reason: "malformed" };
   }
-  if (typeof header.kid !== "string") {
+  const emitter = objectOf(record.emitter);
+  if (!header || typeof header.kid !== "string" || header.kid.length === 0 ||
+      !emitter || typeof emitter.id !== "string" || !emitter.id || typeof emitter.role !== "string" || !emitter.role ||
+      (record.audience !== undefined && typeof record.audience !== "string")) {
     return { valid: false, reason: "malformed" };
   }
 
-  const resolution = resolveKey({
-    kid: header.kid,
-    emitter: record.emitter,
-    ...(record.audience !== undefined ? { audience: record.audience } : {}),
-  });
+  let resolution: EvidenceKeyResolution | undefined;
+  try {
+    resolution = resolveKey({
+      kid: header.kid,
+      emitter: { id: emitter.id, role: emitter.role },
+      ...(typeof record.audience === "string" ? { audience: record.audience } : {}),
+    });
+  } catch {
+    return { valid: false, reason: "key_not_resolvable" };
+  }
   if (resolution === undefined) {
     return { valid: false, reason: "key_not_resolvable" };
   }
 
-  // Step 1 + 2 + 3 (lines 789-797): decode the payload, recompute the
-  // envelope-free canonical bytes, and require byte equality BEFORE the
-  // signature is checked: a still-valid signature over a divergent outer
-  // object is rejected here, never reached by step 4.
-  const decodedPayload = base64UrlDecode(payloadB64);
-  const { evidence_envelope: _drop, ...withoutEnvelope } = record;
-  const recomputed = new TextEncoder().encode(canonicalize(withoutEnvelope as unknown as JsonValue));
-  if (!timingSafeEqualBytes(decodedPayload, recomputed)) {
-    return { valid: false, reason: "byte_mismatch" };
+  if (resolution.status?.compromised) {
+    try {
+      const outcome = evaluateCompromiseBoundary(resolution.status, recoveryProof);
+      if (outcome.applicable && !outcome.verified) return { valid: false, reason: "compromised_key_unproven" };
+    } catch {
+      return { valid: false, reason: "compromised_key_unproven" };
+    }
   }
 
   // Step 4 (lines 798-799, 829-851): verify the signature and the protected
@@ -207,7 +241,7 @@ export async function verifyEvidenceEnvelope(
   // 834-836 fixes it mandatory-to-implement).
   let verified: CompactVerifyResult;
   try {
-    verified = await compactVerify(envelope.value, resolution.key, { algorithms: ["ES256"] });
+    verified = await compactVerify(value, resolution.key, { algorithms: ["ES256"] });
   } catch {
     return { valid: false, reason: "signature_invalid" };
   }
@@ -218,11 +252,13 @@ export async function verifyEvidenceEnvelope(
     return { valid: false, reason: "cty_mismatch" };
   }
 
-  if (resolution.status?.compromised) {
-    const outcome = evaluateCompromiseBoundary(resolution.status, recoveryProof);
-    if (outcome.applicable && !outcome.verified) {
-      return { valid: false, reason: "compromised_key_unproven" };
-    }
+  // Key lookup/crypto can yield to caller code. Do not report a mutated outer
+  // record as verified under the earlier byte-equality observation.
+  const currentEnvelope = objectOf(record.evidence_envelope);
+  const { evidence_envelope: _currentDrop, ...currentContent } = record;
+  if (currentEnvelope?.format !== "jws-compact" || currentEnvelope.value !== value ||
+      canonicalize(currentContent as JsonValue) !== new TextDecoder().decode(recomputed)) {
+    return { valid: false, reason: "byte_mismatch" };
   }
 
   return { valid: true };
