@@ -38,7 +38,7 @@ import {
   DEFAULT_CREATION_TOMBSTONE_TTL_S,
 } from "./kernel/creation-idempotency.js";
 import {
-  DEFAULT_DISCHARGE_EVENT_TTL_S as DISCHARGE_EVENT_TTL_S,
+  DEFAULT_DISCHARGE_EVENT_TTL_S,
   DEFAULT_LIFECYCLE_NONCE_TTL_S as LIFECYCLE_NONCE_TTL_S,
 } from "./kernel/lifecycle-idempotency.js";
 import type { EffectiveAuthoritySource } from "./kernel/derive.js";
@@ -745,6 +745,14 @@ export async function buildAuthorizationServer(opts: {
   // the fan-out so it can revoke per-delegation family grants; undefined until
   // construction completes, and no lifecycle commit fires before then.
   let terminalProvider: Provider | undefined;
+  // @spec discharge#discharge-idempotency, control-plane#tombstones (issue
+  // #250, owner review) — the EFFECTIVE discharge retention, derived once here
+  // and used both for the composed tombstone horizon below and for the
+  // discharge event store the kernel builds. Composing the default constant
+  // while handing the store a larger configured value would leave the detailed
+  // tombstone horizon short of the retry window this deployment declared.
+  const dischargeEventRetentionSeconds =
+    opts.dischargeEventRetentionSeconds ?? DEFAULT_DISCHARGE_EVENT_TTL_S;
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
@@ -763,7 +771,7 @@ export async function buildAuthorizationServer(opts: {
       credential_artifact_lifetime_seconds: TOPOLOGY.ttls.accessTokenSeconds,
       idempotency_retry_seconds: Math.max(
         DEFAULT_CREATION_TOMBSTONE_TTL_S,
-        DISCHARGE_EVENT_TTL_S,
+        dischargeEventRetentionSeconds,
         LIFECYCLE_NONCE_TTL_S,
       ),
       child_cascade_seconds: DERIVATION_POLICY.max_mission_lifetime_s ?? 0,
@@ -776,9 +784,7 @@ export async function buildAuthorizationServer(opts: {
     // `terminal_when` mapping, so the completion capability stays off and fails
     // closed until one does.
     ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
-    ...(opts.dischargeEventRetentionSeconds !== undefined
-      ? { dischargeEventRetentionSeconds: opts.dischargeEventRetentionSeconds }
-      : {}),
+    dischargeEventRetentionSeconds,
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS-asserted
     // actor-type registry, config-shipped and optionally extended by the caller.
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },

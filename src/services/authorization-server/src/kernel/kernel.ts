@@ -67,7 +67,11 @@ import {
   terminalWhenOf,
 } from "./discharge.js";
 import { DischargeMappingPinStore } from "./discharge-pin-store.js";
-import { DischargeEventStore, type DischargeEventKey } from "./lifecycle-idempotency.js";
+import {
+  DEFAULT_DISCHARGE_EVENT_TTL_S,
+  DischargeEventStore,
+  type DischargeEventKey,
+} from "./lifecycle-idempotency.js";
 import { type DurableCommitSubscriber, LifecycleOutbox } from "./lifecycle-outbox.js";
 import {
   DEFAULT_AUDIT_RETENTION_S,
@@ -250,6 +254,12 @@ export interface KernelOptions {
    * retention window (seconds); defaults to the published retry horizon. A test
    * shortens it to prove that a repeated assertion after eviction is processed
    * fresh against the monotonic latch.
+   *
+   * @spec control-plane#tombstones — the EFFECTIVE value (this or the default)
+   * is derived once and floors `tombstoneHorizons.idempotency_retry_seconds`.
+   * A declared retry and idempotency horizon that outlived the tombstone detail
+   * would let a replay reach a terminal record whose terminal state, version
+   * and commit reference had already been pruned.
    */
   dischargeEventRetentionSeconds?: number;
   now?: () => Date;
@@ -373,16 +383,34 @@ export class MissionKernel {
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
+    // @spec discharge#discharge-idempotency, control-plane#tombstones (issue
+    // #250, owner review) — the effective discharge retention, derived ONCE.
+    // One value reaches both the discharge event store and the composed
+    // tombstone horizon, so a caller that constructs KernelOptions directly
+    // cannot leave the horizon behind the retry window it declared.
+    const dischargeRetentionSeconds =
+      opts.dischargeEventRetentionSeconds ?? DEFAULT_DISCHARGE_EVENT_TTL_S;
+    const declaredHorizons = {
+      credential_artifact_lifetime_seconds: 0,
+      state_staleness_seconds: Number(MISSION_MAX_STALE_SECONDS),
+      clock_skew_seconds: DEFAULT_CLOCK_SKEW_S,
+      idempotency_retry_seconds: 0,
+      child_cascade_seconds: 0,
+      audit_retention_seconds: DEFAULT_AUDIT_RETENTION_S,
+      ...opts.tombstoneHorizons,
+    };
     this.tombstones = new MissionTombstoneStore(this.db, {
       now: this.now,
       horizons: {
-        credential_artifact_lifetime_seconds: 0,
-        state_staleness_seconds: Number(MISSION_MAX_STALE_SECONDS),
-        clock_skew_seconds: DEFAULT_CLOCK_SKEW_S,
-        idempotency_retry_seconds: 0,
-        child_cascade_seconds: 0,
-        audit_retention_seconds: DEFAULT_AUDIT_RETENTION_S,
-        ...opts.tombstoneHorizons,
+        ...declaredHorizons,
+        // The discharge window is one of the idempotency horizons, never a
+        // separate one: it floors the declared value rather than replacing it.
+        // A non-numeric declaration still reaches the composition as NaN and
+        // is still refused there.
+        idempotency_retry_seconds: Math.max(
+          declaredHorizons.idempotency_retry_seconds,
+          dischargeRetentionSeconds,
+        ),
       },
     });
     this.outbox = new LifecycleOutbox(this.db, {
@@ -393,9 +421,7 @@ export class MissionKernel {
     });
     this.dischargeEvents = new DischargeEventStore(this.db, {
       now: this.now,
-      ...(opts.dischargeEventRetentionSeconds !== undefined
-        ? { retentionSeconds: opts.dischargeEventRetentionSeconds }
-        : {}),
+      retentionSeconds: dischargeRetentionSeconds,
     });
     this.dischargePins = new DischargeMappingPinStore(this.db);
   }
