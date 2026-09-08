@@ -1797,9 +1797,15 @@
      "name": "managed transaction publication > refuses unmanaged outer transactions rather than publishing before their commit",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > a rolled-back transaction leaves no event, no delivery row and no tombstone",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, and expansion deferral retirement with successor/supersession/outbox. Durable generalized fan-out and asynchronous artifact issuance remain incomplete; the counter tests prove conditional admission and a synchronous caller transaction, not provider/continuation token issuance. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. Asynchronous artifact issuance stays outside that domain: the counter tests prove conditional admission and a synchronous caller transaction, not provider or continuation token issuance, so the named atomic domain coupling a counter check and increment with artifact issuance is not covered. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -1882,9 +1888,22 @@
     "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. The rest of the invariant is unimplemented: the issuer does not refuse state-dependent service while a durable version or commit metadata is uncertain after an out-of-band restore, there is no fenced reconciliation policy that decides when it is certain again, and no retaining-consumer high-water mark is exercised here. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -1904,9 +1923,46 @@
     "normative": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon. A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > composes every declared retention horizon into the detailed horizon",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > refuses a reused identifier after the record is purged and after the detail is pruned",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > keeps the composed horizon at or above the creation-idempotency purge window",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > isolates tombstones per issuer, so one issuer's terminal id does not refuse another's",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The tombstone commits in the terminal transition's own transaction with the canonical issuer/Mission identity, terminal state, final version, transition time and commit event reference, and carries no foreign key to the record table so pruning a terminal record cannot delete the marker. The detailed horizon is computed as the composed maximum of the declared credential and artifact lifetime, staleness plus skew, idempotency and retry, child-cascade and audit-retention horizons; each input is shown to govern the composition, and a non-numeric declaration is refused. Past that horizon the detail is pruned and the identity row remains: creation refuses the identifier both after the record is purged and after the detail is gone."
   },
   {
    "id": "control-plane.consistency.partitions",
@@ -2033,9 +2089,94 @@
     "normative": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition. An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > assigns one event identity per commit, for every commit kind",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > keeps an unpublishable event pending on the recovery path instead of failing an unrelated drain",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > a rolled-back transaction leaves no event, no delivery row and no tombstone",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > redelivers a commit lost before publication under its original identity and timestamp",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > roots the activating commit from the payload, so a redelivery after the record advanced still resolves",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > acknowledges durable subscribers independently: one accepts while another retries with the same payload",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > abandons a delivery only after its bounded retry budget, keeping the row for audit",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > marks a removed subscriber's pending delivery terminal without blocking or resurrecting it",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > migrates a legacy expansion outbox onto the generalized table without losing an event",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > carries ONE jti across a kernel redelivery of an ordinary lifecycle commit",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > round 5 (#640 review): a crash BEFORE the drain (failpoint after commit) recovers with the persisted event identity",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > cascade under replay (#641): a child-bearing predecessor's crash-window replay re-cascades nothing",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> next refresh invalid_grant + the family is destroyed",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "Every commit funnel writes an immutable event row with an in-transaction event identity on the kernel handle, in the state write's own transaction, and publishes only after that commit; a rollback leaves no event, delivery row or tombstone. A publication lost after commit replays the persisted payload with the same identity and commit timestamp, so the Signals SET carries one jti across redelivery and its unique event key makes the replay a no-op. Durable retryable subscribers are acknowledged independently with bounded backoff, and a removed subscriber's pending row reaches a terminal disposition without blocking others. Delivery is at least once with idempotent acceptance: exactly-once external delivery is not claimed, and multi-process claiming and worker topology stay under #641's trigger. The one subscriber whose effect leaves the process, the per-delegation family grant revocation, is captured in the terminal transaction and awaited by the request-path drain, replacing a fire-and-forget promise with a swallowed rejection. The committing caller still learns that publication did not complete, while the recovery path isolates an unpublishable event so one poison row cannot fail a request that committed nothing."
   },
   {
    "id": "control-plane.consistency.declaration",
