@@ -1466,7 +1466,18 @@ export async function handleChildCreationExchange(
       return { missionId: created.child.id, value: created.child };
     });
   } catch (e) {
-    if (e instanceof IntentError) throw intentErrorToOidc(e);
+    if (e instanceof IntentError) {
+      // createCompleted rolled the reservation and record back together. Keep
+      // one serialized, definitive failure for BOTH this response and replay.
+      const mapped = intentErrorToOidc(e) as Error & { statusCode?: number; error?: string; error_description?: string };
+      const status = mapped.statusCode ?? 400;
+      const body = { error: mapped.error ?? e.code, error_description: mapped.error_description ?? e.message };
+      idem.recordFailure(reservation, { status, body });
+      ctx.status = status;
+      ctx.body = body;
+      ctx.set("cache-control", "no-store");
+      return;
+    }
     if (e instanceof UniqueViolationError) {
       // A concurrent duplicate won the reservation: recover its outcome.
       const winner = idem.find(client.clientId, creationRequestId);

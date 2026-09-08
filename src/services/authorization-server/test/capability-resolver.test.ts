@@ -1,7 +1,7 @@
 import { authorityHash, capabilitySourceDigest, extractMcpToolDefinition, type AuthorityEntry } from "@mission/core";
 import { CATALOG_SERVICES, DERIVATION_POLICY, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { trustedCapabilityResolver } from "../src/adapters/capability-resolver.js";
 import { attachCapabilitySources, createExpansion, createTemplate, dispatchFromTemplate, MissionKernel, TemplateStore, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -24,6 +24,20 @@ const approve = (kernel: MissionKernel, actions: string[] = [read]) => kernel.ap
 });
 
 describe("trusted capability recording", () => {
+  it("refuses mixed resolver modes before derivation or resolution and preserves empty or injected-only modes", () => {
+    const resolution = trustedCapabilityResolver().resolve(proposal([read]));
+    const resolver = trustedCapabilityResolver();
+    const resolve = vi.spyOn(resolver, "resolve");
+    const kernel = build(resolver);
+    const derive = vi.spyOn(kernel, "derive");
+    const input = { intent, proposedAuthority: proposal([read]), clientId: "ap-agent", subject: { iss: "https://as.test", sub: "alice" }, approver: { iss: "https://as.test", sub: "bob" }, approvalEventId: "resolver-conflict", capabilityResolution: resolution };
+    expect(() => kernel.approve(input)).toThrow(/cannot be supplied/);
+    expect(resolve).not.toHaveBeenCalled(); expect(derive).not.toHaveBeenCalled();
+    expect(kernel.findByApprovalEvent(input.approvalEventId)).toBeUndefined();
+    expect(kernel.approve({ ...input, capabilityResolution: [] }).authority_set[0]?.capability_sources).toHaveLength(1);
+    const injected = new MissionKernel({ issuer: "https://as.test", policy: DERIVATION_POLICY as never, statusKey: key, statusKid: "status", authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]) });
+    expect(injected.approve(input).authority_set[0]?.capability_sources).toEqual(resolution.map(r => r.binding));
+  });
   it("records source_digest and never a catalog_digest; the selected definition is the trust unit", () => {
     const resolved = trustedCapabilityResolver().resolve(proposal([read]));
     expect(resolved[0]?.binding?.source_digest).toBe(capabilitySourceDigest(extractMcpToolDefinition(catalog.text, "get_invoice")));

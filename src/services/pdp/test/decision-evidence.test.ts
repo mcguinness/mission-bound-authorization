@@ -18,6 +18,7 @@
  */
 
 import { generateKeyPairSync } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { canonicalDigest, capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
 import { runtimeCapabilitySourceOf, type RuntimeCapabilitySource } from "../src/decision-evidence.js";
 import { describe, expect, it } from "vitest";
@@ -32,7 +33,7 @@ import {
   type MissionView,
   relationForAction,
   RUNTIME_EVIDENCE_JWS_TYP,
-  stalenessBoundSeconds,
+  stalenessBound,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 
@@ -42,6 +43,13 @@ const NOW = new Date("2026-07-22T12:00:00Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 
 describe("validated capability evidence (#657)", () => {
+  it("applies the shared recording digest vectors independently at the evidence boundary", () => {
+    const vectors = JSON.parse(readFileSync(new URL("../../../test-fixtures/capability-digests.json", import.meta.url), "utf8")) as Array<{ label: string; value: unknown; valid: boolean }>;
+    const binding = { tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/catalog", operation_ref: "get_invoice", source_digest: capabilitySourceDigest({ name: "get_invoice" }) };
+    for (const vector of vectors) for (const member of ["source_digest", "catalog_digest"] as const) {
+      expect(runtimeCapabilitySourceOf({ ...binding, [member]: vector.value }) !== undefined, `${member}: ${vector.label}`).toBe(vector.valid);
+    }
+  });
   const presented: RuntimeCapabilitySource = { tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };
   const recorded: CapabilitySourceBinding = { action: "payments:invoice.read", ...presented };
   async function decisionFor(value: unknown) {
@@ -142,7 +150,7 @@ function opts(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     now: () => NOW,
-    stalenessBoundSeconds,
+    stalenessBound,
     relationForAction,
     ...over,
   } as EvaluateOptions;

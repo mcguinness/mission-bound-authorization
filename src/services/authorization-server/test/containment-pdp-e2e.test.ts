@@ -18,7 +18,7 @@ import {
   type MissionView,
   policyViewId,
   relationForAction,
-  stalenessBoundSeconds,
+  stalenessBound,
 } from "@mission/pdp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
@@ -114,7 +114,7 @@ const evalAction = async (missionId: string, action: string) => {
         amount: { amount: "100.00", currency: "USD" },
       },
     },
-    { view, fga, modelId, now: () => new Date(), stalenessBoundSeconds, relationForAction },
+    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction },
   );
 };
 

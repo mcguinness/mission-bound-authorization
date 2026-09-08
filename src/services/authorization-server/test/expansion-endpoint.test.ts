@@ -572,6 +572,23 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(predRecord?.successor ?? undefined).toBeUndefined();
   });
 
+  it("a deferral-retirement fault rolls back successor, supersession and outbox as one transaction", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Atomic deferral", ["payments:invoice.read", "payments:remittance.send"]);
+    const body = await opened.json() as { deferral_code: string };
+    approveDeferral(body.deferral_code);
+    const before = as.kernel.get(pred.missionId);
+    as.kernel.db.exec("CREATE TEMP TRIGGER test_refuse_retirement BEFORE UPDATE OF redeemed ON expansion_deferrals WHEN NEW.redeemed = 1 BEGIN SELECT RAISE(ABORT, 'retirement fault'); END");
+    try {
+      expect((await pollExpansion(body.deferral_code)).status).not.toBe(200);
+      expect(as.kernel.get(pred.missionId)).toEqual(before);
+      expect(as.kernel.db.prepare("SELECT count(*) AS n FROM missions WHERE predecessor = ?").get(pred.missionId)).toEqual({ n: 0 });
+      expect(as.kernel.db.prepare("SELECT count(*) AS n FROM lifecycle_outbox WHERE mission_id = ?").get(pred.missionId)).toEqual({ n: 0 });
+      expect(as.kernel.db.prepare("SELECT redeemed, completion_released FROM expansion_deferrals WHERE deferral_code = ?").get(body.deferral_code)).toEqual({ redeemed: 0, completion_released: 0 });
+    } finally { as.kernel.db.exec("DROP TRIGGER test_refuse_retirement"); }
+    expect((await pollExpansion(body.deferral_code)).status).toBe(200);
+  });
+
   it("round 4 (#639 review): a committed activation is recovered on re-poll, never converted to access_denied", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
@@ -587,10 +604,10 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
 
     // Simulate the crash window: the activation transaction committed but
-    // the deferral was never marked redeemed, and the durable finalization
-    // job was never drained.
+    // the completion was not released, and the durable finalization job was
+    // never drained. The retired marker is now atomic with activation.
     as.expansionDeferrals.db
-      .prepare("UPDATE expansion_deferrals SET redeemed = 0 WHERE deferral_code = ?")
+      .prepare("UPDATE expansion_deferrals SET completion_released = 0 WHERE deferral_code = ?")
       .run(ob.deferral_code as string);
     as.kernel.db.prepare("UPDATE lifecycle_outbox SET done = 0").run();
 
@@ -637,9 +654,11 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(firstStatus).not.toBe(200);
 
     // The crash window: the activation transaction committed (predecessor
-    // superseded), the deferral was never marked redeemed, and the durable
-    // job is pending with its immutable payloads persisted.
+    // superseded), the deferral is retired IN THAT SAME commit, and the durable
+    // job is pending with its immutable payloads persisted. The completion has
+    // not yet been released to the token adapter, so recovery can return it.
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    expect(as.kernel.db.prepare("SELECT redeemed, completion_released FROM expansion_deferrals WHERE deferral_code = ?").get(ob.deferral_code)).toEqual({ redeemed: 1, completion_released: 0 });
     const pending = as.kernel.db
       .prepare("SELECT activation_json FROM lifecycle_outbox WHERE done = 0")
       .get() as { activation_json: string } | undefined;
@@ -707,10 +726,10 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(cascaded?.state).toBe("cascaded");
     const versionAfterFirst = cascaded?.version;
 
-    // Crash window: the deferral was never marked redeemed and the durable
+    // Crash window: completion was not released and the durable
     // finalization job was never drained.
     as.expansionDeferrals.db
-      .prepare("UPDATE expansion_deferrals SET redeemed = 0 WHERE deferral_code = ?")
+      .prepare("UPDATE expansion_deferrals SET completion_released = 0 WHERE deferral_code = ?")
       .run(ob.deferral_code as string);
     as.kernel.db.prepare("UPDATE lifecycle_outbox SET done = 0").run();
 
