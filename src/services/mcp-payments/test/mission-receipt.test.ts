@@ -6,7 +6,7 @@
  * file header); a receipt carrying `chain` is rejected as unsupported.
  */
 
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, webcrypto } from "node:crypto";
 import { canonicalDigest } from "@mission/core";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -169,6 +169,33 @@ describe("Mission Receipt digest vector (spec worked example)", () => {
 });
 
 describe("Mission Receipt build + verify", () => {
+  it("retains immutable CryptoKey verification material and rejects symmetric byte keys", async () => {
+    const publicKey = await webcrypto.subtle.importKey("jwk", receiptKeys.publicKey.export({ format: "jwk" }), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    const scope = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey }]]]));
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), scope, resolveEvidenceKey)).toEqual({ valid: true });
+    expect(() => createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey: new Uint8Array(32) }]]]))).toThrow("asymmetric verification key");
+  });
+
+  it("mutation of a caller-owned JWK cannot replace a snapshotted issuer key", async () => {
+    const jwk = receiptKeys.publicKey.export({ format: "jwk" });
+    const frozen = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey: jwk }]]]));
+    const replacement = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    Object.assign(jwk, replacement.publicKey.export({ format: "jwk" }));
+    const decision = await signedDecision();
+    const substituted = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision },
+      "receipts.example.com", { ...RECEIPT_SIGNER, key: replacement.privateKey },
+    );
+    expect(await verifyMissionReceipt(substituted, resolverFor({ decision }), frozen, resolveEvidenceKey)).toMatchObject({ valid: false });
+    const original = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(original, resolverFor({ decision }), frozen, resolveEvidenceKey)).toEqual({ valid: true });
+    const held = frozen.issuers[0]!.keys[0]!.publicKey;
+    expect(held).not.toBe(jwk);
+    expect(Object.isFrozen(held)).toBe(true);
+    expect(() => Object.assign(held, jwk)).toThrow();
+  });
   it("totally refuses malformed authenticated receipt members and references before resolving source records", async () => {
     const decision = await signedDecision();
     const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
