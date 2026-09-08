@@ -54,7 +54,7 @@ const PROPOSED_AUTHORITY: AuthorityEntry[] = [
 const fga = { checkWithContext: async () => true } as unknown as Fga;
 const relationForAction = (action: string) =>
   action === "payments:invoice.read" ? { relation: "reader" as const, needsAmount: false } : null;
-const stalenessBoundSeconds = () => 300;
+const stalenessBound = () => ({ kind: "bounded" as const, seconds: 300 });
 
 /** Wire a real kernel + emitter + receiver, approve one Mission (the activating
  *  commit emits an `active`/v1 SET), and expose a receiver-cache-only loadView. */
@@ -142,7 +142,7 @@ async function bootstrap() {
       fga,
       modelId: "signals-test-model",
       now: () => NOW,
-      stalenessBoundSeconds,
+      stalenessBound,
       relationForAction,
     });
   };

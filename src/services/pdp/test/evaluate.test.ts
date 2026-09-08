@@ -10,7 +10,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import { type MissionView, policyViewId } from "../src/policy-view.js";
-import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
+import { relationForAction, stalenessBound } from "../src/policy.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -85,7 +85,7 @@ const opts = (v: MissionView) => ({
   fga,
   modelId,
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
 });
@@ -480,7 +480,7 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
     fga: stubFga,
     modelId: "unit-test-model",
     now: () => NOW,
-    stalenessBoundSeconds,
+    stalenessBound,
     relationForAction,
   });
 

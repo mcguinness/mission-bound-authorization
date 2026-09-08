@@ -527,8 +527,8 @@ export async function composeStack(opts: {
   };
 
   // @spec runtime#state-freshness: this deployment's trusted state sources
-  // (its Enforcement Scope Statement would publish this list formally; none
-  // exists yet, so it is declared here instead). The demo stack has exactly
+  // (published in config/enforcement-scope.json and resource metadata).
+  // The demo stack has exactly
   // one: `loadView`'s own synchronous live read of the kernel via `viewFor`,
   // named after the `loadView` dependency it fulfills. A deployment adding
   // Mission Status or Lifecycle Signals would list those sources here too.

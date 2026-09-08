@@ -35,7 +35,7 @@ import {
   type OriginPrincipal,
   type PrincipalMappingResolver,
   relationForAction,
-  stalenessBoundSeconds,
+  stalenessBound,
 } from "@mission/pdp";
 import {
   buildEffectiveParams,
@@ -965,7 +965,7 @@ export class Pep {
       fga: this.deps.fga,
       modelId: this.deps.modelId,
       now: this.now,
-      stalenessBoundSeconds,
+      stalenessBound,
       relationForAction,
       ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),

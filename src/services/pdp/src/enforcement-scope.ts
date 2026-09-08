@@ -50,7 +50,7 @@ export interface EnforcementScopeBaseline {
   state_source: {
     source: string;
     max_staleness_seconds: number;
-    pdp_unavailability_posture: string;
+    pdp_unavailability_posture: "deny" | "permit_within_bounds";
   };
   /**
    * One entry per PEP/PDP boundary that is not co-resident; a wholly
@@ -217,7 +217,7 @@ export function validateEnforcementScopeStatement(
     typeof stateSource.max_staleness_seconds === "number" &&
     Number.isFinite(stateSource.max_staleness_seconds) &&
     stateSource.max_staleness_seconds > 0 &&
-    isNonEmptyString(stateSource.pdp_unavailability_posture);
+    (stateSource.pdp_unavailability_posture === "deny" || stateSource.pdp_unavailability_posture === "permit_within_bounds");
   if (!stateSourceOk) {
     push(
       "state_source",

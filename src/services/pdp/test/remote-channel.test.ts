@@ -29,7 +29,7 @@ import { evaluateRemote } from "../src/client.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
-import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
+import { relationForAction, stalenessBound } from "../src/policy.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
@@ -85,7 +85,7 @@ async function startServer(
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       now: () => NOW,
-      stalenessBoundSeconds,
+      stalenessBound,
       relationForAction,
       allowedFreshnessSources: new Set(["status"]),
     }),
@@ -377,7 +377,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
       now: () => NOW,
-      stalenessBoundSeconds,
+      stalenessBound,
       relationForAction,
       allowedFreshnessSources: new Set(["status"]),
     });

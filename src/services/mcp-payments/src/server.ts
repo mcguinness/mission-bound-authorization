@@ -25,7 +25,7 @@ import {
   jwtVerify,
 } from "jose";
 import type { ActObject } from "@mission/actor-chain";
-import type { Decision, MissionView } from "@mission/pdp";
+import { RUNTIME_POSTURE, type Decision, type MissionView } from "@mission/pdp";
 import {
   type ActionApprovalInput,
   CANONICAL_RESOURCE,
@@ -220,6 +220,8 @@ export class McpPaymentsServer {
       bearer_methods_supported: ["dpop"],
       mission_bound_authorization_required: true,
       mission_constraints_supported: ["max_amount", "vendors"],
+      // Deployment-local publication, not a new protocol baseline member.
+      enforcement_scope_statement: RUNTIME_POSTURE,
       // @spec txn-authorization#two-phase-expiry — key discovery rides the
       // upstream metadata: this is where a TAS resolves this resource's
       // challenge-signing keys, and nowhere else.

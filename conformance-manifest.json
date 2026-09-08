@@ -19,8 +19,8 @@
     "content_sha256": "55b175f4ec1b06ee3caaaa99242b7005c41d8d31c3296bca9b3262fd9d8b93f4"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "3fe46aa3a691527309c1e4584b00b1c8593a9e33",
-    "content_sha256": "7f09f249cc7b6fe79c9d1760b46f6d526093bd11b625e2fb9315850c58a2249b"
+    "revision": "cbbdcd7e56efc3c4eafed2a617c0941889f0b830",
+    "content_sha256": "33a07cddf7d3af9d5bf53cf661d3ce7ef4ca0f917696778c8268f64f5548cb8c"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -47,8 +47,8 @@
     "content_sha256": "34453aa0d2819c873ae2ffbc5855ef1dc4fe6ba6967eec63d85ffc97d906afee"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "302ba47bc49d8e8e1a27c745528c0221412e4a73",
-    "content_sha256": "85a7c474869de53e8965086d5f41f142ccfaa030f01e5f0dc1502879cadef33a"
+    "revision": "d29d3e2771cfad5a68909d835939d7c858c12378",
+    "content_sha256": "e63abd62f11beb37d5941e16bda2dfc83cfc30166c94c6f3cd29fc73fa59be9f"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8d470e46d89e6df69ebf1fdae09e7553326b375a",
@@ -681,12 +681,86 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected."
+    "normative": "A deployment declaring revocation propagation SHOULD publish the recovery objective considered when choosing `mission_max_stale_seconds` and the availability consequence when recovery takes longer than that bound. The security ceiling governs the choice: an operational recovery objective never authorizes extending a published freshness horizon during an incident. An existing observation's remaining validity is not reset when an outage is detected.",
+    "local": "`mission_max_stale_seconds` is served on the AS metadata document from config/enforcement-scope.json, and `signedStatus` caps every signed Status response's `fresh_until` at it. The same file's per-bounded-class `recovery_objective_seconds` and `beyond_bound`, and its `availability_consequence` (whose text says an outage never restarts observation age), are served in `enforcement_scope_statement` on the protected-resource metadata document."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 Status specification slice; operator-declaration validation remains unimplemented."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "published runtime posture (@spec runtime#runtime-operational, status#status-operational) > publishes the enforced per-class bounds, issuer ceiling, recovery objective and beyond-bound refusal",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > AS metadata advertises mission_bound_authorization_supported, the adapter introspection endpoint, and the mission_max_stale_seconds ceiling",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the signed Status endpoint returns a verifiable mission-status-response+jwt",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "PR A of #310: declaration/publication and shared configuration consumption only. The reference deployment denies immediately on PDP unavailability; remote wiring belongs to PR B. No bounded-reuse, replication, or positive break-glass capability is claimed."
+  },
+  {
+   "id": "status.caching.freshness-cap",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "When the AS advertises `mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set `mission.fresh_until` later than the response `iat` plus that value.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "When the AS advertises `mission_max_stale_seconds`, it MUST NOT set `mission.fresh_until` later than the response `iat` plus that value.",
+    "local": "The cap is applied inside `MissionKernel.signedStatus`, the one place that stamps `fresh_until` and `exp`, against the same `MISSION_MAX_STALE_SECONDS` the AS metadata document advertises. It holds for a direct call with no requested lifetime, honors a shorter requested lifetime, and caps a longer one; the HTTP Status and discharge surfaces pass no lifetime of their own."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until or exp beyond the advertised ceiling on a direct call",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > honors a requested lifetime shorter than the ceiling",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > caps a requested lifetime longer than the ceiling at the ceiling",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the signed Status endpoint returns a verifiable mission-status-response+jwt",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it."
   },
   {
    "id": "runtime.operational.ride-through-declared",
@@ -702,12 +776,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it."
+    "normative": "A deployment SHOULD publish, for each action class, the availability consequence of its declared staleness bound and the recovery objective considered when choosing it.",
+    "local": "`enforcement_scope_statement.state_source.per_class` on the protected-resource metadata document carries a `freshness_posture` for every declared action class, with `max_staleness_seconds`, `recovery_objective_seconds` and `beyond_bound` on each bounded class and one shared `availability_consequence` string. The published `max_staleness_seconds` is the window `stalenessBound` enforces, asserted class by class; the class declared with no active freshness resolves to no window rather than to zero."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#310 specification only. The implementation that makes the declared PDP-unavailability posture load-bearing remains separate."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "published runtime posture (@spec runtime#runtime-operational, status#status-operational) > publishes the enforced per-class bounds, issuer ceiling, recovery objective and beyond-bound refusal",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the exact validated declaration used by the PDP",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "PR A of #310: declaration/publication and shared configuration consumption only. The reference deployment denies immediately on PDP unavailability; remote wiring belongs to PR B. No bounded-reuse, replication, or positive break-glass capability is claimed."
   },
   {
    "id": "runtime.operational.replication-disclosed",
@@ -9551,9 +9639,21 @@
      "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > rejects disabling freshness for every consequential class at configuration load",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness."
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",

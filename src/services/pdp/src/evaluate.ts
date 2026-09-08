@@ -43,6 +43,7 @@ import {
   type MissionView,
   policyViewId,
 } from "./policy-view.js";
+import { allowsNoActiveFreshness, type StalenessBound } from "./runtime-posture.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -236,8 +237,12 @@ export interface EvaluateOptions {
   fga: Fga;
   modelId: string;
   now: () => Date;
-  /** Published staleness bound per action class, seconds. */
-  stalenessBoundSeconds: (actionClass: string | undefined) => number;
+  /**
+   * The declared freshness posture per action class: a window in seconds, an
+   * explicit "no active freshness" posture, or `undeclared` for a label the
+   * deployment's policy does not declare (@spec runtime#state-freshness).
+   */
+  stalenessBound: (actionClass: string | undefined) => StalenessBound;
   /** Map an action name to the FGA relation and object type it needs. */
   relationForAction: (action: string) => { relation: "payer" | "reader"; needsAmount: boolean } | null;
   /** Deployment/Resource policy: does this action require an action-bound approval? */
@@ -298,7 +303,7 @@ export interface EvaluateOptions {
    * @spec cross-domain#dual-axis: "a deployment claiming this profile MUST
    * declare the source and maximum staleness of local principal entitlement,
    * separately from its Mission-state freshness declaration." Seconds;
-   * deliberately its own option, never collapsed into `stalenessBoundSeconds`
+   * deliberately its own option, never collapsed into `stalenessBound`
    * (Mission-state freshness) or the mapping's own `valid_until`. Absent
    * fails every cross-domain-profile request closed.
    */
@@ -532,28 +537,52 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // through as if no staleness bound applied. Below the high-consequence
   // floor the draft treats token-lifetime expiry as itself a conforming
   // state source, so an absent member there is not by itself a refusal.
+  //
+  // The posture is a declaration, not a number. A class the deployment
+  // declares with no active freshness requirement (the draft's Audit-only
+  // row) runs the remaining gates with no observation window, and an action
+  // class the policy does not declare at all is a request fault refused
+  // below. Neither is `stale_state`, which asserts a freshness fact.
   const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
-  if (req.context.freshness) {
-    const observedAtMs = Date.parse(req.context.freshness.observed_at);
-    const ageMs = now().getTime() - observedAtMs;
-    const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
-    // A malformed timestamp (non-finite), one dated far enough in the future
-    // to be fabricated rather than ordinary clock drift, or a source outside
-    // the deployment's declared set: none of these let the PDP actually
-    // establish Mission state from this observation, so each denies the same
-    // way as present-but-stale (@spec runtime#state-freshness, "cannot
-    // establish ... within the staleness bound"), never permits on an
-    // unverifiable input.
-    if (
-      !Number.isFinite(observedAtMs) ||
-      ageMs < -skewToleranceMs ||
-      ageMs > opts.stalenessBoundSeconds(actionClass) * 1000 ||
-      !sourceTrusted
-    ) {
+  const declaredStaleness = opts.stalenessBound(actionClass);
+  // A custom/injected policy cannot opt a consequential class out of the
+  // freshness floor even if it bypasses the deployment config loader.
+  if (declaredStaleness.kind === "none" && !allowsNoActiveFreshness(actionClass)) return deny("out_of_authority");
+  // @spec authzen#runtime-denial-classification, authzen#failure-condition-coverage
+  // ("Action outside the Authority Set ..., or the request would broaden it"):
+  // the PDP cannot place an undeclared class under any gate the deployment
+  // published, and evaluating it as if a class applied would broaden the
+  // declared scope. A `bounded` posture the PDP cannot enforce (a non-finite
+  // or non-positive window from an injected policy) is not a bound either,
+  // and refuses the same way.
+  const enforceableWindowMs =
+    declaredStaleness.kind === "bounded" && Number.isFinite(declaredStaleness.seconds) && declaredStaleness.seconds > 0
+      ? declaredStaleness.seconds * 1000
+      : undefined;
+  if (declaredStaleness.kind !== "none" && enforceableWindowMs === undefined) return deny("out_of_authority");
+  if (enforceableWindowMs !== undefined) {
+    if (req.context.freshness) {
+      const observedAtMs = Date.parse(req.context.freshness.observed_at);
+      const ageMs = now().getTime() - observedAtMs;
+      const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
+      // A malformed timestamp (non-finite), one dated far enough in the future
+      // to be fabricated rather than ordinary clock drift, or a source outside
+      // the deployment's declared set: none of these let the PDP actually
+      // establish Mission state from this observation, so each denies the same
+      // way as present-but-stale (@spec runtime#state-freshness, "cannot
+      // establish ... within the staleness bound"), never permits on an
+      // unverifiable input.
+      if (
+        !Number.isFinite(observedAtMs) ||
+        ageMs < -skewToleranceMs ||
+        ageMs > enforceableWindowMs ||
+        !sourceTrusted
+      ) {
+        return deny("stale_state");
+      }
+    } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
       return deny("stale_state");
     }
-  } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
-    return deny("stale_state");
   }
 
   // 4. Actor chain shape/consistency (@spec: actor_invalid).
@@ -615,7 +644,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     // entitlement freshness are separate declarations and MUST NOT be
     // collapsed into one timestamp": entitlement is resolved and
     // freshness-checked against its OWN declared bound, never
-    // `stalenessBoundSeconds`. A missing resolver, a missing entitlement
+    // `stalenessBound`. A missing resolver, a missing entitlement
     // result, `entitled !== true`, or entitlement staler than the bound each
     // deny the same way ("entitlement staleness beyond the declared bound
     // denies likewise"). The same skew floor step 3 applies to
@@ -943,11 +972,11 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // @spec runtime#classification: the high-consequence classes are
   // irreversible_action, external_commitment, and privileged_administration
   // (this deployment defines no privileged_administration action), the same
-  // pairing policy.ts's stalenessBoundSeconds already keys its tight bound
+  // pairing policy.ts's stalenessBound already keys its tight bound
   // on. Previously this checked only "irreversible_action", so a
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
-  const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment";
+  const highConsequence = actionClass === "irreversible_action" || actionClass === "external_commitment" || actionClass === "privileged_administration";
   return {
     decision: true,
     context: base({
