@@ -15,9 +15,12 @@
  *  - Durable on return. Mission Signals' subscriber performs a synchronous
  *    `signal_outbox` INSERT with `UNIQUE(event_id, audience)`; that insert IS
  *    the durable acceptance, and a redelivery of the same event is a no-op.
- *  - Rebuilt projections. The Status List republisher, the continuation store
- *    and the delegation-family store are in-memory projections rebuilt at boot.
- *    They are idempotent per Mission and are not acknowledged.
+ *  - Unacknowledged projections. The Status List republisher rebuilds from the
+ *    authoritative record set. The continuation store and the delegation-family
+ *    store are in-memory projections that start EMPTY at each boot: recovery
+ *    replays only committed-but-unpublished events, so an activation already
+ *    published does not repopulate them. Both are idempotent per Mission, both
+ *    fail closed on an unknown row, and neither is acknowledged.
  *  Both classes ride {@link LifecycleOutbox.publishPending}, which is
  *  synchronous, so nothing launches a floating promise from a commit chain.
  *  - Durable retryable. A subscriber whose effect reaches outside this process
@@ -35,6 +38,17 @@
 import { randomBytes } from "node:crypto";
 import { afterCommit, type Database, withTransaction } from "@mission/store";
 import type { LifecycleCommit, PersistedLifecycleCommit } from "./types.js";
+
+/**
+ * The guard every delivery disposition carries (issue #250, owner review). A
+ * disposition applies only while the row is still the PENDING row this attempt
+ * read: `disposition = 'pending'` makes every terminal disposition monotone, so
+ * no update moves a row out of `accepted`, `abandoned` or `subscriber_removed`,
+ * and `attempts = ?` binds the write to the attempt that produced it, so a
+ * stale attempt cannot rewrite the attempt count, the error or the backoff.
+ */
+const PENDING_ATTEMPT_GUARD =
+  "WHERE seq = ? AND subscriber = ? AND disposition = 'pending' AND attempts = ?";
 
 /**
  * The payload schema version an event row carries. The drain refuses an
@@ -147,6 +161,10 @@ export class LifecycleOutbox {
   private readonly retryBaseMs: number;
   private readonly retryCapMs: number;
   private readonly maxAttempts: number;
+  /** The drain pass running or queued on this instance ({@link drain}). */
+  private scheduledPass: Promise<void> | undefined;
+  /** The one not-yet-started follow-up pass mid-pass callers join. */
+  private queuedPass: Promise<void> | undefined;
 
   constructor(
     private readonly db: Database,
@@ -342,8 +360,55 @@ export class LifecycleOutbox {
    * from `afterCommit`. One subscriber can succeed while another fails: rows
    * are acknowledged independently, a failure keeps its own row pending with a
    * bounded backoff, and a retry redelivers the same payload.
+   *
+   * SERIALIZED ON THIS INSTANCE (issue #250, owner review). The request
+   * middleware calls this once per request, so two drains could otherwise
+   * select the same pending row, await delivery, and let the loser's stale
+   * update reverse the winner's acknowledgement. At most one pass runs here,
+   * and every caller that arrives while a pass runs joins ONE queued follow-up
+   * pass that starts after it. The follow-up rather than a bare join is what
+   * keeps liveness: a caller whose own commit enqueued a row would otherwise
+   * wait for the next request or for boot, because the running pass had already
+   * selected its rows. Bounded at one running plus one queued pass, so a slow
+   * external delivery cannot pile requests up behind each other.
+   *
+   * A subscriber's `deliver` MUST NOT call this: it would join the pass that is
+   * awaiting its own delivery. The one durable subscriber here reaches the
+   * provider through the model API, never back through the request path.
+   *
+   * This is instance-level serialization for the declared one-process,
+   * one-writer topology. It is no distributed lease: multi-process claiming and
+   * fencing stay behind #641's deployment trigger.
    */
   async drain(): Promise<void> {
+    // A follow-up is already scheduled. It has not selected its rows yet, so
+    // it covers this caller's work too.
+    if (this.queuedPass) {
+      await this.queuedPass;
+      return;
+    }
+    const ahead = this.scheduledPass;
+    const pass = ahead === undefined ? this.deliverRunnable() : this.passAfter(ahead);
+    if (ahead !== undefined) this.queuedPass = pass;
+    this.scheduledPass = pass;
+    try {
+      await pass;
+    } finally {
+      if (this.scheduledPass === pass) this.scheduledPass = undefined;
+    }
+  }
+
+  /** The queued follow-up: run one pass once the pass ahead has finished. */
+  private async passAfter(ahead: Promise<void>): Promise<void> {
+    // The pass ahead reports its own outcome to its own callers.
+    await ahead.catch(() => undefined);
+    // From here this IS the running pass, so the next caller queues behind it.
+    this.queuedPass = undefined;
+    await this.deliverRunnable();
+  }
+
+  /** One drain pass. Only {@link drain} may start one. */
+  private async deliverRunnable(): Promise<void> {
     this.publishPending();
     const now = this.opts.now().getTime();
     const rows = this.db
@@ -372,28 +437,49 @@ export class LifecycleOutbox {
       const commit = Object.freeze(JSON.parse(row.commit_json) as PersistedLifecycleCommit);
       try {
         await subscriber.deliver(JSON.parse(row.payload_json) as unknown, commit);
+        // A guarded write that changes nothing means another pass already
+        // disposed of this row. The delivery still reached the subscriber, and
+        // at-least-once already permits that duplicate; what the guard refuses
+        // is rewriting the disposition that pass recorded.
         this.db
           .prepare(
-            "UPDATE lifecycle_deliveries SET disposition = 'accepted', attempts = attempts + 1, disposed_at = ?, last_error = NULL WHERE seq = ? AND subscriber = ?",
+            `UPDATE lifecycle_deliveries SET disposition = 'accepted', attempts = attempts + 1, disposed_at = ?, last_error = NULL ${PENDING_ATTEMPT_GUARD}`,
           )
-          .run(this.opts.now().getTime(), row.seq, row.subscriber);
+          .run(this.opts.now().getTime(), row.seq, row.subscriber, row.attempts);
       } catch (e) {
         const attempts = row.attempts + 1;
         const message = e instanceof Error ? e.message : String(e);
+        // Guarded the same way: a stale failure neither reverses an
+        // acknowledgement nor overwrites the attempt, error and backoff the
+        // attempt that actually ran recorded.
         if (attempts >= this.maxAttempts) {
           this.db
             .prepare(
-              "UPDATE lifecycle_deliveries SET disposition = 'abandoned', attempts = ?, disposed_at = ?, last_error = ? WHERE seq = ? AND subscriber = ?",
+              `UPDATE lifecycle_deliveries SET disposition = 'abandoned', attempts = ?, disposed_at = ?, last_error = ? ${PENDING_ATTEMPT_GUARD}`,
             )
-            .run(attempts, this.opts.now().getTime(), message, row.seq, row.subscriber);
+            .run(
+              attempts,
+              this.opts.now().getTime(),
+              message,
+              row.seq,
+              row.subscriber,
+              row.attempts,
+            );
           continue;
         }
         const backoff = Math.min(this.retryCapMs, this.retryBaseMs * 2 ** (attempts - 1));
         this.db
           .prepare(
-            "UPDATE lifecycle_deliveries SET attempts = ?, next_attempt_at = ?, last_error = ? WHERE seq = ? AND subscriber = ?",
+            `UPDATE lifecycle_deliveries SET attempts = ?, next_attempt_at = ?, last_error = ? ${PENDING_ATTEMPT_GUARD}`,
           )
-          .run(attempts, this.opts.now().getTime() + backoff, message, row.seq, row.subscriber);
+          .run(
+            attempts,
+            this.opts.now().getTime() + backoff,
+            message,
+            row.seq,
+            row.subscriber,
+            row.attempts,
+          );
       }
     }
   }
@@ -416,6 +502,11 @@ export class LifecycleOutbox {
     return marked;
   }
 
+  /**
+   * Terminal too, and reached only from a pending row: a pass that selected a
+   * row before reconciliation marked it removed cannot flip it back, and a
+   * removed row cannot be re-marked.
+   */
   private markRemoved(seq: number | undefined, subscriber: string): number {
     const at = this.opts.now().getTime();
     const res =
