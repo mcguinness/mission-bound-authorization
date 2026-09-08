@@ -13,8 +13,10 @@ issuer must already be a PDP or executing PEP named by the statement. The
 scope snapshot holds the designated issuers and, for each, only the keys
 published in a key set the statement binds to that issuer. It is frozen
 through every level verification reads, including the scope statement and
-each key's status: mutating the caller's statement, the published key sets,
-or the returned scope cannot broaden a scope that already exists. Rebuild it
+each key's status and a defensive copy of any public JWK material; immutable
+native key objects may be retained by reference. Mutating the caller's
+statement, the published key sets, or the returned scope cannot broaden a
+scope that already exists. Rebuild it
 from current trusted policy when key status or scope changes. Data supplied
 by the receipt never chooses a key-set location or adds an issuer. This is a
 snapshot over trusted published-key inputs, not a network JWKS discovery,

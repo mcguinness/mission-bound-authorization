@@ -13,6 +13,8 @@
  * `verifyMissionReceipt`'s `chain_not_supported` reason).
  */
 
+import { KeyObject } from "node:crypto";
+import { types } from "node:util";
 import { canonicalDigest, type JsonValue, type RecoveryProof, type SigningKeyStatus } from "@mission/core";
 import type { EvidenceVerificationKey } from "./evidence.js";
 import type {
@@ -65,13 +67,23 @@ export interface ReceiptIssuerScope {
   readonly issuers: readonly ReceiptIssuerBinding[];
 }
 
-/** Freezes the statement's own data. Key material is referenced, never traversed. */
+/** Freezes copied JSON data, including mutable JWK representations. */
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === "object") {
     for (const inner of Object.values(value as Record<string, unknown>)) deepFreeze(inner);
     Object.freeze(value);
   }
   return value;
+}
+
+/** @spec runtime-evidence#decision-evidence-integrity — a scope owns its
+ * JWK bytes, not a live reference into the deployment's key-set cache.
+ * Opaque native key objects have immutable material. Symmetric byte keys
+ * cannot verify the ES256 receipt envelope and are refused at assembly. */
+function snapshotVerificationKey(key: PublishedReceiptKey["publicKey"]): PublishedReceiptKey["publicKey"] {
+  if (key instanceof KeyObject || types.isCryptoKey(key)) return key;
+  if (key instanceof Uint8Array) throw new Error("receipt issuer requires an asymmetric verification key");
+  return deepFreeze(structuredClone(key));
 }
 
 /** Trusted assembly seam: locations are resolved by the deployment, never from a receipt. */
@@ -93,7 +105,7 @@ export function createReceiptIssuerScope(
     const keys: PublishedReceiptKey[] = [];
     for (const key of publishedKeySets.get(binding.key_set) ?? []) {
       if (key.role === "receipt_issuer" && key.emitterId === binding.emitter) {
-        keys.push(Object.freeze({ ...key, ...(key.status ? { status: Object.freeze({ ...key.status }) } : {}) }));
+        keys.push(Object.freeze({ ...key, publicKey: snapshotVerificationKey(key.publicKey), ...(key.status ? { status: Object.freeze({ ...key.status }) } : {}) }));
       }
     }
     issuers.push(Object.freeze({ emitter: binding.emitter, key_set: binding.key_set, keys: Object.freeze(keys) }));
@@ -101,7 +113,8 @@ export function createReceiptIssuerScope(
   // The snapshot is frozen through every level verification reads: a later
   // mutation of the caller's statement, of the published key sets, or of the
   // returned scope itself cannot broaden a scope that already exists. Each
-  // key entry is frozen; the key material it names is referenced as is.
+  // key entry is frozen; JWK data is copied and frozen too. Only immutable
+  // native key material is retained by reference.
   return Object.freeze({ statement: deepFreeze(structuredClone(statement)), issuers: Object.freeze(issuers) });
 }
 
