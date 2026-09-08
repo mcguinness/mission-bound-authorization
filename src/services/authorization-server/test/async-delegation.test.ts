@@ -988,8 +988,29 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     expect(as.delegationFamilyStore.resolve(grantId)?.missionId).toBe(missionId);
 
     as.kernel.transition(missionId, "revoke");
-    // The fan-out marked the family terminal AND destroyed its oidc grant.
+    // The synchronous projection marked the family terminal at once.
     expect(as.delegationFamilyStore.resolve(grantId)).toBeUndefined();
+    // @spec control-plane#fanout — the oidc grant revocation leaves this
+    // process, so it is a DURABLE delivery captured in the terminal
+    // transition's own transaction, not a fire-and-forget promise with a
+    // swallowed rejection. Its row is pending until the drain awaits it.
+    const revokeEventId = (
+      as.kernel.db
+        .prepare("SELECT event_id FROM lifecycle_events WHERE mission_id = ? ORDER BY seq DESC LIMIT 1")
+        .get(missionId) as { event_id: string }
+    ).event_id;
+    expect(as.kernel.outbox.deliveries(revokeEventId)).toEqual([
+      expect.objectContaining({
+        subscriber: "delegation-family-grant-revoke",
+        disposition: "pending",
+        attempts: 0,
+      }),
+    ]);
+    expect(await as.provider.Grant.find(grantId)).toBeDefined();
+
+    await as.kernel.drainLifecycleOutbox();
+    expect(as.kernel.outbox.deliveries(revokeEventId)[0]?.disposition).toBe("accepted");
+    expect(await as.provider.Grant.find(grantId)).toBeUndefined();
 
     const res = await refreshFamily(refresh_token);
     const body = (await res.json()) as { access_token?: string; error?: string };

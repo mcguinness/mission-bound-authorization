@@ -12,7 +12,13 @@ import {
   proposalHash,
 } from "@mission/core";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
-import { afterCommit, openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
+import {
+  openStore,
+  type StoreOptions,
+  UniqueViolationError,
+  withTransaction,
+  type Database,
+} from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
   attachCapabilitySources,
@@ -62,6 +68,14 @@ import {
 } from "./discharge.js";
 import { DischargeMappingPinStore } from "./discharge-pin-store.js";
 import { DischargeEventStore, type DischargeEventKey } from "./lifecycle-idempotency.js";
+import { type DurableCommitSubscriber, LifecycleOutbox } from "./lifecycle-outbox.js";
+import {
+  DEFAULT_AUDIT_RETENTION_S,
+  DEFAULT_CLOCK_SKEW_S,
+  MissionIdReuseError,
+  MissionTombstoneStore,
+  type TombstoneRetentionInputs,
+} from "./tombstones.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -92,6 +106,7 @@ import {
   LEGAL_TRANSITIONS,
   type LifecycleCommit,
   type LifecycleOperation,
+  type PersistedLifecycleCommit,
   type MissionClaim,
   type MissionContainment,
   type MissionIntent,
@@ -150,16 +165,6 @@ CREATE TABLE IF NOT EXISTS missions (
   containment_json TEXT,
   discharged_json TEXT,
   submission_evidence_json TEXT
-) STRICT;
-
-CREATE TABLE IF NOT EXISTS lifecycle_outbox (
-  job_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  kind TEXT NOT NULL,
-  mission_id TEXT NOT NULL,
-  successor_id TEXT,
-  activation_json TEXT NOT NULL,
-  supersession_json TEXT NOT NULL,
-  done INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 `;
 
@@ -256,10 +261,15 @@ export interface KernelOptions {
    */
   allocateStatusIndex?: () => number;
   /**
-   * @spec status-list#status-list — the shared lifecycle-commit hook. Fired once per
-   * committed transition from the four real commit funnels (`setState`,
-   * `supersedeOnRedemption`, `insertRecord`, `contain`). The Status List
-   * republisher subscribes today; Mission Signals subscribes next.
+   * @spec status-list#status-list — the shared lifecycle-commit hook. Invoked
+   * once per publication of a committed transition, from the durable outbox
+   * ({@link LifecycleOutbox}) rather than from the commit funnels directly, so
+   * the commit funnels (`insertRecord`, `setState`, `supersedeInCallerTx`,
+   * `contain`, the discharge latch) enqueue in their own transaction and this
+   * hook runs after it. Subscribers here are synchronous, and a redelivery
+   * carries the same event identity, so acceptance must be idempotent. A
+   * subscriber whose effect leaves the process registers with
+   * {@link MissionKernel.registerDurableSubscriber} instead.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
   /**
@@ -282,6 +292,28 @@ export interface KernelOptions {
    * is exactly the fail-open the five gates exist to prevent.
    */
   authoritySourceCatalog: AuthoritySourceCatalog;
+  /**
+   * @spec control-plane#deployment-declaration (D27) — the kernel store. The
+   * default stays in-memory and single-process; a `file` names the OPT-IN
+   * file-backed SINGLE-WRITER store that makes restart recovery of the durable
+   * lifecycle outbox and the terminal tombstones observable. It authorizes no
+   * second writer: multi-process claiming and fencing stay behind #641's
+   * deployment trigger, and `packages/store` adds no busy timeout and no
+   * IMMEDIATE transaction mode.
+   */
+  store?: StoreOptions;
+  /**
+   * @spec control-plane#tombstones — the deployment's declared retention
+   * horizons. The detailed tombstone horizon is their COMPOSED maximum; the
+   * identity row outlives it permanently as the nonreuse marker. Defaults hold
+   * the reference deployment's own declarations.
+   */
+  tombstoneHorizons?: Partial<TombstoneRetentionInputs>;
+  /**
+   * @spec control-plane#fanout — bounded retry for durable subscriber
+   * deliveries. Tests shorten it; production takes the defaults.
+   */
+  outboxRetry?: { baseMs?: number; capMs?: number; maxAttempts?: number };
 }
 
 export class MissionKernel {
@@ -306,6 +338,19 @@ export class MissionKernel {
    * target authorization reads (never the live policy).
    */
   readonly dischargePins: DischargeMappingPinStore;
+  /**
+   * @spec control-plane#fanout — the durable lifecycle fan-out. On THIS
+   * kernel's database, so an event row commits in the same transaction as the
+   * state write it describes.
+   */
+  readonly outbox: LifecycleOutbox;
+  /**
+   * @spec control-plane#tombstones — the terminal-state tombstones, on this
+   * kernel's database (rollback resistance and identifier nonreuse are issuer
+   * duties the issuer answers from its own store; the audit surface mirrors a
+   * tombstone, it does not own it).
+   */
+  readonly tombstones: MissionTombstoneStore;
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
@@ -324,10 +369,28 @@ export class MissionKernel {
       );
     }
     validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
-    this.db = openStore(SCHEMA);
+    this.db = openStore(SCHEMA, opts.store ?? {});
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
+    this.tombstones = new MissionTombstoneStore(this.db, {
+      now: this.now,
+      horizons: {
+        credential_artifact_lifetime_seconds: 0,
+        state_staleness_seconds: Number(MISSION_MAX_STALE_SECONDS),
+        clock_skew_seconds: DEFAULT_CLOCK_SKEW_S,
+        idempotency_retry_seconds: 0,
+        child_cascade_seconds: 0,
+        audit_retention_seconds: DEFAULT_AUDIT_RETENTION_S,
+        ...opts.tombstoneHorizons,
+      },
+    });
+    this.outbox = new LifecycleOutbox(this.db, {
+      now: this.now,
+      publish: (commit) => this.opts.onLifecycleCommit?.(commit),
+      recoverCascade: (missionId) => this.cascadeChildren(missionId),
+      ...(opts.outboxRetry ? { retry: opts.outboxRetry } : {}),
+    });
     this.dischargeEvents = new DischargeEventStore(this.db, {
       now: this.now,
       ...(opts.dischargeEventRetentionSeconds !== undefined
@@ -709,6 +772,15 @@ export class MissionKernel {
       // INSERT are one atomic commit: a requested ceiling that passes while an
       // approval pends completes as no Mission at all.
       precondition?.();
+      // @spec control-plane#tombstones — identifier nonreuse rests on the
+      // TOMBSTONE, not only on the `missions` primary key: the key stops
+      // reuse only while the terminal row is still there, and a pruned or
+      // purged record would let the same identifier be approved again.
+      if (this.tombstones.exists(record.issuer, record.id)) {
+        throw new MissionIdReuseError(
+          `mission identifier ${record.id} reached a terminal state and is never reused`,
+        );
+      }
       const createdMs = Date.parse(record.created_at);
       const expiresMs = Date.parse(record.expires_at);
       const requestedMs = Date.parse(record.intent.expires_at);
@@ -806,11 +878,13 @@ export class MissionKernel {
           this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
         }
       }
+      // The activating event: version 1, no prior_state. Shared by approve()
+      // and expansion; the commit is built from the persisted row and its
+      // durable outbox row commits with the record
+      // (@spec control-plane#serialization, control-plane#fanout).
+      const inserted = this.get(record.id);
+      if (inserted) this.emitCommit(inserted);
     });
-    // The activating event: version 1, no prior_state. Shared by approve() and
-    // expansion; the commit is built from the persisted row.
-    const inserted = this.get(record.id);
-    if (inserted) this.emitCommit(inserted);
   }
 
   nowDate(): Date {
@@ -823,13 +897,7 @@ export class MissionKernel {
    * `superseded` atomically. Returns false if already superseded.
    */
   supersedeOnRedemption(successorId: string): boolean {
-    let out: { predecessorId: string } | undefined;
-    const superseded = withTransaction(this.db, () => {
-      out = this.supersedeInCallerTx(successorId);
-      return out !== undefined;
-    });
-    if (superseded && out) this.finalizeSupersession(out.predecessorId, successorId);
-    return superseded;
+    return withTransaction(this.db, () => this.supersedeInCallerTx(successorId) !== undefined);
   }
 
   /**
@@ -840,8 +908,14 @@ export class MissionKernel {
    * expiry-aware (@spec mission#lifecycle, the effective-active rule), so an
    * effectively expired predecessor is never superseded and no successor
    * authority survives a predecessor that stopped being effectively active.
-   * The caller MUST invoke {@link finalizeSupersession} after its
-   * transaction commits (the lifecycle hook and cascade run post-commit).
+   *
+   * @spec control-plane#serialization, control-plane#fanout — the supersession
+   * CAS, its durable outbox row, its terminal tombstone and the mandatory
+   * terminal child cascade all commit in THIS transaction. Publication waits
+   * for the outermost commit, so no subscriber can observe a supersession that
+   * rolled back, and a crash before publication redelivers every one of those
+   * events (the predecessor's AND each cascaded descendant's) from the outbox
+   * instead of losing the descendants' committed transitions.
    */
   supersedeInCallerTx(successorId: string): { predecessorId: string } | undefined {
     const successor = this.get(successorId);
@@ -860,20 +934,18 @@ export class MissionKernel {
     const res = this.db
       .prepare("UPDATE missions SET state = 'superseded', successor = ?, version = version + 1 WHERE id = ? AND state = 'active'")
       .run(successorId, pred.id);
-    return res.changes === 1 ? { predecessorId: pred.id } : undefined;
-  }
-
-  /** Post-commit half of redemption supersession: lifecycle hook + cascade. */
-  finalizeSupersession(predecessorId: string, successorId: string): void {
-    const fresh = this.get(predecessorId);
+    if (res.changes !== 1) return undefined;
+    const fresh = this.get(pred.id);
     if (fresh) this.emitCommit(fresh, "active", successorId);
     // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
     // trigger; the successor does NOT inherit the predecessor's children (their
     // strict-subset proof was against the predecessor's Authority Set). This
-    // funnel bypasses setState, so the cascade is invoked explicitly here,
-    // outside the withTransaction block above: setState nests safely inside an
-    // enclosing transaction and holds its publication until that commit.
-    this.cascadeChildren(predecessorId);
+    // funnel bypasses setState, so the cascade is invoked explicitly here.
+    // Inside this transaction: setState nests as a savepoint and holds its own
+    // publication until the outermost commit, so the descendants' transitions
+    // and their durable outbox rows commit with the supersession.
+    this.cascadeChildren(pred.id);
+    return { predecessorId: pred.id };
   }
 
   /**
@@ -1278,17 +1350,20 @@ export class MissionKernel {
     // ALSO <= newEffective, i.e. the mutual-subset (equality) case.
     const authorityChanged = !isSubsetSet(priorEffective, newEffective);
 
-    withTransaction(this.db, () => {
+    // @spec control-plane#serialization — the containment write and its durable
+    // outbox row commit as one unit. Commit from the persisted row; prior ==
+    // current state marks the commit metadata-only (state unchanged, version
+    // incremented). authorityChanged is passed explicitly (never inferred from
+    // prior === state).
+    const fresh = withTransaction(this.db, () => {
       this.db
         .prepare("UPDATE missions SET containment_json = ?, version = version + 1 WHERE id = ?")
         .run(JSON.stringify(next), record.id);
+      const committed = this.get(record.id);
+      if (!committed) throw new Error(`unknown mission: ${id}`);
+      this.emitCommit(committed, committed.state, undefined, authorityChanged, true);
+      return committed;
     });
-    // Commit from the persisted row; prior == current state marks the commit
-    // metadata-only (state unchanged, version incremented). authorityChanged
-    // is passed explicitly (never inferred from prior === state).
-    const fresh = this.get(record.id);
-    if (!fresh) throw new Error(`unknown mission: ${id}`);
-    this.emitCommit(fresh, fresh.state, undefined, authorityChanged, true);
     // @spec child-delegation#child-state — containment propagates entry-wise to
     // existing children justified by the now-contained parent entry, so a child
     // cannot keep deriving contained authority while the parent stays `active`.
@@ -2071,9 +2146,78 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status-list#status-list — fan the committed transition out to the
-   * lifecycle-commit subscriber (no-op when none is wired). `record` MUST be the
-   * post-commit persisted row so `state`/`version` are authoritative.
+   * @spec control-plane#fanout — register a DURABLE retryable subscriber (one
+   * whose effect leaves this process). Must be called before any commit: the
+   * required subscriber set is snapshotted when an event is enqueued, so a
+   * later registration cannot silently complete pending work and a removal
+   * cannot orphan it.
+   */
+  registerDurableSubscriber<P>(subscriber: DurableCommitSubscriber<P>): void {
+    this.outbox.register(subscriber);
+  }
+
+  /**
+   * @spec control-plane#fanout — replay every committed-but-unpublished
+   * transition to the synchronous subscriber chain, from its persisted payload.
+   * Synchronous, so a synchronous request path can recover the crash window
+   * without launching a promise from a commit chain. It publishes nothing new:
+   * every event it delivers was already committed.
+   */
+  publishPendingCommits(): number {
+    return this.outbox.publishPending();
+  }
+
+  /**
+   * @spec control-plane#fanout — the promise-returning drain: replay pending
+   * publications, then attempt every runnable durable subscriber delivery,
+   * awaiting each one. Invoked from BOOT and from request paths, never from
+   * `afterCommit`: an awaited drain launched from a commit chain would be a
+   * floating promise.
+   *
+   * SCOPE. Durable acceptance is not exactly-once external delivery. A crash
+   * after a downstream accepted but before this process acknowledged may
+   * redeliver; the payload, its identity and its `committed_at` are unchanged,
+   * so an idempotent consumer produces one effect. Multi-process claiming and
+   * fencing stay behind #641's deployment trigger.
+   */
+  async drainLifecycleOutbox(): Promise<void> {
+    await this.outbox.drain();
+  }
+
+  /**
+   * @spec control-plane#fanout, control-plane#tombstones — boot recovery. Marks
+   * every pending delivery whose subscriber is no longer registered with the
+   * terminal `subscriber_removed` disposition, replays committed-but-unpublished
+   * transitions, drains runnable deliveries, prunes settled outbox rows past
+   * the composed retention horizon, and prunes tombstone DETAIL past that same
+   * horizon while keeping each identity row as the permanent nonreuse marker.
+   */
+  async recoverAtBoot(): Promise<void> {
+    this.outbox.reconcileRemovedSubscribers();
+    await this.outbox.drain();
+    this.outbox.pruneSettled(this.tombstones.retentionSeconds);
+    this.tombstones.pruneDetails();
+  }
+
+  /**
+   * @spec status-list#status-list — enqueue the committed transition for the
+   * lifecycle-commit subscribers. `record` MUST be the post-commit persisted
+   * row so `state`/`version` are authoritative, and the caller MUST hold the
+   * state write's transaction: the durable outbox row commits with the state
+   * it describes (@spec control-plane#serialization), and publication waits for
+   * the outermost commit.
+   *
+   * @spec control-plane#fanout — the event identity is minted HERE, for every
+   * commit kind. It was previously set only by the expansion finalization
+   * outbox, so a redelivered ordinary commit reached the Signals emitter with
+   * no identity, got a fresh one, and became a new SET with a new `jti`,
+   * defeating both the same-event-identity redelivery rule and the emitter's
+   * `UNIQUE(event_id, audience)` no-op.
+   *
+   * @spec control-plane#tombstones — a TERMINAL commit also writes the terminal
+   * tombstone here, in this same transaction, which is the one point every
+   * terminal funnel passes through (`setState`, the supersession CAS, and each
+   * cascaded descendant).
    *
    * @spec containment#propagation — also carries `record.containment`'s
    * current `containment_version` (absent-means-none), so a `contain` commit
@@ -2088,114 +2232,12 @@ export class MissionKernel {
    * a narrowing (`contain()`'s fresh-event_id/already-represented-removal
    * case is metadata-only yet narrows nothing). Defaults to `false`, so every
    * funnel that never narrows (`insertRecord`'s activating commit, `setState`,
-   * `supersedeOnRedemption`) simply omits the argument. `contain` is today
-   * the only caller that ever passes `true`, and only after proving the
-   * effective set strictly narrowed. Rides the wire absent-means-false,
-   * mirroring `containment_version`'s absent-means-none convention.
+   * `supersedeInCallerTx`) simply omits the argument. `contain` and the
+   * discharge latch are the callers that ever pass `true`, and only after
+   * proving the effective set strictly narrowed. Rides the wire
+   * absent-means-false, mirroring `containment_version`'s absent-means-none
+   * convention.
    */
-  /**
-   * Round-4 (#639 review): while a caller-owned activation transaction is
-   * open, direct emission is suppressed; the transaction instead writes a
-   * durable outbox job, and {@link drainExpansionOutbox} emits from
-   * persisted rows after the commit (at-least-once; consumers dedupe on the
-   * event tuple). A rolled-back transaction therefore never leaks an event
-   * for state that does not exist.
-   */
-  private emitSuppressed = false;
-
-  suppressEmits<T>(fn: () => T): T {
-    const prior = this.emitSuppressed;
-    this.emitSuppressed = true;
-    try {
-      return fn();
-    } finally {
-      this.emitSuppressed = prior;
-    }
-  }
-
-  /**
-   * Enqueue the expansion finalization job inside the caller's transaction.
-   * The IMMUTABLE commit payloads are built and persisted here, at the
-   * transaction's own time and with stable event identities, so every later
-   * drain redelivers the SAME events with the ORIGINAL `committed_at`,
-   * never newly asserted ones (round 5, #640 review). Call order matters:
-   * the caller runs the supersession CAS first, so the predecessor row read
-   * here already carries its superseded state and incremented version.
-   */
-  enqueueExpansionFinalize(predecessorId: string, successorId: string): void {
-    const successor = this.mustGet(successorId);
-    const pred = this.mustGet(predecessorId);
-    const committedAt = this.now().toISOString();
-    const activation: LifecycleCommit = {
-      id: successor.id,
-      issuer: successor.issuer,
-      state: successor.state,
-      version: successor.version,
-      committed_at: committedAt,
-      expires_at: successor.expires_at,
-      event_id: `set_${randomBytes(15).toString("base64url")}`,
-    };
-    const supersession: LifecycleCommit = {
-      id: pred.id,
-      issuer: pred.issuer,
-      prior_state: "active",
-      state: pred.state,
-      version: pred.version,
-      committed_at: committedAt,
-      expires_at: pred.expires_at,
-      successor: successorId,
-      event_id: `set_${randomBytes(15).toString("base64url")}`,
-    };
-    this.db
-      .prepare(
-        "INSERT INTO lifecycle_outbox (kind, mission_id, successor_id, activation_json, supersession_json) VALUES ('expansion-finalize', ?, ?, ?, ?)",
-      )
-      .run(predecessorId, successorId, JSON.stringify(activation), JSON.stringify(supersession));
-  }
-
-  /**
-   * Drain committed-but-unfinalized expansion work. SCOPE (round 5, #640
-   * review): this is durable LOCAL finalization, not event-plane
-   * durability. Each replay delivers the PERSISTED, immutable commit
-   * payloads (same `event_id`, same `committed_at`) to the lifecycle hook,
-   * at-least-once, and re-runs the state-guarded mandatory child cascade;
-   * jobs are marked done only after both. Durability PAST the hook is the
-   * signal plane's (#641, built): @mission/signals journals one durable job
-   * per (event, consumer) in the commit hook, redelivers byte-identical
-   * SETs under a bounded backoff, and runs a recurring dispatcher with
-   * lease-based claiming. THIS outbox's own recurring drive and
-   * multi-process claiming stay scoped to the file-backed kernel store,
-   * which KernelOptions does not plumb yet (D27 :memory: baseline).
-   * Drains run at startup (buildAuthorizationServer) and on every
-   * redemption or recovery poll.
-   */
-  drainExpansionOutbox(): void {
-    if (this.db.inTransaction) {
-      afterCommit(this.db, () => this.drainExpansionOutbox());
-      return;
-    }
-    const jobs = this.db
-      .prepare(
-        "SELECT job_id, mission_id, successor_id, activation_json, supersession_json FROM lifecycle_outbox WHERE done = 0 AND kind = 'expansion-finalize' ORDER BY job_id",
-      )
-      .all() as Array<{
-      job_id: number;
-      mission_id: string;
-      successor_id: string;
-      activation_json: string;
-      supersession_json: string;
-    }>;
-    for (const job of jobs) {
-      const onCommit = this.opts.onLifecycleCommit;
-      if (onCommit) {
-        onCommit(JSON.parse(job.activation_json) as LifecycleCommit);
-        onCommit(JSON.parse(job.supersession_json) as LifecycleCommit);
-      }
-      this.cascadeChildren(job.mission_id);
-      this.db.prepare("UPDATE lifecycle_outbox SET done = 1 WHERE job_id = ?").run(job.job_id);
-    }
-  }
-
   private emitCommit(
     record: MissionRecord,
     prior?: MissionState,
@@ -2203,16 +2245,18 @@ export class MissionKernel {
     authorityChanged = false,
     containmentAdvanced = false,
   ): void {
-    if (this.emitSuppressed) return;
-    const onCommit = this.opts.onLifecycleCommit;
-    if (!onCommit) return;
-    const event = Object.freeze({
+    const event: LifecycleCommit = {
       id: record.id,
       issuer: record.issuer,
       state: record.state,
       version: record.version,
       committed_at: this.now().toISOString(),
       expires_at: record.expires_at,
+      // @spec control-plane#fanout — creation facts on the PAYLOAD, so a
+      // subscriber acting on the activating commit never re-reads live state
+      // that a restart can have advanced or removed.
+      created_at: record.created_at,
+      client_id: record.client_id,
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
@@ -2223,8 +2267,18 @@ export class MissionKernel {
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),
-    });
-    afterCommit(this.db, () => onCommit(event));
+    };
+    const persisted: PersistedLifecycleCommit = this.outbox.enqueueInCallerTx(event);
+    if (TERMINAL_STATES.has(record.state)) {
+      this.tombstones.recordInCallerTx({
+        issuer: record.issuer,
+        missionId: record.id,
+        terminalState: record.state,
+        finalVersion: record.version,
+        transitionAt: persisted.committed_at,
+        commitEventId: persisted.event_id,
+      });
+    }
   }
 
   private mustGet(id: string): MissionRecord {

@@ -473,7 +473,11 @@ export class ExpansionDeferralStore {
         row.approval_event_id,
       );
       if (linked) {
-        this.kernel.drainExpansionOutbox();
+        // @spec control-plane#fanout — recover the crash window before
+        // returning the committed result: any transition committed but not yet
+        // published is replayed from the durable outbox, synchronously, with
+        // its original identity and timestamp.
+        this.kernel.publishPendingCommits();
         this.db
           .prepare("UPDATE expansion_deferrals SET redeemed = 1, completion_released = 1 WHERE deferral_code = ?")
           .run(deferralCode);
@@ -583,7 +587,7 @@ export class ExpansionDeferralStore {
         .run(deferralCode);
       return { error: "access_denied" };
     }
-    this.kernel.drainExpansionOutbox();
+    this.kernel.publishPendingCommits();
     this.db.prepare("UPDATE expansion_deferrals SET completion_released = 1 WHERE deferral_code = ?").run(deferralCode);
     return {
       successor: txOut.successor,
@@ -601,10 +605,9 @@ export class ExpansionDeferralStore {
     submissionEvidence: IntentSubmissionEvidenceFact[] | undefined,
     creationRequestId: string | undefined,
   ): { successor: MissionRecord; predecessorId: string } | undefined {
-    return this.kernel.suppressEmits(() => withTransaction(this.kernel.db, () => {
-      // Read-only effective-active re-check inside the transaction (emission
-      // is suppressed here, so nothing is materialized; lazy expiry stays
-      // with the ordinary gates).
+    return withTransaction(this.kernel.db, () => {
+      // Read-only effective-active re-check inside the transaction (nothing is
+      // materialized here; lazy expiry stays with the ordinary gates).
       const predNow = this.kernel.get(row.predecessor_id as string);
       if (
         !predNow ||
@@ -629,21 +632,20 @@ export class ExpansionDeferralStore {
           res.successor.id,
         );
       }
+      // @spec control-plane#fanout — the supersession CAS enqueues its own
+      // durable event, its tombstone and the mandatory child cascade inside
+      // THIS transaction, so nothing has to be suppressed and reconstructed
+      // from state that has since moved.
       const cas = this.kernel.supersedeInCallerTx(res.successor.id);
       // Single-writer SQLite makes a lost CAS unreachable after the in-tx
       // check; the throw is the invariant's tripwire, and it rolls the
       // successor back rather than ever leaving both lineages live.
       if (!cas) throw new Error("expansion predecessor supersession failed inside the redemption transaction");
-      // Durable finalization: the successor's activation event and the
-      // predecessor's supersession finalize are an outbox job committed WITH
-      // this transaction, emitted only after it (and replayable after a
-      // crash), so no event ever describes state that was rolled back.
-      this.kernel.enqueueExpansionFinalize(cas.predecessorId, res.successor.id);
       const retired = this.db
         .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ? AND redeemed = 0 AND state = 'approved'")
         .run(row.deferral_code as string);
       if (retired.changes !== 1) throw new Error("expansion deferral retirement conflicted");
       return { successor: res.successor, predecessorId: cas.predecessorId };
-    }));
+    });
   }
 }

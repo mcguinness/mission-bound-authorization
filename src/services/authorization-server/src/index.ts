@@ -33,7 +33,14 @@ import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
-import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
+import {
+  CreationIdempotencyStore,
+  DEFAULT_CREATION_TOMBSTONE_TTL_S,
+} from "./kernel/creation-idempotency.js";
+import {
+  DEFAULT_DISCHARGE_EVENT_TTL_S as DISCHARGE_EVENT_TTL_S,
+  DEFAULT_LIFECYCLE_NONCE_TTL_S as LIFECYCLE_NONCE_TTL_S,
+} from "./kernel/lifecycle-idempotency.js";
 import type { EffectiveAuthoritySource } from "./kernel/derive.js";
 import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
@@ -43,8 +50,8 @@ import { StatusListPublisher } from "./kernel/status-list.js";
 import { createTemplate } from "./kernel/template.js";
 import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
-import { TERMINAL_STATES } from "./kernel/types.js";
-import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
+import { isActivatingCommit, TERMINAL_STATES } from "./kernel/types.js";
+import type { ActivatingLifecycleCommit, LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
@@ -66,6 +73,21 @@ export {
   IssuerEvidenceStore,
   type IngestionEvidenceInput,
 } from "./kernel/issuer-evidence.js";
+export {
+  type DeliveryDisposition,
+  type DurableCommitSubscriber,
+  LIFECYCLE_EVENT_PAYLOAD_VERSION,
+  LifecycleOutbox,
+} from "./kernel/lifecycle-outbox.js";
+export {
+  composeTombstoneRetentionSeconds,
+  DEFAULT_AUDIT_RETENTION_S,
+  DEFAULT_CLOCK_SKEW_S,
+  type MissionTombstone,
+  MissionIdReuseError,
+  MissionTombstoneStore,
+  type TombstoneRetentionInputs,
+} from "./kernel/tombstones.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export {
   DEFAULT_SERVICE_TOKEN_PRINCIPALS,
@@ -391,18 +413,21 @@ export {
  * `currentActor`. No cnf is bound (no DPoP key exists at approval); the four-signal
  * check validates the PRESENTED key at /token, never this stored handle's cnf.
  */
-function rootMissionContinuation(store: ContinuationStore, record: MissionRecord): void {
-  if (store.handlesForMission(record.id).length > 0) return; // never double-root
+function rootMissionContinuation(
+  store: ContinuationStore,
+  commit: ActivatingLifecycleCommit,
+): void {
+  if (store.handlesForMission(commit.id).length > 0) return; // never double-root
   const anchorId = store.rootGrantAnchor({
-    missionId: record.id,
+    missionId: commit.id,
     authEnvelope: {
-      authTime: Math.floor(Date.parse(record.created_at) / 1000),
+      authTime: Math.floor(Date.parse(commit.created_at) / 1000),
     },
   });
   store.mint({
     anchorId,
-    missionId: record.id,
-    actor: { iss: record.issuer, sub: record.client_id },
+    missionId: commit.id,
+    actor: { iss: commit.issuer, sub: commit.client_id },
   });
 }
 
@@ -492,6 +517,14 @@ export interface BuiltAs {
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
+  /**
+   * @spec control-plane#deployment-declaration (D27) — the kernel store. The
+   * default is in-memory and single-process; a `file` selects the OPT-IN
+   * file-backed SINGLE-WRITER store, which is what makes the durable lifecycle
+   * outbox and the terminal tombstones survive a restart and lets the recovery
+   * test exercise that path. It authorizes no second writer.
+   */
+  kernelStore?: { file?: string };
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
   /**
@@ -716,6 +749,25 @@ export async function buildAuthorizationServer(opts: {
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
+    // @spec control-plane#deployment-declaration (D27) — in-memory by default;
+    // the file-backed single-writer store is the declared opt-in.
+    ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),
+    // @spec control-plane#tombstones — the deployment's declared retention
+    // horizons, composed into the detailed tombstone horizon. Every input is a
+    // number this deployment actually declares: the access-token lifetime is
+    // the longest-lived artifact that can name a Mission, the creation and
+    // discharge idempotency windows bound replay against a terminal record,
+    // and the child-cascade horizon is zero because the cascade commits inside
+    // the terminal transition's own transaction.
+    tombstoneHorizons: {
+      credential_artifact_lifetime_seconds: TOPOLOGY.ttls.accessTokenSeconds,
+      idempotency_retry_seconds: Math.max(
+        DEFAULT_CREATION_TOMBSTONE_TTL_S,
+        DISCHARGE_EVENT_TTL_S,
+        LIFECYCLE_NONCE_TTL_S,
+      ),
+      child_cascade_seconds: DERIVATION_POLICY.max_mission_lifetime_s ?? 0,
+    },
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
     // only containOnEvent reads it (the manual contain path is unaffected).
     containmentPolicy: CONTAINMENT_POLICY as never,
@@ -746,26 +798,6 @@ export async function buildAuthorizationServer(opts: {
       // @spec async-delegation — terminal propagation for delegation families. A
       // terminal Mission marks all of its family rows terminal (so resolve stops).
       delegationFamilyStore.onLifecycleCommit(commit);
-      // @spec async-delegation — provider-capturing terminal subscriber. On ANY
-      // terminal commit (revoke/complete AND expiry/cascade/supersede all funnel
-      // through here) revoke + destroy the oidc grant of every per-delegation family
-      // rooted in this Mission, so a subsequent refresh fails STRUCTURALLY rather
-      // than merely by the family resolving terminal. The hook carries no Koa ctx,
-      // so the request-scoped revoke helper is unavailable; revoke via the STATIC
-      // RefreshToken.revokeByGrantId + Grant.destroy. Fire-and-forget with a swallowed
-      // rejection (the hook is synchronous): the in-process microtask chain settles
-      // before the next request macrotask, and a missing grant is a no-op. Cascade
-      // re-enters this hook per descendant commit, so a child's own family is covered.
-      if (terminalProvider && TERMINAL_STATES.has(commit.state)) {
-        const p = terminalProvider;
-        for (const gid of delegationFamilyStore.familiesForMission(commit.id)) {
-          void (async () => {
-            await p.RefreshToken.revokeByGrantId(gid);
-            const grant = await p.Grant.find(gid);
-            await grant?.destroy();
-          })().catch(() => {});
-        }
-      }
       // @spec id-continuation-assertion — approval-time grant-anchor rooting. The
       // ACTIVATING commit (version 1, no prior_state, active) of a newly-approved
       // Mission roots the durable grant-anchored continuation root + an INITIAL
@@ -776,11 +808,45 @@ export async function buildAuthorizationServer(opts: {
       // additive: a Mission that never continues is unaffected (the anchor/handle
       // sit inert). Not fired on idempotent re-approval: a duplicate
       // approval_event_id throws before emitCommit, so no commit is emitted.
-      if (commit.version === 1 && commit.prior_state === undefined && commit.state === "active") {
-        const record = kernel.get(commit.id);
-        if (record) rootMissionContinuation(continuationStore, record);
-      }
+      //
+      // @spec control-plane#fanout — rooted from the PAYLOAD, never from a live
+      // `kernel.get(commit.id)`: on a redelivery after a restart that read
+      // returns a record that has since advanced, or none at all, which would
+      // make this subscriber replay-unsafe. `created_at` and `client_id` are the
+      // only record facts the rooting needs and both ride the event.
+      if (isActivatingCommit(commit)) rootMissionContinuation(continuationStore, commit);
       opts.onLifecycleCommit?.(commit);
+    },
+  });
+  // @spec control-plane#fanout — the ONE durable retryable subscriber. Its
+  // effect leaves this process (it revokes and destroys oidc-provider grants),
+  // so it cannot be acknowledged by returning: it gets a durable delivery row
+  // with attempts and a next-retry time, and the promise-returning drain awaits
+  // it from boot and from the request paths. This replaces the fire-and-forget
+  // revocation with a swallowed rejection that the commit hook used to launch.
+  //
+  // `capture` runs inside the commit transaction and SNAPSHOTS the family grant
+  // identifiers, so the delivery is payload-only: a retry after a restart
+  // revokes exactly the grants the transition owed, not whatever the rebuilt
+  // in-memory family projection happens to hold. Cascade re-enters per
+  // descendant commit, so a child's own family gets its own row.
+  kernel.registerDurableSubscriber<{ grants: string[] }>({
+    id: "delegation-family-grant-revoke",
+    capture: (commit) => {
+      if (!TERMINAL_STATES.has(commit.state)) return undefined;
+      const grants = delegationFamilyStore.familiesForMission(commit.id);
+      return grants.length > 0 ? { grants } : undefined;
+    },
+    deliver: async ({ grants }) => {
+      const p = terminalProvider;
+      // Retryable, never accepted-by-default: acknowledging while the provider
+      // is unavailable would drop the revocation the transition owes.
+      if (!p) throw new Error("provider is not constructed yet");
+      for (const gid of grants) {
+        await p.RefreshToken.revokeByGrantId(gid);
+        const grant = await p.Grant.find(gid);
+        await grant?.destroy();
+      }
     },
   });
   // The publisher compares a cached token's own `exp` against the same clock
@@ -794,13 +860,6 @@ export async function buildAuthorizationServer(opts: {
   // @spec expansion — the DTR deferred-completion store for Mission EXPANSION
   // (widening; distinct from AROP, which never widens).
   const expansionDeferrals = new ExpansionDeferralStore(kernel);
-  // Round-5 (#640 review): startup drain of committed-but-unfinalized
-  // expansion work (meaningful for the file-backed store escape hatch; a
-  // no-op on the D27 :memory: baseline). Event-plane durability past the
-  // hook lives in @mission/signals' durable outbox and dispatcher (#641);
-  // this kernel outbox's own recurring drive stays scoped to a plumbed
-  // file-backed kernel store, which does not exist yet.
-  kernel.drainExpansionOutbox();
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).
@@ -909,6 +968,15 @@ export async function buildAuthorizationServer(opts: {
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).
   terminalProvider = provider;
+  // @spec control-plane#fanout, control-plane#tombstones — startup recovery,
+  // run AFTER the provider exists so a pending durable delivery can actually
+  // be attempted. It marks pending deliveries owed to subscribers that are no
+  // longer registered, replays committed-but-unpublished transitions from the
+  // durable outbox, awaits runnable deliveries, and prunes settled outbox rows
+  // and expired tombstone detail past the composed retention horizon. A no-op
+  // on the in-memory default; the `store.file` opt-in is what makes it
+  // observable across a restart.
+  await kernel.recoverAtBoot();
 
   return {
     provider,
