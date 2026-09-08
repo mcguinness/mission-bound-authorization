@@ -164,7 +164,11 @@ d("M4 core enforcement tier", () => {
     build();
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(false);
-    expect(res.denial_reason).toBe("out_of_authority");
+    // inv-3 is vendor "globex", excluded by the entry's vendors: ["acme"]
+    // constraint (@spec authzen#runtime-denial-classification, #801): a
+    // matched entry whose constraint fails is parameter_violation, not
+    // out_of_authority. Either reason still produces a deny record below.
+    expect(res.denial_reason).toBe("parameter_violation");
     const dec = evidence
       .forMission("msn_m4")
       .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "deny");
@@ -204,15 +208,18 @@ d("M4 core enforcement tier", () => {
     expect(res.denial_reason).toBe("parameter_violation");
   });
 
-  it("vendor outside constraint denied out_of_authority", async () => {
+  it("vendor outside constraint denied parameter_violation", async () => {
     build();
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("out_of_authority");
-    // @spec I-D.draft-zehavi-oauth-rar-metadata §4: this out_of_authority is NOT
-    // a genuine absence -- payments:payment.schedule IS in the Authority Set,
-    // only this vendor is excluded by the constraint -- so the remediation
-    // grain must NOT fire (proposing the same entry back would be a false hint).
+    // @spec authzen#runtime-denial-classification (#801): payments:payment.schedule
+    // IS in the Authority Set; only this vendor is excluded by the entry's own
+    // constraint, a parameter violation, not a genuine authority absence.
+    expect(res.denial_reason).toBe("parameter_violation");
+    // @spec I-D.draft-zehavi-oauth-rar-metadata §4: the insufficient_authorization
+    // remediation grain fires only on a GENUINE out_of_authority absence, so it
+    // must NOT fire here either (proposing the same entry back would be a false
+    // hint, and this deny is not out_of_authority at all).
     expect(res.insufficient_authorization).toBeUndefined();
   });
 
