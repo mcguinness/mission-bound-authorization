@@ -14,8 +14,9 @@
 //                               (whitespace-normalized) INSIDE the anchored
 //                               section; an edited or relocated clause forces
 //                               a manifest re-review
-//   (e) missing test          - a mapped test file does not exist, or the full
-//                               test name does not appear in it
+//   (e) missing test          - no structural describe/it/test declaration
+//                               matches the exact leaf and containing ancestors,
+//                               or a path segment is degenerate
 //   (f) coverage inconsistency- the declared coverage state contradicts the
 //                               mappings (see rules below)
 //   (g) spec inventory drift  - source.specs is missing an entry for a spec
@@ -79,15 +80,42 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execSync, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { extractTitles, segmentOk, matchingDeclarations, collectedPathMatches, parseCollectedTests } from "./test-title-paths.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const MANIFEST_PATH = path.join(ROOT, "conformance-manifest.json");
 
+// The existing no-install CI step invokes this command. Exercise its matcher
+// regressions there too without requiring a new workflow or any dependencies.
+// The CLI fixture explicitly clears CI in its child process, avoiding recursion.
+if (process.env.CI && process.env.CI !== "false") {
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, "test-check-conformance-manifest.mjs")], {
+      cwd: ROOT, stdio: "inherit",
+    });
+  } catch {
+    console.error("conformance matcher regression tests failed");
+    process.exit(1);
+  }
+}
+
 const errors = [];
 const fail = (check, msg) => errors.push(`[${check}] ${msg}`);
 const normalize = (s) => s.replace(/\s+/g, " ").trim();
 const nonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
+const testTitles = new Map();
+function titlesFor(file) {
+  if (!testTitles.has(file)) {
+    try {
+      testTitles.set(file, extractTitles(fs.readFileSync(file, "utf8")));
+    } catch (e) {
+      fail("missing-test", `${file}: cannot parse test declarations: ${e.message}`);
+      testTitles.set(file, []);
+    }
+  }
+  return testTitles.get(file);
+}
 
 function readFile(p, label) {
   try {
@@ -373,9 +401,11 @@ for (const row of rows) {
     if (!fs.existsSync(p)) {
       fail("missing-test", `${id}: test file ${m.file} not found`);
     } else {
-      const leaf = m.name.includes(" > ") ? m.name.slice(m.name.lastIndexOf(" > ") + 3) : m.name;
-      if (!fs.readFileSync(p, "utf8").includes(leaf)) {
-        fail("missing-test", `${id}: test "${leaf}" not found in ${m.file}`);
+      const degenerate = m.name.split(" > ").find((segment) => !segmentOk(segment));
+      if (degenerate !== undefined) {
+        fail("missing-test", `${id}: mapping ${m.file} -> "${m.name}" has a degenerate segment "${degenerate}"`);
+      } else if (!matchingDeclarations(titlesFor(p), m.name).length) {
+        fail("missing-test", `${id}: mapping ${m.file} -> "${m.name}" does not match any describe/it/test path in the file`);
       }
     }
     if (m.level === row.level && (row.level !== "endpoint" || m.surface === row.surface)) {
@@ -417,15 +447,20 @@ if (process.argv.includes("--collect")) {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
         timeout: 600000,
+        maxBuffer: 64 * 1024 * 1024,
       });
-      collected = JSON.parse(out.slice(out.indexOf("[")));
+      collected = parseCollectedTests(out);
     } catch (e) {
       fail("collect", `vitest list failed: ${e.message}`);
     }
     for (const row of rows) {
       for (const m of row.tests ?? []) {
-        const hit = collected.some(
-          (e) => e.name === m.name && typeof e.file === "string" && path.resolve(e.file) === path.resolve(ROOT, m.file)
+        if (!nonEmptyString(m.file) || !nonEmptyString(m.name)) continue;
+        const file = path.resolve(ROOT, m.file);
+        const declarations = fs.existsSync(file) ? matchingDeclarations(titlesFor(file), m.name) : [];
+        const hit = collected.some((e) =>
+          typeof e.file === "string" && path.resolve(e.file) === file &&
+          typeof e.name === "string" && declarations.some((d) => collectedPathMatches(d, e.name))
         );
         if (!hit) fail("collect", `${row.id}: (${m.file}, "${m.name}") not collected by the runner`);
       }
