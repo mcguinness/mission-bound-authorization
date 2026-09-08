@@ -33,16 +33,39 @@ export class UniqueViolationError extends Error {
  * mapped to UniqueViolationError so callers can implement idempotency and
  * single-use semantics without string-matching driver errors.
  */
+type CommitFrame = { callbacks: Array<() => void> };
+const commitFrames = new WeakMap<Database.Database, CommitFrame>();
+
+/** Publish after the outermost managed commit, never after a rolled-back
+ * savepoint. Not durable delivery: process-loss recovery still needs an outbox. */
+export function afterCommit(db: Database.Database, callback: () => void): void {
+  const frame = commitFrames.get(db);
+  if (frame) frame.callbacks.push(callback);
+  else if (db.inTransaction) throw new Error("afterCommit requires a managed transaction");
+  else callback();
+}
+
 export function withTransaction<T>(db: Database.Database, fn: () => T): T {
-  const tx = db.transaction(fn);
+  const parent = commitFrames.get(db);
+  if (db.inTransaction && !parent)
+    throw new Error("withTransaction cannot nest in an unmanaged transaction");
+  const frame: CommitFrame = { callbacks: [] };
+  commitFrames.set(db, frame);
+  let result: T;
   try {
-    return tx();
+    result = db.transaction(fn)();
   } catch (e) {
     if (isUniqueViolation(e)) {
       throw new UniqueViolationError((e as Error).message);
     }
     throw e;
+  } finally {
+    if (parent) commitFrames.set(db, parent);
+    else commitFrames.delete(db);
   }
+  if (parent) parent.callbacks.push(...frame.callbacks);
+  else for (const callback of frame.callbacks) callback();
+  return result;
 }
 
 /**

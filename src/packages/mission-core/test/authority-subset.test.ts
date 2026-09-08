@@ -83,15 +83,67 @@ describe("shared authority ceiling (#762)", () => {
         delegation: { max_depth: 1, allowed_delegates: [{ sub: "actor", sub_profile: 2 }] },
       },
       { ...entry, delegation: { max_depth: 1, children: { unknown: true } } },
-      {
-        ...entry,
-        delegation: { max_depth: 1, children: { child_creation_policy: "opaque-policy" } },
-      },
     ];
     for (const candidate of malformed) {
       expect(isAuthorityEntry(candidate)).toBe(false);
       expect(narrowToCeiling([candidate as AuthorityEntry], [entry])).toEqual([]);
       expect(narrowToCeiling([entry], [candidate as AuthorityEntry])).toEqual([]);
+    }
+  });
+});
+
+describe("child_creation_policy in the lineage and ceiling comparison (#787)", () => {
+  const POLICY = "urn:policy:child-drawdown:v1";
+  const children = (extra: Record<string, unknown> = {}): AuthorityEntry => ({
+    ...entry,
+    delegation: {
+      max_depth: 1,
+      children: { max_children: 2, ...extra } as NonNullable<
+        NonNullable<AuthorityEntry["delegation"]>["children"]
+      >,
+    },
+  });
+  const withPolicy = children({ child_creation_policy: POLICY });
+  const withoutPolicy = children();
+
+  it("admits the recorded reference as supported input and refuses a malformed one", () => {
+    expect(isAuthorityEntry(withPolicy)).toBe(true);
+    for (const child_creation_policy of [7, "", null, {}, ["p"]]) {
+      expect(isAuthorityEntry(children({ child_creation_policy }))).toBe(false);
+    }
+  });
+
+  it("absent on both sides compares on the other child members alone", () => {
+    expect(isSubsetSet([withoutPolicy], [withoutPolicy])).toBe(true);
+    expect(narrowToCeiling([withoutPolicy], [withoutPolicy])[0]).toBe(withoutPolicy);
+  });
+
+  it("carries an identical reference byte-for-byte", () => {
+    expect(isSubsetSet([withPolicy], [withPolicy])).toBe(true);
+    expect(narrowToCeiling([withPolicy], [withPolicy])[0]).toBe(withPolicy);
+  });
+
+  it("refuses a reference the grantor never recorded", () => {
+    expect(isSubsetSet([withPolicy], [withoutPolicy])).toBe(false);
+    expect(narrowToCeiling([withPolicy], [withoutPolicy])).toEqual([]);
+  });
+
+  it("refuses a changed reference", () => {
+    const changed = children({ child_creation_policy: "urn:policy:child-drawdown:v2" });
+    expect(isSubsetSet([changed], [withPolicy])).toBe(false);
+    expect(narrowToCeiling([changed], [withPolicy])).toEqual([]);
+  });
+
+  it("refuses dropping the reference while the children grant is retained", () => {
+    expect(isSubsetSet([withoutPolicy], [withPolicy])).toBe(false);
+    expect(narrowToCeiling([withoutPolicy], [withPolicy])).toEqual([]);
+  });
+
+  it("passes removal of the whole children grant as narrowing", () => {
+    const noChildren: AuthorityEntry = { ...entry, delegation: { max_depth: 1 } };
+    for (const narrower of [noChildren, entry]) {
+      expect(isSubsetSet([narrower], [withPolicy])).toBe(true);
+      expect(narrowToCeiling([narrower], [withPolicy])[0]).toBe(narrower);
     }
   });
 });

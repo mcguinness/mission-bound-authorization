@@ -10,6 +10,7 @@
   "dependencies": {
     "@mission/actor-chain": "workspace:*",
     "@mission/core": "workspace:*",
+    "@mission/demo-data": "workspace:*",
     "@mission/store": "workspace:*",
     "@mission/telemetry": "workspace:*",
     "@openfga/sdk": "^0.9.0",

@@ -321,6 +321,26 @@ function loadTopology(): Topology {
 /** The validated deployment topology; consumers inject these values (no cycles). */
 export const TOPOLOGY: Topology = loadTopology();
 
+/** Deployment-owned ESS bytes; the PDP validates the complete statement at boot. */
+export const RUNTIME_SCOPE_CONFIG: unknown = readJson("enforcement-scope.json");
+const runtimeStateSource = asObject(
+  "enforcement-scope.json",
+  asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,
+  "state_source",
+);
+/** @spec status#as-metadata — same issuer ceiling consumed by the runtime loader. */
+export const MISSION_MAX_STALE_SECONDS = runtimeStateSource.mission_max_stale_seconds;
+if (
+  typeof MISSION_MAX_STALE_SECONDS !== "number" ||
+  !Number.isSafeInteger(MISSION_MAX_STALE_SECONDS) ||
+  MISSION_MAX_STALE_SECONDS <= 0
+) {
+  throw new ConfigError(
+    "enforcement-scope.json",
+    "mission_max_stale_seconds must be a positive integer",
+  );
+}
+
 /** The default (pre-env-override) payments resource, from topology.json. */
 const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
 

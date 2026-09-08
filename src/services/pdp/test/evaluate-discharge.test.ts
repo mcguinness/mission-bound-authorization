@@ -30,7 +30,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import type { MissionView } from "../src/policy-view.js";
-import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
+import { relationForAction, stalenessBound } from "../src/policy.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";
@@ -85,7 +85,7 @@ const opts = (v: MissionView) => ({
   fga: {} as never,
   modelId: "model-discharge-test",
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   relationForAction,
 });
 

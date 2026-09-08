@@ -26,7 +26,7 @@ import {
   type MissionView,
   type PdpHttpServerHandle,
   relationForAction,
-  stalenessBoundSeconds,
+  stalenessBound,
 } from "@mission/pdp";
 import { generateKeyPairSync } from "node:crypto";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -324,7 +324,7 @@ describe("the record survives the remote decision channel byte-identically (@spe
         fga: alwaysAllowFga,
         modelId: "unit-test-model",
         now: () => NOW,
-        stalenessBoundSeconds,
+        stalenessBound,
         relationForAction,
       }),
       // The emitter is bound HERE, in the PDP server's own construction, on

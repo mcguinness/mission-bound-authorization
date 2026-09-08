@@ -341,11 +341,11 @@ export class CreationIdempotencyStore {
   ): T {
     return withTransaction(this.db, () => {
       this.insertRow(res, "reserved");
-      // NOTE: insertRecord's lifecycle-commit hook fires inside this outer
-      // transaction (its own withTransaction nests as a savepoint). That is
-      // safe because the only statement after create() is the completion
-      // UPDATE of the row inserted above, which cannot hit a constraint — the
-      // transaction cannot fail after the hook has fanned out.
+      // @spec control-plane#serialization — insertRecord's lifecycle-commit
+      // hook is captured inside this outer transaction (its own
+      // withTransaction nests as a savepoint) and published only after the
+      // OUTERMOST commit, so nothing is fanned out for a reservation this
+      // transaction rolls back.
       const { missionId, value } = create();
       this.db
         .prepare(
