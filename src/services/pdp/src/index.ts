@@ -77,7 +77,13 @@ export {
 export { evaluateRemote, type RemotePdpClientConfig } from "./client.js";
 export {
   claimsWithinScope,
+  resourceDispositions,
   validateEnforcementScopeStatement,
+  type PerimeterDisposition,
+  type ExcludedPathDisposition,
+  type ResourceEntry,
+  type ExcludedPathEntry,
+  type DeclaredExcludedPath,
   type EnforcementClaim,
   type EnforcementExtensionDeclarations,
   type EnforcementExtensionName,
