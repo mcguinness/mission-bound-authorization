@@ -32,7 +32,13 @@ published in a key set the scope does not bind, resolves to nothing even when
 the claimed issuer is designated: an authorized issuer plus an arbitrary key
 never suffices. Envelope verification precedes the kind/shape and evidence
 combination checks; source-record verification precedes digest/identifier/emitter
-comparisons, qualified Mission joins and copied-member checks. `policy`, `executor` and
+comparisons, qualified Mission joins and copied-member checks. Record resolvers
+receive a separate deep copy of each reference; callback mutations cannot change
+the authenticated digest, type, identifier or emitter used for those comparisons.
+A selected `mission.authority_hash` must equal the verified Decision Evidence's
+hash (or the Refusal Record's hash for a refusal receipt); a missing source hash
+cannot support a selected one. Omitting the receipt's hash remains valid even
+when its source carries one. `policy`, `executor` and
 `target` are compared to their verified sources, not trusted merely because the
 receipt issuer signed them. Chaining remains unimplemented and refuses;
 issuer assertions require a separate explicit-policy path and also refuse.

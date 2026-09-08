@@ -17531,6 +17531,18 @@
     },
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > resolver mutation cannot replace the receipt's authenticated evidence reference",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > resolver-owned reference mutations leave all authenticated comparison fields intact",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
      "name": "Mission Receipt build + verify > rejects signed but structurally invalid referenced records rather than treating integrity as content validation",
      "level": "unit",
      "surface": "verification"
@@ -17688,6 +17700,12 @@
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
      "name": "Mission Receipt build + verify > compares selected policy and executor projections exactly and refuses issuer assertions on this verification path",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > a selected receipt authority hash must equal its verified source for every receipt kind",
      "level": "unit",
      "surface": "verification"
     }
