@@ -360,7 +360,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a covered permit carries as its context condition the digest the request supplied, echoed from the PEP's observation rather than derived by the PDP, which holds neither the salt nor the authoritative facts"
+    "normative": "a covered permit carries as its context condition the digest the request supplied, echoed from the PEP's observation rather than recomputed by the PDP; the salt remains unavailable to the PDP, while authoritative facts remain available wherever its policy needs their values"
    },
    "level": "unit",
    "coverage": "todo",
