@@ -156,6 +156,21 @@ export function joinViewId(
 }
 
 /**
+ * @spec authzen#runtime-denial-classification (#801) — the explicit
+ * predicate for whether an entry's `vendors` constraint (present or absent)
+ * admits the target vendor, decided BEFORE any contextual tuple is built.
+ * Shared by `deriveContextualTuples` and the PDP's own vendor-branch check
+ * (evaluate.ts) so the two cannot drift: a caller that finds this false is
+ * looking at a matched entry whose constraint failed (`parameter_violation`);
+ * this predicate says nothing about any OTHER reason a tuple might be
+ * withheld, which stays the caller's own `out_of_authority` fallback.
+ */
+export function vendorConstraintSatisfied(entry: AuthorityEntry, vendorId: string): boolean {
+  const vendors = entry.constraints?.vendors;
+  return !vendors || vendors.includes(vendorId);
+}
+
+/**
  * Derive per-check contextual tuples granting the mission the required
  * relation on the target object, when the target's vendor is within the
  * authority entry's vendor constraint. This is the D26 join: authority +
@@ -168,8 +183,7 @@ export function deriveContextualTuples(input: {
   relation: "payer" | "reader";
 }): TupleKey[] {
   const { view, entry, target, relation } = input;
-  const vendors = entry.constraints?.vendors;
-  if (vendors && !vendors.includes(target.vendorId)) return []; // constraint excludes it
+  if (!vendorConstraintSatisfied(entry, target.vendorId)) return []; // constraint excludes it
   return [
     { user: `mission:${view.id}`, relation, object: `${target.objectType}:${target.objectId}` },
   ];
