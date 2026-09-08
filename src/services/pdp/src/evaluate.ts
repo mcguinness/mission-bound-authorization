@@ -206,7 +206,7 @@ export type DenialReason =
   | "view_inconsistent"
   | "mission_inactive"
   | "actor_invalid"
-  | "constraint_exceeded"
+  | "parameter_violation"
   | "action_approval_required"
   | "unsupported_authorization_type"
   /**
@@ -361,14 +361,17 @@ function newDecisionId(): string {
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
   return getTracer("pdp").startActiveSpan("pdp.evaluate", async (span) => {
     try {
-      const decision = await evaluateInner(req, opts);
+      // Private per-evaluation trace: never read a request-supplied list, and
+      // never reconstruct outcomes by rewalking the authority set after a deny.
+      const contributions = new Set<string>();
+      const decision = await evaluateInner(req, opts, contributions);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
         span.setAttribute("mission.denial_reason", String(decision.context.denial_reason));
       }
       if (opts.evidence) {
-        decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision);
+        decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions);
       }
       return decision;
     } finally {
@@ -394,6 +397,7 @@ async function emitDecisionEvidence(
   opts: EvaluateOptions,
   emitter: DecisionEvidenceEmitter,
   decision: Decision,
+  contributions: ReadonlySet<string>,
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
@@ -441,6 +445,7 @@ async function emitDecisionEvidence(
     audience: req.context.audience,
     evaluation_id: decision.context.evaluation_id as string,
     decision: decision.decision ? "permit" : "deny",
+    contributing_constraints: [...contributions],
     evaluated_at: opts.now().toISOString(),
     ...(req.context.action_class !== undefined
       ? { action_class: req.context.action_class as RuntimeActionClass }
@@ -461,7 +466,7 @@ async function emitDecisionEvidence(
   });
 }
 
-async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
+async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, contributions: Set<string>): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
@@ -712,6 +717,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     if (typeof clientId !== "string" || !clientId) return deny("mission_mismatch");
     const joined = resolveBaselineJoin({
       view,
+      onEntryEvaluated: entry => { contributions.add(entry.type); },
       subject: { iss: req.subject.properties?.iss ?? "", sub: req.subject.id },
       clientId,
       ...(req.context.mission_join.delegate_depth !== undefined
@@ -742,10 +748,12 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // that could omit a case.
   const candidateAuthoritySet = joinedAuthority?.authoritySet ?? view.authority_set;
   const entry: AuthorityEntry | undefined = candidateAuthoritySet.find(
-    (e) =>
-      e.type === MISSION_RESOURCE_ACCESS_TYPE &&
+    (e) => {
+      contributions.add(e.type);
+      return e.type === MISSION_RESOURCE_ACCESS_TYPE &&
       e.resource === req.context.audience &&
-      e.actions.includes(req.action.name),
+      e.actions.includes(req.action.name);
+    },
   );
   if (!entry) {
     // @spec authzen#failure-condition-coverage: the mapping table keeps
@@ -839,6 +847,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
 
   // 6. FGA authority check with contextual tuples derived from the record.
   const vendorId = req.resource.properties?.vendor_id ?? "";
+  if (entry.constraints?.vendors !== undefined) contributions.add("vendors");
   const tuples = deriveContextualTuples({
     view,
     entry,
@@ -849,7 +858,12 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     },
     relation: mapping.relation,
   });
-  if (tuples.length === 0) return deny("out_of_authority"); // constraint excluded target
+  // A constraint that excludes the target withholds the contextual tuple, so
+  // no relationship to the target exists at all: the established boundary
+  // reason (@spec authzen#failure-condition-coverage, "Action outside the
+  // Authority Set ... or the request would broaden it"). The evaluated
+  // constraint key is still recorded in contributing_constraints.
+  if (tuples.length === 0) return deny("out_of_authority");
   const allowed = await fga.checkWithContext(
     { user: `mission:${view.id}`, relation: mapping.relation, object: `${req.resource.type}:${req.resource.id}` },
     tuples,
@@ -900,6 +914,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // requirement that isn't there.
   const cap = entry.constraints?.max_amount;
   if (cap) {
+    contributions.add("max_amount");
     const amt = req.context.amount;
     // @spec mission#max-amount — exact decimal-value comparison at the
     // enforcement point, never IEEE-754 float; an absent amount or a
@@ -912,7 +927,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
       !isValidAmount(cap.amount) ||
       compareAmounts(amt.amount, cap.amount) > 0
     ) {
-      return deny("constraint_exceeded");
+      return deny("parameter_violation");
     }
   }
 
@@ -924,10 +939,9 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   // predicate OR the matched entry's effective Common Constraint, so a
   // delegated leaf carrying `requires_action_approval: true` is gated even
   // where deployment policy alone would not gate the action.
-  if (
-    opts.requiresActionApproval?.(req.action.name, actionClass) ||
-    entry.constraints?.requires_action_approval === true
-  ) {
+  const entryRequiresApproval = entry.constraints?.requires_action_approval;
+  if (entryRequiresApproval !== undefined) contributions.add("requires_action_approval");
+  if (opts.requiresActionApproval?.(req.action.name, actionClass) || entryRequiresApproval === true) {
     const appr = req.context.action_approval;
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
     const valid =

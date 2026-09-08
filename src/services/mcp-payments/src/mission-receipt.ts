@@ -216,6 +216,7 @@ function recordShape(type: ReceiptResolvedRecord["type"], value: unknown): boole
       (!nonempty(p.entry_digest) && !objectOf(p.authorizing_entry)) ||
       (["irreversible_action", "external_commitment", "privileged_administration"].includes(p.action_class as string) && conditions.use_limit !== 1))) return false;
     if (p.decision === "deny" && !nonempty(p.denial_reason)) return false;
+    if (p.contributing_constraints !== undefined && (!Array.isArray(p.contributing_constraints) || !p.contributing_constraints.every(nonempty))) return false;
     if (p.parameter_digest === undefined ? !nonempty(p.evaluation_request_digest) : !nonempty(p.parameter_digest) || p.evaluation_request_digest !== undefined) return false;
     return emitter.role === "pdp" && missionShape(mission) && nonempty(mission?.policy_view_id) &&
       nonempty(p.evidence_id) && nonempty(p.evaluation_id) && integer(p.sequence) && timestamp(p.evaluated_at) &&

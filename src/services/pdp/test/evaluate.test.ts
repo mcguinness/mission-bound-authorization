@@ -251,7 +251,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.context.denial_reason).toBe("out_of_authority");
   });
 
-  it("over-cap execute -> deny constraint_exceeded", async () => {
+  it("over-cap execute -> deny parameter_violation", async () => {
     const dec = await evaluate(
       req({
         action: { name: "payments:payment.execute" },
@@ -264,7 +264,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       opts(view()),
     );
     expect(dec.decision).toBe(false);
-    expect(dec.context.denial_reason).toBe("constraint_exceeded");
+    expect(dec.context.denial_reason).toBe("parameter_violation");
   });
 
   it("revoked mission -> deny mission_inactive within the bound", async () => {

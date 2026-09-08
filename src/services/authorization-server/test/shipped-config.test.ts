@@ -137,7 +137,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     expect(decision.decision).toBe(true);
   });
 
-  it("payment.execute still refuses constraint_exceeded with no context.amount (the #733 guard, unweakened)", async () => {
+  it("payment.execute still refuses parameter_violation with no context.amount (the #733 guard, unweakened)", async () => {
     const derived = deriveDemoAuthoritySet();
     const decision = await evaluate(
       {
@@ -162,7 +162,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
       },
     );
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("constraint_exceeded");
+    expect(decision.context.denial_reason).toBe("parameter_violation");
   });
 });
 

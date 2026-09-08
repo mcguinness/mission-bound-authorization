@@ -239,7 +239,7 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     const outputs = toolOutputs(res);
     expect(outputs).toHaveLength(1);
     expect(outputs[0]?.ok, JSON.stringify(outputs[0])).toBe(false);
-    expect(outputs[0]?.denial_reason).toBe("constraint_exceeded");
+    expect(outputs[0]?.denial_reason).toBe("parameter_violation");
     // The planner could not escape the channel -> no unauthorized side effect.
     expect(connectors.ledgerEntries()).toHaveLength(0);
   });

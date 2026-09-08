@@ -197,11 +197,11 @@ d("M4 core enforcement tier", () => {
     expect(refusal?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
-  it("out-of-authority tool (over-cap invoice) denied out_of_authority... constraint path", async () => {
+  it("over-cap invoice denied parameter_violation", async () => {
     build();
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-2" }, TOKEN);
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("constraint_exceeded");
+    expect(res.denial_reason).toBe("parameter_violation");
   });
 
   it("vendor outside constraint denied out_of_authority", async () => {

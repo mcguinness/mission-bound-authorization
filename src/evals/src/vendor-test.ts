@@ -47,7 +47,7 @@ export function vendorTestCases(revokedInstances: Set<string>): {
         args: { invoice_id: "inv-big" },
         token: () => validToken(),
         expect: "deny",
-        expectReason: "constraint_exceeded",
+        expectReason: "parameter_violation",
         consequential: true,
       },
     },

@@ -15,8 +15,8 @@
     "content_sha256": "e1cf9287664b311c191d0e75cca2bad541c3bac15afecd2da5148243e793097e"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "98380a1ad71548ad4f9a8fcbf532c00e9e489888",
-    "content_sha256": "832d343ed40d40aa1f4c9d8a4b8b508b6a396c6713b7daf6a5981f5ce1bee8d5"
+    "revision": "3c87de67fa33817fb359b0e135ad0fc8c910fa65",
+    "content_sha256": "807e23635eb582c936aeb15dac1947834883a9590abc8d7c64a9c1b12e8a5830"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
@@ -16696,8 +16696,40 @@
     "normative": "contributing_constraints, required when the decision turned on one or more authority or constraint entries, lists every relied-on entry for a permit and every failing entry for a deny; omitting an entry the decision turned on is non-conforming"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a permit lists each evaluated entry type and constraint key, never caller-supplied text",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a constraint deny keeps parameter_violation separate from the evaluated keys and omits unvisited checks",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor constraint that excludes the target records the key it evaluated and never reaches resource policy",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > an early lifecycle denial records no authority entries and an unsupported type records only its evaluated identifier",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a delegate narrowing failure records the loaded entry types without inventing checks of their constraints",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries. The identifiers are authorization_details entry types and constraints keys, as the member's definition and its worked example require, not per-entry instance identifiers; a permit's individual entry stays identified by authorizing_entry or entry_digest. The evaluated key is recorded whichever reason the deny carries, so a target excluded by a vendors constraint records vendors under out_of_authority."
   },
   {
    "id": "evidence.decision.sequence-monotonic-per-emitter",
@@ -16754,8 +16786,22 @@
     "normative": "a consumer treats an unrecognized denial_reason value as a deny and attaches no other semantics to it; a constraint-violation deny records `parameter_violation` in denial_reason with the specific failing keys in contributing_constraints, so the reason enum and the open constraint-key space never mix in one field"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a constraint deny keeps parameter_violation separate from the evaluated keys and omits unvisited checks",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unknown denial reason remains a deny and can never become an execution authorization",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The wire response and the signed evidence both carry parameter_violation when the PDP evaluated a constraint and the request's parameters violated it (the max_amount cap, including an absent, malformed or incomparable amount), and the failing keys stay in contributing_constraints rather than in denial_reason. A constraint that excludes the target withholds the contextual relationship entirely and keeps the established boundary reason out_of_authority (@spec authzen#failure-condition-coverage), so the two reasons remain distinct enum values rather than one reason carrying constraint keys. The deployment carries no constraint_exceeded code. The real receipt verifier preserves a future denial code as denial and refuses an execution join."
   },
   {
    "id": "evidence.decision.permit-must-carry-entry-or-digest",
@@ -16887,7 +16933,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#594 W4-1: required base members, closed runtime projections, verified credential metadata, normalized conditions and permit entry commitment are exercised on actual decisions. Partial remains: contributing_constraints and returned obligations are not yet constructed. Per-action capability_source already shipped in #782; its malformed-input omission tests remain mapped separately."
+   "notes": "#594 W4-1: required base members, closed runtime projections, verified credential metadata, normalized conditions and permit entry commitment are exercised on actual decisions. #594 W4-2 adds the constructed contributing_constraints member. Partial remains: returned obligations are not constructed, so the conditional obligations member of this row's member set is unexercised. Per-action capability_source already shipped in #782; its malformed-input omission tests remain mapped separately."
   },
   {
    "id": "evidence.decision.actor-minimized-never-raw-claims",

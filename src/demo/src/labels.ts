@@ -40,7 +40,7 @@ export const ACTION_LABELS: Record<string, string> = {
  * `mission_not_active` so the gloss fires on the suspend/supersede path.
  */
 export const REASON_LABELS: Record<string, string> = {
-  constraint_exceeded: "Exceeds a mission constraint (e.g. amount cap or vendor)",
+  parameter_violation: "Exceeds a mission constraint (e.g. amount cap or vendor)",
   out_of_authority: "Outside the mission's granted authority",
   authority_contained: "Capability contained after a protected event (approved, then narrowed)",
   authority_discharged: "Entry discharged: its completion condition fired (approved, then done)",

@@ -62,7 +62,7 @@ d("M14 vendor-test demonstration", () => {
     expect(passed, JSON.stringify(rows)).toBe(true);
     const byAxis = Object.fromEntries(rows.map((r) => [r.axis, r]));
     expect(byAxis.state?.reason).toBe("mission_inactive");
-    expect(byAxis.bounds?.reason).toBe("constraint_exceeded");
+    expect(byAxis.bounds?.reason).toBe("parameter_violation");
     expect(byAxis.parameters?.reason).toBe("parameter_mismatch");
     expect(byAxis["delegation chain"]?.reason).toBe("instance_revoked");
     for (const r of rows) expect(r.tokenWasValid).toBe(true);

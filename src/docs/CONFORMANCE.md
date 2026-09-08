@@ -49,7 +49,7 @@ axis, each with a **valid** token.
 | Can you show a valid-token action denied by state/bounds/parameters/delegation? | Yes — the four-axis demonstration below. |
 
 **Demonstration (`evals/test/vendor-test.test.ts`):** state → `mission_inactive`;
-bounds → `constraint_exceeded`; parameters → `parameter_mismatch`; delegation
+bounds → `parameter_violation`; parameters → `parameter_mismatch`; delegation
 chain → `instance_revoked`. Every token was structurally valid.
 
 ## 4. Containment (eval scorecard, goal 2 empirical arm)

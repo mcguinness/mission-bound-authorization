@@ -1705,7 +1705,7 @@ async function main() {
     decision: "DENY",
     reason: gloss("reason", over.denial_reason ?? over.refusal_reason ?? ""),
     observed: `${gloss("tool", "execute_wire_transfer")}(inv-2, $900) denied ${over.denial_reason ?? over.refusal_reason ?? ""} (over the 500 cap)`,
-    ok: !over.ok && over.denial_reason === "constraint_exceeded",
+    ok: !over.ok && over.denial_reason === "parameter_violation",
   });
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-3, globex)", "in-process MCP · O-33");
   const globex = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-3" }, facts);
