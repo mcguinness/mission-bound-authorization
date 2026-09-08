@@ -1960,9 +1960,21 @@
      "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > composes a configured discharge retention that outlives the audit horizon",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > derives one effective discharge retention for the store and the horizon",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "The tombstone commits in the terminal transition's own transaction with the canonical issuer/Mission identity, terminal state, final version, transition time and commit event reference, and carries no foreign key to the record table so pruning a terminal record cannot delete the marker. The detailed horizon is computed as the composed maximum of the declared credential and artifact lifetime, staleness plus skew, idempotency and retry, child-cascade and audit-retention horizons; each input is shown to govern the composition, and a non-numeric declaration is refused. Past that horizon the detail is pruned and the identity row remains: creation refuses the identifier both after the record is purged and after the detail is gone."
+   "notes": "The tombstone commits in the terminal transition's own transaction with the canonical issuer/Mission identity, terminal state, final version, transition time and commit event reference, and carries no foreign key to the record table so pruning a terminal record cannot delete the marker. The detailed horizon is computed as the composed maximum of the declared credential and artifact lifetime, staleness plus skew, idempotency and retry, child-cascade and audit-retention horizons; each input is shown to govern the composition, and a non-numeric declaration is refused. Past that horizon the detail is pruned and the identity row remains: creation refuses the identifier both after the record is purged and after the detail is gone. The effective discharge retention is derived once for the discharge event store and for the composed horizon, in the AS assembly and in direct KernelOptions construction alike, so a configured retry window longer than audit retention keeps the terminal detail readable until it expires and leaves the permanent identity marker afterwards."
   },
   {
    "id": "control-plane.consistency.partitions",
@@ -2174,9 +2186,51 @@
      "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> next refresh invalid_grant + the family is destroyed",
      "level": "cross-component",
      "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > attempts one delivery for two overlapping drains and keeps the acknowledgement",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > records one attempt when the delivery under two overlapping drains fails",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > abandons the final attempt once, and a later drain does not reverse it",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > attempts each delivery once across four concurrent request-path drains",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > delivers a row enqueued during a pass in the queued follow-up pass",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > keeps an acknowledged row acknowledged when a stale attempt fails later",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > keeps an abandoned row abandoned when a stale attempt succeeds later",
+     "level": "concurrency",
+     "surface": "propagation"
     }
    ],
-   "notes": "Every commit funnel writes an immutable event row with an in-transaction event identity on the kernel handle, in the state write's own transaction, and publishes only after that commit; a rollback leaves no event, delivery row or tombstone. A publication lost after commit replays the persisted payload with the same identity and commit timestamp, so the Signals SET carries one jti across redelivery and its unique event key makes the replay a no-op. Durable retryable subscribers are acknowledged independently with bounded backoff, and a removed subscriber's pending row reaches a terminal disposition without blocking others. Delivery is at least once with idempotent acceptance: exactly-once external delivery is not claimed, and multi-process claiming and worker topology stay under #641's trigger. The one subscriber whose effect leaves the process, the per-delegation family grant revocation, is captured in the terminal transaction and awaited by the request-path drain, replacing a fire-and-forget promise with a swallowed rejection. The committing caller still learns that publication did not complete, while the recovery path isolates an unpublishable event so one poison row cannot fail a request that committed nothing."
+   "notes": "Every commit funnel writes an immutable event row with an in-transaction event identity on the kernel handle, in the state write's own transaction, and publishes only after that commit; a rollback leaves no event, delivery row or tombstone. A publication lost after commit replays the persisted payload with the same identity and commit timestamp, so the Signals SET carries one jti across redelivery and its unique event key makes the replay a no-op. Durable retryable subscribers are acknowledged independently with bounded backoff, and a removed subscriber's pending row reaches a terminal disposition without blocking others. Delivery is at least once with idempotent acceptance: exactly-once external delivery is not claimed, and multi-process claiming and worker topology stay under #641's trigger. The one subscriber whose effect leaves the process, the per-delegation family grant revocation, is captured in the terminal transaction and awaited by the request-path drain, replacing a fire-and-forget promise with a swallowed rejection. The committing caller still learns that publication did not complete, while the recovery path isolates an unpublishable event so one poison row cannot fail a request that committed nothing. Overlapping drains are serialized on the outbox instance: one pass runs at a time, a caller arriving mid-pass joins one follow-up pass that starts after it, and every disposition write is guarded on the pending row and on the attempt that produced it, so a terminal disposition never moves and a stale attempt never rewrites the attempt count, the error or the backoff. The controlled-promise cases cover both completion orders, the recorded attempt counts, the request-path seam under four concurrent drains, and the follow-up pass that keeps a row enqueued mid-pass live; the two-instance cases exercise the interleaving serialization removes, in one process over one handle and with no lease. Multi-process claiming and fencing stay under #641's trigger."
   },
   {
    "id": "control-plane.consistency.declaration",

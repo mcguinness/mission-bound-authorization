@@ -12,13 +12,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DERIVATION_POLICY } from "@mission/demo-data";
-import { withTransaction } from "@mission/store";
+import { type Database, openStore, withTransaction } from "@mission/store";
 import { generateKeyPair } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  buildAuthorizationServer,
   composeTombstoneRetentionSeconds,
   DEFAULT_AUDIT_RETENTION_S,
   DEFAULT_CLOCK_SKEW_S,
+  type DurableCommitSubscriber,
+  type LifecycleCommit,
+  LifecycleOutbox,
   MissionIdReuseError,
   MissionKernel,
   type PersistedLifecycleCommit,
@@ -60,6 +64,7 @@ function setup(
     file?: string;
     horizons?: Partial<TombstoneRetentionInputs>;
     retry?: { baseMs?: number; capMs?: number; maxAttempts?: number };
+    dischargeEventRetentionSeconds?: number;
   } = {},
 ): Harness {
   const issuer = opts.issuer ?? ISSUER;
@@ -80,6 +85,9 @@ function setup(
     ...(opts.file ? { store: { file: opts.file } } : {}),
     ...(opts.horizons ? { tombstoneHorizons: opts.horizons } : {}),
     ...(opts.retry ? { outboxRetry: opts.retry } : {}),
+    ...(opts.dischargeEventRetentionSeconds !== undefined
+      ? { dischargeEventRetentionSeconds: opts.dischargeEventRetentionSeconds }
+      : {}),
     onLifecycleCommit: (commit) => {
       if (fail.publish) throw new Error("failpoint: publication lost");
       commits.push(commit as PersistedLifecycleCommit);
@@ -101,6 +109,43 @@ function setup(
       approvalEventId: over.approvalEventId ?? "approval",
     });
   return { kernel, commits, clock, fail, approve };
+}
+
+/**
+ * A durable subscriber whose every delivery returns a promise this test
+ * resolves or rejects by hand, so a delivery can be held open exactly as a slow
+ * external call holds one open while another drain starts.
+ */
+function controlled(id = "external"): {
+  calls: Array<{ resolve: () => void; reject: (e: Error) => void }>;
+  subscriber: DurableCommitSubscriber<{ id: string }>;
+} {
+  const calls: Array<{ resolve: () => void; reject: (e: Error) => void }> = [];
+  return {
+    calls,
+    subscriber: {
+      id,
+      capture: (commit) => ({ id: commit.id }),
+      deliver: () =>
+        new Promise<void>((resolve, reject) => {
+          calls.push({ resolve: () => resolve(), reject: (e) => reject(e) });
+        }),
+    },
+  };
+}
+
+/** The newest committed event's identity. */
+function lastEventId(kernel: MissionKernel): string {
+  return (
+    kernel.db.prepare("SELECT event_id FROM lifecycle_events ORDER BY seq DESC LIMIT 1").get() as {
+      event_id: string;
+    }
+  ).event_id;
+}
+
+/** Every stored column of the one delivery row, for a byte-for-byte compare. */
+function rawDelivery(db: Database): Record<string, unknown> {
+  return db.prepare("SELECT * FROM lifecycle_deliveries").get() as Record<string, unknown>;
 }
 
 describe("durable lifecycle fan-out", () => {
@@ -567,8 +612,13 @@ describe("terminal tombstones and identifier nonreuse", () => {
   });
 
   it("refuses a reused identifier after the record is purged and after the detail is pruned", () => {
+    // Every declared horizon is 60 seconds here, the discharge retry window
+    // included: the effective discharge retention floors the idempotency
+    // horizon, so a deployment cannot declare a detail horizon shorter than the
+    // window in which a discharge assertion may still replay.
     const { kernel, clock, approve } = setup({
       horizons: { audit_retention_seconds: 60, state_staleness_seconds: 0, clock_skew_seconds: 0 },
+      dischargeEventRetentionSeconds: 60,
     });
     try {
       const record = approve();
@@ -611,6 +661,71 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(kernel.tombstones.horizons().idempotency_retry_seconds).toBe(86_400);
     } finally {
       kernel.db.close();
+    }
+  });
+
+  it("composes a configured discharge retention that outlives the audit horizon", () => {
+    // The discharge event store's retention IS an idempotency and retry
+    // horizon (issue #250, owner review): a replayed assertion inside it must
+    // meet a record whose terminal state, version and commit reference are
+    // still readable. A year of discharge retention therefore governs over the
+    // 90-day audit horizon, and the value reaches the composition even when
+    // KernelOptions is built directly rather than through the AS assembly.
+    const year = 365 * 24 * 60 * 60;
+    const { kernel, clock, approve } = setup({ dischargeEventRetentionSeconds: year });
+    try {
+      expect(year).toBeGreaterThan(DEFAULT_AUDIT_RETENTION_S);
+      expect(kernel.tombstones.retentionSeconds).toBe(year);
+      expect(kernel.tombstones.horizons().idempotency_retry_seconds).toBe(year);
+      const record = approve();
+      kernel.transition(record.id, "revoke");
+      // One second inside the discharge horizon: the detail is untouched.
+      clock.at = new Date(new Date(T0).getTime() + (year - 1) * 1000);
+      expect(kernel.tombstones.pruneDetails()).toBe(0);
+      expect(kernel.tombstones.find(ISSUER, record.id)).toMatchObject({
+        terminalState: "revoked",
+        finalVersion: record.version + 1,
+        detailPruned: false,
+      });
+      // Past it the detail goes and the identity row stays as the permanent
+      // nonreuse marker, which still refuses the identifier.
+      clock.at = new Date(new Date(T0).getTime() + (year + 1) * 1000);
+      expect(kernel.tombstones.pruneDetails()).toBe(1);
+      expect(kernel.tombstones.find(ISSUER, record.id)?.terminalState).toBeUndefined();
+      expect(kernel.tombstones.exists(ISSUER, record.id)).toBe(true);
+      expect(() => kernel.insertRecord({ ...record, approval_event_id: "after-prune" })).toThrow(
+        MissionIdReuseError,
+      );
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("derives one effective discharge retention for the store and the horizon", async () => {
+    // The AS assembly composed the DEFAULT discharge constant while handing the
+    // discharge store a larger configured value, so a supported setting never
+    // reached the composed maximum (issue #250, owner review). One derivation
+    // now feeds both.
+    const year = 365 * 24 * 60 * 60;
+    const as = await buildAuthorizationServer({
+      issuer: "https://composed-retention.test",
+      dischargeEventRetentionSeconds: year,
+    });
+    try {
+      expect(as.kernel.tombstones.retentionSeconds).toBeGreaterThanOrEqual(year);
+      expect(as.kernel.tombstones.horizons().idempotency_retry_seconds).toBe(year);
+    } finally {
+      as.kernel.db.close();
+    }
+    // With nothing configured the shipped declaration is unchanged: 86400
+    // seconds of creation and discharge idempotency, and the audit horizon
+    // still governs.
+    const shipped = await buildAuthorizationServer({ issuer: "https://shipped-retention.test" });
+    try {
+      expect(shipped.kernel.tombstones.horizons().idempotency_retry_seconds).toBe(86_400);
+      expect(shipped.kernel.tombstones.retentionSeconds).toBe(DEFAULT_AUDIT_RETENTION_S);
+    } finally {
+      shipped.kernel.db.close();
     }
   });
 
@@ -679,6 +794,229 @@ describe("restart recovery on the declared file-backed store", () => {
       expect(after.kernel.outbox.pendingEventCount()).toBe(0);
     } finally {
       after.kernel.db.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#fanout — overlapping drains (issue #250, owner review).
+ *
+ * The request middleware awaits one drain per request, so two drains are in
+ * flight together with ONE process and ONE writer. That is not #641: there is
+ * no lease, no claim and no second process here. The controlled promises hold a
+ * delivery open exactly as a slow external call would, so a second drain starts
+ * while the first is still awaiting acceptance.
+ */
+describe("serialized drains on one outbox instance", () => {
+  it("attempts one delivery for two overlapping drains and keeps the acknowledgement", async () => {
+    const { kernel, approve } = setup({ retry: { baseMs: 0, capMs: 0, maxAttempts: 1 } });
+    try {
+      const ctl = controlled();
+      kernel.registerDurableSubscriber(ctl.subscriber);
+      approve();
+      const eventId = lastEventId(kernel);
+      const a = kernel.drainLifecycleOutbox();
+      const b = kernel.drainLifecycleOutbox();
+      // The second drain did not select the row the first is delivering.
+      expect(ctl.calls).toHaveLength(1);
+      ctl.calls[0]?.resolve();
+      await Promise.all([a, b]);
+      expect(ctl.calls).toHaveLength(1);
+      const row = kernel.outbox.deliveries(eventId)[0];
+      expect(row?.disposition).toBe("accepted");
+      expect(row?.attempts).toBe(1);
+      expect(row?.last_error).toBeNull();
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("records one attempt when the delivery under two overlapping drains fails", async () => {
+    // A backoff the follow-up pass cannot have reached, so the one recorded
+    // attempt is the one delivery that ran, not a second pass retrying early.
+    const { kernel, approve } = setup({
+      retry: { baseMs: 60_000, capMs: 60_000, maxAttempts: 4 },
+    });
+    try {
+      const ctl = controlled();
+      kernel.registerDurableSubscriber(ctl.subscriber);
+      approve();
+      const eventId = lastEventId(kernel);
+      const a = kernel.drainLifecycleOutbox();
+      const b = kernel.drainLifecycleOutbox();
+      expect(ctl.calls).toHaveLength(1);
+      ctl.calls[0]?.reject(new Error("downstream refused"));
+      await Promise.all([a, b]);
+      expect(ctl.calls).toHaveLength(1);
+      const row = kernel.outbox.deliveries(eventId)[0];
+      expect(row?.disposition).toBe("pending");
+      expect(row?.attempts).toBe(1);
+      expect(row?.last_error).toBe("downstream refused");
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("abandons the final attempt once, and a later drain does not reverse it", async () => {
+    const { kernel, approve } = setup({ retry: { baseMs: 0, capMs: 0, maxAttempts: 1 } });
+    try {
+      const ctl = controlled();
+      kernel.registerDurableSubscriber(ctl.subscriber);
+      approve();
+      const eventId = lastEventId(kernel);
+      const a = kernel.drainLifecycleOutbox();
+      const b = kernel.drainLifecycleOutbox();
+      expect(ctl.calls).toHaveLength(1);
+      ctl.calls[0]?.reject(new Error("permanently unavailable"));
+      await Promise.all([a, b]);
+      const abandoned = kernel.outbox.deliveries(eventId)[0];
+      expect(abandoned?.disposition).toBe("abandoned");
+      expect(abandoned?.attempts).toBe(1);
+      // The terminal row is not re-selected and not re-attempted.
+      await kernel.drainLifecycleOutbox();
+      expect(ctl.calls).toHaveLength(1);
+      expect(kernel.outbox.deliveries(eventId)[0]).toEqual(abandoned);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("attempts each delivery once across four concurrent request-path drains", async () => {
+    // The provider middleware's seam is one awaited `drainLifecycleOutbox` per
+    // request. Four concurrent calls stand in for four in-flight requests; the
+    // HTTP layer adds nothing to this seam.
+    const { kernel, approve } = setup({ retry: { baseMs: 0, capMs: 0, maxAttempts: 1 } });
+    try {
+      const ctl = controlled();
+      kernel.registerDurableSubscriber(ctl.subscriber);
+      approve();
+      const eventId = lastEventId(kernel);
+      const drains = [0, 1, 2, 3].map(() => kernel.drainLifecycleOutbox());
+      expect(ctl.calls).toHaveLength(1);
+      ctl.calls[0]?.resolve();
+      await Promise.all(drains);
+      expect(ctl.calls).toHaveLength(1);
+      const row = kernel.outbox.deliveries(eventId)[0];
+      expect(row?.disposition).toBe("accepted");
+      expect(row?.attempts).toBe(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("delivers a row enqueued during a pass in the queued follow-up pass", async () => {
+    // Why one queued follow-up rather than a bare join: a caller whose own
+    // commit enqueued a row while a pass was running would otherwise wait for
+    // the next request or for boot, because that pass had already selected its
+    // rows.
+    const { kernel, approve } = setup({ retry: { baseMs: 0, capMs: 0, maxAttempts: 1 } });
+    try {
+      const ctl = controlled();
+      kernel.registerDurableSubscriber(ctl.subscriber);
+      const record = approve();
+      const first = lastEventId(kernel);
+      const a = kernel.drainLifecycleOutbox();
+      expect(ctl.calls).toHaveLength(1);
+      // A second transition commits its own delivery row while the first pass
+      // is still awaiting acceptance.
+      kernel.transition(record.id, "suspend");
+      const second = lastEventId(kernel);
+      const b = kernel.drainLifecycleOutbox();
+      expect(ctl.calls).toHaveLength(1);
+      ctl.calls[0]?.resolve();
+      await a;
+      await vi.waitFor(() => expect(ctl.calls).toHaveLength(2));
+      ctl.calls[1]?.resolve();
+      await b;
+      expect(kernel.outbox.deliveries(first)[0]?.disposition).toBe("accepted");
+      expect(kernel.outbox.deliveries(second)[0]?.disposition).toBe("accepted");
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  /**
+   * Two outbox instances over ONE database handle in ONE process: the closest
+   * single-process stand-in for the interleaving the serialization above
+   * removes. It is not multi-process claiming (#641) and needs no lease. The
+   * guard is what keeps a row honest if any future caller reintroduces overlap.
+   */
+  const handCommit = (id: string): LifecycleCommit => ({
+    id,
+    issuer: ISSUER,
+    state: "active",
+    version: 1,
+    committed_at: T0,
+    expires_at: EXPIRES_AT,
+  });
+
+  it("keeps an acknowledged row acknowledged when a stale attempt fails later", async () => {
+    const db = openStore("");
+    try {
+      const now = () => new Date(T0);
+      const retry = { baseMs: 60_000, capMs: 60_000, maxAttempts: 4 };
+      const a = new LifecycleOutbox(db, { now, publish: () => undefined, retry });
+      const b = new LifecycleOutbox(db, { now, publish: () => undefined, retry });
+      const ctlA = controlled();
+      const ctlB = controlled();
+      a.register(ctlA.subscriber);
+      b.register(ctlB.subscriber);
+      const commit = withTransaction(db, () => a.enqueueInCallerTx(handCommit("m-stale-fail")));
+
+      const drainA = a.drain();
+      const drainB = b.drain();
+      // Both instances selected the same pending row: the interleaving.
+      expect(ctlA.calls).toHaveLength(1);
+      expect(ctlB.calls).toHaveLength(1);
+      ctlA.calls[0]?.resolve();
+      await drainA;
+      const accepted = rawDelivery(db);
+      expect(accepted).toMatchObject({ disposition: "accepted", attempts: 1, last_error: null });
+
+      ctlB.calls[0]?.reject(new Error("stale downstream failure"));
+      await drainB;
+      // Byte for byte: the stale failure moved neither the disposition nor the
+      // attempt count, the error or the backoff.
+      expect(rawDelivery(db)).toEqual(accepted);
+      expect(a.deliveries(commit.event_id)[0]?.disposition).toBe("accepted");
+    } finally {
+      db.close();
+    }
+  });
+
+  it("keeps an abandoned row abandoned when a stale attempt succeeds later", async () => {
+    const db = openStore("");
+    try {
+      const now = () => new Date(T0);
+      const retry = { baseMs: 0, capMs: 0, maxAttempts: 1 };
+      const a = new LifecycleOutbox(db, { now, publish: () => undefined, retry });
+      const b = new LifecycleOutbox(db, { now, publish: () => undefined, retry });
+      const ctlA = controlled();
+      const ctlB = controlled();
+      a.register(ctlA.subscriber);
+      b.register(ctlB.subscriber);
+      withTransaction(db, () => a.enqueueInCallerTx(handCommit("m-stale-ok")));
+
+      const drainA = a.drain();
+      const drainB = b.drain();
+      ctlA.calls[0]?.reject(new Error("budget exhausted"));
+      await drainA;
+      const abandoned = rawDelivery(db);
+      expect(abandoned).toMatchObject({
+        disposition: "abandoned",
+        attempts: 1,
+        last_error: "budget exhausted",
+      });
+
+      // A duplicate that later succeeded does not un-abandon the row. The
+      // record keeps what the attempt it tracks did: at-least-once already
+      // permits the duplicate delivery, and no update moves a row out of a
+      // terminal disposition.
+      ctlB.calls[0]?.resolve();
+      await drainB;
+      expect(rawDelivery(db)).toEqual(abandoned);
+    } finally {
+      db.close();
     }
   });
 });
