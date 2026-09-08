@@ -400,6 +400,18 @@ canonicalization, and integrity envelope a deployment emits.
   evidence projection of the decision request rather than a
   pass-through of it.
 
+`action_phase`:
+: CONDITIONAL. A string from `preflight`, `prepare`, `commit`, or
+  `compensate`; REQUIRED when the evaluated operation is a phase of a
+  compound action ({{I-D.draft-mcguinness-mission-runtime}}). The phase
+  is recorded once here, not inside this record's normalized
+  `conditions`. On a permit, the producer MUST ensure it equals the
+  live permit's phase condition. On a denial, it records the phase
+  from the validated evaluation context, without requiring a permit
+  condition that does not exist. Malformed or unvalidated phase input
+  MUST be omitted. This is retrospective evidence, never a substitute
+  for the live permit condition or the PEP's comparison at use.
+
 `audience`:
 : REQUIRED. A string. The audience the PDP evaluated: the runtime
   profile's audience input to the Decision Output
@@ -462,9 +474,10 @@ canonicalization, and integrity envelope a deployment emits.
   set `use_limit: 1` for a permit in the high-consequence classes).
   The parameter binding is recorded once, in this record's
   `parameter_digest` member; the producer MUST ensure that value
-  equals the binding carried by the wire conditions. A binding maps
-  its wire members onto this form (for example the AuthZEN binding's
-  `conditions` response member,
+  equals the binding carried by the wire conditions. The phase binding
+  is likewise recorded once in `action_phase`, under that member's
+  equality rule. A binding maps its wire members onto this form (for
+  example the AuthZEN binding's `conditions` response member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `evaluation_request_digest`:
@@ -481,10 +494,15 @@ canonicalization, and integrity envelope a deployment emits.
   or a deny.
 
 `compensates_evaluation_id`:
-: OPTIONAL. A string. The `evaluation_id` of the action this decision
+: CONDITIONAL. A string; REQUIRED for a compensate-phase decision.
+  The `evaluation_id` of the committed action this decision
   compensates, carrying the runtime profile's compensation link
   ({{I-D.draft-mcguinness-mission-runtime}}) so a compensating
-  action reconciles against the action it reverses.
+  action reconciles against the action it reverses. The trusted
+  execution path MUST establish this link from retained, verified
+  evidence of the original evaluation, never merely copy an
+  agent-supplied identifier. The link confers no authority and does
+  not authorize compensation under the original action's permit.
 
 `decision`:
 : REQUIRED. A string. One of `permit` or `deny`.
@@ -1058,9 +1076,12 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 : CONDITIONAL. A string. Error identifier when `outcome` is `failed` or
   `suppressed`, from this closed set: `parameter_mismatch` (the
   executing PEP found the effective parameters differ from those the
-  permit bound), `permit_expired` (the permit's validity window had
-  passed at execution), `permit_consumed` (re-presentation of an
-  already-consumed single-use evaluation identifier),
+  permit bound), `phase_mismatch` (the permit's phase differs from the
+  executing crossing, is missing or malformed where required, or
+  cannot be established at use), `permit_expired` (the permit's
+  validity window had passed at execution), `permit_consumed`
+  (re-presentation of an already-consumed single-use evaluation
+  identifier),
   `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
   named in `obligation_outcomes`), and `kill_switch` (execution
@@ -1226,6 +1247,13 @@ emit Execution Evidence with `outcome` `suppressed` and `error`
 recorded against an `outcome` of `completed` or `failed`, a buggy or
 compromised executor having gone ahead despite the mismatch, is
 equally representable and is never grounds to reject the record.
+
+A phase binding failure detected before acting likewise requires
+Execution Evidence with `outcome` `suppressed` and `error`
+`phase_mismatch`. Its distinct identifier records a phase failure,
+not a parameter deviation; the parameter digests can be identical
+when phases share an action identifier and inputs. The original
+Decision Evidence retains the phase the permit actually authorized.
 
 Whatever the recorded `outcome`, when the two digests diverge the
 audit consumer MUST classify the execution as a parameter deviation
