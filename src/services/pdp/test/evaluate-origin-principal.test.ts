@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest, type EvaluateOptions } from "../src/evaluate.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
-import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
+import { relationForAction, stalenessBound } from "../src/policy.js";
 import type { EntitlementObservation, OriginPrincipal, PrincipalMappingObservation } from "@mission/core";
 
 const RESOURCE = "http://localhost:4403/mcp";
@@ -56,7 +56,7 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   fga: alwaysAllowFga,
   modelId: "unit-test-model",
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
   ...extra,
@@ -89,6 +89,15 @@ const resolverOpts = (
   });
 
 describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)", () => {
+  it("resource policy independently narrows a Mission action covered by fresh entitlement", async () => {
+    const options = resolverOpts(FRESH_MAPPING, { ...ENTITLED, authority: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }] }, 600);
+    const allow = await evaluate(req(), options);
+    const deny = await evaluate(req(), { ...options, fga: { checkWithContext: async () => false } as unknown as Fga });
+    expect(allow.decision, JSON.stringify(allow.context)).toBe(true);
+    expect(deny.decision).toBe(false);
+    expect(deny.context.denial_reason).toBe("out_of_authority");
+    expect(deny.context.principal_mapping).toEqual(allow.context.principal_mapping);
+  });
   it("a request NOT claiming the profile (no context.mission.subject) is completely unaffected: no resolvers configured, still permits", async () => {
     const dec = await evaluate(req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }), baseOpts());
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);

@@ -11,6 +11,7 @@ import {
   intentHash,
   proposalHash,
 } from "@mission/core";
+import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
@@ -104,6 +105,13 @@ import {
 
 /** Retry budget for random Status List index allocation on UNIQUE collision. */
 const STATUS_INDEX_MAX_ATTEMPTS = 16;
+
+/**
+ * @spec status#mission-status-caching — the default Status response lifetime,
+ * seconds. Every value, requested or default, is capped at the advertised
+ * `mission_max_stale_seconds` inside {@link MissionKernel.signedStatus}.
+ */
+const DEFAULT_STATUS_FRESHNESS_SECONDS = 60;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS missions (
@@ -557,6 +565,11 @@ export class MissionKernel {
    * key.
    */
   approve(input: ApproveInput): MissionRecord {
+    // Trusted wiring modes are exclusive. Reject before derivation or resolver
+    // side effects; an empty fact list still means no caller-supplied facts.
+    if (this.opts.capabilityResolver && input.capabilityResolution?.length) {
+      throw new Error("capabilityResolution cannot be supplied when capabilityResolver is configured");
+    }
     // @spec mission#authority-proposal — normalize: an empty proposal is no
     // proposal (matches the wire, where an empty authorization_details array
     // is treated as absent). Present iff submitted: template-mode Missions
@@ -1931,6 +1944,15 @@ export class MissionKernel {
    * mission-status-response+jwt, mission object mirroring the claim plus
    * state/version/fresh_until; audience-scoped authorization_details.
    */
+  /**
+   * @spec status#mission-status-caching — "When the AS advertises
+   * `mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set
+   * `mission.fresh_until` later than the response `iat` plus that value."
+   * The cap lives here, at the one place that stamps `fresh_until` and
+   * `exp`, so no caller can publish a longer horizon than the metadata
+   * document advertises (`@spec status#as-metadata`), and the advertised
+   * and the enforced ceiling are the same number.
+   */
   async signedStatus(
     id: string,
     opts: {
@@ -1949,7 +1971,10 @@ export class MissionKernel {
   ): Promise<string> {
     const record = this.applyExpiry(this.mustGet(id));
     const nowS = Math.floor(this.now().getTime() / 1000);
-    const freshness = opts.freshnessSeconds ?? 60;
+    const freshness = Math.min(
+      opts.freshnessSeconds ?? DEFAULT_STATUS_FRESHNESS_SECONDS,
+      Number(MISSION_MAX_STALE_SECONDS),
+    );
     // Audience-scoped entries project the EFFECTIVE set (approved minus
     // containment); a contained entry never appears on the Status surface.
     const scoped = opts.audience

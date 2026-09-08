@@ -203,6 +203,42 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
     }
   });
 
+  // #787: `child_creation_policy` is an issuer-recorded reference that becomes a
+  // child's approval-basis root_commitment, so the destination ceiling compares it
+  // rather than stripping it: a declared reference binds, and the minted entry
+  // keeps it alongside its retained-action provenance.
+  const childPolicy = "urn:policy:child-drawdown:v1";
+  const withChildPolicy = (policy?: string): AuthorityEntry => ({
+    ...delegated,
+    delegation: {
+      max_depth: 1,
+      children: { max_children: 2, ...(policy ? { child_creation_policy: policy } : {}) },
+    },
+  });
+
+  it("a declared child-creation policy binds, and the mint preserves the reference with its retained-action provenance", async () => {
+    const bindings = delegated.actions.map(action => ({ action, tool_id: action, source_uri: "https://catalog.test", source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"), operation_ref: action }));
+    const server = await ras({ localCeiling: [{ ...withChildPolicy(childPolicy), actions: ["invoices.read"] }] });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [{ ...withChildPolicy(childPolicy), capability_sources: bindings }] }), clientJkt);
+    expect(details(result.access_token)).toEqual([{ ...withChildPolicy(childPolicy), actions: ["invoices.read"], capability_sources: [bindings[0]] }]);
+  });
+
+  it("a candidate retaining the children grant without the declared policy refuses before minting", async () => {
+    const server = await ras({ localCeiling: [withChildPolicy(childPolicy)] });
+    await expect(server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy()] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("a candidate altering the declared policy reference refuses before minting", async () => {
+    const server = await ras({ localCeiling: [withChildPolicy(childPolicy)] });
+    await expect(server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy("urn:policy:child-drawdown:v2")] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("a ceiling declaring no children grant drops the entry carrying one, minting no child-creation authority", async () => {
+    const server = await ras();
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy(childPolicy), DEFAULT_CEILING[1]] }), clientJkt);
+    expect(details(result.access_token)).toEqual([DEFAULT_CEILING[1]]);
+  });
+
   it("absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup", async () => {
     for (const localCeiling of [undefined, [], [{}], [{ ...delegated, capability_sources: [] }]]) {
       await expect(ras({ localCeiling } as unknown as Partial<RasConfig>)).rejects.toThrow("RAS local policy");
