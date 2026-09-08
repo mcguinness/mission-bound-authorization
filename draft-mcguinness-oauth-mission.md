@@ -5857,6 +5857,166 @@ partner ERP in another trust domain and enforced there, is walked
 through in the companion's end-to-end example
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
+# Derivation Policy (Non-Normative) {#derivation-policy}
+
+This appendix is illustrative and adds no normative requirements. It
+describes an authoring artifact for the contract in
+{{authorization-derivation}}, not a standardized policy language or an
+alternative subset relation.
+
+## The Policy as an Artifact
+
+A deployment retains a versioned derivation policy with its ceiling,
+configured mappings, and issuance limits. Its inputs include a validated
+Mission Intent, the client's authority proposal in narrowing mode (or
+configured candidates when there is no proposal), the applicable authority
+source ceiling, and the capability catalog's per-action properties. The
+output is the Authority Set committed by `authority_hash`; `policy_version`
+identifies the policy used. The policy does not travel. Its identifier and
+published Intent-to-Authority-Set fixtures let a partner review outcomes.
+
+Reproducing a derivation requires the same inputs and the retained
+policy and catalog versions, not just the identifier of a mutable
+configuration. Derivation is mechanical: a model may suggest an Intent
+or a proposal, and does not make the approval-time narrowing decision.
+
+## Properties a Derivation Policy Holds
+
+The five properties below restate, for a policy author, what
+{{authorization-derivation}} and the rules it cites already require of
+a derivation. They add no requirement of their own.
+
+- **Deterministic.** The same Intent, proposal, ceiling, and catalog
+  derive the same Authority Set, which is what makes `policy_version`
+  an audit correlator at all ({{authorization-derivation}}).
+- **Narrowing only.** Every derived entry is a subset of some proposed
+  entry of the same type, under that type's own relation
+  ({{authority-proposal}}, {{subset}}); in configured-mapping mode the
+  configured candidates supply that comparison input. Retaining fewer
+  JSON fields is not narrowing: dropping a restriction can grant more.
+  Where the relation cannot decide, because two bounds are
+  incomparable, the posture is conservative refusal ({{subset}}). For
+  `mission_resource_access`, two amount caps naming different
+  currencies have no intersection, with no implicit conversion and no
+  "ceiling wins" exception; the Common Constraints and their
+  intersection rules are defined by
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}.
+- **Refusal over silent drop.** A policy demonstrates narrowing only
+  for a constraint its engine compares. An entry of an unsupported
+  type, or one that fails its schema, is refused, and a validation
+  failure is never repaired by omitting the entry
+  ({{authority-proposal}}). An entry carrying a constraint the engine
+  cannot compare is refused rather than derived with that constraint
+  dropped ({{subset}}, {{error-mapping}}): a narrowing intent that
+  vanishes silently is a widening. An entry the engine compares and
+  policy cannot accept is the distinct case, narrowed or omitted with
+  the granted echo reflecting it ({{authority-proposal}}). A
+  deployment-defined constraint carries the same obligation as a
+  registered one, its own implemented comparison, and a name absent
+  from the common registry does not relieve it.
+- **Issuer-established members are not client-supplied.**
+  `policy_version` ({{authorization-derivation}}), `authority_source`
+  and `approval_basis` ({{authority-sources}}, {{mission-record}}), and
+  the effective `derivation_limit` ({{derivation-issuance-policy}}) are
+  established by the issuer at the approval event, and no proposal
+  member sets them. A client's `requested_derivation_limit` is an input
+  the issuer clamps, never an independently established ceiling
+  ({{derivation-issuance-policy}}).
+- **No member the ceiling never granted.** A grant-shaped member absent
+  from the ceiling, such as a per-entry `delegation` policy, stays
+  absent from the derived entry, so a proposal introduces no capability
+  the policy never conferred. A restriction nested inside an
+  already-granted delegation, such as `allowed_delegates`, narrows in
+  the ordinary direction.
+
+## A Worked Rule
+
+Consider a catalog whose read actions supply no amount for a cap to
+compare against, while a journal write does. The ceiling separates
+those actions:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read", "journal-entries.read"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" } } }
+]
+~~~
+
+The validated proposal also separates the read from the amount-bound write:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "900.00", "currency": "USD" } } }
+]
+~~~
+
+The resulting Authority Set contains the proposed `invoices.read` entry
+unchanged, and the proposed `journal-entries.write` entry with `max_amount`
+narrowed to `500.00 USD`. The ceiling's unrequested `journal-entries.read`
+does not appear. Each proposal intersects the same-resource ceiling
+fragments; disjoint action intersections contribute no authority.
+
+Attaching the amount cap to a single mixed read and write proposal is
+not a shortcut to that result: the read supplies no amount for the cap
+to compare against. A deployment applying one entry-admission rule at
+intake refuses that modeling error, rather than leaving derivation to
+drop the cap from a read fragment. A write proposal naming a different
+currency likewise cannot produce the USD intersection shown. And a
+proposal carrying a Common Constraint this deployment does not compare
+is refused with `invalid_authorization_details` ({{error-mapping}}),
+not derived with the constraint dropped. These are negative fixtures
+alongside the positive result, not special cases that relax the type's
+relation.
+
+## Fixtures and Authoring Discipline
+
+Versioned Intent/proposal fixtures with expected Authority Sets make the
+existing publication recommendation in {{authorization-derivation}}
+concrete. Reviewing their diffs with every policy change exposes altered
+grants before approval. Include empty intersections, unknown constraints,
+incomparable values, and attempts to introduce delegation, as well as
+normal template and narrowing outcomes. Check subset against both proposal
+and ceiling, not only against the issuer's ceiling.
+
+An additional tripwire runs the configuration actually shipped through
+intake, derivation and a real decision path. A successful configuration
+load alone does not prove that it can authorize its intended workload.
+Using the same entry-admission rule at configuration load and client intake
+helps prevent those two surfaces from disagreeing. A reference
+implementation's split action ceiling and shipped-configuration tests
+realize this discipline. This appendix states the contract and
+certifies no implementation's handling of a constraint it does not
+compare or of mismatched currencies; a deployment establishes that with
+its own fixtures.
+
+## Ownership and Operational Signals
+
+| Artifact | Owner | Responsibility |
+|---|---|---|
+| Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time derivation |
+| Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
+| Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
+
+Templates amortize repeated authoring across Missions; they do not bypass
+the ceilings. Unmapped-resource rate, template-hit rate and rule-exception
+rate help an operator see where its policy authoring surface remains
+incomplete. None of these metrics certifies that a policy captured a human's
+intended meaning; the derivation boundary remains the one stated in
+{{authorization-derivation}}.
+
 # Integrity Anchor Test Vectors {#test-vectors}
 
 These non-normative vectors let an implementation verify its anchor
@@ -6222,6 +6382,10 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Added an informative derivation-policy appendix with an admissible
+  split-action worked rule, authoring fixtures and ownership guidance;
+  no normative requirements were added.
 
 - PR #725 review round: split Local Approved-Set Verification's
   authenticated complete-set retrieval into two explicit tiers
