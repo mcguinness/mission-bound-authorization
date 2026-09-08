@@ -477,6 +477,9 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
       decision: "permit",
       evaluated_at: new Date().toISOString(),
       action_class: "irreversible_action",
+      entry_digest: "sha-256:fixture-entry",
+      parameter_digest: FULLY_RECOGNIZED_CONTEXT.conditions.parameter_digest,
+      conditions: FULLY_RECOGNIZED_CONTEXT.conditions,
     });
     return { ...FULLY_RECOGNIZED_CONTEXT, ...extra, decision_evidence };
   };

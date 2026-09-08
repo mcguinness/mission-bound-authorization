@@ -80,6 +80,8 @@ export interface TxnCredential {
  * and {@link TokenFacts} below for why they are split.
  */
 export interface CommonTokenFacts {
+  /** Credential issuer/expiry established by the token verifier; never raw claims. */
+  credential?: EvaluationRequest["context"]["credential"];
   sub: string;
   clientId: string;
   clientInstanceId?: string;
@@ -936,6 +938,10 @@ export class Pep {
         // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
         freshness,
         actor: contextActor,
+        ...(token.credential ? { credential: {
+          ...(typeof token.credential.issuer === "string" ? { issuer: token.credential.issuer } : {}),
+          ...(typeof token.credential.expires_at === "string" ? { expires_at: token.credential.expires_at } : {}),
+        } } : {}),
         // @spec capability-binding#context-capability-source — the PEP supplies
         // the binding for a catalog-sourced action, and omits the member entirely
         // for a non-catalog one.

@@ -53,6 +53,51 @@ export interface RuntimeActionRef {
   name: string;
 }
 
+/** Deployment audit policy: verified issuer/expiry only, never token bytes or confirmation keys. */
+export interface RuntimeCredentialRef {
+  issuer?: string;
+  expires_at?: string;
+}
+
+function objectOf(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : undefined;
+}
+
+function requiredString(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) throw new Error("Decision Evidence requires a nonempty string");
+  return value;
+}
+
+/** Runtime allowlist, not a cast: extra claims never enter the signed object. */
+export function runtimeCredentialOf(value: unknown): RuntimeCredentialRef | undefined {
+  const p = objectOf(value);
+  if (!p) return undefined;
+  const issuer = typeof p.issuer === "string" && p.issuer.length > 0 ? p.issuer : undefined;
+  const expires_at = typeof p.expires_at === "string" && Number.isFinite(Date.parse(p.expires_at)) ? p.expires_at : undefined;
+  return issuer || expires_at ? { ...(issuer ? { issuer } : {}), ...(expires_at ? { expires_at } : {}) } : undefined;
+}
+
+/** Preserve identifiers and chain order, but no arbitrary hop claims or nested keys. */
+function runtimeActorOf(value: unknown): ContextActor | undefined {
+  const p = objectOf(value);
+  if (!p) return undefined;
+  const out: ContextActor = {};
+  if (typeof p.client_id === "string") out.client_id = p.client_id;
+  if (typeof p.client_instance_id === "string") out.client_instance_id = p.client_instance_id;
+  if (p.act !== undefined) {
+    if (!Array.isArray(p.act)) return undefined;
+    const chain = [];
+    for (const value of p.act) {
+      const hop = objectOf(value);
+      if (!hop || typeof hop.iss !== "string" || typeof hop.sub !== "string") return undefined;
+      chain.push({ iss: hop.iss, sub: hop.sub, ...(typeof hop.sub_profile === "string" ? { sub_profile: hop.sub_profile } : {}) });
+    }
+    out.act = chain;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** @spec runtime-evidence#decision-evidence-object `conditions` (normalized permit form). */
 export interface RuntimeConditions {
   valid_until: string;
@@ -135,6 +180,7 @@ export interface DecisionEvidenceObject {
   action_class: RuntimeActionClass;
   class_source: RuntimeClassSource;
   actor?: ContextActor;
+  credential?: RuntimeCredentialRef;
   capability_source?: RuntimeCapabilitySource;
   principal_mapping?: RuntimePrincipalMapping;
   hop_reference?: RuntimeHopReference;
@@ -199,6 +245,7 @@ export interface DecisionEvidenceEmissionInput {
   evaluated_at: string;
   action_class?: RuntimeActionClass;
   actor?: ContextActor;
+  credential?: RuntimeCredentialRef;
   principal_mapping?: RuntimePrincipalMapping;
   parameter_digest?: string;
   conditions?: RuntimeConditions;
@@ -241,8 +288,8 @@ export interface DecisionEvidenceEmitterConfig {
  */
 export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterConfig): DecisionEvidenceEmitter {
   const sequences = new Map<string, number>();
-  const nextSequence = (missionId: string): number => {
-    const key = `${missionId} ${config.emitterId} pdp`;
+  const nextSequence = (mission: RuntimeMissionRef): number => {
+    const key = JSON.stringify([mission.issuer, mission.id, config.emitterId, "pdp"]);
     const n = sequences.get(key) ?? 0;
     sequences.set(key, n + 1);
     return n;
@@ -256,6 +303,21 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         );
       }
       const action_class = input.action_class ?? "consequential_read";
+      if (input.parameter_digest !== undefined) requiredString(input.parameter_digest);
+      if (input.conditions?.use_limit !== undefined && (!Number.isSafeInteger(input.conditions.use_limit) || input.conditions.use_limit < 1)) {
+        throw new Error("Decision Evidence use_limit must be a positive integer");
+      }
+      const classes = ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"];
+      if (!classes.includes(action_class)) throw new Error("Decision Evidence has an unknown action class");
+      if (input.decision === "permit" && (!input.entry_digest || !input.conditions)) {
+        throw new Error("Decision Evidence permit requires entry digest and conditions");
+      }
+      if (input.conditions?.parameter_digest !== input.parameter_digest && input.decision === "permit") {
+        throw new Error("Decision Evidence parameter binding differs from wire conditions");
+      }
+      if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
+        throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
+      }
       const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
       const evaluation_request_digest =
         input.parameter_digest === undefined
@@ -268,26 +330,42 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
             })
           : undefined;
       const capability_source = runtimeCapabilitySourceOf(input.capability_source);
+      const actor = runtimeActorOf(input.actor);
+      const credential = runtimeCredentialOf(input.credential);
+      const mission: RuntimeMissionRef = {
+        id: requiredString(input.mission.id), issuer: requiredString(input.mission.issuer),
+        policy_view_id: requiredString(input.mission.policy_view_id),
+        ...(typeof input.mission.authority_hash === "string" ? { authority_hash: input.mission.authority_hash } : {}),
+        ...(typeof input.mission.intent_hash === "string" ? { intent_hash: input.mission.intent_hash } : {}),
+        ...(typeof input.mission.policy_version === "string" ? { policy_version: input.mission.policy_version } : {}),
+      };
       const unsigned = {
         evidence_id: newRecordId("evd"),
         evaluation_id: input.evaluation_id,
-        mission: input.mission,
-        subject: input.subject,
-        resource: input.resource,
-        action: input.action,
+        mission,
+        subject: { id: requiredString(input.subject.id),
+          ...(typeof input.subject.type === "string" ? { type: input.subject.type } : {}),
+          ...(typeof input.subject.properties?.iss === "string" ? { properties: { iss: input.subject.properties.iss } } : {}),
+        },
+        resource: { type: requiredString(input.resource.type), id: requiredString(input.resource.id) },
+        action: { name: requiredString(input.action.name) },
         audience: input.audience,
         action_class,
         class_source,
         ...(capability_source ? { capability_source } : {}),
-        ...(input.actor !== undefined ? { actor: input.actor } : {}),
+        ...(actor ? { actor } : {}),
+        ...(credential ? { credential } : {}),
         ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
         ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
         ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
-        ...(input.conditions !== undefined ? { conditions: input.conditions } : {}),
+        ...(input.conditions !== undefined ? { conditions: {
+          valid_until: requiredString(input.conditions.valid_until),
+          ...(input.conditions.use_limit !== undefined ? { use_limit: input.conditions.use_limit } : {}),
+        } } : {}),
         decision: input.decision,
         ...(input.denial_reason !== undefined ? { denial_reason: input.denial_reason } : {}),
         ...(input.entry_digest !== undefined ? { entry_digest: input.entry_digest } : {}),
-        sequence: nextSequence(input.mission.id),
+        sequence: nextSequence(mission),
         emitter: { id: config.emitterId, role: "pdp" as const },
         evaluated_at: input.evaluated_at,
       };

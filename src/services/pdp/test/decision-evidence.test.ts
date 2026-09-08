@@ -19,7 +19,7 @@
 
 import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
+import { canonicalDigest, capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
 import { runtimeCapabilitySourceOf, type RuntimeCapabilitySource } from "../src/decision-evidence.js";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
@@ -157,6 +157,98 @@ function opts(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
 }
 
 describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741)", () => {
+  it("projects subject, actor, resource and credential at runtime and never signs raw nested claims or action parameters", async () => {
+    const { emitter, resolve } = emitterFixture();
+    const request = req();
+    const secret = "RAW-CLAIM-OR-PARAMETER-MUST-NOT-BE-SIGNED";
+    request.subject = { id: "alice", properties: { iss: "https://as.test", raw_claims: { secret } }, secret } as never;
+    request.resource = { type: "invoice", id: "inv-1", properties: { vendor_id: "acme", secret }, secret } as never;
+    request.action = { name: "payments:invoice.read", properties: { parameters: { secret } }, renamed_parameters: { secret } } as never;
+    request.context.actor = { client_id: "ap-agent", secret, act: [
+      { iss: "https://as.test", sub: "root", sub_profile: "service", cnf: { secret }, secret },
+      { iss: "https://as.test", sub: "leaf", secret, act: { secret } },
+    ] } as never;
+    request.context.credential = { issuer: "https://as.test", expires_at: "2026-07-22T13:00:00Z", raw_token: secret, confirmation: { secret }, claims: { secret } } as never;
+    request.context.parameter_digest = canonicalDigest({ secret });
+    const decision = await evaluate(request, opts({ evidence: emitter }));
+    expect(decision.decision).toBe(true);
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(record.subject).toEqual({ id: "alice", properties: { iss: "https://as.test" } });
+    expect(record.resource).toEqual({ type: "invoice", id: "inv-1" });
+    expect(record.action).toEqual({ name: "payments:invoice.read" });
+    expect(record.actor).toEqual({ client_id: "ap-agent", act: [
+      { iss: "https://as.test", sub: "root", sub_profile: "service" }, { iss: "https://as.test", sub: "leaf" },
+    ] });
+    expect(record.credential).toEqual({ issuer: "https://as.test", expires_at: "2026-07-22T13:00:00Z" });
+    expect(record.parameter_digest).toBe(request.context.parameter_digest);
+    expect(JSON.stringify(record)).not.toContain(secret);
+    const signed = Buffer.from(record.evidence_envelope.value.split(".")[1]!, "base64url").toString("utf8");
+    expect(signed).not.toContain(secret);
+    expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+    // The record owns its projections; a later caller mutation changes neither bytes nor verification.
+    request.context.actor!.act![0]!.sub = "mutated";
+    request.context.credential!.issuer = "https://mutated.test";
+    expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+  });
+
+  it("records the applied class, a permit entry digest and one matching parameter binding for every action class", async () => {
+    const { emitter } = emitterFixture();
+    for (const actionClass of [undefined, "consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"]) {
+      const request = req();
+      request.context.action_class = actionClass;
+      request.context.parameter_digest = canonicalDigest({ invoice_id: "inv-1" });
+      request.context.freshness = { observed_at: NOW.toISOString(), source: "load_view" };
+      const decision = await evaluate(request, opts({ evidence: emitter, allowedFreshnessSources: new Set(["load_view"]) }));
+      expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+      const record = decision.context.decision_evidence as DecisionEvidenceObject;
+      expect(record.action_class).toBe(actionClass ?? "consequential_read");
+      expect(record.class_source).toBe(actionClass ? "deployment" : "default");
+      expect(record.entry_digest).toMatch(/^sha-256:/);
+      expect(record.parameter_digest).toBe((decision.context.conditions as { parameter_digest: string }).parameter_digest);
+      expect(record.conditions).not.toHaveProperty("parameter_digest");
+      expect(record).not.toHaveProperty("evaluation_request_digest");
+      expect(Number.isFinite(Date.parse(record.conditions!.valid_until))).toBe(true);
+      if (["irreversible_action", "external_commitment", "privileged_administration"].includes(actionClass ?? "")) expect(record.conditions!.use_limit).toBe(1);
+    }
+  });
+
+  it("uses only the documented request-summary digest without a parameter binding on permit and deny, and omits absent credential", async () => {
+    const { emitter } = emitterFixture();
+    for (const authority_set of [view().authority_set, []]) {
+      const decision = await evaluate(req(), opts({ view: view({ authority_set }), evidence: emitter }));
+      const record = decision.context.decision_evidence as DecisionEvidenceObject;
+      expect(record).not.toHaveProperty("parameter_digest");
+      expect(record.evaluation_request_digest).toMatch(/^sha-256:/);
+      expect(record).not.toHaveProperty("credential");
+    }
+  });
+
+  it("a view-mismatch denial names the request Mission and the PDP view separately, never another Mission's authority anchor", async () => {
+    const { emitter, resolve } = emitterFixture();
+    const request = req();
+    request.context.mission = { id: "different-mission", issuer: "https://other.test", policy_version: "policy-7" };
+    const decision = await evaluate(request, opts({ evidence: emitter }));
+    expect(decision.context.denial_reason).toBe("view_inconsistent");
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(record.mission).toEqual({ id: "different-mission", issuer: "https://other.test", policy_version: "policy-7", policy_view_id: decision.context.policy_view_id });
+    expect(record.mission).not.toHaveProperty("authority_hash");
+    expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+  });
+
+  it("refuses an inconsistent binding or unbounded high-consequence permit before signing", async () => {
+    const { emitter } = emitterFixture();
+    const input = {
+      mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
+      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
+    };
+    await expect(emitter.emit({ ...input, parameter_digest: canonicalDigest({ amount: 1 }) })).rejects.toThrow("binding differs");
+    await expect(emitter.emit({ ...input, action_class: "privileged_administration" })).rejects.toThrow("use_limit 1");
+    await expect(emitter.emit({ ...input, entry_digest: undefined })).rejects.toThrow("entry digest and conditions");
+    await expect(emitter.emit({ ...input, action_class: "unregistered" as never })).rejects.toThrow("unknown action class");
+  });
+
   it("evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits", async () => {
     const { emitter } = emitterFixture();
     const decision = await evaluate(req(), opts({ evidence: emitter }));

@@ -46,6 +46,7 @@ export {
   type RuntimeCapabilitySource,
   type RuntimeClassSource,
   type RuntimeConditions,
+  type RuntimeCredentialRef,
   type RuntimeHopReference,
   type RuntimeMissionRef,
   type RuntimePrincipalMapping,

@@ -462,6 +462,8 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
         audience: AUDIENCE,
         evaluation_id: "dec_activity",
         decision: "permit",
+        entry_digest: "sha-256:fixture-entry",
+        conditions: { valid_until: new Date(Date.now() + 60_000).toISOString() },
         evaluated_at: new Date().toISOString(),
       }),
     );
