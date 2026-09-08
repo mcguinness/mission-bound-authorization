@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "6dbc9eb9ebe444a82ede6e1c4f920205b82cebdf",
-    "content_sha256": "97aecd8c39b1e8641a8d6e93c13795d263d7f900843bc51cd120f853824fdbd1"
+    "revision": "ae362420a2d87cce061cd26711a709e48c6763e5",
+    "content_sha256": "9bff622c97ce5d02e6d5204472ffe001ed97121e7c56bcc9432757ab1a53c822"
    },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
