@@ -135,7 +135,10 @@ function makeHarness(containmentPolicy?: ContainmentPolicy): Harness {
       publisher?.markDirty();
     },
   });
-  publisher = new StatusListPublisher(() => kernel.publishStatusList());
+  publisher = new StatusListPublisher(
+    () => kernel.publishStatusList(),
+    () => kernel.nowDate(),
+  );
   return { kernel, commits, publisher, dirtyMarks: () => marks };
 }
 

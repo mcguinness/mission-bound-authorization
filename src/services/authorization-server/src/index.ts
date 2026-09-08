@@ -783,7 +783,12 @@ export async function buildAuthorizationServer(opts: {
       opts.onLifecycleCommit?.(commit);
     },
   });
-  statusListPublisher = new StatusListPublisher(() => kernel.publishStatusList());
+  // The publisher compares a cached token's own `exp` against the same clock
+  // that signed it (@spec control-plane#fresh-observation).
+  statusListPublisher = new StatusListPublisher(
+    () => kernel.publishStatusList(),
+    () => kernel.nowDate(),
+  );
   // AROP DTR store, wired onto the real /token deferred grant (D42).
   const deferrals = new DeferralStore(kernel);
   // @spec expansion — the DTR deferred-completion store for Mission EXPANSION

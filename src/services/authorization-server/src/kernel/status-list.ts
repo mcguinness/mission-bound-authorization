@@ -10,7 +10,7 @@
  */
 
 import { deflateSync, inflateSync } from "node:zlib";
-import { jwtVerify, SignJWT, type CryptoKey } from "jose";
+import { decodeJwt, jwtVerify, SignJWT, type CryptoKey } from "jose";
 import { type MissionState, TERMINAL_STATES } from "./types.js";
 
 /** typ header of the Status List Token (draft-ietf-oauth-status-list §5.1). */
@@ -199,6 +199,13 @@ export function readStatus(
   return readStatusBit(token, idx) === STATUS_VALID ? "active" : "non-active";
 }
 
+/** The `exp` the token was signed with, in milliseconds. A token carrying no
+ *  `exp` has no validity to serve inside, so it counts as already past. */
+function publishedExpiryMs(token: string): number {
+  const exp = decodeJwt(token).exp;
+  return typeof exp === "number" ? exp * 1000 : 0;
+}
+
 /**
  * The republication seam for the whole-list fetch. It subscribes to the
  * kernel's `onLifecycleCommit` hook by marking the cached token dirty; the route
@@ -208,22 +215,59 @@ export function readStatus(
  * §status-list: a committed transition MUST appear in the next published token).
  *
  * It takes a `build` thunk, never the kernel, so kernel.ts (which imports this
- * module) stays free of an import cycle.
+ * module) stays free of an import cycle. The thunk rebuilds from the
+ * authoritative record set: this seam never re-signs cached bits.
  */
 export class StatusListPublisher {
   private dirty = true;
-  private cached: string | undefined;
+  private cached: { token: string; expMs: number } | undefined;
+  private building: Promise<string> | undefined;
 
-  constructor(private readonly build: () => Promise<string>) {}
+  constructor(
+    private readonly build: () => Promise<string>,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   markDirty(): void {
     this.dirty = true;
   }
 
   async current(): Promise<string> {
-    if (!this.dirty && this.cached !== undefined) return this.cached;
+    // @spec control-plane#fresh-observation — the cached token is served only
+    // inside the validity it was signed with. Past its own `exp` it is an older
+    // observation: republishing it puts a list past its validity on the wire,
+    // and the next build's `iat` would stamp freshness over the gap. Time
+    // alone, with no lifecycle commit, is therefore a rebuild.
+    const cached = this.cached;
+    if (!this.dirty && cached !== undefined && cached.expMs > this.now().getTime()) {
+      return cached.token;
+    }
+    // One build at a time. A fetch arriving mid-build joins that build rather
+    // than racing a second signature whose older snapshot could land last, and
+    // joining does NOT clear the latch, so a transition that committed during
+    // the build still forces the next fetch to rebuild.
+    const building = this.building;
+    if (building) return building;
     this.dirty = false;
-    this.cached = await this.build();
-    return this.cached;
+    const run = this.rebuild();
+    this.building = run;
+    try {
+      return await run;
+    } finally {
+      if (this.building === run) this.building = undefined;
+    }
+  }
+
+  /** Build, then cache with the `exp` the bytes carry. A failed build keeps the
+   *  latch set, so it never leaves the superseded token published. */
+  private async rebuild(): Promise<string> {
+    try {
+      const token = await this.build();
+      this.cached = { token, expMs: publishedExpiryMs(token) };
+      return token;
+    } catch (e) {
+      this.dirty = true;
+      throw e;
+    }
   }
 }
