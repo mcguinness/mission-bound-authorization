@@ -15,8 +15,8 @@
     "content_sha256": "e1cf9287664b311c191d0e75cca2bad541c3bac15afecd2da5148243e793097e"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "3078ca1313845d977897cd1d163532d56b48a21c",
-    "content_sha256": "aeeba8e6a3ec7702cc94c1dc278656801a069079db65dfc3281254250501bdbd"
+    "revision": "98380a1ad71548ad4f9a8fcbf532c00e9e489888",
+    "content_sha256": "832d343ed40d40aa1f4c9d8a4b8b508b6a396c6713b7daf6a5981f5ce1bee8d5"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
@@ -17672,8 +17672,22 @@
     "normative": "a verifier verifies the referenced records and cross-record joins before relying on any copied field, and additionally verifies the transparency commitment where transparency is claimed; a deployment may instead accept a copied field on the receipt signer's authority alone, but only under an explicit policy naming the receipt issuer as attesting that fact directly"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > performs envelope, combination and source verification before joins or copied-field reliance",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects when the referenced record's own signature does not verify",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here. The transparency limb is not exercised: this receipt verifier checks no transparency commitment, and no receipt path in this deployment claims transparency for a referenced record, so that conditional clause is inapplicable here rather than proved."
   },
   {
    "id": "evidence.receipt.decision-kind-no-execution-claim",
@@ -17694,8 +17708,16 @@
     "normative": "a `decision`-kind receipt is never treated as evidence that an action occurred"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an execution receipt requires a terminal outcome and a permit, while a decision receipt makes no execution claim",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.no-premature-execution-receipt",
@@ -17716,8 +17738,16 @@
     "normative": "an execution-kind receipt is never issued by rewriting an unresolved action as terminal; it exists only once the linked Execution Evidence has a real terminal outcome"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an execution receipt requires a terminal outcome and a permit, while a decision receipt makes no execution claim",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.mission-member-exact-object-no-union",
@@ -17738,8 +17768,16 @@
     "normative": "the receipt's mission member is exactly {id, issuer, optionally authority_hash}, never unioned with fields from another projection"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > totally refuses malformed authenticated receipt members and references before resolving source records",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.issuer-must-be-scope-named",
@@ -17757,11 +17795,37 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "receipt issuance is limited to components the deployment's enforcement scope statement names; a verifier rejects an emitter the statement does not name as a receipt issuer, and a self-published key presenting role receipt_issuer establishes nothing on its own"
+    "normative": "receipt issuance is limited to components the deployment's enforcement scope statement names; a verifier checks that designation against the trusted scope before any key lookup and rejects an emitter the statement does not name as a receipt issuer with issuer_not_authorized, including an emitter removed from the scope's receipt_issuers; a self-published key presenting role receipt_issuer establishes nothing on its own, and a key bound to another issuer or published in a key set the scope does not bind resolves to nothing even when the claimed issuer is designated"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an issuer the trusted scope does not designate refuses as issuer_not_authorized, before any key lookup",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an authorized issuer refuses a key bound to another issuer or published outside the scope",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > a scope snapshot cannot be broadened after it is created, and the declaration limits component and resource scope",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > mutation of a caller-owned JWK cannot replace a snapshotted issuer key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. The trusted receipt-issuer scope is an explicit parameter of verifyMissionReceipt, an immutable snapshot of the designated receipt_issuers and their key bindings; the cited tests cover a non-designated issuer, an issuer removed from the scope, a key bound to another designated issuer (with the same key material verifying for its own issuer), a key published outside the scope's bound key sets, and a snapshot that a later mutation cannot broaden. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here. Mutable JWK representations are defensively copied and frozen; a post-assembly replacement of the caller's public-key coordinates cannot change the snapshot's trust."
   },
   {
    "id": "evidence.receipt.outcome-required-for-execution-kind",
@@ -17782,8 +17846,16 @@
     "normative": "outcome is REQUIRED exactly when kind is execution and absent otherwise, copied from the projected Execution Evidence's outcome unchanged"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an execution receipt requires a terminal outcome and a permit, while a decision receipt makes no execution claim",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.optional-members-selected-not-defaulted",
@@ -17870,8 +17942,22 @@
     "normative": "the emitted Mission Receipt carries evidence_envelope (object), kind (string), mission (object), emitter (object), evidence (array), and issued_at (timestamp) on every receipt, and carries outcome (string) whenever kind is execution"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > totally refuses malformed authenticated receipt members and references before resolving source records",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unknown receipt kind cannot fall through into a valid refusal combination",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.evidence-reference-digest-classification",
@@ -17892,8 +17978,16 @@
     "normative": "an evidence reference's digest is a canonical-object digest (complete object, evidence_envelope included, JCS canonicalized) for a JSON evidence record, and a raw-octet digest over the exact serialization octets for a compact-serialized artifact"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > compares each reference's identifier, emitter and complete canonical digest after source verification",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.evidence-combination-per-kind",
@@ -17914,8 +18008,28 @@
     "normative": "the evidence array carries exactly the reference combination fixed for the receipt's kind (decision: one Decision Evidence; execution: a permit Decision Evidence plus the final Execution Evidence of the same action; refusal: one Refusal Record); a reference to an unimplemented record type fails verification rather than being silently skipped"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unknown receipt kind cannot fall through into a valid refusal combination",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an execution receipt requires a terminal outcome and a permit, while a decision receipt makes no execution claim",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects a genuinely mis-signed 'decision' receipt that carries an Execution Evidence reference too (evidence-combination-per-kind)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.evidence-reference-required-members-and-types",
@@ -17936,8 +18050,22 @@
     "normative": "each evidence array entry carries type (string, the referenced record's registered media type), digest (string), evidence_id (string), and emitter (object), all REQUIRED"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > totally refuses malformed authenticated receipt members and references before resolving source records",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > compares each reference's identifier, emitter and complete canonical digest after source verification",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.chain-schema-and-predecessor-digest",
@@ -17980,8 +18108,28 @@
     "normative": "the seven-step receipt verification procedure runs in order, and a receipt is relied on only if every step succeeds; the reject-on list (a missing required record, a record of an unimplemented type, digest mismatch, emitter or key mismatch, join failure, a chain-linkage failure, or a copied field that differs) enumerates what \"any step fails\" means"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > performs envelope, combination and source verification before joins or copied-field reliance",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects signed but structurally invalid referenced records rather than treating integrity as content validation",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an unimplemented chain refuses at its own step, after the steps before it and never as a pass",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested, and the unimplemented chain step refusing in its own position without masking an earlier reason. Partial: chain verification and the richer source-content/profile families remain incomplete; unsupported chains and issuer assertions refuse. No complete receipt-verifier bar is claimed."
   },
   {
    "id": "evidence.receipt.step1-envelope-and-no-binding-by-key-alone",
@@ -17999,11 +18147,37 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "step 1 verifies the receipt's own evidence_envelope (byte equality, typ, and signature against the scope statement's published keys, confirming the statement names the emitter as a receipt issuer) but the receipt's Mission binding itself rests on the verified referenced records and their joins, never on key publication alone"
+    "normative": "step 1 validates the receipt's own evidence_envelope structurally (a well-formed compact JWS carrying typ, a kid and the claimed receipt issuer), checks that issuer's designation against the trusted scope, looks up the key bound to that issuer within that scope, and then requires byte equality and a valid signature; the receipt's Mission binding itself rests on the verified referenced records and their joins, never on key publication alone"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > an issuer the trusted scope does not designate refuses as issuer_not_authorized, before any key lookup",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > totally refuses malformed authenticated receipt members and references before resolving source records",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects the receipt's own envelope tampering (byte-mismatch, ordered-total-verification)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > joins issuer-qualified Mission identity and reports an unauthorized completed parameter deviation without discarding evidence",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Reused coverage for two limbs of the observation: the malformed-members test carries the structural-envelope vectors (null, a non-object, an absent or non-object evidence_envelope) that refuse before any issuer is named, and the envelope-tampering test carries the byte-equality refusal; both are also mapped to the rows that own those requirements. Step 1's own order is exercised: structural envelope validation, then the issuer-designation check against the explicit scope parameter (issuer_not_authorized), then the issuer-bound key lookup, then byte equality and signature. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.step3-resolve-and-recompute-digest",
@@ -18024,7 +18198,7 @@
     "normative": "step 3 resolves and independently verifies each referenced record, recomputes its digest and requires equality with the reference, and requires the resolved record's own identifier and emitter/key to match the reference"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
@@ -18049,9 +18223,33 @@
      "name": "Mission Receipt build + verify > rejects a digest mismatch: the resolved record verifies on its own but does not match the receipt's committed digest",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > compares each reference's identifier, emitter and complete canonical digest after source verification",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > resolver mutation cannot replace the receipt's authenticated evidence reference",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > resolver-owned reference mutations leave all authenticated comparison fields intact",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > rejects signed but structurally invalid referenced records rather than treating integrity as content validation",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "Partial, not tested: the cited tests cover resolve-and-verify-under-own-rules, digest recomputation and equality, and (#739 review point 2) the resolved kind matching the reference's own declared type. No test currently exercises the resolved record's own identifier or its emitter/key failing to equal the reference's `evidence_id`/`emitter` (the `identifier_mismatch` and `emitter_mismatch` reasons the code returns are untested)."
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.step4-cross-record-joins",
@@ -18121,9 +18319,15 @@
      "name": "Mission Receipt build + verify > rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > joins issuer-qualified Mission identity and reports an unauthorized completed parameter deviation without discarding evidence",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "Partial, not tested: mission.id/mission.issuer joins (Decision Evidence, Execution Evidence via mission_id, and now (#739 review point 3) Refusal Record for a 'refusal'-kind receipt), the evaluation_id join, and authorized/effective parameter-digest consistency (exact-mirror in both directions, and effective_parameter_digest's own required-when-authorized-present rule) are exercised. Audience consistency across Decision and Execution Evidence (`executionRec.audience !== decisionRec.audience`) and target consistency are implemented but not separately exercised by a dedicated negative test. The reverse-direction parameter-digest mirror was, at the time this row was written, stricter than the draft's own literal text; that gap is now closed (issue #649 finding): the draft's `authorized_parameter_digest` member is biconditional (execution-evidence-object) and step 4 states the join failure explicitly, so the verifier's exact-mirror check and the draft agree. See evidence.execution.authorized-digest-absent-when-decision-lacks-parameter-digest and evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present for the rows tracking the new text directly."
+   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains."
   },
   {
    "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
@@ -18180,7 +18384,7 @@
     "normative": "every copied optional member on the receipt equals the corresponding member of the record it projects"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
@@ -18190,12 +18394,24 @@
     },
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > rejects a receipt carrying an unimplemented copied-member projection (target) rather than accepting it unverified (#739 review point 4)",
+     "name": "Mission Receipt build + verify > verifies a selected target projection against the source record (#739 review point 4)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > compares selected policy and executor projections exactly and refuses issuer assertions on this verification path",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > a selected receipt authority hash must equal its verified source for every receipt kind",
      "level": "unit",
      "surface": "verification"
     }
    ],
-   "notes": "Partial, not tested: the `decision` copied member is verified equal to its source; `policy`, `executor`, and `target` are, per the #739 review, REJECTED rather than compared (evidence.receipt.optional-members-selected-not-defaulted / this row's own text both require every copied member be verified, so an unimplemented one is refused rather than silently accepted unverified). Nothing in this deployment emits a receipt carrying any of the three (`buildAndSignMissionReceipt` never populates them), so the actual comparison logic for those three members remains unimplemented, tracked here as the remaining gap rather than claimed tested."
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.receipt.step6-chain-verification-and-monotonicity",
@@ -18646,8 +18862,16 @@
     "normative": "a compromised receipt-issuer signing key is governed by the same compromise-boundary rule during receipt verification; the receipt's own asserted timestamps never establish that its signature predates the boundary"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > a compromised receipt issuer key cannot bypass the boundary rule through scope publication",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-6: exercised through the scope-bound receipt verifier, with genuinely signed positive/negative fixtures and exact failure reasons. Trusted key-set inputs are keyed by ESS-declared locations; network JWKS discovery and key/status refresh are deployment seams, not claimed here."
   },
   {
    "id": "evidence.privacy.pii-sink-access-control-should",

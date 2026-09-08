@@ -6,20 +6,26 @@
  * file header); a receipt carrying `chain` is rejected as unsupported.
  */
 
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, webcrypto } from "node:crypto";
 import { canonicalDigest } from "@mission/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   REFUSAL_RECORD_MEDIA_TYPE,
   type EvidenceSigningKey,
+  type EnforcementScopeStatement,
   signEvidenceEnvelope,
 } from "@mission/pdp";
 import type { DecisionEvidenceObject, ExecutionEvidenceObject, RefusalRecordObject } from "../src/evidence.js";
+import { buildEvidenceKeyResolver, type EvidenceVerificationKey } from "../src/evidence.js";
 import {
   buildAndSignMissionReceipt,
+  createReceiptIssuerScope,
   type MissionReceiptEvidenceRef,
+  type PublishedReceiptKey,
+  type ReceiptIssuerBinding,
+  type ReceiptIssuerScope,
   type ReceiptResolvedRecord,
   verifyMissionReceipt,
 } from "../src/mission-receipt.js";
@@ -50,6 +56,8 @@ async function signedDecision(overrides: Partial<DecisionEvidenceObject> = {}): 
     parameter_digest: "sha-256:paramdigest",
     decision: "permit" as const,
     entry_digest: "sha-256:entrydigest",
+    conditions: { valid_until: "2026-01-01T00:05:00.000Z" },
+    ...(Object.hasOwn(overrides, "parameter_digest") && overrides.parameter_digest === undefined ? { evaluation_request_digest: canonicalDigest({ request: "fixture" }) } : {}),
     sequence: 0,
     emitter: { id: "pdp.example.com", role: "pdp" as const },
     evaluated_at: "2026-01-01T00:00:01.000Z",
@@ -84,8 +92,10 @@ async function signedRefusal(overrides: Partial<RefusalRecordObject> = {}): Prom
     action: { name: "payments:invoice.read" },
     decision: "deny" as const,
     denial_reason: "out_of_authority",
+    evaluation_request_digest: canonicalDigest({ request: "fixture" }),
+    sequence: 0,
     evaluated_at: "2026-01-01T00:00:01.000Z",
-    mission: { id: MISSION.id, issuer: MISSION.issuer },
+    mission: { ...MISSION },
     emitter: { id: "pep.example.com", role: "pep" as const },
     ...overrides,
   };
@@ -106,14 +116,35 @@ function resolverFor(records: {
   };
 }
 
-const resolveEvidenceKey = ({ emitter }: { emitter: { role: string } }) => {
-  if (emitter.role === "pdp") return { key: pdpKeys.publicKey };
-  if (emitter.role === "executor") return { key: executorKeys.publicKey };
-  if (emitter.role === "pep") return { key: pepKeys.publicKey };
-  return undefined;
+const resolveEvidenceKey = buildEvidenceKeyResolver([
+  { kid: "pdp-1", publicKey: pdpKeys.publicKey, emitterId: "pdp.example.com", role: "pdp", audience: "https://erp.example.com" },
+  { kid: "exec-1", publicKey: executorKeys.publicKey, emitterId: "pep.example.com", role: "executor", audience: "https://erp.example.com" },
+  { kid: "pep-1", publicKey: pepKeys.publicKey, emitterId: "pep.example.com", role: "pep", audience: "https://erp.example.com" },
+]);
+const KEY_SET = "https://deployment.example.com/receipt-jwks";
+const receiptScope = (): EnforcementScopeStatement => ({
+  mediated_scope: { resources: ["https://erp.example.com"], action_classes: ["consequential_read"], execution_paths: ["tools"], pep_locations: ["pep.example.com", "receipts.example.com"], excluded_paths: [], mission_establishment_mode: "token-claim" },
+  authority_entry_types: [{ type: "mission_resource_access", evaluator: "fixture" }], pdps: ["pdp.example.com"],
+  state_source: { source: "status", max_staleness_seconds: 30, pdp_unavailability_posture: "deny" },
+  remote_decision_channels: [], record_integrity_mechanism: "signed-records", claims: ["evidence"],
+  extensions: { evidence: { mechanism: "signed-records", retention_window: "test-only", signing_key_locations: [KEY_SET], receipt_issuers: [{ emitter: "receipts.example.com", key_set: KEY_SET }] } },
+});
+const receiptKey: EvidenceVerificationKey = { kid: "receipt-1", publicKey: receiptKeys.publicKey, emitterId: "receipts.example.com", role: "receipt_issuer" };
+const receiptIssuers = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [receiptKey]]]));
+/** A frozen snapshot rejects a write: strict mode throws, and either way the snapshot is unchanged. */
+const tamper = (mutate: () => void): void => {
+  try {
+    mutate();
+  } catch {
+    /* frozen */
+  }
 };
-const resolveReceiptKey = ({ emitter }: { emitter: { role: string } }) =>
-  emitter.role === "receipt_issuer" ? { key: receiptKeys.publicKey } : undefined;
+
+async function resigned(receipt: object, changes: Record<string, unknown>) {
+  const { evidence_envelope: _drop, ...base } = receipt as Record<string, unknown>;
+  const unsigned = { ...base, ...changes };
+  return { ...unsigned, evidence_envelope: await signEvidenceEnvelope(unsigned as never, "application/mission-receipt+json", RECEIPT_SIGNER) };
+}
 
 describe("Mission Receipt digest vector (spec worked example)", () => {
   it("reproduces the exact digest the spec computes over its Execution Evidence stand-in", () => {
@@ -138,6 +169,301 @@ describe("Mission Receipt digest vector (spec worked example)", () => {
 });
 
 describe("Mission Receipt build + verify", () => {
+  it("resolver mutation cannot replace the receipt's authenticated evidence reference", async () => {
+    const decision = await signedDecision();
+    const replacement = await signedDecision({ parameter_digest: "sha-256:replacement" });
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const committedDigest = receipt.evidence[0]!.digest;
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision: replacement }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "digest_mismatch" });
+    expect(await verifyMissionReceipt(receipt, async (ref) => {
+      await Promise.resolve();
+      ref.digest = canonicalDigest(replacement as never);
+      return { type: "decision", record: replacement };
+    }, receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "digest_mismatch" });
+    expect(receipt.evidence[0]!.digest).toBe(committedDigest);
+  });
+
+  it("resolver-owned reference mutations leave all authenticated comparison fields intact", async () => {
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, (ref) => {
+      ref.type = REFUSAL_RECORD_MEDIA_TYPE;
+      ref.digest = "sha-256:resolver-cache-marker";
+      ref.evidence_id = "resolver-cache-id";
+      ref.emitter.id = "resolver-cache-emitter";
+      ref.emitter.role = "pep";
+      return { type: "decision", record: decision };
+    }, receiptIssuers, resolveEvidenceKey)).toEqual({ valid: true });
+  });
+
+  it("a selected receipt authority hash must equal its verified source for every receipt kind", async () => {
+    const identity = { id: MISSION.id, issuer: MISSION.issuer };
+    for (const kind of ["decision", "execution", "refusal"] as const) {
+      for (const sourceHasHash of [true, false]) {
+        const sourceMission = sourceHasHash ? MISSION : identity;
+        const decision = await signedDecision({ mission: { ...sourceMission, policy_view_id: "pv-1" } });
+        const execution = await signedExecution();
+        const refusal = await signedRefusal({ mission: sourceMission });
+        const receipt = await buildAndSignMissionReceipt({
+          kind, mission: identity,
+          ...(kind === "refusal" ? { refusalRecord: refusal } : { decisionEvidence: decision }),
+          ...(kind === "execution" ? { executionEvidence: execution } : {}),
+        }, "receipts.example.com", RECEIPT_SIGNER);
+        const resolve = resolverFor({ decision, execution, refusal });
+        // Selection is optional even when the verified source has the hash.
+        expect(await verifyMissionReceipt(receipt, resolve, receiptIssuers, resolveEvidenceKey))
+          .toEqual({ valid: true });
+        for (const authority_hash of [MISSION.authority_hash, "sha-256:another-authority"]) {
+          const selected = await resigned(receipt, { mission: { ...identity, authority_hash } });
+          expect(await verifyMissionReceipt(selected, resolve, receiptIssuers, resolveEvidenceKey))
+            .toEqual(sourceHasHash && authority_hash === MISSION.authority_hash
+              ? { valid: true } : { valid: false, reason: "copied_member_mismatch" });
+        }
+      }
+    }
+  });
+
+  it("retains immutable CryptoKey verification material and rejects symmetric byte keys", async () => {
+    const publicKey = await webcrypto.subtle.importKey("jwk", receiptKeys.publicKey.export({ format: "jwk" }), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    const scope = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey }]]]));
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), scope, resolveEvidenceKey)).toEqual({ valid: true });
+    expect(() => createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey: new Uint8Array(32) }]]]))).toThrow("asymmetric verification key");
+  });
+
+  it("mutation of a caller-owned JWK cannot replace a snapshotted issuer key", async () => {
+    const jwk = receiptKeys.publicKey.export({ format: "jwk" });
+    const frozen = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey: jwk }]]]));
+    const replacement = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    Object.assign(jwk, replacement.publicKey.export({ format: "jwk" }));
+    const decision = await signedDecision();
+    const substituted = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision },
+      "receipts.example.com", { ...RECEIPT_SIGNER, key: replacement.privateKey },
+    );
+    expect(await verifyMissionReceipt(substituted, resolverFor({ decision }), frozen, resolveEvidenceKey)).toMatchObject({ valid: false });
+    const original = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(original, resolverFor({ decision }), frozen, resolveEvidenceKey)).toEqual({ valid: true });
+    const held = frozen.issuers[0]!.keys[0]!.publicKey;
+    expect(held).not.toBe(jwk);
+    expect(Object.isFrozen(held)).toBe(true);
+    expect(() => Object.assign(held, jwk)).toThrow();
+  });
+  it("totally refuses malformed authenticated receipt members and references before resolving source records", async () => {
+    const decision = await signedDecision();
+    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const resolve = vi.fn(resolverFor({ decision }));
+    for (const input of [null, undefined, [], true, "receipt", {}, { evidence_envelope: null }]) {
+      expect(await verifyMissionReceipt(input, resolve, receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "envelope_invalid" });
+    }
+    const changes = [
+      { kind: null }, { kind: "unknown" }, { mission: MISSION.id }, { mission: [] }, { mission: { id: MISSION.id } },
+      { mission: { ...MISSION, grant: "a grant beside the receipt is not this member" } },
+      { issued_at: undefined }, { issued_at: "2026-01-01" }, { issued_at: "2026-02-31T00:00:00Z" }, { issued_at: 1 }, { outcome: "completed" },
+      { evidence: null }, { evidence: [{}] }, { decision: { id: 1, result: "permit" } },
+      ...["type", "digest", "evidence_id", "emitter"].map((key) => ({ evidence: [{ ...base.evidence[0], [key]: null }] })),
+    ];
+    for (const change of changes) {
+      expect(await verifyMissionReceipt(await resigned(base, change), resolve, receiptIssuers, resolveEvidenceKey), JSON.stringify(change))
+        .toEqual({ valid: false, reason: "malformed" });
+    }
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("an unknown receipt kind cannot fall through into a valid refusal combination", async () => {
+    const refusal = await signedRefusal();
+    const base = await buildAndSignMissionReceipt({ kind: "refusal", mission: MISSION, refusalRecord: refusal }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(await resigned(base, { kind: "another-kind" }), resolverFor({ refusal }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "malformed" });
+    await expect(buildAndSignMissionReceipt({ kind: "another-kind" as never, mission: MISSION, refusalRecord: refusal }, "receipts.example.com", RECEIPT_SIGNER))
+      .rejects.toThrow("unknown Mission Receipt kind");
+  });
+
+  it("an issuer the trusted scope does not designate refuses as issuer_not_authorized, before any key lookup", async () => {
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const resolve = vi.fn(resolverFor({ decision }));
+    const removed = receiptScope(); removed.extensions!.evidence!.receipt_issuers = [];
+    expect(await verifyMissionReceipt(receipt, resolve, createReceiptIssuerScope(removed, new Map([[KEY_SET, [receiptKey]]])), resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "issuer_not_authorized" });
+    const elsewhere = receiptScope(); elsewhere.extensions!.evidence!.receipt_issuers = [{ emitter: "pep.example.com", key_set: KEY_SET }];
+    expect(await verifyMissionReceipt(receipt, resolve, createReceiptIssuerScope(elsewhere, new Map([[KEY_SET, [receiptKey]]])), resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "issuer_not_authorized" });
+    // A public key alone cannot designate a receipt issuer. The trusted scope is an
+    // explicit parameter, so a bare key resolver is a compile error wherever the
+    // build type-checks it, and designates nothing at runtime.
+    const keyAlone = (() => ({ key: receiptKeys.publicKey })) as unknown as ReceiptIssuerScope;
+    expect(await verifyMissionReceipt(receipt, resolve, keyAlone, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "issuer_not_authorized" });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("an authorized issuer refuses a key bound to another issuer or published outside the scope", async () => {
+    const decision = await signedDecision();
+    const both = receiptScope();
+    both.mediated_scope.pep_locations = [...both.mediated_scope.pep_locations, "other-receipts.example.com"];
+    both.extensions!.evidence!.receipt_issuers = [
+      { emitter: "receipts.example.com", key_set: KEY_SET },
+      { emitter: "other-receipts.example.com", key_set: KEY_SET },
+    ];
+    // One key set, one published key, one kid, bound to the OTHER designated issuer.
+    const boundElsewhere = createReceiptIssuerScope(both, new Map([[KEY_SET, [{ ...receiptKey, emitterId: "other-receipts.example.com" }]]]));
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), boundElsewhere, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "envelope_invalid" });
+    const ownIssuer = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "other-receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(ownIssuer, resolverFor({ decision }), boundElsewhere, resolveEvidenceKey)).toEqual({ valid: true });
+    const outside = createReceiptIssuerScope(receiptScope(), new Map([["https://other.test/keys", [receiptKey]]]));
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), outside, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "envelope_invalid" });
+  });
+
+  it("a scope snapshot cannot be broadened after it is created, and the declaration limits component and resource scope", async () => {
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const unknownComponent = receiptScope(); unknownComponent.mediated_scope.pep_locations = ["pep.example.com"];
+    expect(() => createReceiptIssuerScope(unknownComponent, new Map([[KEY_SET, [receiptKey]]]))).toThrow("not named by the scope");
+    const wrongLocation = receiptScope(); wrongLocation.extensions!.evidence!.signing_key_locations = ["https://other.test/keys"];
+    expect(() => createReceiptIssuerScope(wrongLocation, new Map([[KEY_SET, [receiptKey]]]))).toThrow("not named by the scope");
+    const statement = receiptScope(); statement.mediated_scope.resources = ["https://other.test"];
+    const published: PublishedReceiptKey[] = [receiptKey];
+    const narrow = createReceiptIssuerScope(statement, new Map([[KEY_SET, published]]));
+    statement.mediated_scope.resources = ["https://erp.example.com"]; // The caller's own statement.
+    published.push({ ...receiptKey, kid: "receipt-2" }); // The caller's own key set.
+    tamper(() => { (narrow.issuers as ReceiptIssuerBinding[]).push({ emitter: "attacker.example.com", key_set: KEY_SET, keys: [receiptKey] }); });
+    tamper(() => { (narrow.issuers[0]!.keys as PublishedReceiptKey[]).push({ ...receiptKey, kid: "receipt-3" }); });
+    tamper(() => { (narrow.statement.mediated_scope.resources as string[]).push("https://erp.example.com"); });
+    expect(narrow.issuers).toHaveLength(1);
+    expect(narrow.issuers[0]!.keys).toHaveLength(1);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), narrow, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "referenced_record_invalid" });
+    const pushedIssuer = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "attacker.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(pushedIssuer, resolverFor({ decision }), narrow, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "issuer_not_authorized" });
+    const differentMission = await resigned(receipt, { mission: { ...MISSION, id: "another-mission" } });
+    expect(await verifyMissionReceipt(differentMission, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("an execution receipt requires a terminal outcome and a permit, while a decision receipt makes no execution claim", async () => {
+    const decision = await signedDecision();
+    const execution = await signedExecution();
+    const receipt = await buildAndSignMissionReceipt({ kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution }, "receipts.example.com", RECEIPT_SIGNER);
+    for (const outcome of [undefined, null, "pending", "running"]) {
+      expect(await verifyMissionReceipt(await resigned(receipt, { outcome }), resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey))
+        .toEqual({ valid: false, reason: "malformed" });
+      await expect(buildAndSignMissionReceipt({ kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: { ...execution, outcome: outcome as never } }, "receipts.example.com", RECEIPT_SIGNER))
+        .rejects.toThrow("final outcome");
+    }
+    const decisionOnly = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(decisionOnly).not.toHaveProperty("outcome");
+    expect(await verifyMissionReceipt(await resigned(decisionOnly, { outcome: "completed" }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "malformed" });
+    const denied = await signedDecision({ decision: "deny", denial_reason: "out_of_authority" });
+    const malicious = await resigned(receipt, { evidence: [
+      { ...receipt.evidence[0], digest: canonicalDigest(denied as never) }, receipt.evidence[1],
+    ], decision: { id: denied.evidence_id, result: "deny" } });
+    expect(await verifyMissionReceipt(malicious, resolverFor({ decision: denied, execution }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("rejects signed but structurally invalid referenced records rather than treating integrity as content validation", async () => {
+    const decision = await signedDecision({ subject: null as never });
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "referenced_record_invalid" });
+    const good = await signedDecision();
+    const goodReceipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: good }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(goodReceipt, () => { throw new Error("store unavailable"); }, receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "reference_unresolvable" });
+    expect(await verifyMissionReceipt(goodReceipt, () => ({ type: "unknown", record: good }) as never, receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "reference_type_mismatch" });
+  });
+
+  it("compares each reference's identifier, emitter and complete canonical digest after source verification", async () => {
+    const decision = await signedDecision();
+    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(base.evidence[0]!.digest).toBe(canonicalDigest(decision as never));
+    const { evidence_envelope: _envelope, ...unsignedDecision } = decision;
+    expect(base.evidence[0]!.digest).not.toBe(canonicalDigest(unsignedDecision as never));
+    for (const [change, reason] of [
+      [{ evidence_id: "another-id" }, "identifier_mismatch"],
+      [{ emitter: { id: "another-emitter", role: "pdp" } }, "emitter_mismatch"],
+      [{ digest: "sha-512:unsupported" }, "digest_mismatch"],
+    ] as const) {
+      expect(await verifyMissionReceipt(await resigned(base, { evidence: [{ ...base.evidence[0], ...change }] }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+        .toEqual({ valid: false, reason });
+    }
+  });
+
+  it("compares selected policy and executor projections exactly and refuses issuer assertions on this verification path", async () => {
+    const actor = { client_id: "ap-agent", act: [{ iss: "https://as.example.com", sub: "worker" }] };
+    const decision = await signedDecision({ actor });
+    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const policy = { pdp_policy_view: decision.mission.policy_view_id };
+    const selected = await resigned(base, { policy, executor: actor });
+    expect(await verifyMissionReceipt(selected, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey)).toEqual({ valid: true });
+    for (const changed of [{ policy: { ...policy, mission_policy_version: "invented" } }, { executor: { ...actor, client_id: "other" } }]) {
+      expect(await verifyMissionReceipt(await resigned(selected, changed), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+        .toEqual({ valid: false, reason: "copied_member_mismatch" });
+    }
+    expect(await verifyMissionReceipt(await resigned(base, { issuer_assertions: { custody: "asserted" } }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "malformed" });
+    expect(await verifyMissionReceipt(await resigned(base, { profile: "https://example.com/other-profile", issuer_assertions: { custody: "asserted" } }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "unimplemented_projection" });
+  });
+
+  it("performs envelope, combination and source verification before joins or copied-field reliance", async () => {
+    const decision = await signedDecision();
+    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const resolve = vi.fn(resolverFor({ decision }));
+    expect(await verifyMissionReceipt({ ...base, evidence: [] }, resolve, receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "envelope_invalid" });
+    expect(resolve).not.toHaveBeenCalled();
+    expect(await verifyMissionReceipt(await resigned(base, { evidence: [], decision: { id: "bad", result: "deny" } }), resolve, receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "combination_invalid" });
+    expect(resolve).not.toHaveBeenCalled();
+    const wrongCopy = await resigned(base, { decision: { id: "bad", result: "deny" } });
+    expect(await verifyMissionReceipt(wrongCopy, resolverFor({ decision: { ...decision, subject: { id: "changed" } } }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "referenced_record_invalid" });
+  });
+
+  it("an unimplemented chain refuses at its own step, after the steps before it and never as a pass", async () => {
+    const decision = await signedDecision();
+    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const chain = { stream: "https://receipts.example.com/stream", sequence: 1, previous: [{ digest: canonicalDigest({ predecessor: true }) }] };
+    expect(await verifyMissionReceipt(await resigned(base, { chain }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "chain_not_supported" });
+    // An earlier step still owns its own reason: the chain refusal never masks it.
+    expect(await verifyMissionReceipt(await resigned(base, { chain, evidence: [{ ...base.evidence[0], evidence_id: "another-id" }] }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "identifier_mismatch" });
+  });
+
+  it("joins issuer-qualified Mission identity and reports an unauthorized completed parameter deviation without discarding evidence", async () => {
+    const decision = await signedDecision();
+    const execution = await signedExecution({ effective_parameter_digest: "sha-256:changed" });
+    const receipt = await buildAndSignMissionReceipt({ kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: true, unauthorized_execution: true });
+    const foreignMission = await resigned(receipt, { mission: { ...MISSION, issuer: "https://other-issuer.test" } });
+    expect(await verifyMissionReceipt(foreignMission, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("a compromised receipt issuer key cannot bypass the boundary rule through scope publication", async () => {
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const status = { compromised: true, boundary: "2026-01-01T00:00:00Z" };
+    const keys = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, status }]]]));
+    status.compromised = false; // Frozen policy snapshot, not a mutable caller back door.
+    const resolve = vi.fn(resolverFor({ decision }));
+    expect(await verifyMissionReceipt(receipt, resolve, keys, resolveEvidenceKey)).toEqual({ valid: false, reason: "envelope_invalid" });
+    expect(resolve).not.toHaveBeenCalled();
+    expect(await verifyMissionReceipt(receipt, resolve, keys, resolveEvidenceKey, {
+      presented: true, valid: true, commits: "complete-artifact", authenticatedTime: "2026-01-01T00:00:00Z", proofKey: { compromised: false },
+    })).toEqual({ valid: false, reason: "envelope_invalid" });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
   it("builds and verifies a 'decision' receipt", async () => {
     const decision = await signedDecision();
     const receipt = await buildAndSignMissionReceipt(
@@ -150,7 +476,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: true });
@@ -170,7 +496,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: true });
@@ -188,7 +514,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       truncated,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     // The envelope no longer matches the truncated evidence array either, but
@@ -221,7 +547,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       badReceipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "combination_invalid" });
@@ -256,7 +582,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       badReceipt,
       resolverFor({ decision }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "copied_member_mismatch" });
@@ -269,7 +595,7 @@ describe("Mission Receipt build + verify", () => {
       "receipts.example.com",
       RECEIPT_SIGNER,
     );
-    const result = await verifyMissionReceipt(receipt, () => undefined, resolveReceiptKey, resolveEvidenceKey);
+    const result = await verifyMissionReceipt(receipt, () => undefined, receiptIssuers, resolveEvidenceKey);
     expect(result).toEqual({ valid: false, reason: "reference_unresolvable" });
   });
 
@@ -284,7 +610,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision: tamperedDecision }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "referenced_record_invalid" });
@@ -304,7 +630,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision: otherDecision }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "digest_mismatch" });
@@ -321,7 +647,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "join_failure" });
@@ -338,7 +664,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       tampered,
       resolverFor({ decision }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "envelope_invalid" });
@@ -351,7 +677,7 @@ describe("Mission Receipt build + verify", () => {
       "receipts.example.com",
       RECEIPT_SIGNER,
     );
-    const result = await verifyMissionReceipt(receipt, resolverFor({ decision }), () => undefined, resolveEvidenceKey);
+    const result = await verifyMissionReceipt(receipt, resolverFor({ decision }), createReceiptIssuerScope(receiptScope(), new Map()), resolveEvidenceKey);
     expect(result).toEqual({ valid: false, reason: "envelope_invalid" });
   });
 
@@ -366,7 +692,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ refusal }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: true });
@@ -389,7 +715,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       () => ({ type: "execution", record: execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "reference_type_mismatch" });
@@ -406,7 +732,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "join_failure" });
@@ -422,7 +748,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ refusal }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "join_failure" });
@@ -439,7 +765,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "join_failure" });
@@ -456,7 +782,7 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "join_failure" });
@@ -473,22 +799,21 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receipt,
       resolverFor({ decision, execution }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
     expect(result).toEqual({ valid: false, reason: "join_failure" });
   });
 
-  it("rejects a receipt carrying an unimplemented copied-member projection (target) rather than accepting it unverified (#739 review point 4)", async () => {
+  it("verifies a selected target projection against the source record (#739 review point 4)", async () => {
     const decision = await signedDecision();
     const receiptBase = await buildAndSignMissionReceipt(
       { kind: "decision", mission: MISSION, decisionEvidence: decision },
       "receipts.example.com",
       RECEIPT_SIGNER,
     );
-    // Re-sign with an added `target` projection: this verifier does not
-    // implement the comparison, so it must reject rather than let the
-    // member through unverified.
+    // Re-sign with an explicitly selected target projection. Acceptance
+    // requires equality against the verified source, never the issuer key alone.
     const { evidence_envelope: _drop, ...unsignedBase } = receiptBase;
     const unsigned = { ...unsignedBase, target: { resource: decision.resource, audience: decision.audience } };
     const evidence_envelope = await signEvidenceEnvelope(unsigned, "application/mission-receipt+json", RECEIPT_SIGNER);
@@ -496,9 +821,11 @@ describe("Mission Receipt build + verify", () => {
     const result = await verifyMissionReceipt(
       receiptWithTarget,
       resolverFor({ decision }),
-      resolveReceiptKey,
+      receiptIssuers,
       resolveEvidenceKey,
     );
-    expect(result).toEqual({ valid: false, reason: "unimplemented_projection" });
+    expect(result).toEqual({ valid: true });
+    const wrong = await resigned(receiptWithTarget, { target: { resource: { ...decision.resource, id: "inv-other" }, audience: decision.audience } });
+    expect(await verifyMissionReceipt(wrong, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "copied_member_mismatch" });
   });
 });
