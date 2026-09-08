@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "efb2a01b9dc4f9e61a118f94c8a4061aa5b0aaa8",
-    "content_sha256": "59c6a070b21b08556d7507e66a2be2a7b67402af21c076b447fee773ab3f8aa0"
+    "revision": "6dbc9eb9ebe444a82ede6e1c4f920205b82cebdf",
+    "content_sha256": "97aecd8c39b1e8641a8d6e93c13795d263d7f900843bc51cd120f853824fdbd1"
    },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
@@ -1371,9 +1371,82 @@
     "normative": "The Mission Issuer MUST provide one serialization order per Mission and per multi-object invariant. Atomic domains include lifecycle state, state version, and durable fan-out work; predecessor supersession and successor creation; parent fan-out accounting and child creation; counter checks/increments and artifact issuance; and an idempotency claim and its side effect. These members commit together or none does. A region label is not a serialization mechanism. This tightens the binding's existing atomic-issuance obligations and adds explicit durable fan-out coupling."
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > a stale lifecycle snapshot cannot overwrite a committed version",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > an outer rollback restores lifecycle state and emits no transition",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > a counter reservation rolls back with its caller transaction and never exceeds its cap",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > checks fanout in the insertion transaction and a post-check fault leaves no child or publication",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > rolls back a parent transition and its whole child cascade without publishing either",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a deferral-retirement fault rolls back successor, supersession and outbox as one transaction",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > a derivation admitted from a stale snapshot cannot overshoot the cap",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > an expiry materialized under a transition refuses the operation once, at one version",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/store/test/serialization.test.ts",
+     "name": "managed transaction publication > publishes nested work only after the outermost commit and discards rolled-back savepoint work",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/store/test/serialization.test.ts",
+     "name": "managed transaction publication > discards successful inner work when the outer transaction rolls back",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/store/test/serialization.test.ts",
+     "name": "managed transaction publication > never mistakes a post-commit subscriber failure for a database rollback",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/store/test/serialization.test.ts",
+     "name": "managed transaction publication > refuses unmanaged outer transactions rather than publishing before their commit",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, and expansion deferral retirement with successor/supersession/outbox. Durable generalized fan-out and asynchronous artifact issuance remain incomplete; the counter tests prove conditional admission and a synchronous caller transaction, not provider/continuation token issuance. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -1393,9 +1466,28 @@
     "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-list.test.ts",
+     "name": "Status List republication (@spec control-plane#fresh-observation) > rebuilds once the published token passes its own exp, with no commit at all",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-list.test.ts",
+     "name": "Status List republication (@spec control-plane#fresh-observation) > a failed rebuild never republishes the pre-transition token",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-list.test.ts",
+     "name": "Status List republication (@spec control-plane#fresh-observation) > a transition racing an asynchronous build is not lost and the older snapshot never lands last",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The authenticated observation/commit watermark, the Status conditional-request surface, and the other signed state observations remain unimplemented."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -1547,9 +1639,28 @@
     "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > one-issuer stores refuse foreign records and independent issuers can retain the same local id",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > equal Mission ids and event ids from distinct issuers keep separate delivery jobs and state",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
   },
   {
    "id": "control-plane.consistency.fanout",

@@ -7,7 +7,7 @@ import {
   jwtVerify,
   type KeyLike,
 } from "jose";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   MissionKernel,
   type MissionRecord,
@@ -15,8 +15,10 @@ import {
   readStatusBit,
   signStatusListToken,
   STATUS_INVALID,
+  STATUS_LIST_TTL_SECONDS,
   STATUS_SUSPENDED,
   STATUS_VALID,
+  StatusListPublisher,
   statusListUri,
   validateMissionIntent,
   verifyStatusListToken,
@@ -190,5 +192,129 @@ describe("Mission Status List (@spec status-list#status-list)", () => {
     });
     kernel.transition(m.id, "revoke");
     expect(() => kernel.participateInStatusList(m.id)).toThrow();
+  });
+});
+
+// @spec control-plane#fresh-observation — the publisher may serve a cached
+// token only inside the validity it was signed with, must not leave the
+// superseded token published when a rebuild fails, and must not let an older
+// in-flight snapshot land after a newer one.
+describe("Status List republication (@spec control-plane#fresh-observation)", () => {
+  const START = new Date("2028-01-01T00:00:00Z");
+  let pubClock: Date;
+  let pubKernel: MissionKernel;
+  let pubMission: MissionRecord;
+  let pubIdx: number;
+  let publisher: StatusListPublisher | undefined;
+  let builds: number;
+
+  beforeEach(() => {
+    pubClock = new Date(START);
+    publisher = undefined;
+    builds = 0;
+    let cursor = 0;
+    pubKernel = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(
+        DERIVATION_POLICY.ceiling,
+        ["ap-agent"],
+        ["bob"],
+      ),
+      statusKey: signingKey,
+      statusKid: "as-status",
+      now: () => pubClock,
+      allocateStatusIndex: () => [101, 102, 103][cursor++ % 3] as number,
+      onLifecycleCommit: () => publisher?.markDirty(),
+    });
+    pubMission = pubKernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Publish the whole list",
+          target_resources: [RESOURCE],
+          expires_at: "2031-01-01T00:00:00Z",
+        }),
+      ),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "sl-pub-apev",
+    });
+    pubIdx = pubKernel.participateInStatusList(pubMission.id);
+  });
+
+  it("rebuilds once the published token passes its own exp, with no commit at all", async () => {
+    publisher = new StatusListPublisher(() => {
+      builds++;
+      return pubKernel.publishStatusList();
+    }, () => pubClock);
+    const first = await publisher.current();
+    // Inside its validity the same bytes are the right answer.
+    expect(await publisher.current()).toBe(first);
+    expect(builds).toBe(1);
+    // Time alone, no lifecycle commit: the cached token is now past the `exp`
+    // it was signed with, so it is no longer publishable.
+    pubClock = new Date(START.getTime() + (STATUS_LIST_TTL_SECONDS + 1) * 1000);
+    const second = await publisher.current();
+    expect(builds).toBe(2);
+    expect(second).not.toBe(first);
+    await expect(
+      verifyStatusListToken(first, verifyKey, { uri: URI, now: pubClock }),
+    ).rejects.toThrow();
+    const token = await verifyStatusListToken(second, verifyKey, { uri: URI, now: pubClock });
+    expect(readStatus(token, pubIdx, pubClock)).toBe("active");
+  });
+
+  it("a failed rebuild never republishes the pre-transition token", async () => {
+    let fail = false;
+    publisher = new StatusListPublisher(() => {
+      builds++;
+      return fail
+        ? Promise.reject(new Error("signing unavailable"))
+        : pubKernel.publishStatusList();
+    }, () => pubClock);
+    const first = await publisher.current();
+    pubKernel.transition(pubMission.id, "revoke");
+    fail = true;
+    await expect(publisher.current()).rejects.toThrow("signing unavailable");
+    // The failure published nothing and did not clear the rebuild latch: the
+    // committed transition is still owed, never covered by the stale token.
+    fail = false;
+    const second = await publisher.current();
+    expect(builds).toBe(3);
+    expect(second).not.toBe(first);
+    const token = await verifyStatusListToken(second, verifyKey, { uri: URI, now: pubClock });
+    expect(readStatusBit(token, pubIdx)).toBe(STATUS_INVALID);
+  });
+
+  it("a transition racing an asynchronous build is not lost and the older snapshot never lands last", async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    publisher = new StatusListPublisher(async () => {
+      builds++;
+      // The entries are read here; only the signature is slow, so this build
+      // holds the pre-transition snapshot.
+      const signing = pubKernel.publishStatusList();
+      if (builds === 1) await gate;
+      return signing;
+    }, () => pubClock);
+
+    const inFlight = publisher.current();
+    // The revoke commits while the first build is still signing.
+    pubKernel.transition(pubMission.id, "revoke");
+    // A fetch arriving now joins that build instead of starting a second one.
+    const joined = publisher.current();
+    release?.();
+    const [served, alsoServed] = await Promise.all([inFlight, joined]);
+    expect(alsoServed).toBe(served);
+    expect(builds).toBe(1);
+    // The transition committed during the build is still owed, so the next
+    // fetch rebuilds; the stale snapshot never becomes the published token.
+    const next = await publisher.current();
+    expect(builds).toBe(2);
+    const token = await verifyStatusListToken(next, verifyKey, { uri: URI, now: pubClock });
+    expect(readStatusBit(token, pubIdx)).toBe(STATUS_INVALID);
   });
 });
