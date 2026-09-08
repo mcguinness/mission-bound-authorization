@@ -4,9 +4,8 @@
  * `intersect`'s fixed four-key rebuild (`derive.ts`) silently dropped any
  * `constraints` member outside {`max_amount`, `vendors`,
  * `requires_action_approval`, `terminal_when`} instead of refusing: a
- * narrowing intent that vanishes silently is a widening. The fix is at the
- * TWO admission boundaries that feed derivation, so `intersect` never sees an
- * unsupported key in the first place:
+ * narrowing intent that vanishes silently is a widening. The fix spans THREE
+ * boundaries:
  *
  *  1. the typed config loaders (`@mission/demo-data`) — `parseCeilingEntry`
  *     (`policy.json`/`ras-policy.json`) already ran {@link isAuthorityEntry};
@@ -16,15 +15,24 @@
  *     `validateMissionResourceAccessSchema`), whose published JSON Schema
  *     used to leave `constraints` open (`additionalProperties: true`),
  *     silently admitting a key the engine could never narrow.
+ *  3. `deriveAuthoritySet` itself (review on PR #803): the first two gate
+ *     only the demo JSON loader and PAR intake, but `deriveAuthoritySet` is
+ *     exported and a `DerivationPolicy`/proposal can be supplied
+ *     programmatically, so neither admission boundary is load-bearing for a
+ *     caller that never goes through either. `deriveAuthoritySet` validates
+ *     every ceiling and proposal entry itself, before any resource/action
+ *     filtering narrows either array, so an entry the filter would discard
+ *     untouched cannot carry an unsupported key past it either.
  *
  * `test/kernel.test.ts`'s "still fails closed on a registered-but-unimplemented
  * Common Constraint" case bypasses config load entirely (an `as never` cast
  * builds the ceiling in memory), so it proves nothing about either loader;
- * the cases below exercise the loaders themselves. Both a wholly unregistered
- * key and a registered-but-unimplemented one (e.g. `time_window`) are covered
- * at each boundary: registration in the Common Constraints registry is not
- * itself support, and an unregistered, deployment-defined key carries the
- * same obligation as a registered one.
+ * the cases below exercise the loaders themselves, and (in the last describe
+ * block) `deriveAuthoritySet` directly, with no `as never` cast anywhere in
+ * that block. Both a wholly unregistered key and a registered-but-unimplemented
+ * one (e.g. `time_window`) are covered at every boundary: registration in the
+ * Common Constraints registry is not itself support, and an unregistered,
+ * deployment-defined key carries the same obligation as a registered one.
  */
 
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -33,7 +41,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
-import { IntentError, validateAuthorityProposal } from "../src/index.js";
+import { type AuthorityEntry, deriveAuthoritySet, IntentError, type MissionIntent, validateAuthorityProposal } from "../src/index.js";
 
 const RESOURCE = CANONICAL_RESOURCE;
 
@@ -174,5 +182,144 @@ describe("PAR intake refuses an unsupported constraint key (#784)", () => {
       [RESOURCE],
     );
     expect(entries[0]?.constraints?.requires_action_approval).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Direct derivation (review on PR #803, P2): `deriveAuthoritySet` is exported
+// and a `DerivationPolicy`/proposal can be built and supplied programmatically,
+// so neither loader above nor PAR intake is load-bearing for a caller that
+// never goes through either. Every ceiling/proposal literal below is built
+// the way the owner's own reproduction at the PR head was: `constraints` is
+// assigned from a plain variable, never an inline object literal, so each
+// case type-checks with no `as never` cast anywhere in this block.
+// ---------------------------------------------------------------------------
+describe("direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803)", () => {
+  const intent: MissionIntent = {
+    goal: "g",
+    target_resources: [RESOURCE],
+    expires_at: "2027-01-01T00:00:00Z",
+  };
+
+  it("configured-mapping mode refuses a wholly unregistered constraints key on a directly-supplied ceiling entry", () => {
+    const constraints = { vendors: ["acme"], review_unknown_limit: 1 };
+    const ceiling: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints },
+    ];
+    try {
+      deriveAuthoritySet(intent, { policy_version: "review", ceiling });
+      expect.unreachable("an unsupported constraints key must be refused, not silently dropped");
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).code).toBe("invalid_authorization_details");
+      expect((e as IntentError).message).toMatch(/review_unknown_limit/);
+    }
+  });
+
+  it("configured-mapping mode refuses a registered-but-unimplemented Common Constraint key on a directly-supplied ceiling entry", () => {
+    const constraints = { time_window: { not_before: "2026-01-01T00:00:00Z" } };
+    const ceiling: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints },
+    ];
+    try {
+      deriveAuthoritySet(intent, { policy_version: "review", ceiling });
+      expect.unreachable("a registered-but-unimplemented key must be refused, not silently dropped");
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).code).toBe("invalid_authorization_details");
+      expect((e as IntentError).message).toMatch(/time_window/);
+    }
+  });
+
+  // Positive control (review's "keep positive vendors coverage"): the same
+  // direct call, bypassing every loader and PAR intake, still derives a
+  // supported vendors-only ceiling entry normally. Without this the two
+  // refusals above could pass by making derivation refuse everything.
+  it("positive control: a supported vendors-only ceiling entry still derives, narrowed, through the same direct call", () => {
+    const constraints = { vendors: ["acme"] };
+    const ceiling: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints },
+    ];
+    const derived = deriveAuthoritySet(intent, { policy_version: "review", ceiling });
+    expect(derived).toHaveLength(1);
+    expect(derived[0]?.constraints?.vendors).toEqual(["acme"]);
+  });
+
+  // @spec mission#common-constraints (review on PR #803, finding 2) — a
+  // proposal entry naming a resource NO ceiling entry shares must still
+  // refuse an unsupported key: `matchingCeilings` filters it to nothing, so
+  // it would never reach `intersect` even under a fix that validated only at
+  // that pairing. A sibling proposal entry that DOES derive successfully
+  // proves the whole call would otherwise have returned normally, masking
+  // the second entry's violation entirely.
+  it("submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine", () => {
+    const ceiling: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { vendors: ["acme"] },
+      },
+    ];
+    const badConstraints = { review_unknown_limit: 1 };
+    const proposal: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { vendors: ["acme"] },
+      },
+      {
+        type: "mission_resource_access",
+        resource: "https://unmapped.example.com",
+        actions: ["read"],
+        constraints: badConstraints,
+      },
+    ];
+    try {
+      deriveAuthoritySet(intent, { policy_version: "review", ceiling }, proposal);
+      expect.unreachable("an unsupported key on an unmatched proposal entry must still refuse");
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).message).toMatch(/review_unknown_limit/);
+    }
+  });
+
+  // Same shape, ceiling side: a second same-resource ceiling entry whose
+  // actions the submitted proposal never names would have its `intersect`
+  // pairing return null on the action filter BEFORE any constraint check the
+  // prior code ran there, while the FIRST ceiling entry still lets derivation
+  // succeed. Only validating the full ceiling array up front catches it.
+  it("submitted-proposal mode refuses a registered-but-unimplemented key on a ceiling entry no submitted action overlaps, even though another same-resource entry derives fine", () => {
+    const timeWindow = { time_window: { not_before: "2026-01-01T00:00:00Z" } };
+    const ceiling: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { vendors: ["acme"] },
+      },
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.execute"],
+        constraints: timeWindow,
+      },
+    ];
+    const proposal: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { vendors: ["acme"] },
+      },
+    ];
+    try {
+      deriveAuthoritySet(intent, { policy_version: "review", ceiling }, proposal);
+      expect.unreachable("a registered-but-unimplemented key must refuse even on an action-filtered-out ceiling entry");
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).message).toMatch(/time_window/);
+    }
   });
 });
