@@ -348,6 +348,15 @@ function minAmount(
 ): { amount: string; currency: string } | undefined {
   if (!a) return b;
   if (!b) return a;
+  // Different currencies are incomparable, so return the ceiling side (`b`)
+  // outright rather than dropping the constraint: the caller here is deriving
+  // AGAINST a ceiling, and the ceiling bound is already the intended cap, so
+  // it stays exact rather than being replaced by a refusal. This is a
+  // deliberately DIFFERENT rule from intersectForProjection's currency-mismatch
+  // handling below (issue #784): a projection intersects two already-derived,
+  // already-ceiling-bound entries with no ceiling side to fall back on, so it
+  // drops the whole fragment instead. Both narrow (neither ever widens past
+  // its inputs); do not converge them into one rule.
   if (a.currency !== b.currency) return b; // ceiling wins on currency mismatch
   // @spec mission#max-amount — exact decimal-value comparison (never
   // IEEE-754 float): a malformed amount on either side refuses the
@@ -607,7 +616,10 @@ function intersectForProjection(
   if (cCap || eCap) {
     if (cCap && eCap) {
       // Different currencies are incomparable: no value is at or below both,
-      // so no fragment can be a subset of both sides.
+      // so no fragment can be a subset of both sides. Drop the whole
+      // fragment here rather than picking a side, unlike minAmount's
+      // ceiling-wins rule above (issue #784): neither side here is a
+      // ceiling, so there is nothing to fall back to.
       if (cCap.currency !== eCap.currency) return null;
       if (!isValidAmount(cCap.amount) || !isValidAmount(eCap.amount)) return null;
       constraints.max_amount = compareAmounts(cCap.amount, eCap.amount) <= 0 ? cCap : eCap;
