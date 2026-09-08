@@ -15,7 +15,7 @@
 import { describe, expect, it } from "vitest";
 import type { ContextActor } from "@mission/actor-chain";
 import type { Fga } from "../src/fga.js";
-import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBoundSeconds } from "../src/index.js";
+import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -54,7 +54,7 @@ const optsWith = (fga: Fga, v: MissionView = view()) => ({
   fga,
   modelId: "unit-test-model",
   now: () => NOW,
-  stalenessBoundSeconds,
+  stalenessBound,
   relationForAction,
 });
 

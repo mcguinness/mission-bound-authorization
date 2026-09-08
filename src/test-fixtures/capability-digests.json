@@ -1,0 +1,14 @@
+[
+  { "label": "canonical zero bytes", "value": "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "valid": true },
+  { "label": "verified published vector", "value": "sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0", "valid": true },
+  { "label": "unsupported algorithm", "value": "sha-512:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "valid": false, "refusal": "algorithm" },
+  { "label": "malformed body", "value": "sha-256:not-a-digest", "valid": false, "refusal": "body" },
+  { "label": "empty body", "value": "sha-256:", "valid": false, "refusal": "body" },
+  { "label": "short body", "value": "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "valid": false, "refusal": "body" },
+  { "label": "long body", "value": "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "valid": false, "refusal": "body" },
+  { "label": "padding", "value": "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "valid": false, "refusal": "body" },
+  { "label": "noncanonical trailing bits", "value": "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB", "valid": false, "refusal": "body" },
+  { "label": "null", "value": null, "valid": false, "refusal": "type" },
+  { "label": "numeric", "value": 123, "valid": false, "refusal": "type" },
+  { "label": "object", "value": {}, "valid": false, "refusal": "type" }
+]

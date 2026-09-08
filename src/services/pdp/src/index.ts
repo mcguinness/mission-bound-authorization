@@ -23,7 +23,8 @@ export {
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "./evaluate.js";
-export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";
+export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
+export { RUNTIME_POSTURE, RUNTIME_CLASSES, loadRuntimePosture, PostureConfigError, postureStalenessBound, type RuntimePosture, type StalenessBound } from "./runtime-posture.js";
 export {
   createDecisionPoint,
   createEphemeralDecisionPoint,
@@ -74,10 +75,17 @@ export {
   type PdpHttpServerHandle,
   type PdpRemoteServerConfig,
 } from "./server.js";
-export { evaluateRemote, type RemotePdpClientConfig } from "./client.js";
+export { evaluateRemote, isDecisionChannelRefusal, type RemotePdpClientConfig } from "./client.js";
+export { channelDeadlineMs, createDecisionChannel } from "./decision-channel.js";
 export {
   claimsWithinScope,
+  resourceDispositions,
   validateEnforcementScopeStatement,
+  type PerimeterDisposition,
+  type ExcludedPathDisposition,
+  type ResourceEntry,
+  type ExcludedPathEntry,
+  type DeclaredExcludedPath,
   type EnforcementClaim,
   type EnforcementExtensionDeclarations,
   type EnforcementExtensionName,
