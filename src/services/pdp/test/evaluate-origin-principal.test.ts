@@ -89,6 +89,15 @@ const resolverOpts = (
   });
 
 describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)", () => {
+  it("resource policy independently narrows a Mission action covered by fresh entitlement", async () => {
+    const options = resolverOpts(FRESH_MAPPING, { ...ENTITLED, authority: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }] }, 600);
+    const allow = await evaluate(req(), options);
+    const deny = await evaluate(req(), { ...options, fga: { checkWithContext: async () => false } as unknown as Fga });
+    expect(allow.decision, JSON.stringify(allow.context)).toBe(true);
+    expect(deny.decision).toBe(false);
+    expect(deny.context.denial_reason).toBe("out_of_authority");
+    expect(deny.context.principal_mapping).toEqual(allow.context.principal_mapping);
+  });
   it("a request NOT claiming the profile (no context.mission.subject) is completely unaffected: no resolvers configured, still permits", async () => {
     const dec = await evaluate(req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }), baseOpts());
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);

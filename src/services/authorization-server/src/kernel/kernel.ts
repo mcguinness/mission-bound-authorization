@@ -565,6 +565,11 @@ export class MissionKernel {
    * key.
    */
   approve(input: ApproveInput): MissionRecord {
+    // Trusted wiring modes are exclusive. Reject before derivation or resolver
+    // side effects; an empty fact list still means no caller-supplied facts.
+    if (this.opts.capabilityResolver && input.capabilityResolution?.length) {
+      throw new Error("capabilityResolution cannot be supplied when capabilityResolver is configured");
+    }
     // @spec mission#authority-proposal — normalize: an empty proposal is no
     // proposal (matches the wire, where an empty authorization_details array
     // is treated as absent). Present iff submitted: template-mode Missions
