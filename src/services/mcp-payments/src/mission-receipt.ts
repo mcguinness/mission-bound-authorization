@@ -462,7 +462,10 @@ async function verifyReceipt(
   const resolved: Partial<Record<ReceiptResolvedRecord["type"], ReceiptResolvedRecord["record"]>> = {};
   for (const ref of receipt.evidence) {
     let r: ReceiptResolvedRecord | undefined;
-    try { r = structuredClone(await resolveRecord(ref)); }
+    // Keep the authenticated comparison input private across the callback,
+    // including nested emitter fields. A resolver owns its lookup copy, not
+    // the receipt's signed commitment; returned records are snapshotted too.
+    try { r = structuredClone(await resolveRecord(structuredClone(ref))); }
     catch { return { valid: false, reason: "reference_unresolvable" }; }
     if (!r) {
       return { valid: false, reason: "reference_unresolvable" };
@@ -597,6 +600,14 @@ async function verifyReceipt(
   // against a source record; `chain` is step 6, separately unimplemented).
   if ("issuer_assertions" in receipt) {
     return { valid: false, reason: "unimplemented_projection" };
+  }
+  // The optional hash is a source projection, not an assertion established
+  // by the receipt issuer's signature. Omission is valid minimization, but
+  // selecting it requires a byte-identical value on the verified source.
+  const sourceMission = decisionRec?.mission ?? refusalRec?.mission;
+  if (receipt.mission.authority_hash !== undefined &&
+      receipt.mission.authority_hash !== sourceMission?.authority_hash) {
+    return { valid: false, reason: "copied_member_mismatch" };
   }
   const projections: Record<string, unknown> = decisionRec ? {
     policy: { pdp_policy_view: decisionRec.mission.policy_view_id,

@@ -95,7 +95,7 @@ async function signedRefusal(overrides: Partial<RefusalRecordObject> = {}): Prom
     evaluation_request_digest: canonicalDigest({ request: "fixture" }),
     sequence: 0,
     evaluated_at: "2026-01-01T00:00:01.000Z",
-    mission: { id: MISSION.id, issuer: MISSION.issuer },
+    mission: { ...MISSION },
     emitter: { id: "pep.example.com", role: "pep" as const },
     ...overrides,
   };
@@ -169,6 +169,61 @@ describe("Mission Receipt digest vector (spec worked example)", () => {
 });
 
 describe("Mission Receipt build + verify", () => {
+  it("resolver mutation cannot replace the receipt's authenticated evidence reference", async () => {
+    const decision = await signedDecision();
+    const replacement = await signedDecision({ parameter_digest: "sha-256:replacement" });
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    const committedDigest = receipt.evidence[0]!.digest;
+    expect(await verifyMissionReceipt(receipt, resolverFor({ decision: replacement }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "digest_mismatch" });
+    expect(await verifyMissionReceipt(receipt, async (ref) => {
+      await Promise.resolve();
+      ref.digest = canonicalDigest(replacement as never);
+      return { type: "decision", record: replacement };
+    }, receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "digest_mismatch" });
+    expect(receipt.evidence[0]!.digest).toBe(committedDigest);
+  });
+
+  it("resolver-owned reference mutations leave all authenticated comparison fields intact", async () => {
+    const decision = await signedDecision();
+    const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
+    expect(await verifyMissionReceipt(receipt, (ref) => {
+      ref.type = REFUSAL_RECORD_MEDIA_TYPE;
+      ref.digest = "sha-256:resolver-cache-marker";
+      ref.evidence_id = "resolver-cache-id";
+      ref.emitter.id = "resolver-cache-emitter";
+      ref.emitter.role = "pep";
+      return { type: "decision", record: decision };
+    }, receiptIssuers, resolveEvidenceKey)).toEqual({ valid: true });
+  });
+
+  it("a selected receipt authority hash must equal its verified source for every receipt kind", async () => {
+    const identity = { id: MISSION.id, issuer: MISSION.issuer };
+    for (const kind of ["decision", "execution", "refusal"] as const) {
+      for (const sourceHasHash of [true, false]) {
+        const sourceMission = sourceHasHash ? MISSION : identity;
+        const decision = await signedDecision({ mission: { ...sourceMission, policy_view_id: "pv-1" } });
+        const execution = await signedExecution();
+        const refusal = await signedRefusal({ mission: sourceMission });
+        const receipt = await buildAndSignMissionReceipt({
+          kind, mission: identity,
+          ...(kind === "refusal" ? { refusalRecord: refusal } : { decisionEvidence: decision }),
+          ...(kind === "execution" ? { executionEvidence: execution } : {}),
+        }, "receipts.example.com", RECEIPT_SIGNER);
+        const resolve = resolverFor({ decision, execution, refusal });
+        // Selection is optional even when the verified source has the hash.
+        expect(await verifyMissionReceipt(receipt, resolve, receiptIssuers, resolveEvidenceKey))
+          .toEqual({ valid: true });
+        for (const authority_hash of [MISSION.authority_hash, "sha-256:another-authority"]) {
+          const selected = await resigned(receipt, { mission: { ...identity, authority_hash } });
+          expect(await verifyMissionReceipt(selected, resolve, receiptIssuers, resolveEvidenceKey))
+            .toEqual(sourceHasHash && authority_hash === MISSION.authority_hash
+              ? { valid: true } : { valid: false, reason: "copied_member_mismatch" });
+        }
+      }
+    }
+  });
+
   it("retains immutable CryptoKey verification material and rejects symmetric byte keys", async () => {
     const publicKey = await webcrypto.subtle.importKey("jwk", receiptKeys.publicKey.export({ format: "jwk" }), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
     const scope = createReceiptIssuerScope(receiptScope(), new Map([[KEY_SET, [{ ...receiptKey, publicKey }]]]));
