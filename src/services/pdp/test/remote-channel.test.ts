@@ -26,6 +26,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { macHex, REQUEST_MAC_DOMAIN } from "../src/channel-mac.js";
 import { evaluateRemote } from "../src/client.js";
+import { channelDeadlineMs } from "../src/decision-channel.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
@@ -95,6 +96,23 @@ async function startServer(
   });
   return handle;
 }
+
+describe("channel deadline inside the action class's staleness budget (@spec authzen#transport-behavior)", () => {
+  it("caps the configured deadline at the declared window for the class, and leaves it where the class declares none", () => {
+    // irreversible_action publishes 30 s, so a 120 s configured deadline
+    // cannot outlive it; consequential_read publishes 300 s, so the tighter
+    // configured deadline stands.
+    expect(channelDeadlineMs("irreversible_action", 120_000)).toBe(30_000);
+    expect(channelDeadlineMs("consequential_read", 120_000)).toBe(120_000);
+    expect(channelDeadlineMs("external_commitment", 120_000)).toBe(60_000);
+    // A class declared with no active freshness requirement, and a label the
+    // statement does not declare, have no window to cap the deadline: the
+    // configured value stands, and the PDP applies its own class rule.
+    expect(channelDeadlineMs("audit_only", 120_000)).toBe(120_000);
+    expect(channelDeadlineMs("unpublished_class", 120_000)).toBe(120_000);
+    expect(channelDeadlineMs(undefined)).toBe(5_000);
+  });
+});
 
 describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
   it("a validly signed request over a real HTTP hop permits, and the PEP verifies the response signature", async () => {

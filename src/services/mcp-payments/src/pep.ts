@@ -28,6 +28,7 @@ import {
   type Decision,
   type EntitlementResolver,
   evaluate,
+  isDecisionChannelRefusal,
   type EvaluationRequest,
   type Fga,
   type Freshness,
@@ -981,7 +982,42 @@ export class Pep {
       // carries `context.mission_join` above.
       ...(this.deps.masJoin?.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
     };
-    const decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
+    // @spec authzen#failure-condition-coverage, runtime#outage-radius — the
+    // decision call is guarded. A call that threw obtained no decision, and
+    // "an unavailable gate is not permission": a transport error the channel
+    // did not classify, a failure before the channel's own guard (request
+    // serialization, channel authentication material), and a defect inside
+    // the decision point all fail closed here as `pdp_unreachable`, the
+    // reason the classified branch below already gives an unobtainable
+    // decision. This is the PEP's own refusal path, never a policy denial: no
+    // PDP evidence or evaluation identifier is attributed, nothing executes,
+    // and the operator timeline keeps the Refusal Record.
+    let decision: Decision;
+    try {
+      decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
+    } catch {
+      return this.refuse(token, "pdp_unreachable", mapping.action, view);
+    }
+    // @spec authzen#failure-condition-coverage — a local channel failure is
+    // not a PDP decision. It has no PDP evidence/evaluation identifier, and
+    // must take the PEP's own pre-decision Refusal Record path.
+    if (isDecisionChannelRefusal(decision)) {
+      // @spec authzen#failure-condition-coverage, authzen#transport-behavior —
+      // the table scopes `channel_failure` to "PEP-PDP channel authentication
+      // or integrity fails", so only an unauthenticated, malformed or
+      // oversized response takes it. A reachable PDP that returned no decision
+      // (timeout, transport failure, or any non-2xx status, 429 and 503
+      // included) is "no decision obtainable within its policy window":
+      // `pdp_unreachable`, per the same document's overload rule.
+      const cause = String(decision.context.denial_reason);
+      const integrityFailures = new Set([
+        "decision_channel_unauthenticated_response",
+        "decision_channel_malformed_response",
+        "decision_channel_response_too_large",
+      ]);
+      const reason = integrityFailures.has(cause) ? "channel_failure" : "pdp_unreachable";
+      return this.refuse(token, reason, mapping.action, view);
+    }
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
 
