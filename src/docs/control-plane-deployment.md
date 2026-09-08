@@ -23,21 +23,35 @@ transactions defer synchronous publication until the outermost commit and
 discard callbacks on rollback, including rolled-back savepoints, so no
 subscriber observes a transition that rolled back; and a process lost between
 the commit and its publication replays the persisted payload, with the same
-identity and the same commit timestamp, at startup or on the next request path.
-Subscribers are classified rather than each given retry state. The Signals
-subscriber's synchronous journal insert is its durable acceptance and its
-unique event key makes a redelivery a no-op. The Status List republisher, the
-continuation store and the delegation-family store are projections rebuilt at
-boot and are idempotent per Mission. A subscriber whose effect leaves the
-process gets a durable delivery row with attempts and a next-retry time,
-drained by an awaited call from startup and from request paths, never from a
-commit callback. Delivery is at least once with idempotent acceptance; a crash
-after a downstream accepted but before the local acknowledgement may redeliver.
-Exactly-once external delivery is not offered. A pending delivery whose
-subscriber is no longer registered is marked at startup with a terminal
-`subscriber_removed` disposition and its removal time, retained for the same
-horizon as a completed delivery, blocking no other subscriber's rows, and not
-resurrected by re-registering that subscriber.
+identity and the same commit timestamp, at startup or on the next request
+path. Subscribers are classified rather than each given retry state. The
+Signals subscriber's synchronous journal insert is its durable acceptance and
+its unique event key makes a redelivery a no-op. The Status List republisher
+rebuilds from the authoritative record set. The continuation store and the
+delegation-family store are in-memory projections that start empty at each
+boot, and recovery replays only committed-but-unpublished events, so an
+activation event that was already published does not repopulate them. Both are
+idempotent per Mission and both fail closed on a row they do not hold: after a
+restart an unknown continuation handle and an unknown family grant resolve to
+nothing, so continuation resolution and family refresh refuse rather than
+serve authority the process cannot account for. Rebuilding those two
+projections from a durable source is follow-on work and no restart-recovery
+claim is made for them. A subscriber whose effect leaves the process gets a
+durable delivery row with attempts and a next-retry time, drained by an
+awaited call from startup and from request paths, never from a commit
+callback. Those drains are serialized on the kernel's outbox: one pass runs at
+a time, and a caller arriving while a pass runs joins one follow-up pass that
+starts after it, so two passes cannot dispose of the same delivery row. Each
+disposition write is guarded on the pending row and on the attempt that
+produced it, so a terminal disposition never moves and a stale attempt never
+rewrites the attempt count, the error or the backoff. Delivery is at least
+once with idempotent acceptance; a crash after a downstream accepted but
+before the local acknowledgement may redeliver. Exactly-once external delivery
+is not offered. A pending delivery whose subscriber is no longer registered is
+marked at startup with a terminal `subscriber_removed` disposition and its
+removal time, retained for the same horizon as a completed delivery, blocking
+no other subscriber's rows, and not resurrected by re-registering that
+subscriber.
 
 Derivation admission uses a conditional counter update, so a caller holding a
 snapshot taken before another writer consumed the last derivation is refused
