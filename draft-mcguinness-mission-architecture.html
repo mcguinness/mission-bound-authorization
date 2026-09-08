@@ -3362,7 +3362,10 @@ mode (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D
 where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">The ceiling the derivation narrows against is itself a composition,
+<p id="section-11-2">The OAuth binding's informative Derivation Policy appendix
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) illustrates that policy
+artifact: a worked narrowing rule, fixtures, and ownership.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">The ceiling the derivation narrows against is itself a composition,
 not a single object. The derived Authority Set sits inside every
 bound on the task: the issuer's derivation policy, the ceiling of
 the Mission's established authority source (a delegating person's
@@ -3377,8 +3380,8 @@ the runtime contract re-checks the rest on every action, which is
 why a permit is never implied by the Authority Set alone. A
 deployment adding further sources (a tenant boundary, an
 environment-specific floor) adds them as derivation-policy inputs or
-as decision-point policy, never as agent-negotiated widening.<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">The derivation modes rank by how portable their result is:<a href="#section-11-3" class="pilcrow">¶</a></p>
+as decision-point policy, never as agent-negotiated widening.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">The derivation modes rank by how portable their result is:<a href="#section-11-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
         <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -3406,10 +3409,10 @@ as decision-point policy, never as agent-negotiated widening.<a href="#section-1
           </tr>
         </tbody>
       </table>
-<p id="section-11-5">A deployment seeking interoperable authority uses the first;
+<p id="section-11-6">A deployment seeking interoperable authority uses the first;
 free-text and model-assisted derivation are local policy unless a
 profile pins them with a published policy identifier, version, and
-test fixtures.<a href="#section-11-5" class="pilcrow">¶</a></p>
+test fixtures.<a href="#section-11-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deployment">
@@ -5931,11 +5934,15 @@ minimization and retention duties applying there.<a href="#section-19-3" class="
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Added the optional Control-Plane Consistency companion to the document
-map (#250).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Linked the OAuth binding's informative derivation-policy appendix
+from the authority derivation boundary (#309).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Controls taxonomy retirement (#636): the swarm-execution discussion
+          <p id="appendix-A-2.2.1">Added the optional Control-Plane Consistency companion to the document
+map (#250).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Controls taxonomy retirement (#636): the swarm-execution discussion
 no longer claims <code>derivation_limit</code> (renamed from <code>max_derivations</code>)
 is a fan-out or concurrency ceiling; it counts issuance events, not
 instances, and one instance refreshing repeatedly exhausts it exactly
@@ -5945,10 +5952,10 @@ the OAuth binding currently defines, pointing to a forward-referenced
 Agent Deployment Binding profile instead of the retired
 <code>controls.agent_deployment</code>. References to the OAuth binding's
 retired <code>controls</code> extension seam updated to the Mission Intent's
-own (open, named-member) extension seam.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+own (open, named-member) extension seam.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">PR #717 review fix: precised the "Mission-bound" definition text
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">PR #717 review fix: precised the "Mission-bound" definition text
 (<a href="#token-classes" class="auto internal xref">Section 10.2</a> and <a href="#binding-properties" class="auto internal xref">Section 13.3</a>) so it no longer
 requires a Mission Substrate Statement of a binding that
 deliberately publishes none. A binding that claims substrate
@@ -5957,10 +5964,10 @@ Statement; the OAuth binding, which claims no substrate conformance
 and publishes no Statement, is instead assessed through its own
 informative Mapping Assessment and discharges the definition
 directly through its own Conformance gates. No normative content
-changed.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Reworded the blanket "the bindings are peers of one another"
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Reworded the blanket "the bindings are peers of one another"
 sentence in the Introduction to name two independent axes, deployment
 topology and data-model independence, and to classify the Mission
 Authority Server as a normative standalone-controller protocol
@@ -5974,10 +5981,10 @@ binding's Conformance gates): <a href="#binding-properties" class="auto internal
 a binding's Mission Substrate Statement is how it evidences the
 properties, and the OAuth binding's gates are its discharge of the
 definition (#663). No normative content, anchor, or table row
-changed.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Cross-referenced the three previously separate accounts of what
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Cross-referenced the three previously separate accounts of what
 earns the "Mission-bound" term: <a href="#token-classes" class="auto internal xref">Section 10.2</a> now names the
 Mission Binding Properties vector's <code>credential-mission-bound</code>
 property (<a href="#binding-properties" class="auto internal xref">Section 13.3</a>) as the definition. Its six
@@ -5987,18 +5994,18 @@ no longer names a token-carried <code>authority_hash</code>, aligning with
 the ruled minimal-claim direction of #702, and condition 6
 (the auditable derivation link) names the OAuth binding's retained
 Mission Record explicitly rather than asserting an unspecified
-discharge (#663).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+discharge (#663).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Non-goal reworded (#637): "a new authority format, or a new grant
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Non-goal reworded (#637): "a new authority format, or a new grant
 protocol" narrowed to "a new grant protocol," naming the OAuth
 binding's Mission Resource Access Profile as the family's one
 cross-resource <code>authorization_details</code> type, since RFC 9396 leaves
 type semantics to the type and the family now defines one. Document
-Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Editorial density pass on this Informational document: the
 aggregate-ceiling and artifact-plane (non-transitive work-product)
 composition readings under <a href="#invariants" class="auto internal xref">Section 8</a> tightened to a summary
 sentence plus citation each, with their "not this summary, is the
@@ -6006,7 +6013,7 @@ normative text this passage tracks" deferral kept; several
 over-long paragraphs in <a href="#capability-envelope" class="auto internal xref">Section 4.1</a>, <a href="#validity-model" class="auto internal xref">Section 10.5</a>,
 <a href="#assurance-levels" class="auto internal xref">Section 13</a>, and <a href="#containment" class="auto internal xref">Section 15.1</a> split for one idea per
 paragraph and front-loaded openers. No normative content, anchor,
-or table row changed.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+or table row changed.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
