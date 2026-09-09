@@ -34,6 +34,7 @@ import {
   parameterDigest,
   PaymentsStore,
   Pep,
+  type RefusalRecord,
   type TokenFacts,
 } from "../src/index.js";
 import { testAttempt } from "./execution-attempt.js";
@@ -50,7 +51,67 @@ const TOKEN: TokenFacts = {
   cnfJkt: "jkt-1",
 };
 
-describe("PEP-emitted records are per-attempt, immutable, and append-only", () => {
+describe("Refusal Records are per-attempt, immutable, and append-only", () => {
+  it("a sustained pre-decision failure condition yields one new Refusal Record per attempt, never an amendment in place", async () => {
+    // The PRE-decision half of the clause, on the Refusal Record carrier:
+    // an unresolvable target is established before any decision request, so
+    // no permit exists and every attempt appends its own signed record.
+    // (Issue #786 moved the post-permit half to Execution Evidence, below.)
+    const payments = new PaymentsStore();
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+    const view = {
+      id: TOKEN.mission.id,
+      issuer: TOKEN.mission.issuer,
+      state: "active" as const,
+      version: 1,
+      authority_hash: TOKEN.mission.authority_hash,
+      authority_set: [
+        {
+          type: "mission_resource_access",
+          resource: CANONICAL_RESOURCE,
+          actions: ["payments:payment.schedule"],
+        },
+      ],
+      subject: { iss: TOKEN.mission.issuer, sub: "alice" },
+      client_id: "ap-agent",
+    };
+    const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
+      payments,
+      evidence,
+      // Never reached: the invoice lookup fails before any decision request.
+      fga: {} as unknown as Fga,
+      modelId: "unused",
+      loadView: (ref) =>
+        ref.id === view.id && ref.issuer === view.issuer
+          ? { view: view as never, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          : undefined,
+      instanceEpoch: "epoch-1",
+      allowedFreshnessSources: new Set(["load_view"]),
+    });
+
+    const first = await pep.enforce("schedule_payment", { invoice_id: "inv-missing" }, TOKEN);
+    // The caller-visible diagnostic is the deployment's own; the signed
+    // record carries the enumerated value it maps to.
+    expect(first.refusal_reason).toBe("unknown_invoice");
+    const afterFirst = evidence.forMission(TOKEN.mission.id);
+    expect(afterFirst).toHaveLength(1);
+    const record = afterFirst[0] as RefusalRecord;
+    expect(record.kind).toBe("refusal");
+    expect(record.content.denial_reason).toBe("target_unresolvable");
+    const snapshot = structuredClone(afterFirst[0]);
+
+    const second = await pep.enforce("schedule_payment", { invoice_id: "inv-missing" }, TOKEN);
+    expect(second.refusal_reason).toBe("unknown_invoice");
+    const afterSecond = evidence.forMission(TOKEN.mission.id);
+    expect(afterSecond).toHaveLength(2);
+    expect(afterSecond[1]).not.toBe(afterSecond[0]);
+    expect((afterSecond[1] as RefusalRecord).content.refusal_id).not.toBe(record.content.refusal_id);
+    expect(afterSecond[0]).toEqual(snapshot);
+  });
+});
+
+describe("PEP-emitted execution records are per-attempt, immutable, and append-only", () => {
   it("a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place", async () => {
     const payments = new PaymentsStore();
     payments.seed(
