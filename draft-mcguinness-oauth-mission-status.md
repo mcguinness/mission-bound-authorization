@@ -243,7 +243,7 @@ referenced, not re-specified, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 6 conformance rows in conformance-manifest.json (4 tested, 2 todo).
+Implementation: 6 conformance rows in conformance-manifest.json (5 tested, 1 todo).
 Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

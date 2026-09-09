@@ -978,16 +978,66 @@
    "level": "unit",
    "coverage": "tested",
    "tests": [
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > the draft's nested resources and excluded paths validate", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a bare resource string is the mediated shorthand and validates", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses missing disposition and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses unknown disposition and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses bare excluded path and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses mediated excluded path and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting resource dispositions and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting excluded dispositions and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > identical repeated keys normalize to one entry and validate", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > malformed JSON containers and entries yield findings rather than throwing or widening claims", "level": "unit", "surface": "deployment-documentation" }
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > the draft's nested resources and excluded paths validate",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a bare resource string is the mediated shorthand and validates",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses missing disposition and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses unknown disposition and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses bare excluded path and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses mediated excluded path and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting resource dispositions and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting excluded dispositions and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > identical repeated keys normalize to one entry and validate",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > malformed JSON containers and entries yield findings rather than throwing or widening claims",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
    ]
   },
   {
@@ -1012,11 +1062,36 @@
    "level": "unit",
    "coverage": "tested",
    "tests": [
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming a reconstructed resource is rejected", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming an unrecorded resource is rejected", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > an excluded execution path refuses even when it is also declared", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a mediated resource on a declared nonexcluded path is accepted", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate", "level": "unit", "surface": "deployment-documentation" }
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming a reconstructed resource is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming an unrecorded resource is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > an excluded execution path refuses even when it is also declared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a mediated resource on a declared nonexcluded path is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
    ]
   },
   {
@@ -2451,7 +2526,7 @@
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -2481,7 +2556,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -4724,25 +4799,25 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > a carried entry that is a subset of a retrieved, correctly-committed entry verifies (permits)",
+     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > a carried entry that is a subset of a retrieved, correctly-committed entry verifies (permits)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects when the retrieved set does not recompute to the retrieved authority_hash (commitment_mismatch)",
+     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > rejects when the retrieved set does not recompute to the retrieved authority_hash (commitment_mismatch)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry that is NOT a subset of any retrieved entry (not_subset)",
+     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry that is NOT a subset of any retrieved entry (not_subset)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
+     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
      "level": "unit",
      "surface": "verification"
     }
@@ -4773,13 +4848,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > a Tier-1-passing retrieval that matches the independently retained authority_hash verifies",
+     "name": "Local Approved-Set Verification \u2014 Tier 2 (@spec mission#lasv-retrieval, independently retained root) > a Tier-1-passing retrieval that matches the independently retained authority_hash verifies",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > @spec mission#the-mission-claim, mission#lasv-retrieval (#702/#725 review) -- a SUBSTITUTED set that is internally self-consistent (recomputes correctly under Tier 1) is still refused once an independently retained approval-time root disagrees: Tier 1 alone would have permitted this",
+     "name": "Local Approved-Set Verification \u2014 Tier 2 (@spec mission#lasv-retrieval, independently retained root) > @spec mission#the-mission-claim, mission#lasv-retrieval (#702/#725 review) -- a SUBSTITUTED set that is internally self-consistent (recomputes correctly under Tier 1) is still refused once an independently retained approval-time root disagrees: Tier 1 alone would have permitted this",
      "level": "unit",
      "surface": "verification"
     }
@@ -5747,9 +5822,16 @@
     "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover observation and retrieval (@spec child-delegation#carryover-evidence, #carryover-commit) > pairs the signed Status projection and the signed lifecycle event on carried_to and omits it for an excluded child",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "`kernel.signedStatus` is the implementing surface: the test verifies the signed Status JWS under the issuer's key and asserts `carried_to` on the carried child's `cascaded` projection and its absence for an excluded child. The same assertion covers `introspectionProjection`."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -5774,31 +5856,31 @@
    "tests": [
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
+     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
      "level": "unit",
      "surface": "signals"
     },
@@ -5997,9 +6079,16 @@
     "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/carryover-correlation.test.ts",
+     "name": "carryover cascade propagated by Mission Signals > delivers carried_to on the carried child's cascaded SET and omits it on an excluded child's",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "Asserted on the DELIVERED SET bytes captured off the emitter's own delivery sink, driven by a real carryover completion transaction, not a hand-built payload. The excluded sibling's SET carries the same `cascaded` state with no correlation, and the replacement's activation SET carries none either."
   },
   {
    "id": "cross-org.chain.presentation-closed",
@@ -14900,7 +14989,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -14930,7 +15019,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -19586,7 +19675,7 @@
     },
     {
      "file": "src/services/authorization-server/test/continuation-assertion.test.ts",
-     "name": "validateContinuationAssertion — rejects > a jti the redeeming caller already consumed",
+     "name": "validateContinuationAssertion \u2014 rejects > a jti the redeeming caller already consumed",
      "level": "unit",
      "surface": "verification"
     }
@@ -19810,7 +19899,7 @@
    "tests": [
     {
      "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (\u00a7 in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -21265,7 +21354,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
+     "name": "Approval Context Manifest (approval-governance \u00a7 approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21293,13 +21382,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > includes ceiling_hash iff the input carries one",
+     "name": "Approval Context Manifest (approval-governance \u00a7 approval-context-manifest) > includes ceiling_hash iff the input carries one",
      "level": "unit",
      "surface": "commitment"
     },
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 3: conditional ceiling_hash",
+     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 3: conditional ceiling_hash",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21327,13 +21416,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 1: base manifest (no conditional members)",
+     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 1: base manifest (no conditional members)",
      "level": "unit",
      "surface": "commitment"
     },
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
+     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21361,7 +21450,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
+     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21466,13 +21555,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
+     "name": "Approval Context Commitment verification (approval-governance \u00a7 approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "name": "Approval Context Commitment verification (approval-governance \u00a7 approval-context-computation) > vector 6: rejects a value committed under a different typ",
      "level": "unit",
      "surface": "verification"
     }
@@ -21500,7 +21589,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "name": "Approval Context Commitment verification (approval-governance \u00a7 approval-context-computation) > vector 6: rejects a value committed under a different typ",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21660,7 +21749,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "notes": "#576 kernel PR 2: the completion guard exists (`applyCarryoverInCallerTx` refuses unless the route asserts an authenticated direct approval AND the successor's own basis is `direct`), but no policy-adjudicated completion path into carryover exists to refuse from: the only route is the deferred-expansion completion, whose successor basis is always `direct`. An injected flag cannot honor this row's cross-component level, so it stays `todo` until a policy-adjudicated drawdown completion surface exists."
   },
   {
    "id": "child-delegation.carryover.manifest-committed",
@@ -21680,9 +21769,40 @@
     "normative": "The Mission Issuer MUST render and commit the exact Carryover Manifest, including its exclusion policy and replacement approval facts, at the expansion approval event."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > cascades an uncovered child with a rendered reason and authenticates the complete map under the issuer's signing key",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a completion whose manifest hash does not match the approved commitment, creating nothing",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > reserves identifiers once and hands the same reservations back to an idempotent retry",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > holds a cancelled plan's reserved identifiers and never completes it",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses an oversized plan at intake, before any approval event names it",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it."
   },
   {
    "id": "child-delegation.carryover.completion-cas",
@@ -21702,9 +21822,46 @@
     "normative": "The Mission Issuer MUST compare-and-set every mutable eligibility and transfer input committed in the manifest within the completion transaction, not merely compare lifecycle version or `authority_hash`."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch whose derivation counter moved after rendering with no lifecycle version bump",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch whose fan-out occupancy moved after rendering",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch when a grandchild was inserted after approval, so no unrendered descendant is silently carried",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > refuses a change class the plan did not commit, even under disclosed exclusions",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > excludes only a committed change class under disclosed exclusions and carries the rest",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -21724,9 +21881,34 @@
     "normative": "The Mission Issuer MUST re-derive and validate each carried child in generation order against its prospective parent's Effective Authority Set, using all ordinary strict-subset, actor, and children-control checks."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > carries a grandchild under its replacement parent, never the root successor",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > cascades an uncovered child with a rendered reason and authenticates the complete map under the issuer's signing key",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > recounts fan-out occupancy against the successor's own justifying entries as each carried generation is inserted",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > excludes every dependent descendant of an excluded parent rather than attaching a replacement to a missing parent",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Generation order, the prospective-parent attachment (a deeper row attaches to its own replacement parent, never the root successor), the ordinary strict-subset proof against the prospective parent's effective set, dependent-descendant exclusion, and the fan-out recount in the same serialization domain are all witnessed. PARTIAL because the actor and children-control REFUSAL arms are unreachable in the reference deployment: a successor derives `delegation.children` from the same policy ceiling that gated the old children's creation, so no rendered row can fail `allowed_child_actors`, `max_children`, `max_child_depth` or the delegation on-switch at carryover time. The gates run on every rendered replacement; only their refusals lack a witness."
   },
   {
    "id": "child-delegation.carryover.effective-set-basis",
@@ -21746,9 +21928,22 @@
     "normative": "The Mission Issuer MUST use the old child's current Effective Authority Set as the replacement's authority ceiling and MUST NOT restore containment or discharge removed by that effective-set calculation."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > does not restore containment removed from the old child's effective set",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > excludes a suspended child and never resumes it",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "The replacement's approved set is the old child's RECHECKED effective set, so a contained action is absent from the replacement and its overlay is not carried; an independent ceiling check against that effective set is asserted in the completion path. Only an effectively `active` child is eligible: a suspended child is rendered a cascade with reason `suspended_not_resumed`, terminated, and never restored."
   },
   {
    "id": "child-delegation.carryover.no-expiry-extension",
@@ -21768,9 +21963,16 @@
     "normative": "The replacement's `expires_at` MUST NOT exceed either the old child's `expires_at` or its new parent's effective `expires_at`."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses to extend a carried child under a successor whose approved extension outlives the predecessor",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement."
   },
   {
    "id": "child-delegation.carryover.budget-transfer",
@@ -21790,9 +21992,28 @@
     "normative": "The Mission Issuer MUST preserve the old child's `derivation_limit` and `derivation_count` and atomically preserve every remaining operational budget or make the child ineligible."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover budgets and external state (@spec child-delegation#carryover-no-reset) > transfers the derivation budget verbatim across two expand-and-carry cycles",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover budgets and external state (@spec child-delegation#carryover-no-reset) > renders a child ineligible when no external meter or latch can participate and the deployment declares none absent",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover budgets and external state (@spec child-delegation#carryover-no-reset) > rolls the whole batch back when a transaction-participating external transfer fails",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "The derivation budget clause is fully witnessed: `derivation_limit` and `derivation_count` are preserved verbatim, and two successive expand-and-carry cycles cannot replenish them. PARTIAL for the OPERATIONAL budget clause: the reference deployment has no external meter or latch and declares that explicitly (`no_applicable_external_state`), which is what makes a carried budget honest here rather than a claimed distributed atomicity. The adapter seam is exercised with a test adapter (an absent adapter renders a child ineligible before approval; a transfer that refuses to participate rolls the whole batch back), but no deployment implements it, so this row moves to `tested` only when one does."
   },
   {
    "id": "child-delegation.carryover.fresh-direct-records",
@@ -21812,9 +22033,22 @@
     "normative": "The Mission Issuer MUST create a new record for each replacement, with `approval_basis.type` `direct` and a child-specific approval event, and MUST NOT modify the old child's `parent` or immutable approval anchors."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > carries an active leaf child under the successor with a fresh direct approval basis, the preserved budget and bare same-issuer correlation",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > completes a widening expansion by carrying the child and returns the authenticated batch map on the completion response",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "A NEW record per replacement with `approval_basis.type` `direct`, the expansion Approver as `consent_principal` and `direct` activation actor, its deterministic child-specific `approval_event_id` on activation, and `root_commitment` equal to its own `authority_hash`. The old child's `parent` and immutable approval anchors are untouched. `related_to` and `carried_to` are bare same-issuer strings, interpreted in the issuing namespace. Source ACTIVATION and source CEILING both re-run for the rendered `authority_source`, with a no-substitution check against the record the manifest says the source came from."
   },
   {
    "id": "child-delegation.carryover.atomic-records-map-outbox",
@@ -21834,9 +22068,34 @@
     "normative": "The Mission Issuer MUST commit successor activation, predecessor supersession, every replacement record, the required old-child cascades, the final old-to-new map, and durable publication/recovery work atomically."
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover budgets and external state (@spec child-delegation#carryover-no-reset) > rolls the whole batch back when a transaction-participating external transfer fails",
+     "level": "concurrency",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover durable recovery (@spec child-delegation#carryover-commit) > redelivers every carried transition byte-identically after a crash between commit and publication",
+     "level": "concurrency",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > terminates a live descendant hidden behind a terminal intermediate, leaving the post-supersession cascade nothing",
+     "level": "concurrency",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > carries a grandchild under its replacement parent, never the root successor",
+     "level": "cross-component",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "Successor activation, every replacement record, every external transfer, the required old-child cascades, the complete final map, the authenticated Carryover Evidence, the terminal tombstones and the durable outbox payloads commit in ONE transaction. A mid-batch failure after a replacement already existed leaves no successor, no replacement, no cascade and no published event. The completion asserts that no descendant is left non-terminal, so the post-supersession cascade is a genuine no-op and nothing transitions outside the committed map. A crash between commit and publication redelivers each carried transition byte-identically from the durable outbox over a file-backed store, and the retained map and signed evidence are read back rather than recomputed."
   },
   {
    "id": "child-delegation.carryover.authorized-idempotent-retrieval",
@@ -21856,9 +22115,22 @@
     "normative": "The Mission Issuer MUST provide idempotent retrieval of the committed replacement result through the child-creation completion surface to the authenticated and authorized child actor."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > retrieves the committed replacement result idempotently for its own child actor, and refuses another authenticated client",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover observation and retrieval (@spec child-delegation#carryover-evidence, #carryover-commit) > retrieves a committed replacement result only for its own child actor and refuses another actor",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The retrieval mode of the child-creation completion surface at the real token endpoint (`carryover_replacement`, no `subject_token`, no new endpoint and no new metadata member). Authorization is the replacement record's own `client_id`: the replacement's child actor authenticates with its own private_key_jwt and DPoP key and retrieves the committed result, a repeat creates no duplicate replacement and repeats no approval, and a different authenticated client holding a valid assertion and proof is refused. The deterministic approval event identifier is a correlation key, never retrieval authorization."
   },
   {
    "id": "child-delegation.carryover.no-token-rebind",
@@ -21878,9 +22150,22 @@
     "normative": "A token for the terminated child MUST NOT be treated as a credential of its replacement."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover observation and retrieval (@spec child-delegation#carryover-evidence, #carryover-commit) > keeps the old child's credential bound to the old record and never rebinds it to the replacement",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > retrieves the committed replacement result idempotently for its own child actor, and refuses another authenticated client",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "The old child's identity still resolves to the OLD, now terminal record: derivation and the active gate both refuse under it, and the replacement is reachable only through its own child-specific approval event. At the wire the old child's identifier is not a retrievable replacement, and the grant returned for a replacement names the replacement's own actor as its only redeemer."
   },
   {
    "id": "child-delegation.carryover.authenticated-map",
@@ -21900,9 +22185,28 @@
     "normative": "The Mission Issuer MUST retain authenticated Carryover Evidence containing the `manifest_hash`, predecessor and successor references, and the complete final map of old child identities to carried or excluded outcomes."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > cascades an uncovered child with a rendered reason and authenticates the complete map under the issuer's signing key",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > completes a widening expansion by carrying the child and returns the authenticated batch map on the completion response",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > cascades an unrendered descendant under disclosed exclusions and lists it explicitly in the authenticated map",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly."
   },
   {
    "id": "child-delegation.carryover.observation-correlation",
@@ -21922,9 +22226,22 @@
     "normative": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover observation and retrieval (@spec child-delegation#carryover-evidence, #carryover-commit) > pairs the signed Status projection and the signed lifecycle event on carried_to and omits it for an excluded child",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/mission-signals/test/carryover-correlation.test.ts",
+     "name": "carryover cascade propagated by Mission Signals > delivers carried_to on the carried child's cascaded SET and omits it on an excluded child's",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The committed `carried_to` correlation is carried on the old child's `cascaded` observation on both deployed surfaces, and omitted where no replacement committed. A batch map does not replace ordinary Child Evidence: each replacement's Child Evidence keeps `parent`, `child`, `attenuation`, `fanout` and `decision` and adds `creation_mode`, the qualified `carried_from`, `manifest_hash` and an authenticated reference to the retained map."
   },
   {
    "id": "child-delegation.carryover.out-of-order-recovery",
@@ -21944,9 +22261,22 @@
     "normative": "A consumer MUST NOT infer absence of a replacement from receiving a cascade before the replacement's creation event."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover observation and retrieval (@spec child-delegation#carryover-evidence, #carryover-commit) > lets an out-of-order consumer that saw the cascade first resolve the replacement through the verified map",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > cascades an unrendered descendant under disclosed exclusions and lists it explicitly in the authenticated map",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "A consumer that received the cascade before any creation event does not infer absence of a replacement: it resynchronizes through the retained, signature-verified map, pairing by issuer-qualified identity. The map, not `related_to`, is the normative record of replacement."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -21966,9 +22296,34 @@
     "normative": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > excludes only a committed change class under disclosed exclusions and carries the rest",
+     "level": "cross-component",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > refuses a change class the plan did not commit, even under disclosed exclusions",
+     "level": "cross-component",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > cascades an unrendered descendant under disclosed exclusions and lists it explicitly in the authenticated map",
+     "level": "cross-component",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion",
+     "level": "cross-component",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result."
   },
   {
    "id": "child-delegation.carryover.expansion-expiry",
@@ -21988,9 +22343,16 @@
     "normative": "An approved successor extension MUST NOT extend a carried child's expiry"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses to extend a carried child under a successor whose approved extension outlives the predecessor",
+     "level": "cross-component",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "A successor's separately approved, disclosed expiry extension does not extend the old child's horizon: the replacement's `expires_at` is the earliest of the old child's own expiry, the new parent's effective expiry, the requested ceiling and this deployment's lifetime ceiling."
   },
   {
    "id": "child-delegation.carryover.expansion-atomicity",
@@ -22010,9 +22372,28 @@
     "normative": "When the approved operation includes Child Mission Carryover, the Mission Issuer MUST include replacement records, required old-child cascades, the committed outcome map, and durable recovery work in the same atomic operation."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#576 foundation only. The acceptance matrix includes post-render derivation/discharge, descendant exclusion, rollback, authenticated recovery, and out-of-order publication. Kernel/wire implementation and tests are a follow-on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover budgets and external state (@spec child-delegation#carryover-no-reset) > rolls the whole batch back when a transaction-participating external transfer fails",
+     "level": "cross-component",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > terminates a live descendant hidden behind a terminal intermediate, leaving the post-supersession cascade nothing",
+     "level": "cross-component",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover (@spec child-delegation#carryover) > carries a grandchild under its replacement parent, never the root successor",
+     "level": "cross-component",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "Predecessor supersession, successor activation and the whole old subtree's terminal transitions commit together. The explicit whole-subtree traversal owns the generation-ordered descent through one internal carried-terminal entry point that suppresses only `setState`'s automatic recursion, so a terminal intermediate cannot hide a live descendant and an already-terminal row keeps its state with no second transition."
   }
  ]
 }

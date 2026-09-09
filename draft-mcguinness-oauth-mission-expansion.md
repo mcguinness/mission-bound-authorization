@@ -270,7 +270,7 @@ This document does NOT define:
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 3 conformance rows in conformance-manifest.json (3 todo).
+Implementation: 3 conformance rows in conformance-manifest.json (3 tested).
 Adopt when: Approved authority will predictably need to widen mid-task via fresh approval.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

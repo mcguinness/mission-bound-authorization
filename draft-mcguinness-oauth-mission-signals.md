@@ -217,7 +217,7 @@ unaffected by this document.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 7 conformance rows in conformance-manifest.json (5 tested, 1 partial, 1 todo).
+Implementation: 7 conformance rows in conformance-manifest.json (6 tested, 1 partial).
 Adopt when: Consumers need push notice of state changes instead of polling per Mission.
 Requires: Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
