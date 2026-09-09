@@ -682,11 +682,15 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<string, string>> = Obje
   // decision request. Distinct from the PDP's evaluated `out_of_authority`
   // denial, which this member must not duplicate.
   out_of_authority: "credential_authority_insufficient",
-  // One instance of the delegation chain is revoked, so the presented
-  // credential is not valid for use. Allocated to `token_invalid` rather than
-  // to a value of its own: the operator-facing distinction stays on the
-  // caller-visible diagnostic.
-  instance_revoked: "token_invalid",
+  // One instance of the delegation chain is revoked, so the credential's own
+  // authority no longer covers any request. Allocated to
+  // `credential_authority_insufficient`, whose definition is exactly an
+  // authority bound the PEP establishes before any decision request, NOT to
+  // `token_invalid`, which names a credential that failed validation. A
+  // revoked instance presents a well-formed credential whose authority was
+  // withdrawn, and an auditor must be able to tell those apart. The
+  // operator-facing distinction stays on the caller-visible diagnostic.
+  instance_revoked: "credential_authority_insufficient",
 });
 
 /** The enumerated Refusal Record `denial_reason` for a caller-visible diagnostic. */

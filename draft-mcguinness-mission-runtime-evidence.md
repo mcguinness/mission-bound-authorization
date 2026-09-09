@@ -658,7 +658,9 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   {{I-D.draft-mcguinness-mission-authority-server}}),
   `credential_authority_insufficient` (the presented credential's own
   authority does not cover the request, as the PEP establishes it
-  before any decision request), `request_unsupported` (the
+  before any decision request, including a delegation instance whose
+  authority has been withdrawn, which is distinct from a credential
+  that failed validation), `request_unsupported` (the
   enforcement surface implements no such action), `target_unresolvable`
   (the request names a target object the enforcement surface cannot
   resolve), `capability_source_unresolvable` (the capability
