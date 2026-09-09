@@ -199,7 +199,7 @@ are referenced, not duplicated, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 103 conformance rows in conformance-manifest.json (56 tested, 12 partial, 35 todo).
+Implementation: 103 conformance rows in conformance-manifest.json (60 tested, 12 partial, 31 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).

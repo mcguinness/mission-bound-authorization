@@ -20,7 +20,7 @@ import {
   OperationProfileRegistry,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
@@ -41,7 +41,11 @@ import {
   createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
+  deploymentReceiptIssuerScope,
+  deploymentRetentionWindowSeconds,
   type DpopKeys,
+  EVIDENCE_KEY_SET_LOCATION,
+  EvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
   type LoadedView,
@@ -51,6 +55,7 @@ import {
   PaymentsStore,
   Pep,
   type PepDeps,
+  type ReceiptIssuerScope,
   type ResourceMetadataServer,
   startResourceMetadataServer,
   type TokenFacts,
@@ -103,6 +108,20 @@ export interface DemoStack {
   modelId: string;
   payments: PaymentsStore;
   evidence: EvidenceStore;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (Retention), #594 W4-8:
+   * the durable retention store behind `evidence`, and the deployment's
+   * published verification key sets. Exposed so an operator surface can read
+   * what is retained and which keys are still resolvable.
+   */
+  evidenceRetention: EvidenceRetentionStore;
+  /**
+   * The deployment's receipt-issuer designation, or `undefined` where its
+   * Enforcement Scope Statement claims no evidence capability, which is what
+   * `config/enforcement-scope.json` does today: no designation, so no receipt
+   * verification path.
+   */
+  receiptIssuerScope?: ReceiptIssuerScope;
   /** The egress gate's OWN evidence store (D32); the agent run's gate writes here
    * so its records join the Activity Log without relocating the store. */
   egressEvidence: EvidenceStore;
@@ -478,6 +497,31 @@ export async function composeStack(opts: {
     },
   });
   const evidenceKeys = createEphemeralEvidenceKeys();
+  // @spec runtime-evidence#execution-evidence-object (Retention),
+  // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
+  // retention store, and the key sets it publishes at its own key-set
+  // location. The window is the retention floor the runtime profile puts
+  // under every runtime-enforced deployment: the Mission audit horizon, since
+  // this deployment's statement claims no evidence capability and so declares
+  // no longer window of its own.
+  const evidenceRetention = new EvidenceRetentionStore({
+    retentionWindowSeconds: deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS),
+  });
+  for (const key of [
+    ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
+    { ...decisionPoint.evidenceVerification, role: "pdp" as const },
+  ]) {
+    evidenceRetention.publishKey({
+      location: EVIDENCE_KEY_SET_LOCATION,
+      kid: key.kid,
+      emitterId: key.emitterId,
+      role: key.role,
+      ...(key.audience !== undefined ? { audience: key.audience } : {}),
+      // A published set carries JWKs; the PDP's own verification key is a
+      // WebCrypto key, so it is exported here rather than at publication.
+      publicKey: await exportJWK(key.publicKey as Parameters<typeof exportJWK>[0]),
+    });
+  }
   const evidence = new EvidenceStore(
     evidenceKeys.signing,
     buildEvidenceKeyResolver([
@@ -485,7 +529,16 @@ export async function composeStack(opts: {
       // Exactly what the decision point publishes for the records it emits.
       { ...decisionPoint.evidenceVerification, role: "pdp" },
     ]),
+    evidenceRetention,
   );
+  // @spec runtime#runtime-conformance — the deployment's own receipt-issuer
+  // designation, over the key sets above and the locations its own statement
+  // declares. `undefined` here, and that is the point: config/enforcement-scope.json
+  // claims no evidence capability, so this deployment designates no receipt
+  // issuer and receipt verification is unreachable for it. Switching the claim
+  // on is a deployment assertion, gated on the producer and consumer duties
+  // #594's W4-3/W4-4/W4-16 still own.
+  const receiptIssuerScope = deploymentReceiptIssuerScope(RUNTIME_SCOPE_CONFIG, evidenceRetention);
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
   // Egress stays on the pre-existing unsigned path (issue #649's deferred slice B).
   const egressEvidence = new EvidenceStore();
@@ -701,6 +754,8 @@ export async function composeStack(opts: {
     modelId,
     payments,
     evidence,
+    evidenceRetention,
+    ...(receiptIssuerScope ? { receiptIssuerScope } : {}),
     egressEvidence,
     ...(issuerEvidenceStore ? { issuerEvidence: issuerEvidenceStore } : {}),
     connectors,

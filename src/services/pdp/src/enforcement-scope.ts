@@ -300,3 +300,143 @@ export function claimsWithinScope(input: unknown, claim: EnforcementClaim): bool
   }
   return true;
 }
+
+/**
+ * The number of seconds an ISO 8601 duration names, or `undefined` when it
+ * names no fixed number of them. Days and below only (`P[nD][T[nH][nM][nS]]`):
+ * years and months are calendar-relative, so they resolve to no fixed count
+ * and are refused rather than approximated. A retention window the deployment
+ * cannot resolve to seconds cannot be compared against an audit horizon, and a
+ * declaration is validated against that horizon, never as a non-empty string
+ * (@spec runtime-evidence#execution-evidence-object).
+ */
+export function retentionWindowSeconds(value: unknown): number | undefined {
+  if (typeof value !== "string") return undefined;
+  const parts = /^P(?!$)(?:(\d{1,6})D)?(?:T(?!$)(?:(\d{1,6})H)?(?:(\d{1,6})M)?(?:(\d{1,6})S)?)?$/.exec(value);
+  if (!parts) return undefined;
+  const seconds =
+    Number(parts[1] ?? 0) * 86400 + Number(parts[2] ?? 0) * 3600 + Number(parts[3] ?? 0) * 60 + Number(parts[4] ?? 0);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? seconds : undefined;
+}
+
+/**
+ * The deployment-external facts the evidence declaration is checked against:
+ * the Mission audit horizon, "the deployment-declared retention window for
+ * the Mission record and its evidence" (@spec mission#mission-record), which
+ * the runtime profile makes the floor under an evidence retention window
+ * (@spec runtime-evidence#execution-evidence-object).
+ */
+export interface EvidenceDeclarationContext {
+  auditHorizonSeconds: number;
+}
+
+/**
+ * Validates the `evidence` extension declaration against this deployment's
+ * own scope and audit horizon: the checks that need facts beyond the
+ * statement's internal completeness, so {@link validateEnforcementScopeStatement}
+ * stays the pure structural pass.
+ *
+ * A declaration and a claim travel together in both directions. A claimed
+ * capability with no declaration is incomplete; an attached declaration under
+ * no claim is a deployment asserting a capability in its configuration while
+ * denying it in its statement, so it is refused at load rather than read as
+ * the claim it is not.
+ *
+ * Every named location and emitter must resolve inside this statement: a
+ * receipt issuer that is not a declared PDP or PEP location, or a key set that
+ * is not a declared signing-key location, names something unresolvable and is
+ * refused at load.
+ */
+export function evidenceDeclarationFindings(
+  input: unknown,
+  ctx: EvidenceDeclarationContext,
+): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const findings: EnforcementScopeFinding[] = [];
+  const push = (member: string, problem: string): void => {
+    findings.push({ member, problem });
+  };
+  const declared = object(stmt.extensions) ? stmt.extensions.evidence : undefined;
+  const claimed = Array.isArray(stmt.claims) && stmt.claims.includes("evidence");
+  if (declared === undefined) {
+    if (claimed) push("extensions.evidence", "the evidence capability is claimed with no attached declaration");
+    return findings;
+  }
+  if (!claimed) {
+    push("claims", "an evidence declaration is attached while the statement claims no evidence capability");
+  }
+  if (!object(declared)) {
+    push("extensions.evidence", "declaration must be an object");
+    return findings;
+  }
+  if (!isNonEmptyString(declared.mechanism)) {
+    push("extensions.evidence.mechanism", "missing the append-only integrity mechanism for retained records");
+  }
+  const horizon = ctx.auditHorizonSeconds;
+  const window = retentionWindowSeconds(declared.retention_window);
+  if (window === undefined) {
+    push(
+      "extensions.evidence.retention_window",
+      "must name a duration in seconds resolvable from an ISO 8601 duration of days or below",
+    );
+  } else if (!Number.isSafeInteger(horizon) || horizon <= 0) {
+    push(
+      "extensions.evidence.retention_window",
+      "the deployment declares no resolvable Mission audit horizon to check it against",
+    );
+  } else if (window < horizon) {
+    push(
+      "extensions.evidence.retention_window",
+      `${window}s is shorter than the ${horizon}s Mission audit horizon this deployment declares`,
+    );
+  }
+  if (!isNonEmptyStringArray(declared.signing_key_locations)) {
+    push(
+      "extensions.evidence.signing_key_locations",
+      "missing the published location or locations of the evidence signing key sets",
+    );
+  }
+  const locations = isNonEmptyStringArray(declared.signing_key_locations) ? declared.signing_key_locations : [];
+  const scope = object(stmt.mediated_scope) ? stmt.mediated_scope : {};
+  const components = new Set<string>([
+    ...(isNonEmptyStringArray(stmt.pdps) ? stmt.pdps : []),
+    ...(isNonEmptyStringArray(scope.pep_locations) ? scope.pep_locations : []),
+  ]);
+  if (declared.receipt_issuers !== undefined) {
+    if (!Array.isArray(declared.receipt_issuers)) {
+      push("extensions.evidence.receipt_issuers", "must be an array of {emitter, key_set} designations");
+    } else {
+      declared.receipt_issuers.forEach((entry, i) => {
+        const member = `extensions.evidence.receipt_issuers[${i}]`;
+        if (!object(entry) || !isNonEmptyString(entry.emitter) || !isNonEmptyString(entry.key_set)) {
+          push(member, "designation requires a non-empty emitter and key set");
+          return;
+        }
+        if (!components.has(entry.emitter)) {
+          push(member, `emitter "${entry.emitter}" is not a declared PDP or PEP location of this scope`);
+        }
+        if (!locations.includes(entry.key_set)) {
+          push(member, `key set "${entry.key_set}" is not a declared signing-key location`);
+        }
+      });
+    }
+  }
+  if (declared.agent_isolated_evidence_emission !== undefined) {
+    if (!Array.isArray(declared.agent_isolated_evidence_emission)) {
+      push(
+        "extensions.evidence.agent_isolated_evidence_emission",
+        "must be an array of {emitter, declaration} entries",
+      );
+    } else {
+      declared.agent_isolated_evidence_emission.forEach((entry, i) => {
+        const member = `extensions.evidence.agent_isolated_evidence_emission[${i}]`;
+        if (!object(entry) || !isNonEmptyString(entry.emitter) || !isNonEmptyString(entry.declaration)) {
+          push(member, "entry requires a non-empty emitter and declaration");
+        } else if (!components.has(entry.emitter)) {
+          push(member, `emitter "${entry.emitter}" is not a declared PDP or PEP location of this scope`);
+        }
+      });
+    }
+  }
+  return findings;
+}
