@@ -1130,9 +1130,11 @@ export class Pep {
       // grain, additive to the grains above): only on a GENUINE out_of_authority
       // denial -- the (resource, action) pair is absent from the Mission's
       // Authority Set entirely, not merely denied for THIS target object
-      // (deriveContextualTuples/FGA can also return out_of_authority when the
-      // entry exists but the specific object is excluded) -- propose the
-      // missing entry back. Deliberately NOT emitted for authority_contained:
+      // (deriveContextualTuples/FGA can still return out_of_authority for the
+      // matched entry when the specific object's relationship is denied for
+      // some other reason; a vendor-constraint exclusion is instead
+      // parameter_violation, @spec authzen#runtime-denial-classification #801)
+      // -- propose the missing entry back. Deliberately NOT emitted for authority_contained:
       // that is the family's monotonic trust ratchet (@spec containment);
       // handing back "here's how to ask again" for a deliberately narrowed
       // capability would contradict restore-only-via-Expansion.

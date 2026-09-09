@@ -180,7 +180,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     expect(invoices.map((i) => i.vendor_id).sort()).toEqual(["acme", "globex"]);
   });
 
-  it("vendor_id outside the entry's vendor constraint is refused out_of_authority, not silently filtered", async () => {
+  it("vendor_id outside the entry's vendor constraint is refused parameter_violation, not silently filtered", async () => {
     const { server } = await build({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
@@ -189,7 +189,11 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     });
     const res = await server.callReadTool("list_invoices", { vendor_id: "globex" }, TOKEN);
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("out_of_authority");
+    // @spec authzen#runtime-denial-classification (#801): the entry IS
+    // approved for this action; only this vendor is excluded by the
+    // entry's own constraint, a parameter violation, not a genuine
+    // authority absence.
+    expect(res.denial_reason).toBe("parameter_violation");
   });
 
   it("vendor_id inside the entry's vendor constraint is permitted and bound to exactly that vendor", async () => {

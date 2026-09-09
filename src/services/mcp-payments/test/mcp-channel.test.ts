@@ -316,8 +316,10 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const jwt = await signMissionToken({});
     const overCap = await client.callTool("execute_wire_transfer", { invoice_id: "inv-2" }, jwt);
     expect(overCap.denial_reason).toBe("parameter_violation");
+    // @spec authzen#runtime-denial-classification (#801): a vendor-constraint
+    // exclusion is a parameter violation on a matched entry, not out_of_authority.
     const wrongVendor = await client.callTool("execute_wire_transfer", { invoice_id: "inv-3" }, jwt);
-    expect(wrongVendor.denial_reason).toBe("out_of_authority");
+    expect(wrongVendor.denial_reason).toBe("parameter_violation");
   });
 });
 

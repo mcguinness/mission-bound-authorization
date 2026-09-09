@@ -85,7 +85,11 @@ export const adversarialSuite: EvalCaseDef[] = [
     args: { invoice_id: "inv-globex" },
     token: () => base(),
     expect: "deny",
-    expectReason: "out_of_authority",
+    // @spec authzen#runtime-denial-classification (#801): the entry IS
+    // matched (payments:payment.execute is granted); only this vendor is
+    // excluded by the entry's own constraint, a parameter violation, not a
+    // genuine authority absence.
+    expectReason: "parameter_violation",
     consequential: true,
   },
   {
