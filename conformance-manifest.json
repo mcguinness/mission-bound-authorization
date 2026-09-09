@@ -1938,6 +1938,12 @@
      "name": "control-plane retained signed responses > keeps a plain JSON outcome replayable for the whole nonce window",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane derivation reservations > gates a replay that has no recorded artifact, and never counts it twice",
+     "level": "concurrency",
+     "surface": "derivation"
     }
    ],
    "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
@@ -2017,7 +2023,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, a recovered response is signed over the recorded observation and never re-dated, and a retained signed envelope past its own validity is no longer replayed. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, a recovered response is signed over the recorded observation and never re-dated, and a retained signed envelope past its own validity is no longer replayable while its row and request digest stay retained, so the divergent-retry refusal keeps its full nonce window. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
   },
   {
    "id": "control-plane.consistency.state-surfaces",

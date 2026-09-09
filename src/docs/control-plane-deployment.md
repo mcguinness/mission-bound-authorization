@@ -90,10 +90,25 @@ delivered. A retransmission that finds a committed outcome whose bytes were
 lost finalizes the response from that material instead of re-executing the
 operation, so a `resume` that in fact succeeded replays its success rather than
 answering a conflict. For a signed envelope the recorded observation is signed
-again with its original `iat` and `exp`, so recovery re-dates nothing, and a
-retained envelope past its own validity is not replayed at all. Replay lookup
-runs before any state-dependent check, which is where a future
+again with its original `iat` and `exp`, so recovery re-dates nothing. Replay
+lookup runs before any state-dependent check, which is where a future
 `expected_version` precondition must stay behind it.
+
+Two clocks govern the retry key, and operators should read them separately. The
+divergent-retry refusal compares request digests for the whole ten-minute nonce
+window, so reusing a nonce with a different request stays `invalid_request` for
+ten minutes. Handing the retained BYTES back stops at the response's own
+validity, which for the signed `discharge` envelope is sixty seconds: past that
+instant the envelope would present an expired observation, so the exchange is
+processed fresh at a new observation point instead, which `discharge` is
+already idempotent under. Unsigned JSON outcomes assert no freshness and stay
+replayable for the full window.
+
+A reservation replay is the one ungated path, and only when an artifact was
+actually retained: returning a recorded artifact produces nothing new. A
+recorded operation identity with no retained artifact is gated like any fresh
+request, so a Mission revoked, expired or fully contained since the first
+attempt refuses rather than signing off an unvalidated record.
 
 The Mission Status List publisher answers only from a token still inside the
 validity that token was signed with. Past its own `exp`, and on any lifecycle

@@ -2148,13 +2148,24 @@ export class MissionKernel {
   ): { record: MissionRecord; reservation: DerivationReservationResult } {
     const current = this.mustGet(id);
     const recorded = this.derivationReservations.find(current.issuer, id, operation.operationId);
-    if (recorded) {
+    if (recorded?.completion) {
+      // A COMMITTED operation whose artifact was retained is recognized before
+      // the state gate: it already succeeded, and the caller replays that exact
+      // artifact rather than producing a new one. This is the only ungated
+      // branch, and it produces nothing new.
       return { record: current, reservation: { kind: "replay", reservation: recorded } };
     }
     // The state gate runs BEFORE the transaction opens, for the same reason
     // {@link gateDerivable} is not inside it: a refusal must not roll back an
     // expiry the gate materialized.
-    this.gateDerivable(id);
+    const gated = this.gateDerivable(id);
+    if (recorded) {
+      // Counted once already, with nothing retained to replay: the caller mints
+      // against the count it spent. It is GATED first, so a Mission that has
+      // since been revoked, expired or fully contained refuses here rather than
+      // signing a fresh artifact off an unvalidated record (fail closed).
+      return { record: gated, reservation: { kind: "replay", reservation: recorded } };
+    }
     return withTransaction(this.db, () => {
       const record = this.countDerivationInCallerTx(id);
       const reservation = this.derivationReservations.reserveInCallerTx({

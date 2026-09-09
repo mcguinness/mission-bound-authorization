@@ -316,6 +316,26 @@ describe("control-plane derivation reservations", () => {
     }
   });
 
+  it("gates a replay that has no recorded artifact, and never counts it twice", () => {
+    const { kernel, record } = setup();
+    try {
+      // A reservation with nothing retained to replay: the count was spent, but
+      // no artifact was recorded, so a retry must still mint one.
+      kernel.reserveDerivation(record.id, { operationId: "op-6", artifactId: "art-6" });
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // The Mission is revoked before the retry arrives. The retry is GATED,
+      // never admitted off an unvalidated record: only a recorded artifact is
+      // returned ungated, because returning one produces nothing new.
+      kernel.transition(record.id, "revoke");
+      expect(() => kernel.reserveDerivation(record.id, { operationId: "op-6" })).toThrow(
+        "is revoked",
+      );
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
   it("returns a counted derivation only on an authoritative non-acceptance", async () => {
     const { kernel, record } = setup();
     try {

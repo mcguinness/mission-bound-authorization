@@ -75,6 +75,14 @@ CREATE TABLE IF NOT EXISTS discharge_events (
  * @spec status#idempotency — the replay window MUST be at least the validity
  * span of the signed response the AS would replay (its `iat` to `exp`, 60s
  * here). Ten minutes is a deployment choice well above that floor.
+ *
+ * @spec control-plane#fresh-observation — the window governs TWO things, on two
+ * clocks. The divergent-retry refusal compares request digests for this whole
+ * window, so reusing a nonce with a different request stays `invalid_request`
+ * for ten minutes. Handing the retained BYTES back stops at the response's own
+ * validity, which for a signed envelope is 60s: past that instant the envelope
+ * would present an expired observation, so the exchange is processed fresh
+ * (idempotently, at a new observation point) instead of replayed.
  */
 export const DEFAULT_LIFECYCLE_NONCE_TTL_S = 600;
 
@@ -128,9 +136,10 @@ export interface StoredLifecycleResponse {
  * material rather than re-executing the operation. For a signed envelope that
  * means the recorded observation is signed again: the payload, including its
  * `iat` and `exp`, is the ORIGINAL observation's, so recovery never re-dates
- * it. A recorded envelope past its own validity is not replayed at all
- * ({@link LifecycleResponseStore.find} drops it), so expired signed output is
- * never presented as fresh.
+ * it. A recorded envelope past its own validity is no longer replayable
+ * ({@link RetainedLifecycleResponse.replayable} goes false while the row and
+ * its request digest are retained), so expired signed output is never presented
+ * as fresh and the divergent-retry rule keeps its full window.
  */
 export type LifecycleResponseState = "committed" | "final";
 
@@ -153,6 +162,14 @@ export interface RetainedLifecycleResponse {
   body?: string;
   /** The material a `committed` row is finalized from. */
   material?: LifecycleResponseMaterial;
+  /**
+   * @spec control-plane#fresh-observation — false once a response that carries
+   * its own validity (a signed envelope) has passed it. The ROW is retained
+   * either way, because the divergent-retry rule compares request digests for
+   * the whole nonce window; only the bytes stop being deliverable, since
+   * handing them back would present an expired observation as current.
+   */
+  replayable: boolean;
 }
 
 export class LifecycleResponseStore {
@@ -184,12 +201,12 @@ export class LifecycleResponseStore {
     const row = this.row(key);
     if (!row) return undefined;
     const nowMs = this.options.now().getTime();
-    const validUntil = row.response_valid_until as number | null;
-    if (nowMs > (row.expires_at as number) || (validUntil !== null && nowMs > validUntil)) {
+    if (nowMs > (row.expires_at as number)) {
       this.purge(key);
       return undefined;
     }
-    return toRetained(row);
+    const validUntil = row.response_valid_until as number | null;
+    return toRetained(row, validUntil === null || nowMs <= validUntil);
   }
 
   /**
@@ -243,7 +260,7 @@ export class LifecycleResponseStore {
       );
     const row = this.row(key);
     if (!row) throw new Error("lifecycle response claim vanished");
-    return toRetained(row);
+    return toRetained(row, true);
   }
 
   /**
@@ -321,7 +338,7 @@ export class LifecycleResponseStore {
   }
 }
 
-function toRetained(row: Record<string, unknown>): RetainedLifecycleResponse {
+function toRetained(row: Record<string, unknown>, replayable: boolean): RetainedLifecycleResponse {
   const state = (row.state as LifecycleResponseState) ?? "final";
   const material = row.material_json
     ? (JSON.parse(row.material_json as string) as LifecycleResponseMaterial)
@@ -331,6 +348,7 @@ function toRetained(row: Record<string, unknown>): RetainedLifecycleResponse {
     requestDigest: row.request_digest as string,
     status: row.status as number,
     contentType: row.content_type as string,
+    replayable,
     ...(state === "final" ? { body: row.body as string } : {}),
     ...(material ? { material } : {}),
   };

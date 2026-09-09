@@ -1945,12 +1945,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // belongs strictly AFTER this lookup, never in front of it.
       if (nonceKey) {
         const stored = lifecycleResponses.find(nonceKey);
-        if (stored) {
-          if (stored.requestDigest !== digest) {
-            // Never answered with the unrelated original response.
-            sendInvalidRequest("nonce was already used with a different request");
-            return;
-          }
+        // The DIGEST rule and the REPLAY rule run on two clocks. The digest
+        // comparison holds for the whole nonce window, so a divergent retry is
+        // always refused; the bytes stop being deliverable at the response's
+        // own validity, and past that the exchange is processed fresh below at
+        // a new observation point rather than replayed expired.
+        if (stored?.requestDigest !== undefined && stored.requestDigest !== digest) {
+          // Never answered with the unrelated original response.
+          sendInvalidRequest("nonce was already used with a different request");
+          return;
+        }
+        if (stored?.replayable) {
           // @spec control-plane#serialization — RECOVERY ACROSS THE SIGNING
           // BOUNDARY. A `committed` row is an operation that committed and a
           // response whose bytes were never retained. It is finalized from the

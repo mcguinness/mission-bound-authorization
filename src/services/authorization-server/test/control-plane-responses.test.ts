@@ -313,12 +313,19 @@ describe("control-plane retained signed responses", () => {
         body: jws,
       });
       // Inside its own validity the retained envelope replays verbatim.
+      expect(store.find(key)?.replayable).toBe(true);
       expect(store.find(key)?.body).toBe(jws);
-      // Past it, the retained envelope is gone: an expired observation is
-      // never handed back as though it were current, and the store retention
-      // window (ten minutes) is deliberately longer than the envelope's own
-      // validity, so this clock is the one that decides.
+      // Past it the bytes stop being deliverable: an expired observation is
+      // never handed back as though it were current. The ROW and its request
+      // digest are retained, so the divergent-retry refusal keeps the full
+      // ten-minute nonce window even though the envelope was only valid for
+      // sixty seconds.
       clock.at = new Date((observed.exp + 1) * 1000);
+      const expired = store.find(key);
+      expect(expired?.replayable).toBe(false);
+      expect(expired?.requestDigest).toBe("sha-256:req");
+      // Past the nonce window itself the row is gone and the nonce is free.
+      clock.at = new Date(clock.at.getTime() + 600_001);
       expect(store.find(key)).toBeUndefined();
     } finally {
       kernel.db.close();
@@ -344,6 +351,7 @@ describe("control-plane retained signed responses", () => {
       });
       clock.at = new Date(clock.at.getTime() + 120_000);
       expect(store.find(key)?.state).toBe("final");
+      expect(store.find(key)?.replayable).toBe(true);
       clock.at = new Date(clock.at.getTime() + 600_001);
       expect(store.find(key)).toBeUndefined();
     } finally {
