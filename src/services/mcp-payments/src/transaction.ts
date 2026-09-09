@@ -55,10 +55,12 @@ export class TransactionEngine {
    * identity instead. The prior operation's own `permit_id` decides:
    * equal is that re-presentation (`permit_consumed`), different is a fresh
    * permit for an operation another permit already claimed
-   * (`operation_already_claimed`). A missing prior row is a redemption this
-   * engine cannot attribute (a prior epoch, for one), reported as the
-   * narrower operation-claim failure rather than asserting an identifier it
-   * never saw.
+   * (`operation_already_claimed`). The lookup is scoped to THIS instance
+   * epoch: `redeemOnce` keys its table on the operation key alone and merely
+   * records the epoch, so a redemption taken under a different epoch must not
+   * lend its `permit_id` to this comparison. A prior row this engine cannot
+   * attribute reports the narrower operation-claim failure rather than
+   * asserting an evaluation identifier it never saw.
    */
   redeemPermit(input: {
     permitId: string;
@@ -69,9 +71,9 @@ export class TransactionEngine {
   }): { ok: boolean; reason?: "permit_consumed" | "operation_already_claimed" | "lease_setup_failed" } {
     const consumed = redeemOnce(this.db, "permit_redemptions", input.opKey, this.instanceEpoch);
     if (!consumed) {
-      const prior = this.db.prepare("SELECT permit_id FROM operations WHERE op_key = ?").get(input.opKey) as
-        | { permit_id: string }
-        | undefined;
+      const prior = this.db
+        .prepare("SELECT permit_id FROM operations WHERE op_key = ? AND epoch = ?")
+        .get(input.opKey, this.instanceEpoch) as { permit_id: string } | undefined;
       return {
         ok: false,
         reason: prior?.permit_id === input.permitId ? "permit_consumed" : "operation_already_claimed",
