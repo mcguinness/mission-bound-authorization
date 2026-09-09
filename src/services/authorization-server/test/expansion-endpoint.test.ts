@@ -32,6 +32,7 @@ import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fix
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
+  compactVerify,
   createRemoteJWKSet,
   decodeJwt,
   type CryptoKey,
@@ -44,6 +45,7 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
+  JWT_TOKEN_TYPE,
   REFRESH_TOKEN_TOKEN_TYPE,
   TOKEN_EXCHANGE_GRANT_TYPE,
 } from "../src/adapters/continuation-grant.js";
@@ -53,6 +55,7 @@ import {
   createChildMission,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
+  validateMissionIntent,
 } from "../src/index.js";
 
 const PORT = 14485;
@@ -69,6 +72,16 @@ let clientKey: CryptoKey;
 let dpopKeys: DpopKeys;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 let apev = 0;
+/**
+ * @spec child-delegation#carryover-commit — a TEST-ONLY child actor registered
+ * for the token-exchange grant, so a carryover REPLACEMENT's own child actor
+ * can authenticate at /token and retrieve its committed result. The shipped
+ * child actor carries only the jwt-bearer grant, and `config/clients.json` is
+ * untouched (the builder's `testClients` seam adds, never redefines).
+ */
+const CARRY_ACTOR = "test-carryover-child";
+let carryActorKey: CryptoKey;
+let carryDpop: DpopKeys;
 
 async function clientAssertion(): Promise<string> {
   return new SignJWT({})
@@ -272,10 +285,39 @@ const containEvent = (id: string) => ({
 });
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
+  const carryActorKeys = await generateKeyPair("ES256", { extractable: true });
+  carryActorKey = carryActorKeys.privateKey;
+  const carryActorJwk = {
+    ...(await exportJWK(carryActorKeys.publicKey)),
+    kid: `${CARRY_ACTOR}-auth`,
+    alg: "ES256",
+    use: "sig",
+  };
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    testClients: [
+      {
+        client_id: CARRY_ACTOR,
+        client_name: "Carryover replacement child actor (token-exchange capable)",
+        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [carryActorJwk] },
+        scope: "payments",
+        authorization_details_types: ["mission_resource_access"],
+      },
+    ],
+    // The AS ASSERTS this actor's type, exactly as config does for the shipped one.
+    actorProfiles: { [CARRY_ACTOR]: "ai_agent" },
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
+  carryDpop = await generateKeyPair("ES256", { extractable: true });
   remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
 });
 
@@ -869,5 +911,195 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
     expect(body.error_description).toContain("confirmation key");
+  });
+});
+
+describe("carryover completion and result retrieval (@spec child-delegation#carryover-commit)", () => {
+  /** A private_key_jwt assertion for an arbitrary registered client. */
+  const assertionFor = async (clientId: string, kid: string, k: CryptoKey): Promise<string> =>
+    new SignJWT({})
+      .setProtectedHeader({ alg: "ES256", kid })
+      .setIssuer(clientId)
+      .setSubject(clientId)
+      .setAudience(ISSUER)
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .setJti(crypto.randomUUID())
+      .sign(k);
+
+  /** POST /token as an arbitrary client with its OWN DPoP key (nonce retry). */
+  const requestAs = async (
+    clientId: string,
+    kid: string,
+    k: CryptoKey,
+    dpop: DpopKeys,
+    params: Record<string, string>,
+  ): Promise<Response> => {
+    const htu = `${ISSUER}/token`;
+    const proof = async (extra: Record<string, unknown>): Promise<string> =>
+      new SignJWT({ htu, htm: "POST", ...extra })
+        .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpop.publicKey) })
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .sign(dpop.privateKey);
+    const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+      fetch(htu, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
+        body: new URLSearchParams({
+          ...params,
+          client_assertion: await assertionFor(clientId, kid, k),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    let res = await send();
+    const nonce = res.headers.get("dpop-nonce");
+    if (res.status === 400 && nonce) res = await send({ nonce });
+    return res;
+  };
+
+  /** A predecessor with one Child Mission held by the token-exchange-capable actor. */
+  const predecessorWithChild = async (): Promise<{
+    missionId: string;
+    accessToken: string;
+    childId: string;
+  }> => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const child = createChildMission(as.kernel, {
+      parentId: pred.missionId,
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Extract Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: FAR_EXP,
+        }),
+      ),
+      proposedAuthority: authority(["payments:invoice.read"]) as never,
+      childActor: { sub: CARRY_ACTOR, sub_profile: "ai_agent" },
+    }).child;
+    return { ...pred, childId: child.id };
+  };
+
+  it("completes a widening expansion by carrying the child and returns the authenticated batch map on the completion response", async () => {
+    const pred = await predecessorWithChild();
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const openedBody = (await opened.json()) as { deferral_code?: string; error?: string };
+    expect(opened.status, JSON.stringify(openedBody)).toBe(400);
+    expect(openedBody.error).toBe("authorization_pending");
+    approveDeferral(openedBody.deferral_code as string);
+    const done = await pollExpansion(openedBody.deferral_code as string);
+    const body = (await done.json()) as {
+      mission_id?: string;
+      carryover_manifest_hash?: string;
+      carryover_evidence?: string;
+      carryover_replacements?: Array<{ mission_id: string; related_to?: string; client_id: string }>;
+    };
+    expect(done.status, JSON.stringify(body)).toBe(200);
+    // The AUTHENTICATED result rides the completion response: the committed
+    // manifest commitment and the retained, signed batch map.
+    expect(body.carryover_manifest_hash).toMatch(/^sha-256:/);
+    // The signature really verifies against the issuer's PUBLISHED key set,
+    // over the real /jwks document: this is a signed result, not a payload.
+    const verified = await compactVerify(body.carryover_evidence as string, remoteJwks);
+    const decoded = JSON.parse(Buffer.from(verified.payload).toString("utf8")) as {
+      manifest_hash: string;
+      map: Array<{ old_child: { mission_id: string }; outcome: string; replacement_id?: string }>;
+    };
+    expect(decoded.manifest_hash).toBe(body.carryover_manifest_hash);
+    const row = decoded.map.find((r) => r.old_child.mission_id === pred.childId);
+    expect(row?.outcome).toBe("carried");
+    expect(body.carryover_replacements).toHaveLength(1);
+    const replacement = body.carryover_replacements?.[0];
+    expect(replacement?.mission_id).toBe(row?.replacement_id);
+    expect(replacement?.related_to).toBe(pred.childId);
+    expect(replacement?.client_id).toBe(CARRY_ACTOR);
+    // The old child is carried, terminal, and its correlation is committed.
+    const oldChild = as.kernel.get(pred.childId);
+    expect(oldChild?.state).toBe("cascaded");
+    expect(oldChild?.carried_to).toBe(replacement?.mission_id);
+    // The replacement is a child of the SUCCESSOR with a direct basis.
+    const newChild = as.kernel.get(replacement?.mission_id as string);
+    expect(newChild?.parent?.id).toBe(body.mission_id);
+    expect(newChild?.approval_basis.type).toBe("direct");
+  });
+
+  it("retrieves the committed replacement result idempotently for its own child actor, and refuses another authenticated client", async () => {
+    const pred = await predecessorWithChild();
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance again", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const openedBody = (await opened.json()) as { deferral_code: string };
+    approveDeferral(openedBody.deferral_code);
+    const done = await pollExpansion(openedBody.deferral_code);
+    const completion = (await done.json()) as {
+      mission_id: string;
+      carryover_replacements: Array<{ mission_id: string }>;
+    };
+    expect(done.status, JSON.stringify(completion)).toBe(200);
+    const replacementId = completion.carryover_replacements[0]?.mission_id as string;
+
+    // The child actor authenticates AS ITSELF and retrieves the committed
+    // result through the child-creation completion surface.
+    const first = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      carryover_replacement: replacementId,
+    });
+    const firstBody = (await first.json()) as {
+      mission_id?: string;
+      access_token?: string;
+      related_to?: string;
+      carryover_manifest_hash?: string;
+      carryover_evidence?: string;
+    };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    expect(firstBody.mission_id).toBe(replacementId);
+    expect(firstBody.related_to).toBe(pred.childId);
+    expect(firstBody.carryover_evidence).toBeDefined();
+    // The returned grant names the replacement's own actor as its redeemer.
+    const grant = decodeJwt(firstBody.access_token as string) as { client_id: string; mission: { id: string } };
+    expect(grant.client_id).toBe(CARRY_ACTOR);
+    expect(grant.mission.id).toBe(replacementId);
+
+    // IDEMPOTENT: a repeat retrieval creates no duplicate replacement and
+    // repeats no approval.
+    const childrenBefore = as.kernel.findChildren(completion.mission_id).length;
+    const second = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      carryover_replacement: replacementId,
+    });
+    const secondBody = (await second.json()) as { mission_id?: string };
+    expect(second.status, JSON.stringify(secondBody)).toBe(200);
+    expect(secondBody.mission_id).toBe(replacementId);
+    expect(as.kernel.findChildren(completion.mission_id).length).toBe(childrenBefore);
+
+    // UNAUTHORIZED: a different authenticated client, holding a valid
+    // assertion and a valid DPoP proof, is refused. The deterministic approval
+    // event identifier is not retrieval authorization.
+    const other = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      carryover_replacement: replacementId,
+    });
+    const otherBody = (await other.json()) as { error?: string; error_description?: string };
+    expect(other.status, JSON.stringify(otherBody)).toBe(400);
+    expect(otherBody.error).toBe("invalid_grant");
+    expect(otherBody.error_description).toContain("child actor");
+
+    // The OLD child's identifier is not a retrievable replacement: a terminated
+    // record is never treated as a credential or a result of its replacement.
+    const oldLookup = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      carryover_replacement: pred.childId,
+    });
+    const oldBody = (await oldLookup.json()) as { error?: string };
+    expect(oldLookup.status, JSON.stringify(oldBody)).toBe(400);
+    expect(oldBody.error).toBe("invalid_request");
   });
 });

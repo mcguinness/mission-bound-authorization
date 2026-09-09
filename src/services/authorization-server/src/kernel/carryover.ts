@@ -1277,9 +1277,18 @@ export function applyCarryoverInCallerTx(
     }
   }
 
-  // 4. Per-row exhaustive compare-and-set over every committed mutable input,
-  // one conditional UPDATE per rendered CARRY row, `changes === 1` each. A
-  // subtree-wide guard would let one stale entry through.
+  // 4. Per-row compare-and-set, one conditional UPDATE per rendered CARRY row
+  // with `changes === 1` each: a subtree-wide guard would let one stale entry
+  // through. Two halves cover the spec's full input list, in this one
+  // transaction. The CAS below binds the row to the manifest's committed SCALAR
+  // inputs (state, lifecycle version, `authority_hash`, `derivation_count`,
+  // `expires_at`) and to the containment and discharge bytes the membership
+  // pass above just verified against the committed `containment_version` and
+  // `effective_authority_hash`. The membership pass owns the STRUCTURAL inputs
+  // the SQL predicate cannot recompute: effective authority, discharge state,
+  // fan-out occupancy, descendant-set membership, and any external meter or
+  // latch input. `derivation_count` is in the CAS precisely because
+  // `gateDerivation` moves it with no version increment.
   const carryEntries = manifest.entries.filter(
     (e) => e.outcome === "carry" && e.replacement && !excluded.has(e.child_id),
   );
