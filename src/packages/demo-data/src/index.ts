@@ -1147,6 +1147,18 @@ export interface GovernedPolicy {
   digest: string;
 }
 
+/**
+ * @spec mission#derivation-policy (issue #784) — the OTHER typed ceiling
+ * loader, serving `governed-policy.json` and `authority-sources.json`. Runs
+ * the SAME two admission gates {@link parseCeilingEntry} runs for
+ * `policy.json`/`ras-policy.json`: {@link isAuthorityEntry} (a `constraints`
+ * key outside {@link SUPPORTED_CONSTRAINT_KEYS} is refused rather than
+ * silently carried into derivation and then dropped there) and
+ * {@link amountBearingBindingError} (#743, a `max_amount` bound to an action
+ * the catalog marks not amount-bearing). Before this fix neither gate ran
+ * here, so a governed or authority-source ceiling could ship an unsupported
+ * constraint or an unsatisfiable amount binding undetected.
+ */
 function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEntry[] {
   return asArray(file, raw, ctx).map((item, i) => {
     const e = asObject(file, item, `${ctx}[${i}]`);
@@ -1170,6 +1182,10 @@ function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEnt
         CeilingEntry["delegation"]
       >;
     }
+    if (!isAuthorityEntry(entry))
+      throw new ConfigError(file, `${ctx}[${i}] has malformed or unsupported authority`);
+    const bindingError = amountBearingBindingError(entry);
+    if (bindingError) throw new ConfigError(file, `${ctx}[${i}] ${bindingError}`);
     return entry;
   });
 }

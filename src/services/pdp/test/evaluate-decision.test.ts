@@ -197,6 +197,29 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
 });
 
 /**
+ * @spec authzen#runtime-denial-classification (#801) — the `allowed ===
+ * false` branch (evaluate.ts) had no isolating test before this issue: every
+ * existing case that denies out_of_authority at the FGA check also carries a
+ * `vendors` constraint (the bulk-read describe blocks below, and
+ * pep-fail-closed.test.ts's "finding 3" describe block), so a regression
+ * that misclassified the vendor branch could hide behind them. This entry
+ * declares NO vendors constraint at all, so the deny below can only be the
+ * genuine relationship result, never a constraint exclusion.
+ */
+describe("a genuine Resource-policy/FGA denial on an unconstrained entry still denies out_of_authority, never parameter_violation (@spec authzen#runtime-denial-classification, #801)", () => {
+  it("an entry with no vendors constraint whose FGA check fails denies out_of_authority", async () => {
+    const denyAll = { checkWithContext: async () => false } as unknown as Fga;
+    const dec = await evaluate(
+      req(),
+      { view: view(), fga: denyAll, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction },
+    );
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("out_of_authority");
+    expect(dec.context.conditions).toBeUndefined();
+  });
+});
+
+/**
  * @spec runtime#read-binding: finding 3 (PR #612 author review), a bound bulk
  * read names a COLLECTION, not one representative object. The request
  * shape's `resource.properties.vendor_ids` is what makes evaluateInner check

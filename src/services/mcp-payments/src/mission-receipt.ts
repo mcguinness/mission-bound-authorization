@@ -1,16 +1,20 @@
 /**
  * @spec draft-mcguinness-mission-runtime-evidence.md#mission-receipt (lines
- * 1236-1662 at 41f66a4a), #receipt-verification (1482-1537), issue #649.
+ * 1236-1662 at 41f66a4a), #receipt-verification (1482-1537), #receipt-chaining,
+ * issue #649, issue #594 (W4-7).
  *
  * The Mission Receipt: a signed manifest projecting Decision Evidence,
  * Execution Evidence, or a Refusal Record (per `kind`), reusing the SAME
  * integrity algorithm as those records ({{decision-evidence-integrity}},
- * line 1311). Implements build + sign, and verification steps 1-5 and 7 of
- * {{receipt-verification}}. Step 6 (chain verification) is NOT implemented:
- * chaining is OPTIONAL in the spec and this deployment does not issue
- * chained receipts, so `chain` never appears on a built receipt and a
- * receipt carrying one is rejected as unimplemented (see
- * `verifyMissionReceipt`'s `chain_not_supported` reason).
+ * line 1311). Implements build + sign, and verification steps 1-7 of
+ * {{receipt-verification}}, including step 6 (chain verification and
+ * monotonicity): the OPTIONAL `chain{stream, sequence, previous}` member.
+ * Monotonicity is checked per predecessor, relative to THIS receipt's
+ * `chain.sequence` only; concurrent issuance can record more than one
+ * predecessor, and the verifier treats the result as a DAG, never as a
+ * claim of a single globally serialized stream or of completeness.
+ * `issuer_assertions`/`profile` remain unimplemented: a receipt carrying
+ * `issuer_assertions` is rejected (see `unimplemented_projection`).
  */
 
 import { KeyObject } from "node:crypto";
@@ -188,6 +192,19 @@ function receiptShape(value: unknown): value is MissionReceiptObject {
   if (p.kind === "execution" ? !terminal(p.outcome) : p.outcome !== undefined) return false;
   if (p.profile !== undefined && !nonempty(p.profile)) return false;
   if (p.issuer_assertions !== undefined && (!nonempty(p.profile) || !objectOf(p.issuer_assertions))) return false;
+  // @spec runtime-evidence#receipt-chaining (evidence.receipt.chain-schema-and-predecessor-digest,
+  // #594 W4-7): chain carries stream (a non-empty issuer-chosen identifier),
+  // sequence (a non-negative integer), and previous (present on every
+  // receipt after the stream's first), each entry a complete-object digest
+  // of a predecessor Mission Receipt.
+  if (p.chain !== undefined) {
+    const chain = objectOf(p.chain);
+    if (!chain || !nonempty(chain.stream) || !integer(chain.sequence)) return false;
+    if (chain.previous !== undefined) {
+      if (!Array.isArray(chain.previous) || chain.previous.length === 0) return false;
+      if (!chain.previous.every((entry) => { const link = objectOf(entry); return !!link && nonempty(link.digest); })) return false;
+    }
+  }
   if (p.decision !== undefined) {
     const decision = objectOf(p.decision);
     if (!decision || !nonempty(decision.id) || !["permit", "deny"].includes(decision.result as string)) return false;
@@ -243,6 +260,27 @@ export interface MissionReceiptEvidenceRef {
   emitter: EvidenceEmitterRef;
 }
 
+/** @spec runtime-evidence#receipt-chaining: one predecessor, named by the
+ * COMPLETE canonical digest of its Mission Receipt object (evidence_envelope
+ * included), so the linkage covers the predecessor's signature too. */
+export interface MissionReceiptChainLink {
+  digest: string;
+}
+
+/**
+ * @spec runtime-evidence#receipt-chaining (evidence.receipt.chain-schema-and-predecessor-digest,
+ * #594 W4-7): OPTIONAL per-stream linkage. `stream` is an issuer-chosen
+ * identifier; `sequence` increases per stream; `previous` is present on
+ * every receipt after the stream's first and MAY carry more than one
+ * predecessor when issuance is concurrent (a DAG, not a single global
+ * sequence).
+ */
+export interface MissionReceiptChain {
+  stream: string;
+  sequence: number;
+  previous?: readonly MissionReceiptChainLink[];
+}
+
 /** @spec runtime-evidence#mission-receipt Members (lines 1302-1404): the closed wire object this deployment builds. */
 export interface MissionReceiptObject {
   kind: MissionReceiptKind;
@@ -252,6 +290,7 @@ export interface MissionReceiptObject {
   issued_at: string;
   outcome?: "completed" | "failed" | "suppressed";
   decision?: { id: string; result: "permit" | "deny" };
+  chain?: MissionReceiptChain;
   evidence_envelope: EvidenceEnvelope;
 }
 
@@ -276,6 +315,12 @@ export interface BuildMissionReceiptInput {
   decisionEvidence?: DecisionEvidenceObject;
   executionEvidence?: ExecutionEvidenceObject;
   refusalRecord?: RefusalRecordObject;
+  /** @spec runtime-evidence#receipt-chaining, #594 W4-7: OPTIONAL, selected
+   * by the issuer never defaulted. `previous` names predecessors by their
+   * own complete-object digest; this function does not compute it, since
+   * only the caller (holding the actual predecessor Mission Receipt objects,
+   * envelope included) can. */
+  chain?: MissionReceiptChain;
 }
 
 /**
@@ -292,6 +337,13 @@ export async function buildAndSignMissionReceipt(
 ): Promise<MissionReceiptObject> {
   if (!["decision", "execution", "refusal"].includes(input.kind)) throw new Error("unknown Mission Receipt kind");
   if (input.kind === "execution" && !terminal(input.executionEvidence?.outcome)) throw new Error("execution receipt requires a final outcome");
+  if (input.chain !== undefined) {
+    const { stream, sequence, previous } = input.chain;
+    if (!stream || !Number.isSafeInteger(sequence) || sequence < 0 ||
+        (previous !== undefined && (previous.length === 0 || previous.some((link) => !link.digest)))) {
+      throw new Error("invalid Mission Receipt chain");
+    }
+  }
   const evidence: MissionReceiptEvidenceRef[] = [];
 
   if (input.kind === "decision" || input.kind === "execution") {
@@ -329,6 +381,7 @@ export async function buildAndSignMissionReceipt(
     ...(input.decisionEvidence
       ? { decision: { id: input.decisionEvidence.evidence_id, result: input.decisionEvidence.decision } }
       : {}),
+    ...(input.chain !== undefined ? { chain: input.chain } : {}),
   };
   const evidence_envelope = await signEvidenceEnvelope(
     unsigned as unknown as JsonValue,
@@ -348,6 +401,14 @@ export type ReceiptRecordResolver = (
   ref: MissionReceiptEvidenceRef,
 ) => ReceiptResolvedRecord | undefined | Promise<ReceiptResolvedRecord | undefined>;
 
+/** @spec runtime-evidence#receipt-verification step 6, #594 W4-7: resolve
+ * one chain predecessor by the COMPLETE canonical digest this receipt
+ * committed to. Absence of a resolver, or an unresolvable digest, fails
+ * chain verification: it is never treated as "no predecessors to check". */
+export type ReceiptPredecessorResolver = (
+  digest: string,
+) => MissionReceiptObject | undefined | Promise<MissionReceiptObject | undefined>;
+
 export type ReceiptVerifyFailure =
   | "malformed"
   | "issuer_not_authorized"
@@ -364,7 +425,12 @@ export type ReceiptVerifyFailure =
   | "copied_member_mismatch"
   /** Issuer assertions require a separately authorized profile/policy path not implemented here. */
   | "unimplemented_projection"
-  | "chain_not_supported";
+  /** Step 6: a chain predecessor digest resolved to nothing, or no resolver was supplied at all. */
+  | "predecessor_unresolvable"
+  /** Step 6: a resolved predecessor's own envelope, issuer authorization, or shape does not verify. */
+  | "chain_predecessor_invalid"
+  /** Step 6: a predecessor's chain.sequence is not strictly less than this receipt's. */
+  | "chain_sequence_violation";
 
 export type ReceiptVerifyResult = { valid: true; unauthorized_execution?: true } | { valid: false; reason: ReceiptVerifyFailure };
 
@@ -375,51 +441,33 @@ const CTY_FOR: Record<ReceiptResolvedRecord["type"], string> = {
 };
 
 /**
- * Verify a Mission Receipt end to end, per {{receipt-verification}} steps
- * 1-5 and 7 (step 6, chain verification, is not implemented: see the file
- * header). `issuerScope` is the trusted receipt-issuer scope snapshot
- * ({@link createReceiptIssuerScope}): it designates the issuers and holds
- * the keys bound to each, so the receipt issuer's key is never supplied by
- * an arbitrary callback. `resolveEvidenceKey` resolves the referenced
- * records' emitter keys (the same resolver a caller already uses to verify
- * Decision/Execution/Refusal records directly).
+ * Step 1's envelope check (lines 1490-1503), in its own order: minimal
+ * structural validation first (an envelope that is not a well-formed JWS
+ * carrying `typ`, a `kid` and a receipt issuer names no issuer to check),
+ * then the issuer designation against the trusted scope BEFORE any key
+ * lookup, then the key lookup bound to THAT issuer inside THAT scope. A key
+ * published for another designated issuer, or in a key set the scope does
+ * not bind, resolves to nothing: an authorized issuer plus an arbitrary key
+ * never suffices. Shared by the top-level receipt and, for step 6, each
+ * resolved chain predecessor: a predecessor is a Mission Receipt too, and
+ * its own envelope is verified through the SAME trusted scope, never a
+ * looser or parallel path.
  */
-export async function verifyMissionReceipt(
-  receipt: unknown,
-  resolveRecord: ReceiptRecordResolver,
+async function verifyReceiptEnvelope(
+  input: unknown,
   issuerScope: ReceiptIssuerScope,
-  resolveEvidenceKey: EvidenceKeyResolver,
   recoveryProof?: RecoveryProof,
-): Promise<ReceiptVerifyResult> {
-  try {
-    return await verifyReceipt(structuredClone(receipt), resolveRecord, issuerScope, resolveEvidenceKey, recoveryProof);
-  } catch {
-    return { valid: false, reason: "malformed" };
-  }
-}
-
-async function verifyReceipt(
-  input: unknown, resolveRecord: ReceiptRecordResolver, issuerScope: ReceiptIssuerScope,
-  resolveEvidenceKey: EvidenceKeyResolver, recoveryProof?: RecoveryProof,
-): Promise<ReceiptVerifyResult> {
-  // Step 1 (lines 1490-1503), in its own order. Minimal structural
-  // validation of the envelope comes first: an envelope that is not a
-  // well-formed JWS carrying `typ`, a `kid` and a receipt issuer names no
-  // issuer to check.
+): Promise<
+  | { ok: true; receipt: MissionReceiptObject }
+  | { ok: false; reason: "issuer_not_authorized" | "envelope_invalid" | "malformed" }
+> {
   const claimed = claimedIssuer(input);
-  if (!claimed) return { valid: false, reason: "envelope_invalid" };
+  if (!claimed) return { ok: false, reason: "envelope_invalid" };
 
-  // The issuer designation is checked against the trusted scope BEFORE any
-  // key lookup, so an issuer the scope does not designate (or one removed
-  // from it) refuses under its own reason rather than as an absent key.
   const scope = snapshotOf(issuerScope);
   const designated = scope?.issuers.filter((binding) => binding.emitter === claimed.issuer) ?? [];
-  if (!scope || designated.length === 0) return { valid: false, reason: "issuer_not_authorized" };
+  if (!scope || designated.length === 0) return { ok: false, reason: "issuer_not_authorized" };
 
-  // The key lookup is bound to THAT issuer inside THAT scope: a key
-  // published for another designated issuer, or in a key set the scope does
-  // not bind, resolves to nothing. An authorized issuer plus an arbitrary
-  // key never suffices.
   const resolveReceiptKey: EvidenceKeyResolver = ({ kid, emitter, audience }) => {
     if (kid !== claimed.kid || emitter.id !== claimed.issuer || emitter.role !== "receipt_issuer") return undefined;
     const matches = designated.flatMap((binding) => binding.keys).filter((key) =>
@@ -436,10 +484,51 @@ async function verifyReceipt(
     recoveryProof,
   );
   if (!envelopeResult.valid) {
-    return { valid: false, reason: "envelope_invalid" };
+    return { ok: false, reason: "envelope_invalid" };
   }
-  if (!receiptShape(input)) return { valid: false, reason: "malformed" };
-  const receipt = input;
+  if (!receiptShape(input)) return { ok: false, reason: "malformed" };
+  return { ok: true, receipt: input };
+}
+
+/**
+ * Verify a Mission Receipt end to end, per {{receipt-verification}} steps
+ * 1-7, including step 6 (chain verification and monotonicity, #594 W4-7).
+ * `issuerScope` is the trusted receipt-issuer scope snapshot ({@link
+ * createReceiptIssuerScope}): it designates the issuers and holds the keys
+ * bound to each, so the receipt issuer's key is never supplied by an
+ * arbitrary callback. `resolveEvidenceKey` resolves the referenced records'
+ * emitter keys (the same resolver a caller already uses to verify
+ * Decision/Execution/Refusal records directly). `resolveReceipt` resolves a
+ * chain predecessor by its complete-object digest, for step 6; a receipt
+ * with no `chain` member never calls it.
+ */
+export async function verifyMissionReceipt(
+  receipt: unknown,
+  resolveRecord: ReceiptRecordResolver,
+  issuerScope: ReceiptIssuerScope,
+  resolveEvidenceKey: EvidenceKeyResolver,
+  recoveryProof?: RecoveryProof,
+  resolveReceipt?: ReceiptPredecessorResolver,
+): Promise<ReceiptVerifyResult> {
+  try {
+    return await verifyReceipt(structuredClone(receipt), resolveRecord, issuerScope, resolveEvidenceKey, recoveryProof, resolveReceipt);
+  } catch {
+    return { valid: false, reason: "malformed" };
+  }
+}
+
+async function verifyReceipt(
+  input: unknown, resolveRecord: ReceiptRecordResolver, issuerScope: ReceiptIssuerScope,
+  resolveEvidenceKey: EvidenceKeyResolver, recoveryProof?: RecoveryProof, resolveReceipt?: ReceiptPredecessorResolver,
+): Promise<ReceiptVerifyResult> {
+  // Step 1: see verifyReceiptEnvelope. designated is re-derivable from
+  // issuerScope; claimsWithinScope below needs the scope's statement, which
+  // envelope.ok already proved resolves (same pure snapshot, no new key
+  // material derived).
+  const envelope = await verifyReceiptEnvelope(input, issuerScope, recoveryProof);
+  if (!envelope.ok) return { valid: false, reason: envelope.reason };
+  const receipt = envelope.receipt;
+  const scope = snapshotOf(issuerScope)!;
 
   // Step 2 (line 1504-1505, {{receipt-kinds}}, {{receipt-evidence}}): the
   // required evidence combination for this `kind`, no more, no less.
@@ -597,7 +686,7 @@ async function verifyReceipt(
   // (`profile` and `issuer_assertions` are excluded: the spec calls them
   // "structurally separate from the projections above", issuer-asserted
   // facts with profile-defined semantics, never a copy step 5 checks
-  // against a source record; `chain` is step 6, separately unimplemented).
+  // against a source record; `chain` is step 6, checked separately below).
   if ("issuer_assertions" in receipt) {
     return { valid: false, reason: "unimplemented_projection" };
   }
@@ -628,9 +717,49 @@ async function verifyReceipt(
     }
   }
 
-  // Step 6 (chain) intentionally not implemented; step 7 (reject on any
-  // failure) is realized by every early return above.
-  if ("chain" in receipt) return { valid: false, reason: "chain_not_supported" };
+  // Step 6 (@spec runtime-evidence#receipt-verification, evidence.receipt.step6-chain-verification-and-monotonicity,
+  // #594 W4-7): when `chain` is present, each predecessor named in
+  // `previous` is resolved by the COMPLETE canonical digest this receipt
+  // committed to, its own envelope is verified through the SAME trusted
+  // issuer scope (never a looser path), and it must name the same
+  // qualified Mission, the same receipt issuer, and the same chain.stream.
+  // Monotonicity requires each predecessor's OWN chain.sequence to be
+  // strictly less than THIS receipt's; that bound is checked per
+  // predecessor, independently, with NO ordering required between the
+  // predecessors themselves (concurrent issuance can record more than one,
+  // and the result is a DAG, never a single global sequence, and never a
+  // claim of completeness). A predecessor this verifier cannot resolve -
+  // including because no resolver was supplied at all - fails chain
+  // verification rather than being silently treated as absent.
+  const chain = receipt.chain;
+  for (const link of chain?.previous ?? []) {
+    let predecessor: MissionReceiptObject | undefined;
+    try {
+      const resolved = resolveReceipt ? await resolveReceipt(link.digest) : undefined;
+      predecessor = resolved === undefined ? undefined : structuredClone(resolved);
+    } catch {
+      return { valid: false, reason: "predecessor_unresolvable" };
+    }
+    if (!predecessor) return { valid: false, reason: "predecessor_unresolvable" };
+    const predecessorEnvelope = await verifyReceiptEnvelope(predecessor, issuerScope, recoveryProof);
+    if (!predecessorEnvelope.ok) return { valid: false, reason: "chain_predecessor_invalid" };
+    const prior = predecessorEnvelope.receipt;
+    if (
+      prior.mission.id !== receipt.mission.id ||
+      prior.mission.issuer !== receipt.mission.issuer ||
+      prior.emitter.id !== receipt.emitter.id ||
+      prior.chain?.stream !== chain!.stream
+    ) {
+      return { valid: false, reason: "join_failure" };
+    }
+    if (canonicalDigest(prior as unknown as JsonValue) !== link.digest) {
+      return { valid: false, reason: "digest_mismatch" };
+    }
+    if (prior.chain === undefined || prior.chain.sequence >= chain!.sequence) {
+      return { valid: false, reason: "chain_sequence_violation" };
+    }
+  }
+  // Step 7 (reject on any failure) is realized by every early return above.
   const deviation = executionRec && executionRec.outcome !== "suppressed" &&
     executionRec.authorized_parameter_digest !== undefined &&
     executionRec.authorized_parameter_digest !== executionRec.effective_parameter_digest;

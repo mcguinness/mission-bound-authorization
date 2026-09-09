@@ -8,7 +8,14 @@
  * they propose can widen past the ceiling (the compromised-shaper property).
  */
 
-import { capabilitySourceIdentity, compareAmounts, isValidAmount, isSubsetEntry, isSubsetSet } from "@mission/core";
+import {
+  capabilitySourceIdentity,
+  compareAmounts,
+  isValidAmount,
+  isSubsetEntry,
+  isSubsetSet,
+  SUPPORTED_CONSTRAINT_KEYS,
+} from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 import { unionConditions } from "./discharge.js";
@@ -16,60 +23,39 @@ import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
 
 /**
- * @spec mission#common-constraints — every `constraints` member name the core
- * defines as a specification-defined Common Constraint (the initial registry:
- * {{common-constraints}}). `max_amount` is IMPLEMENTED below; the rest are
- * not (the derivation engine narrows only `max_amount`/`vendors` today).
- * `vendors` is deliberately absent: it is a deployment-defined key, not a
- * registered Common Constraint, so it is out of scope for the fail-closed
- * rule and keeps its existing (implemented) handling.
+ * @spec mission#common-constraints — FAIL CLOSED (refuse the derivation) when
+ * any entry's `constraints` carries a key outside {@link SUPPORTED_CONSTRAINT_KEYS},
+ * the single supported-key declaration this derivation engine shares with the
+ * typed config loader (`demo-data`'s `parseCeilingEntry`/`loadCeilingEntries`)
+ * and PAR intake (`authorization-details-metadata.ts`, `intent.ts`), so the
+ * three admission boundaries cannot drift apart (issue #784). This spans both
+ * a specification-defined Common Constraint this engine does not implement
+ * narrowing for (e.g. `time_window`, `tenant`: registered by the core
+ * ({{common-constraints}}) but not accepted here) and any other unregistered
+ * key (registration is not the test; support is). Silently dropping the key
+ * (the prior behavior: `intersect` below rebuilds only its four known
+ * members) would widen effective authority: the entry's narrowing intent
+ * would vanish from the derived entry with no trace.
+ *
+ * Called over the FULL `policy.ceiling` array and the FULL submitted
+ * `proposal` array, before any resource/action filtering narrows either down
+ * (@spec mission#authorization-derivation, review on PR #803): an entry the
+ * filter would discard because it targets a different resource, or shares no
+ * action with its counterpart, still carries an unsupported key and must
+ * still refuse. This is the defense-in-depth boundary for a caller that
+ * builds or supplies a `DerivationPolicy`/proposal programmatically, bypassing
+ * the config loader and PAR intake gates entirely.
  */
-const REGISTERED_COMMON_CONSTRAINTS = new Set([
-  "max_amount",
-  "resource_issued_after",
-  "resource_issued_before",
-  "tenant",
-  "recipient_domain",
-  "time_window",
-  "data_classification",
-  "allowed_tools",
-  "requires_action_approval",
-  // @spec discharge#terminal-when — a specification-defined Common Constraint
-  // registered by the Status profile (its completion capability), IMPLEMENTED
-  // below: entry completion conditions, narrowed by union.
-  "terminal_when",
-]);
-
-/**
- * Common Constraint keys this derivation engine implements narrowing for.
- * `terminal_when` (@spec discharge#terminal-when) joins them: its narrowing is the
- * UNION of the two condition arrays ({@link unionConditions}), the direction
- * the subset rule fixes (a candidate must carry every reference condition and
- * MAY add more).
- */
-const IMPLEMENTED_COMMON_CONSTRAINTS = new Set([
-  "max_amount",
-  "requires_action_approval",
-  "terminal_when",
-]);
-
-/**
- * @spec mission#common-constraints — FAIL CLOSED (refuse the derivation)
- * when either operand carries a registered-but-unimplemented Common
- * Constraint. Silently dropping it (the prior behavior) would widen effective
- * authority: the operand's narrowing intent would vanish from the derived
- * entry with no trace. A key that is registered AND implemented (`max_amount`)
- * or that is not registered at all (deployment-defined, e.g. `vendors`) passes
- * through untouched.
- */
-function assertNoUnimplementedCommonConstraint(constraints: AuthorityEntry["constraints"]): void {
-  if (!constraints) return;
-  for (const key of Object.keys(constraints)) {
-    if (REGISTERED_COMMON_CONSTRAINTS.has(key) && !IMPLEMENTED_COMMON_CONSTRAINTS.has(key)) {
-      throw new IntentError(
-        "invalid_authorization_details",
-        `registered Common Constraint '${key}' is not implemented by this derivation engine; refusing rather than silently dropping it`,
-      );
+function assertSupportedConstraints(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    if (!entry.constraints) continue;
+    for (const key of Object.keys(entry.constraints)) {
+      if (!(SUPPORTED_CONSTRAINT_KEYS as readonly string[]).includes(key)) {
+        throw new IntentError(
+          "invalid_authorization_details",
+          `constraints carries unsupported key '${key}'; refusing rather than silently dropping it`,
+        );
+      }
     }
   }
 }
@@ -218,6 +204,17 @@ export function deriveAuthoritySet(
   policy: DerivationPolicy,
   proposal?: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
+  // @spec mission#common-constraints (issue #784, review on PR #803) — every
+  // ceiling entry and every submitted proposal entry is checked for an
+  // unsupported `constraints` key BEFORE the resource/action filtering below
+  // narrows either array down, so an entry the filter would otherwise discard
+  // untouched still cannot carry one past this function. `policy.ceiling` is
+  // validated in full regardless of mode; `proposal`, when submitted, is the
+  // client's full unfiltered array (a ceiling entry never sharing a resource
+  // with any proposal element would otherwise never reach `intersect` below).
+  assertSupportedConstraints(policy.ceiling);
+  if (proposal) assertSupportedConstraints(proposal);
+
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
   // `authorization_details` proposal is the sole discriminator between the
@@ -297,11 +294,11 @@ export function deriveAuthoritySet(
 function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): AuthorityEntry | null {
   const actions = proposal.actions.filter((a) => ceiling.actions.includes(a));
   if (actions.length === 0) return null;
-  // @spec mission#common-constraints — fail closed before narrowing anything:
-  // an unimplemented registered key on EITHER operand must refuse, never
-  // silently vanish from the derived entry below.
-  assertNoUnimplementedCommonConstraint(proposal.constraints);
-  assertNoUnimplementedCommonConstraint(ceiling.constraints);
+  // @spec mission#common-constraints — both operands already passed
+  // `assertSupportedConstraints` in `deriveAuthoritySet` above (over the FULL
+  // ceiling and proposal arrays, before this filtering), so neither can carry
+  // an unsupported key here. Not re-checked per pair: this function is only
+  // ever called from that loop, over entries it already validated.
   const entry: AuthorityEntry = { type: "mission_resource_access", resource: ceiling.resource, actions };
   const constraints: NonNullable<AuthorityEntry["constraints"]> = {};
   const ceilCap = ceiling.constraints?.max_amount;
@@ -348,6 +345,15 @@ function minAmount(
 ): { amount: string; currency: string } | undefined {
   if (!a) return b;
   if (!b) return a;
+  // Different currencies are incomparable, so return the ceiling side (`b`)
+  // outright rather than dropping the constraint: the caller here is deriving
+  // AGAINST a ceiling, and the ceiling bound is already the intended cap, so
+  // it stays exact rather than being replaced by a refusal. This is a
+  // deliberately DIFFERENT rule from intersectForProjection's currency-mismatch
+  // handling below (issue #784): a projection intersects two already-derived,
+  // already-ceiling-bound entries with no ceiling side to fall back on, so it
+  // drops the whole fragment instead. Both narrow (neither ever widens past
+  // its inputs); do not converge them into one rule.
   if (a.currency !== b.currency) return b; // ceiling wins on currency mismatch
   // @spec mission#max-amount — exact decimal-value comparison (never
   // IEEE-754 float): a malformed amount on either side refuses the
@@ -607,7 +613,10 @@ function intersectForProjection(
   if (cCap || eCap) {
     if (cCap && eCap) {
       // Different currencies are incomparable: no value is at or below both,
-      // so no fragment can be a subset of both sides.
+      // so no fragment can be a subset of both sides. Drop the whole
+      // fragment here rather than picking a side, unlike minAmount's
+      // ceiling-wins rule above (issue #784): neither side here is a
+      // ceiling, so there is nothing to fall back to.
       if (cCap.currency !== eCap.currency) return null;
       if (!isValidAmount(cCap.amount) || !isValidAmount(eCap.amount)) return null;
       constraints.max_amount = compareAmounts(cCap.amount, eCap.amount) <= 0 ? cCap : eCap;

@@ -31,6 +31,28 @@ export function entryWithinCeiling(
   return isSubsetSet(withoutCapabilitySources([entry]), [...ceiling]);
 }
 
+/**
+ * @spec mission#common-constraints, mission#derivation-policy — the
+ * `constraints` member names this engine accepts on an `AuthorityEntry`,
+ * config ceiling and client proposal alike (issue #784). This spans both the
+ * Common Constraint keys the engine implements narrowing for (`max_amount`,
+ * `requires_action_approval`, `terminal_when`) and `vendors`, a
+ * deployment-defined key the common registry does not carry at all. Neither
+ * direction of the registration/support distinction is automatic: a key
+ * registered by the Common Constraints registry is not necessarily supported
+ * here (e.g. `time_window`, `tenant`), and `vendors` being unregistered does
+ * not exempt it from the same obligation. This is the SINGLE declaration of
+ * that supported set; every boundary that admits an `AuthorityEntry` (typed
+ * config load, PAR intake) reuses it rather than keeping a parallel list that
+ * can drift.
+ */
+export const SUPPORTED_CONSTRAINT_KEYS = [
+  "max_amount",
+  "vendors",
+  "requires_action_approval",
+  "terminal_when",
+] as const;
+
 /** Validate the subset engine's supported input before a foreign grant can use it. */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -48,11 +70,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
     if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints))
       return false;
     const c = e.constraints as Record<string, unknown>;
-    if (
-      Object.keys(c).some(
-        (k) => !["max_amount", "vendors", "requires_action_approval", "terminal_when"].includes(k),
-      )
-    )
+    if (Object.keys(c).some((k) => !(SUPPORTED_CONSTRAINT_KEYS as readonly string[]).includes(k)))
       return false;
     if (c.vendors !== undefined && !strings(c.vendors)) return false;
     if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean")

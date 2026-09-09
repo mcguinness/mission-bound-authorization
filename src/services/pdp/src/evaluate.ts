@@ -43,6 +43,7 @@ import {
   MISSION_RESOURCE_ACCESS_TYPE,
   type MissionView,
   policyViewId,
+  vendorConstraintSatisfied,
 } from "./policy-view.js";
 import { allowsNoActiveFreshness, type StalenessBound } from "./runtime-posture.js";
 
@@ -847,7 +848,19 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
 
   // 6. FGA authority check with contextual tuples derived from the record.
   const vendorId = req.resource.properties?.vendor_id ?? "";
-  if (entry.constraints?.vendors !== undefined) contributions.add("vendors");
+  // @spec authzen#runtime-denial-classification (#801) — decide vendor-
+  // constraint satisfaction BEFORE tuple construction, sharing the predicate
+  // with deriveContextualTuples so the two paths cannot drift. The entry was
+  // already matched (step 5); a declared vendors constraint that excludes
+  // this target fails a parameter constraint (parameter_violation), distinct
+  // from a withheld tuple or denied relationship for any other reason
+  // (out_of_authority, below). The contribution is recorded here, at the
+  // predicate's own call site, so a declared-and-passed constraint still
+  // appears in contributing_constraints and one never evaluated does not.
+  if (entry.constraints?.vendors !== undefined) {
+    contributions.add("vendors");
+    if (!vendorConstraintSatisfied(entry, vendorId)) return deny("parameter_violation");
+  }
   const tuples = deriveContextualTuples({
     view,
     entry,
@@ -858,16 +871,18 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
     },
     relation: mapping.relation,
   });
-  // A constraint that excludes the target withholds the contextual tuple, so
-  // no relationship to the target exists at all: the established boundary
-  // reason (@spec authzen#failure-condition-coverage, "Action outside the
-  // Authority Set ... or the request would broaden it"). The evaluated
-  // constraint key is still recorded in contributing_constraints.
+  // The vendor constraint (if any) is already established above; an empty
+  // tuple here is some OTHER withholding cause as deriveContextualTuples
+  // evolves, or a required tuple genuinely unavailable: the established
+  // boundary reason (@spec authzen#failure-condition-coverage, "Action
+  // outside the Authority Set ... or the request would broaden it").
   if (tuples.length === 0) return deny("out_of_authority");
   const allowed = await fga.checkWithContext(
     { user: `mission:${view.id}`, relation: mapping.relation, object: `${req.resource.type}:${req.resource.id}` },
     tuples,
   );
+  // A negative relationship/FGA result independent of any parameter
+  // constraint: the entry was matched but no relation to the target holds.
   if (!allowed) return deny("out_of_authority");
 
   // 6a. @spec runtime#read-binding: a bound bulk/cross-tenant read names a
@@ -887,6 +902,17 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
   const vendorIds = req.resource.properties?.vendor_ids;
   if (vendorIds) {
     for (const memberVendorId of vendorIds) {
+      // Same distinction as step 6, applied per member: a vendor exclusion
+      // for THIS member is parameter_violation; an independent policy denial
+      // for THIS member is out_of_authority. Neither classification permits
+      // the whole collection because some OTHER member passes (comment
+      // above: no partially-narrowed lane).
+      if (
+        entry.constraints?.vendors !== undefined &&
+        !vendorConstraintSatisfied(entry, memberVendorId)
+      ) {
+        return deny("parameter_violation");
+      }
       const memberTuples = deriveContextualTuples({
         view,
         entry,

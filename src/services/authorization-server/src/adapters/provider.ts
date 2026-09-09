@@ -1147,6 +1147,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
     body.mission_expires_at = record.expires_at;
   });
 
+  // @spec control-plane#fanout — the request-path drain. Durable subscriber
+  // deliveries are awaited HERE, once per request, after the handler returned
+  // and before the response is flushed: the commit path is synchronous, so an
+  // awaited drain launched from it would be the floating promise with a
+  // swallowed rejection this replaces. One central seam rather than a call at
+  // every terminal funnel, because a terminal transition can also be
+  // materialized lazily by the expiry clock inside an ordinary gate. Provider#use
+  // splices each middleware BEFORE the internal route dispatcher, so this
+  // observes every route, custom grant included. A publication or delivery
+  // failure leaves its own durable row pending for the next drain rather than
+  // being discarded.
+  provider.use(async (ctx, next) => {
+    await next();
+    await opts.kernel.drainLifecycleOutbox();
+  });
+
   provider.use(makeRoutes(provider, opts));
   return provider;
 }
