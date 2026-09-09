@@ -15,8 +15,8 @@
     "content_sha256": "e1cf9287664b311c191d0e75cca2bad541c3bac15afecd2da5148243e793097e"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "3c87de67fa33817fb359b0e135ad0fc8c910fa65",
-    "content_sha256": "807e23635eb582c936aeb15dac1947834883a9590abc8d7c64a9c1b12e8a5830"
+    "revision": "9b360f5a03ce585734a265d4c1c06526e1c2451c",
+    "content_sha256": "68c25433a790617562f6ab3d906c61c887c117ef224afcbf394e16d33c3dd8d4"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
@@ -18321,8 +18321,22 @@
     "normative": "chain carries stream (issuer-chosen identifier), sequence (strictly increasing per stream), and previous (one or more predecessor digests, present on every receipt after the stream's first); a predecessor digest is a canonical-object digest of the complete predecessor Mission Receipt object, evidence_envelope included, so it covers the signature and not only the unsigned payload; concurrent issuance either serializes per stream or records multiple predecessors, and a verifier treats the result as a DAG, checking linkage and sequence monotonicity, never completeness"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > a predecessor digest commits to the complete Mission Receipt object, evidence_envelope included (evidence.receipt.chain-schema-and-predecessor-digest)",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > multiple concurrent predecessors are each checked against this receipt independently, with no ordering required between them",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-7: chain{stream, sequence, previous} is built by the issuer (buildAndSignMissionReceipt) and its shape validated by the verifier (receiptShape); the predecessor digest is asserted to cover the complete signed object (evidence_envelope included, distinct from the unsigned payload's digest), and concurrent issuance recording more than one predecessor (a DAG, not a serialized stream) verifies with no ordering required between them."
   },
   {
    "id": "evidence.receipt.verification-ordered-total",
@@ -18359,12 +18373,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > an unimplemented chain refuses at its own step, after the steps before it and never as a pass",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > an earlier verification step still owns its own reason even when the chain itself would verify",
      "level": "unit",
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested, and the unimplemented chain step refusing in its own position without masking an earlier reason. Partial: chain verification and the richer source-content/profile families remain incomplete; unsupported chains and issuer assertions refuse. No complete receipt-verifier bar is claimed."
+   "notes": "#594 W4-6: ordered unknown-safe verification, scope-bound issuer designation, source/combination/shape/digest/join failures tested. #594 W4-7 implements step 6 (chain schema and verification, see evidence.receipt.step6-chain-verification-and-monotonicity) and its own step still owns its reason, never masked by an otherwise-verifying chain; issuer_assertions/profile remain unimplemented and refuse (unimplemented_projection). Partial: the richer source-content/profile families remain incomplete under this row's own bar; no complete receipt-verifier bar is claimed."
   },
   {
    "id": "evidence.receipt.step1-envelope-and-no-binding-by-key-alone",
@@ -18667,8 +18681,52 @@
     "normative": "when chain is present, the verifier resolves each previous digest to a predecessor receipt, verifies the predecessor's own envelope, requires the same mission/emitter/chain.stream, recomputes the predecessor digest and requires equality, and requires each predecessor's chain.sequence to be strictly less than this receipt's; monotonicity is relative to this receipt's predecessors only, and a predecessor unresolvable within its retention obligations fails chain verification"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > multiple concurrent predecessors are each checked against this receipt independently, with no ordering required between them",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > a predecessor whose chain.sequence is not strictly less than this receipt's fails chain verification",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > an unresolvable predecessor fails chain verification, and omitting a resolver fails the same way",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > a predecessor digest that does not match the resolved receipt's own recomputed digest fails chain verification",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > a predecessor naming a different mission or chain stream fails chain verification",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > a predecessor signed by a different, independently authorized receipt issuer fails chain verification",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7) > an earlier verification step still owns its own reason even when the chain itself would verify",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-7: step 6 resolves each previous digest through the SAME scope-bound envelope verifier used for the top-level receipt (never a looser path), requires the predecessor to name the same qualified Mission, receipt issuer and chain.stream (join_failure otherwise), requires the recomputed digest to equal the declared reference (digest_mismatch otherwise), and requires each predecessor's own chain.sequence strictly less than this receipt's (chain_sequence_violation otherwise), independently per predecessor with no ordering imposed between them. A predecessor this verifier cannot resolve, including when no resolver is supplied at all, fails closed (predecessor_unresolvable) rather than being treated as absent; retention-window-bounded resolution itself is not modeled here (W4-8). An earlier step's own reason is never masked by a chain that would otherwise verify."
   },
   {
    "id": "evidence.receipt.retention-keys-and-evidence-resolvable",

@@ -1,9 +1,10 @@
 /**
  * @spec draft-mcguinness-mission-runtime-evidence.md#mission-receipt (lines
- * 1236-1662 at 41f66a4a), #receipt-verification (1482-1537). Covers build +
- * sign, positive end-to-end verification, and each of steps 1-5 and 7's
- * failure modes. Step 6 (chain) is not implemented (see mission-receipt.ts's
- * file header); a receipt carrying `chain` is rejected as unsupported.
+ * 1236-1662 at 41f66a4a), #receipt-verification (1482-1537), #receipt-chaining,
+ * issue #594 (W4-7). Covers build + sign, positive end-to-end verification,
+ * and each of steps 1-7's failure modes, including step 6 (chain
+ * verification and monotonicity: see the "Mission Receipt chaining" describe
+ * block below).
  */
 
 import { generateKeyPairSync, webcrypto } from "node:crypto";
@@ -23,6 +24,7 @@ import {
   buildAndSignMissionReceipt,
   createReceiptIssuerScope,
   type MissionReceiptEvidenceRef,
+  type MissionReceiptObject,
   type PublishedReceiptKey,
   type ReceiptIssuerBinding,
   type ReceiptIssuerScope,
@@ -440,16 +442,6 @@ describe("Mission Receipt build + verify", () => {
       .toEqual({ valid: false, reason: "referenced_record_invalid" });
   });
 
-  it("an unimplemented chain refuses at its own step, after the steps before it and never as a pass", async () => {
-    const decision = await signedDecision();
-    const base = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
-    const chain = { stream: "https://receipts.example.com/stream", sequence: 1, previous: [{ digest: canonicalDigest({ predecessor: true }) }] };
-    expect(await verifyMissionReceipt(await resigned(base, { chain }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
-      .toEqual({ valid: false, reason: "chain_not_supported" });
-    // An earlier step still owns its own reason: the chain refusal never masks it.
-    expect(await verifyMissionReceipt(await resigned(base, { chain, evidence: [{ ...base.evidence[0], evidence_id: "another-id" }] }), resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
-      .toEqual({ valid: false, reason: "identifier_mismatch" });
-  });
 
   it("joins issuer-qualified Mission identity and reports an unauthorized completed parameter deviation without discarding evidence", async () => {
     const decision = await signedDecision();
@@ -840,5 +832,210 @@ describe("Mission Receipt build + verify", () => {
     expect(result).toEqual({ valid: true });
     const wrong = await resigned(receiptWithTarget, { target: { resource: { ...decision.resource, id: "inv-other" }, audience: decision.audience } });
     expect(await verifyMissionReceipt(wrong, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey)).toEqual({ valid: false, reason: "copied_member_mismatch" });
+  });
+});
+
+describe("Mission Receipt chaining is per stream and never assumed complete (@spec runtime-evidence#receipt-chaining, #receipt-verification, #594 W4-7)", () => {
+  const STREAM = "https://receipts.example.com/streams/invoice-1";
+
+  it("a predecessor digest commits to the complete Mission Receipt object, evidence_envelope included (evidence.receipt.chain-schema-and-predecessor-digest)", async () => {
+    const predDecision = await signedDecision({ evidence_id: "evd_schema_pred" });
+    const predecessor = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: predDecision, chain: { stream: STREAM, sequence: 1 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const predecessorDigest = canonicalDigest(predecessor as never);
+    const { evidence_envelope: _drop, ...unsignedPredecessor } = predecessor;
+    expect(predecessorDigest).not.toBe(canonicalDigest(unsignedPredecessor as never));
+
+    const decision = await signedDecision({ evidence_id: "evd_schema_child" });
+    const child = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 2, previous: [{ digest: predecessorDigest }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    expect(await verifyMissionReceipt(child, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined,
+      (digest) => (digest === predecessorDigest ? predecessor : undefined))).toEqual({ valid: true });
+  });
+
+  it("multiple concurrent predecessors are each checked against this receipt independently, with no ordering required between them", async () => {
+    const decisionA = await signedDecision({ evidence_id: "evd_dag_a" });
+    const predecessorA = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decisionA, chain: { stream: STREAM, sequence: 7 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const decisionB = await signedDecision({ evidence_id: "evd_dag_b" });
+    const predecessorB = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decisionB, chain: { stream: STREAM, sequence: 2 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const digestA = canonicalDigest(predecessorA as never);
+    const digestB = canonicalDigest(predecessorB as never);
+    const byDigest = new Map<string, MissionReceiptObject>([[digestA, predecessorA], [digestB, predecessorB]]);
+    const resolve = vi.fn((digest: string) => byDigest.get(digest));
+
+    const decision = await signedDecision({ evidence_id: "evd_dag_child" });
+    // Listed out of sequence order (A's sequence 7 before B's sequence 2):
+    // concurrent issuance need not serialize, and the verifier imposes NO
+    // ordering between the predecessors themselves, only that each is
+    // strictly less than THIS receipt's own sequence (a DAG, never a single
+    // global sequence, and never a claim of completeness).
+    const child = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 10, previous: [{ digest: digestA }, { digest: digestB }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    expect(await verifyMissionReceipt(child, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, resolve))
+      .toEqual({ valid: true });
+    expect(resolve).toHaveBeenCalledWith(digestA);
+    expect(resolve).toHaveBeenCalledWith(digestB);
+  });
+
+  it("a predecessor whose chain.sequence is not strictly less than this receipt's fails chain verification", async () => {
+    const predDecision = await signedDecision({ evidence_id: "evd_seq_pred" });
+    const predecessor = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: predDecision, chain: { stream: STREAM, sequence: 5 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const predecessorDigest = canonicalDigest(predecessor as never);
+    const resolve = (digest: string) => (digest === predecessorDigest ? predecessor : undefined);
+    const decision = await signedDecision({ evidence_id: "evd_seq_child" });
+    for (const [childSequence, expected] of [
+      [5, { valid: false, reason: "chain_sequence_violation" }],
+      [4, { valid: false, reason: "chain_sequence_violation" }],
+      [6, { valid: true }],
+    ] as const) {
+      const child = await buildAndSignMissionReceipt(
+        { kind: "decision", mission: MISSION, decisionEvidence: decision,
+          chain: { stream: STREAM, sequence: childSequence, previous: [{ digest: predecessorDigest }] } },
+        "receipts.example.com", RECEIPT_SIGNER,
+      );
+      expect(await verifyMissionReceipt(child, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, resolve))
+        .toEqual(expected);
+    }
+  });
+
+  it("an unresolvable predecessor fails chain verification, and omitting a resolver fails the same way", async () => {
+    const decision = await signedDecision({ evidence_id: "evd_unresolvable_child" });
+    const child = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 3, previous: [{ digest: "sha-256:never-published" }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    expect(await verifyMissionReceipt(child, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, () => undefined))
+      .toEqual({ valid: false, reason: "predecessor_unresolvable" });
+    // No sixth argument at all: the fail-closed default, never "no predecessors to check".
+    expect(await verifyMissionReceipt(child, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey))
+      .toEqual({ valid: false, reason: "predecessor_unresolvable" });
+  });
+
+  it("a predecessor digest that does not match the resolved receipt's own recomputed digest fails chain verification", async () => {
+    const realDecision = await signedDecision({ evidence_id: "evd_digest_real" });
+    const real = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: realDecision, chain: { stream: STREAM, sequence: 1 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const otherDecision = await signedDecision({ evidence_id: "evd_digest_other" });
+    const other = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: otherDecision, chain: { stream: STREAM, sequence: 1 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const claimedDigest = canonicalDigest(real as never);
+    const decision = await signedDecision({ evidence_id: "evd_digest_child" });
+    const child = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 5, previous: [{ digest: claimedDigest }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    // The resolver returns a genuinely valid, genuinely signed Mission
+    // Receipt for the requested digest, but not the one that actually
+    // hashes to it: a resolver cache or storage-key bug, not a forged
+    // signature.
+    expect(await verifyMissionReceipt(child, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, () => other))
+      .toEqual({ valid: false, reason: "digest_mismatch" });
+  });
+
+  it("a predecessor naming a different mission or chain stream fails chain verification", async () => {
+    const decision = await signedDecision({ evidence_id: "evd_join_child" });
+    async function predecessorReceipt(overrides: { mission?: typeof MISSION; stream?: string } = {}) {
+      const predDecision = await signedDecision({ evidence_id: "evd_join_pred" });
+      return buildAndSignMissionReceipt(
+        { kind: "decision", mission: overrides.mission ?? MISSION, decisionEvidence: predDecision,
+          chain: { stream: overrides.stream ?? STREAM, sequence: 1 } },
+        "receipts.example.com", RECEIPT_SIGNER,
+      );
+    }
+    const goodPredecessor = await predecessorReceipt();
+    const goodDigest = canonicalDigest(goodPredecessor as never);
+    const goodChild = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 5, previous: [{ digest: goodDigest }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    expect(await verifyMissionReceipt(goodChild, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined,
+      (digest) => (digest === goodDigest ? goodPredecessor : undefined))).toEqual({ valid: true });
+
+    const mismatchedMission = await predecessorReceipt({ mission: { ...MISSION, id: "another-mission" } });
+    const mismatchedStream = await predecessorReceipt({ stream: "https://receipts.example.com/streams/other" });
+    for (const bad of [mismatchedMission, mismatchedStream]) {
+      const badDigest = canonicalDigest(bad as never);
+      const badChild = await buildAndSignMissionReceipt(
+        { kind: "decision", mission: MISSION, decisionEvidence: decision,
+          chain: { stream: STREAM, sequence: 5, previous: [{ digest: badDigest }] } },
+        "receipts.example.com", RECEIPT_SIGNER,
+      );
+      expect(await verifyMissionReceipt(badChild, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined,
+        (digest) => (digest === badDigest ? bad : undefined))).toEqual({ valid: false, reason: "join_failure" });
+    }
+  });
+
+  it("a predecessor signed by a different, independently authorized receipt issuer fails chain verification", async () => {
+    const twoIssuers = receiptScope();
+    twoIssuers.mediated_scope.pep_locations = [...twoIssuers.mediated_scope.pep_locations, "other-receipts.example.com"];
+    twoIssuers.extensions!.evidence!.receipt_issuers = [
+      { emitter: "receipts.example.com", key_set: KEY_SET },
+      { emitter: "other-receipts.example.com", key_set: KEY_SET },
+    ];
+    const scope = createReceiptIssuerScope(twoIssuers, new Map([[KEY_SET, [
+      receiptKey, { ...receiptKey, emitterId: "other-receipts.example.com" },
+    ]]]));
+    const predDecision = await signedDecision({ evidence_id: "evd_emitter_pred" });
+    const predecessor = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: predDecision, chain: { stream: STREAM, sequence: 1 } },
+      "other-receipts.example.com", RECEIPT_SIGNER,
+    );
+    const predecessorDigest = canonicalDigest(predecessor as never);
+    const decision = await signedDecision({ evidence_id: "evd_emitter_child" });
+    const child = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 5, previous: [{ digest: predecessorDigest }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    expect(await verifyMissionReceipt(child, resolverFor({ decision }), scope, resolveEvidenceKey, undefined,
+      (digest) => (digest === predecessorDigest ? predecessor : undefined))).toEqual({ valid: false, reason: "join_failure" });
+  });
+
+  it("an earlier verification step still owns its own reason even when the chain itself would verify", async () => {
+    const predDecision = await signedDecision({ evidence_id: "evd_order_pred" });
+    const predecessor = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: predDecision, chain: { stream: STREAM, sequence: 1 } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const predecessorDigest = canonicalDigest(predecessor as never);
+    const decision = await signedDecision({ evidence_id: "evd_order_child" });
+    const base = await buildAndSignMissionReceipt(
+      { kind: "decision", mission: MISSION, decisionEvidence: decision,
+        chain: { stream: STREAM, sequence: 2, previous: [{ digest: predecessorDigest }] } },
+      "receipts.example.com", RECEIPT_SIGNER,
+    );
+    const resolve = (digest: string) => (digest === predecessorDigest ? predecessor : undefined);
+    // Sanity: as built, this chain genuinely verifies.
+    expect(await verifyMissionReceipt(base, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, resolve))
+      .toEqual({ valid: true });
+    // Step 3's identifier check still fires first, never masked by a chain
+    // that would otherwise be valid.
+    const corrupted = await resigned(base, { evidence: [{ ...base.evidence[0], evidence_id: "another-id" }] });
+    expect(await verifyMissionReceipt(corrupted, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, resolve))
+      .toEqual({ valid: false, reason: "identifier_mismatch" });
   });
 });
