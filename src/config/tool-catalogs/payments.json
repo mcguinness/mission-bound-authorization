@@ -29,6 +29,24 @@
       }
     },
     {
+      "name": "check_transfer",
+      "description": "Check whether a wire transfer is feasible, reserving nothing",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "invoice_id": { "type": "string" } },
+        "required": ["invoice_id"]
+      }
+    },
+    {
+      "name": "hold_transfer",
+      "description": "Place a hold for a wire transfer",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "invoice_id": { "type": "string" } },
+        "required": ["invoice_id"]
+      }
+    },
+    {
       "name": "execute_wire_transfer",
       "description": "Execute a wire transfer",
       "inputSchema": {
