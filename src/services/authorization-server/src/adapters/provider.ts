@@ -166,6 +166,7 @@ import {
   authorizationDetailsTypesMetadata,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
+import { withTransaction } from "@mission/store";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
 import {
   DIGEST_PREFIX,
@@ -178,6 +179,7 @@ import {
   LIFECYCLE_ENDPOINT_KEY,
   type LifecycleNonceKey,
   LifecycleResponseStore,
+  type RetainedLifecycleResponse,
 } from "../kernel/lifecycle-idempotency.js";
 import {
   type EffectiveAuthoritySource,
@@ -188,7 +190,12 @@ import {
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
-import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
+import {
+  GateError,
+  LifecycleConflictError,
+  type MissionKernel,
+  type StatusObservation,
+} from "../kernel/kernel.js";
 import {
   STATUS_LIST_ID,
   STATUS_LIST_MEDIA_TYPE,
@@ -877,6 +884,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
         }
       }
       try {
+        // @spec control-plane#serialization — THE UNCOUPLED COUNTER. This hook
+        // is synchronous and runs inside oidc-provider's own token `save()`,
+        // which offers no acceptance callback and no operation identity, so the
+        // count cannot be reserved against the access token it pays for the way
+        // the ID-JAG and AAT root paths do ({@link
+        // MissionKernel.reserveDerivation}). The conditional write still
+        // prevents cap overshoot; coupling the count to THIS artifact needs the
+        // provider's issuance state recorded transactionally before delivery,
+        // which this slice does not build.
         const gated = kernel.gateDerivation(record.id);
         // @spec child-delegation#parent-member + expansion#predecessor-member — a
         // Child Mission projects the `parent` lineage member; a successor Mission
@@ -1888,13 +1904,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
        * overwrites the response a retransmission must replay.
        */
       const send = (status: number, contentType: string, text: string): void => {
+        // @spec control-plane#serialization — RETENTION PRECEDES DELIVERY: the
+        // exact bytes are durable before they are handed to the network, so a
+        // crash between the two replays the same response instead of
+        // re-executing the operation.
+        if (nonceKey) {
+          lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
+        }
         ctx.status = status;
         ctx.set("content-type", contentType);
         ctx.set("cache-control", "no-store");
         ctx.body = text;
-        if (nonceKey) {
-          lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
-        }
       };
       const sendJson = (status: number, json: Record<string, unknown>): void =>
         send(status, "application/json", JSON.stringify(json));
@@ -1917,20 +1937,52 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // A request whose `nonce` is absent or malformed echoes none.
           ...(echoNonce && nonce ? { nonce } : {}),
         });
-      // @spec status#idempotency — the retransmission rule, evaluated FIRST:
-      // it governs the HTTP exchange, before any operation is re-executed.
+      // @spec status#idempotency, control-plane#serialization — the
+      // retransmission rule, evaluated FIRST and BEFORE ANY STATE-DEPENDENT
+      // CHECK: it governs the HTTP exchange, so a request that already
+      // succeeded replays its success even after the Mission moved on. A
+      // conditional precondition this endpoint may grow (`expected_version`)
+      // belongs strictly AFTER this lookup, never in front of it.
       if (nonceKey) {
         const stored = lifecycleResponses.find(nonceKey);
-        if (stored) {
-          if (stored.requestDigest !== digest) {
-            // Never answered with the unrelated original response.
-            sendInvalidRequest("nonce was already used with a different request");
+        // The DIGEST rule and the REPLAY rule run on two clocks. The digest
+        // comparison holds for the whole nonce window, so a divergent retry is
+        // always refused; the bytes stop being deliverable at the response's
+        // own validity, and past that the exchange is processed fresh below at
+        // a new observation point rather than replayed expired.
+        if (stored?.requestDigest !== undefined && stored.requestDigest !== digest) {
+          // Never answered with the unrelated original response.
+          sendInvalidRequest("nonce was already used with a different request");
+          return;
+        }
+        if (stored?.replayable) {
+          // @spec control-plane#serialization — RECOVERY ACROSS THE SIGNING
+          // BOUNDARY. A `committed` row is an operation that committed and a
+          // response whose bytes were never retained. It is finalized from the
+          // retained immutable material, never re-executed: for a signed
+          // envelope the recorded observation is signed again, carrying its
+          // ORIGINAL `iat` and `exp`, so recovery reports the state at the
+          // observation point and re-dates nothing.
+          const recovered =
+            stored.state === "final"
+              ? stored.body
+              : await finalizeRetainedResponse(kernel, stored);
+          if (recovered === undefined) {
+            sendNotFound();
             return;
+          }
+          if (stored.state !== "final") {
+            lifecycleResponses.record(nonceKey, {
+              requestDigest: digest,
+              status: stored.status,
+              contentType: stored.contentType,
+              body: recovered,
+            });
           }
           ctx.status = stored.status;
           ctx.set("content-type", stored.contentType);
           ctx.set("cache-control", "no-store");
-          ctx.body = stored.body;
+          ctx.body = recovered;
           return;
         }
       }
@@ -1944,6 +1996,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           missionId,
           body,
           ...(nonce !== undefined ? { nonce } : {}),
+          // @spec control-plane#serialization — the discharge latch, the nonce
+          // claim and the OBSERVATION the response reports commit together;
+          // only the signature happens after.
+          claimObservation: (observation) => {
+            if (!nonceKey) return;
+            lifecycleResponses.claimInCallerTx(nonceKey, {
+              requestDigest: digest,
+              status: 200,
+              contentType: MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+              material: {
+                kind: "status-observation",
+                observation: observation as unknown as Record<string, unknown>,
+              },
+              responseValidUntil: observation.exp * 1000,
+            });
+          },
           sendJws: (jws) => send(200, MISSION_STATUS_RESPONSE_MEDIA_TYPE, jws),
           sendJson,
           sendNotFound,
@@ -1983,34 +2051,71 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             );
             return;
           }
-          const { record, evidence } = kernel.contain(missionId, {
-            event: {
-              type: event.type,
-              source: event.source,
-              observed_at: event.observed_at,
-              event_id: event.event_id,
-            },
-            remove: remove as Array<{ resource: string; actions?: string[] }>,
+          // @spec control-plane#serialization — the containment commit, the
+          // nonce claim and the committed outcome are ONE transaction, so a
+          // committed narrowing always leaves a replayable record behind.
+          // The narrowed members are captured before the closure: a closure
+          // does not carry the control-flow narrowing the checks above proved.
+          const containEvent = {
+            type: event.type,
+            source: event.source,
+            observed_at: event.observed_at,
+            event_id: event.event_id,
+          };
+          const contained = withTransaction(kernel.db, () => {
+            const { record, evidence } = kernel.contain(missionId, {
+              event: containEvent,
+              remove: remove as Array<{ resource: string; actions?: string[] }>,
+            });
+            const outcome = {
+              id: record.id,
+              state: record.state,
+              version: record.version,
+              containment_version: record.containment?.containment_version ?? 0,
+            };
+            if (nonceKey) {
+              lifecycleResponses.claimInCallerTx(nonceKey, {
+                requestDigest: digest,
+                status: 200,
+                contentType: "application/json",
+                material: { kind: "json", body: outcome },
+              });
+            }
+            return { evidence, outcome };
           });
           // Retain the returned Containment Evidence issuer-side (break-glass
           // path: its evidence `policy` is "manual"). Previously discarded.
-          opts.issuerEvidence?.retainContainment(evidence);
-          sendJson(200, {
-            id: record.id,
-            state: record.state,
-            version: record.version,
-            containment_version: record.containment?.containment_version ?? 0,
-          });
+          opts.issuerEvidence?.retainContainment(contained.evidence);
+          sendJson(200, contained.outcome);
           return;
         }
-        const record = kernel.transition(missionId, body.operation as LifecycleOperation);
+        // @spec control-plane#serialization — the transition, the nonce claim
+        // and the committed outcome are ONE transaction. Before this, a process
+        // lost between the commit and the response answered a retry 409 for an
+        // operation that had in fact succeeded. The grant destruction stays
+        // OUTSIDE: it is asynchronous and reaches the provider's own store, so
+        // it can neither join nor roll back with this commit.
+        const transitioned = withTransaction(kernel.db, () => {
+          const record = kernel.transition(missionId, body.operation as LifecycleOperation);
+          const outcome = { id: record.id, state: record.state, version: record.version };
+          if (nonceKey) {
+            lifecycleResponses.claimInCallerTx(nonceKey, {
+              requestDigest: digest,
+              status: 200,
+              contentType: "application/json",
+              material: { kind: "json", body: outcome },
+            });
+          }
+          return { record, outcome };
+        });
+        const record = transitioned.record;
         // Revocation/terminal states also revoke the OAuth grant so refresh
         // fails structurally, not just by gating.
         if (record.state !== "active" && record.state !== "suspended" && record.grant_id) {
           const grant = await provider.Grant.find(record.grant_id);
           await grant?.destroy();
         }
-        sendJson(200, { id: record.id, state: record.state, version: record.version });
+        sendJson(200, transitioned.outcome);
       } catch (e) {
         if (e instanceof LifecycleConflictError) {
           sendJson(409, {
@@ -3266,12 +3371,40 @@ const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-
  * signed Mission Status Response envelope carrying `discharge_result` as a
  * sibling of `mission`.
  */
+/**
+ * @spec control-plane#serialization, control-plane#fresh-observation — finalize
+ * a COMMITTED lifecycle response from its retained immutable material.
+ *
+ * This is the recovery half of the signing boundary: the operation committed,
+ * the response bytes did not survive, and the exact response is reproduced
+ * rather than the operation re-executed. A JSON outcome re-serializes to the
+ * same bytes. A signed envelope is signed again over the RECORDED observation,
+ * so its `iat` and `exp` are the original observation point's and nothing is
+ * re-dated; a recorded envelope already past its own validity never reaches
+ * here, because the store stops replaying it.
+ */
+async function finalizeRetainedResponse(
+  kernel: MissionKernel,
+  stored: RetainedLifecycleResponse,
+): Promise<string | undefined> {
+  const material = stored.material;
+  if (!material) return undefined;
+  if (material.kind === "json") return JSON.stringify(material.body);
+  return kernel.signObservation(material.observation as unknown as StatusObservation);
+}
+
 async function handleDischarge(input: {
   kernel: MissionKernel;
   principal: ServiceTokenPrincipal;
   missionId: string;
   body: Record<string, unknown>;
   nonce?: string;
+  /**
+   * @spec control-plane#serialization — invoked INSIDE the latch transaction
+   * with the observation the response will report, so the committed outcome
+   * and its replayable material are durable before anything is signed.
+   */
+  claimObservation?: (observation: StatusObservation) => void;
   sendJws: (jws: string) => void;
   sendJson: (status: number, json: Record<string, unknown>) => void;
   sendNotFound: () => void;
@@ -3346,26 +3479,35 @@ async function handleDischarge(input: {
     }
   }
   try {
-    const { result } = kernel.discharge(missionId, {
-      // The AUTHENTICATED discharge authority, never a request-supplied value.
-      authority: principal.principal_id,
-      entry_digest: entryDigestValue,
-      condition_digest: conditionDigestValue,
-      event_type: eventType,
-      event_id: eventId,
-      ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
-      ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
-      ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
+    // @spec control-plane#serialization, control-plane#fresh-observation — the
+    // latch, the observation it is reported at and the nonce claim commit as
+    // one unit; the signature is the only work left outside, and it adds no
+    // recency of its own.
+    const observation = withTransaction(kernel.db, () => {
+      const { result } = kernel.discharge(missionId, {
+        // The AUTHENTICATED discharge authority, never a request-supplied value.
+        authority: principal.principal_id,
+        entry_digest: entryDigestValue,
+        condition_digest: conditionDigestValue,
+        event_type: eventType,
+        event_id: eventId,
+        ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
+        ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
+        ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
+      });
+      const captured = kernel.observeInCallerTx(missionId, {
+        requester: principal.principal_id,
+        nonce,
+        dischargeResult: result,
+      });
+      input.claimObservation?.(captured);
+      return captured;
     });
     // @spec discharge#discharge-result — the endpoint's existing signed envelope,
     // state-only (the request carries no `audience`), echoing this request's own
     // nonce: the durable acknowledgement an at-least-once sender stops retrying
     // against.
-    const jws = await kernel.signedStatus(missionId, {
-      requester: principal.principal_id,
-      nonce,
-      dischargeResult: result,
-    });
+    const jws = await kernel.signObservation(observation);
     input.sendJws(jws);
   } catch (e) {
     if (e instanceof DischargeNotFoundError) {

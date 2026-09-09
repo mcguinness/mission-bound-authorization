@@ -57,21 +57,78 @@ Derivation admission uses a conditional counter update, so a caller holding a
 snapshot taken before another writer consumed the last derivation is refused
 rather than allowed to overshoot the cap. A synchronous caller can include the
 reservation in the same managed transaction as its local side effect, as the
-fault tests demonstrate. Existing asynchronous provider, continuation and
-signed-grant issuance paths do not yet share that atomic domain; no completed
-serialization conformance claim is made. In particular, an expansion's
-`completion_released` marker records release to the token adapter, not proof
-of token delivery. It preserves recovery before that release but does not
-provide cross-store exactly-once issuance.
+fault tests demonstrate.
+
+Each counted derivation also carries a durable reservation naming the operation
+and the artifact it paid for. The increment and the reservation commit in one
+transaction; the reservation is released when the artifact is accepted; and a
+repeat of a recorded operation identity replays the recorded artifact rather
+than counting a second derivation. An unreleased reservation is AMBIGUOUS: the
+artifact may never have been minted, or it may have been accepted with the
+acknowledgement lost. Startup recovery therefore records the ambiguity as
+`unacknowledged` and keeps the count consumed. A count is returned only on an
+authoritative observation that no artifact was accepted, recorded with the
+source that asserted it. Operators reconciling a fleet should read
+`unacknowledged` as work owed an authoritative answer, never as a refund.
+
+The ID-JAG and attenuation-root paths use that reservation. The provider
+access-token hook does not: it is synchronous, runs inside the provider's own
+token save, and offers neither an operation identity nor an acceptance
+callback, so its count stays uncoupled from the token it pays for. Recording
+authoritative issuance state and artifact material transactionally before
+delivery is a possible future architecture; this deployment does not implement
+it, and no completed serialization conformance claim is made. In particular, an
+expansion's `completion_released` marker records release to the token adapter,
+not proof of token delivery. It preserves recovery before that release but does
+not provide cross-store exactly-once issuance, and it is not evidence of any
+broader guarantee.
+
+The lifecycle endpoint's retry key has an explicit signing boundary. The nonce
+claim, the committed operation outcome and enough immutable response material
+commit with the transition; the exact bytes are retained before they are
+delivered. A retransmission that finds a committed outcome whose bytes were
+lost finalizes the response from that material instead of re-executing the
+operation, so a `resume` that in fact succeeded replays its success rather than
+answering a conflict. For a signed envelope the recorded observation is signed
+again with its original `iat` and `exp`, so recovery re-dates nothing. Replay
+lookup runs before any state-dependent check, which is where a future
+`expected_version` precondition must stay behind it.
+
+Two clocks govern the retry key, and operators should read them separately. The
+divergent-retry refusal compares request digests for the whole ten-minute nonce
+window, so reusing a nonce with a different request stays `invalid_request` for
+ten minutes. Handing the retained BYTES back stops at the response's own
+validity, which for the signed `discharge` envelope is sixty seconds: past that
+instant the envelope would present an expired observation, so the exchange is
+processed fresh at a new observation point instead, which `discharge` is
+already idempotent under. Unsigned JSON outcomes assert no freshness and stay
+replayable for the full window.
+
+A reservation replay is the one ungated path, and only when an artifact was
+actually retained: returning a recorded artifact produces nothing new. A
+recorded operation identity with no retained artifact is gated like any fresh
+request, so a Mission revoked, expired or fully contained since the first
+attempt refuses rather than signing off an unvalidated record.
 
 The Mission Status List publisher answers only from a token still inside the
 validity that token was signed with. Past its own `exp`, and on any lifecycle
 commit, the list is rebuilt from the authoritative record set rather than
 re-signed from cached bits; a failed rebuild leaves no superseded token
 published; and a fetch arriving mid-build joins that build, so an older
-snapshot never lands after a newer commit. The authenticated
-observation/commit watermark and the Status conditional-request surface remain
-follow-on work, so the fresh-observation claim stays partial.
+snapshot never lands after a newer commit.
+
+A signed Mission Status observation is taken in one authoritative transactional
+read of the stored record, with the expiry clock materialized in that same
+transaction, and it carries the `(version, commit)` watermark it was taken at.
+Its `iat`, `exp` and `fresh_until` belong to that observation point and are
+never restamped, so a commit landing while the signature is in flight leaves
+the delivered snapshot older without making it fresher. Refusing to deliver an
+observation whose commit point advanced is available as an optional declared
+policy (`strictObservationWatermark`), off by default: the governing rule
+permits delivering an authenticated authoritative observation inside its own
+validity, and refusal costs churn on a busy Mission and reader starvation under
+sustained writes. The Status conditional-request surface remains follow-on
+work, so the fresh-observation claim stays partial.
 
 A terminal transition writes its tombstone in that same transaction: canonical
 issuer and Mission identity, terminal state, final version, transition time and
