@@ -454,6 +454,44 @@ describe("Mission Receipt build + verify", () => {
       .toEqual({ valid: false, reason: "join_failure" });
   });
 
+  it("a FAILED execution carrying the same deviation is equally valid and equally flagged, and a suppressed one is not the flag's witness", async () => {
+    // @spec runtime-evidence#execution-evidence-object: "a deviation recorded
+    // against `outcome` `completed` or `failed` ... is equally representable,
+    // and a consumer MUST flag it as an unauthorized execution". The
+    // completed case sits in the test above; this is the `failed` half, plus
+    // the negative control that suppression is NOT the flag: a suppressed
+    // record with the same digest divergence is the refusal working as
+    // intended, not an unauthorized execution.
+    const decision = await signedDecision();
+    const failed = await signedExecution({
+      outcome: "failed",
+      error: "parameter_mismatch",
+      effective_parameter_digest: "sha-256:changed",
+    });
+    const failedReceipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: failed },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    expect(
+      await verifyMissionReceipt(failedReceipt, resolverFor({ decision, execution: failed }), receiptIssuers, resolveEvidenceKey),
+    ).toEqual({ valid: true, unauthorized_execution: true });
+
+    const suppressed = await signedExecution({
+      outcome: "suppressed",
+      error: "parameter_mismatch",
+      effective_parameter_digest: "sha-256:changed",
+    });
+    const suppressedReceipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: suppressed },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    expect(
+      await verifyMissionReceipt(suppressedReceipt, resolverFor({ decision, execution: suppressed }), receiptIssuers, resolveEvidenceKey),
+    ).toEqual({ valid: true });
+  });
+
   it("a compromised receipt issuer key cannot bypass the boundary rule through scope publication", async () => {
     const decision = await signedDecision();
     const receipt = await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER);
