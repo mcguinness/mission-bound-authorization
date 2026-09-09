@@ -30,6 +30,7 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
+  signedDenialReason,
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
@@ -266,13 +267,21 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
       // Zero unauthorized side effects over MCP.
       expect(mcp.connectors.ledgerEntries()).toHaveLength(0);
 
-      // Non-vacuous: the PEP recorded a deny/refusal carrying this exact reason.
+      // Non-vacuous: the PEP recorded a deny/refusal for this refusal. A
+      // PDP denial carries the caller's reason verbatim; a pre-decision
+      // Refusal Record carries the ENUMERATED value the deployment maps that
+      // caller-visible diagnostic to (@spec
+      // runtime-evidence#pre-decision-refusal, issue #786: "this member
+      // carries an enumerated value, never a deployment's own diagnostic
+      // string"), so the two surfaces are compared through that mapping
+      // rather than assumed identical.
+      const signed = signedDenialReason(mcpReason as string);
       const recorded = mcp.evidence
         .all()
         .some(
           (e) =>
             (e.kind === "decision" && e.content.decision === "deny" && e.content.denial_reason === mcpReason) ||
-            (e.kind === "refusal" && e.content.denial_reason === mcpReason),
+            (e.kind === "refusal" && e.content.denial_reason === signed),
         );
       expect(recorded, "expected a decision-deny or refusal record for this reason").toBe(true);
     });

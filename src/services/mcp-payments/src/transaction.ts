@@ -44,9 +44,21 @@ export class TransactionEngine {
   /**
    * Redeem a single-use permit exactly once (D28). Redemption is keyed by the
    * stable operation key (mission+action+parameter_digest), so replaying the
-   * same operation -- even with a freshly minted permit id -- is refused as
-   * permit_consumed and cannot double-execute. Bound to the instance epoch
-   * (D39): a prior-epoch permit is rejected after restart.
+   * same operation, even with a freshly minted permit id, cannot
+   * double-execute. Bound to the instance epoch (D39): a prior-epoch permit
+   * is rejected after restart.
+   *
+   * @spec runtime-evidence#execution-evidence-object (issue #786): the two
+   * failures are DIFFERENT and are reported separately, because the draft
+   * scopes `permit_consumed` to "re-presentation of an already-consumed
+   * single-use evaluation identifier" and this table keys on operation
+   * identity instead. The prior operation's own `permit_id` decides:
+   * equal is that re-presentation (`permit_consumed`), different is a fresh
+   * permit for an operation another permit already claimed
+   * (`operation_already_claimed`). A missing prior row is a redemption this
+   * engine cannot attribute (a prior epoch, for one), reported as the
+   * narrower operation-claim failure rather than asserting an identifier it
+   * never saw.
    */
   redeemPermit(input: {
     permitId: string;
@@ -54,9 +66,17 @@ export class TransactionEngine {
     missionId: string;
     action: string;
     leaseSeconds: number;
-  }): { ok: boolean; reason?: "permit_consumed" | "lease_setup_failed" } {
+  }): { ok: boolean; reason?: "permit_consumed" | "operation_already_claimed" | "lease_setup_failed" } {
     const consumed = redeemOnce(this.db, "permit_redemptions", input.opKey, this.instanceEpoch);
-    if (!consumed) return { ok: false, reason: "permit_consumed" };
+    if (!consumed) {
+      const prior = this.db.prepare("SELECT permit_id FROM operations WHERE op_key = ?").get(input.opKey) as
+        | { permit_id: string }
+        | undefined;
+      return {
+        ok: false,
+        reason: prior?.permit_id === input.permitId ? "permit_consumed" : "operation_already_claimed",
+      };
+    }
     const leaseExpires = this.now().getTime() + input.leaseSeconds * 1000;
     this.db
       .prepare(

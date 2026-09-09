@@ -683,6 +683,16 @@ export interface RefusalRecordInput {
 export interface ExecutionEvidenceInput {
   permitId: string;
   opKey: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object `execution_id`: "unique
+   * execution identifier, stable across delivery retries of this record".
+   * The caller supplies it so ONE identity covers one disposition attempt and
+   * every emission retry of that attempt (issue #786); absent, the store
+   * allocates a fresh one. A distinct attempt MUST supply a distinct value:
+   * that is what keeps a rejected replay from presenting itself as the
+   * original completed record.
+   */
+  execution_id?: string;
   evaluation_id: string;
   mission_id: string;
   audience: string;
@@ -870,17 +880,47 @@ export class EvidenceStore {
     return record;
   }
 
-  /** @spec runtime-evidence#execution-evidence-object: sign and retain an Execution Evidence Object. */
+  /**
+   * @spec runtime-evidence#execution-evidence-object: sign and retain an
+   * Execution Evidence Object.
+   *
+   * "Exactly one Execution Evidence Object exists per final disposition of a
+   * permit, and delivery of that record is at-least-once, so a consumer MUST
+   * deduplicate on `execution_id`." A retry of a pending emission therefore
+   * supplies the SAME `execution_id` and gets the retained record back
+   * rather than a second row. A retry that supplies the same identity with a
+   * DIFFERENT disposition is not a retry: it throws, because silently
+   * returning the retained record would let a rejected replay report the
+   * original completed record as its own outcome (issue #786). Retention is
+   * append-only either way: no call replaces a retained record.
+   */
   async recordExecution(
     emitterId: string,
     role: "pep" | "executor",
     input: ExecutionEvidenceInput,
   ): Promise<ExecutionEvidence> {
     const signer = this.requireSigner(role === "executor" ? "executor" : "pep");
+    if (input.execution_id !== undefined) {
+      const prior = this.records.find(
+        (e): e is ExecutionEvidence => e.kind === "execution" && e.content.execution_id === input.execution_id,
+      );
+      if (prior) {
+        const same =
+          prior.content.evaluation_id === input.evaluation_id &&
+          prior.content.outcome === input.outcome &&
+          prior.content.error === input.error;
+        if (!same) {
+          throw new Error(
+            `EvidenceStore.recordExecution(): execution_id "${input.execution_id}" is already retained for a different disposition (fail closed: one identity per disposition, retries only)`,
+          );
+        }
+        return prior;
+      }
+    }
     const sequence = this.nextSequence(input.mission_id, emitterId, role);
     const outcome_at = new Date().toISOString();
     const unsigned = {
-      execution_id: newRecordId("exe"),
+      execution_id: input.execution_id ?? newRecordId("exe"),
       evaluation_id: input.evaluation_id,
       mission_id: input.mission_id,
       audience: input.audience,

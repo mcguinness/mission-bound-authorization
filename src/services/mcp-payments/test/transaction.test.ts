@@ -148,6 +148,17 @@ function build(
       pending: import("../src/index.js").TxnPendingStore;
       consumption: import("../src/index.js").TxnConsumptionStore;
     };
+    /**
+     * The TransactionEngine's clock (issue #786). `TransactionEngine` has
+     * always accepted a `now` injector and no harness supplied one, so the
+     * execution lease could never be made to expire in a test.
+     */
+    now?: () => Date;
+    /**
+     * Wrap the decision point (issue #786): lets one test present the SAME
+     * permit, and therefore the same evaluation identifier, twice.
+     */
+    decide?: import("@mission/pdp").DecisionFn;
   } = {},
 ) {
   const payments = new PaymentsStore();
@@ -157,10 +168,10 @@ function build(
   );
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
-  const engine = new TransactionEngine("epoch-1");
+  const engine = new TransactionEngine("epoch-1", opts.now);
   const gated = Boolean(opts.jit || opts.challengeSigner || opts.gateRemittance);
   const pep = new Pep({
-    decide: EVIDENCE_KEYS.decide,
+    decide: opts.decide ?? EVIDENCE_KEYS.decide,
     payments,
     evidence,
     fga,
@@ -331,16 +342,90 @@ d("M5 transaction-assurance tier", () => {
     expect(exec?.content.hop_reference).toBeUndefined();
   });
 
-  it("replayed permit is refused as permit_consumed and does not double-execute", async () => {
-    const { server, connectors } = build();
+  it("a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute", async () => {
+    const { server, connectors, evidence } = build();
     const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
     expect(first.ok).toBe(true);
-    // Same effective params -> same permit id/op key -> single-use redemption fails.
+    // Each call is its own evaluation, so the second carries a FRESH
+    // decision_id. Same effective params -> same op key -> the single use for
+    // that OPERATION is already held. @spec
+    // runtime-evidence#execution-evidence-object (#786): that is
+    // `operation_already_claimed`, never `permit_consumed`, which the draft
+    // scopes to re-presenting one evaluation identifier. The caller-visible
+    // diagnostic stays `permit_consumed`.
     const replay = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
     expect(replay.ok).toBe(false);
     expect(replay.refusal_reason).toBe("permit_consumed");
     // Exactly one ledger entry: no double spend.
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(1);
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["completed", undefined],
+      ["suppressed", "operation_already_claimed"],
+    ]);
+    // The earlier COMPLETED record is untouched: a rejected replay records its
+    // own disposition and never rewrites the one that executed.
+    expect(executions[0]?.content.execution_id).not.toBe(executions[1]?.content.execution_id);
+  });
+
+  it("the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands", async () => {
+    // @spec runtime-evidence#execution-evidence-object: `permit_consumed` is
+    // "re-presentation of an already-consumed single-use evaluation
+    // identifier". Replaying the decision point's own permit verbatim is
+    // exactly that: same decision_id, same signed Decision Evidence.
+    let granted: Awaited<ReturnType<typeof EVIDENCE_KEYS.decide>> | undefined;
+    const { server, connectors, evidence } = build({
+      decide: async (req, opts) => {
+        if (granted) return granted;
+        const decision = await EVIDENCE_KEYS.decide(req, opts);
+        if (decision.decision) granted = decision;
+        return decision;
+      },
+    });
+    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+    const replay = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(replay.ok).toBe(false);
+    expect(replay.refusal_reason).toBe("permit_consumed");
+    expect(connectors.ledgerEntries("msn_m5")).toHaveLength(1);
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["completed", undefined],
+      ["suppressed", "permit_consumed"],
+    ]);
+    // Both records name the same evaluation, which is the point: one
+    // identifier, two dispositions, the completed one preserved.
+    expect(executions[1]?.content.evaluation_id).toBe(executions[0]?.content.evaluation_id);
+    expect(executions[0]?.content.outcome).toBe("completed");
+  });
+
+  it("an expired execution lease is refused as permit_expired, not as a parameter mismatch", async () => {
+    // The lease used to sit as an `||` operand ahead of reverification, so an
+    // expired lease short-circuited: nothing was recorded and the caller was
+    // told `parameter_mismatch`, which was false. The bound exercised here is
+    // this deployment's own 30-second lease, a LOCAL bound; comparing the
+    // permit's own `conditions.valid_until` is #252 PR C's gate on this same
+    // seam.
+    let clock = new Date();
+    const { server, connectors, evidence } = build({ now: () => clock });
+    const res = await server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      () => {
+        clock = new Date(clock.getTime() + 31_000);
+      },
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("permit_expired");
+    expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([["suppressed", "permit_expired"]]);
+    // The parameters never changed, so the digest pair holds: this record
+    // says the window closed, not that the parameters moved.
+    expect(executions[0]?.content.effective_parameter_digest).toBe(
+      executions[0]?.content.authorized_parameter_digest,
+    );
   });
 
   it("TOCTOU in the decision->commit window refuses before the connector commits", async () => {
@@ -1038,9 +1123,17 @@ d("M5 transaction-assurance tier", () => {
     const refused = first?.ok ? second : first;
     expect(refused?.refusal_reason).toBe("duplicate_suppressed");
     const executions = [...a.evidence.forMission("msn_m5"), ...b.evidence.forMission("msn_m5")].filter(
-      (e) => e.kind === "execution",
+      (e): e is ExecutionEvidence => e.kind === "execution",
     );
-    expect(executions).toHaveLength(1);
+    // Exactly one COMPLETED disposition: one effect. The loser now carries its
+    // own suppressed record (issue #786; it used to carry none at all),
+    // naming the operation identity whose single claim was already held. Its
+    // own permit is a different evaluation identifier, so this is not
+    // `permit_consumed`.
+    expect(executions.filter((e) => e.content.outcome === "completed")).toHaveLength(1);
+    expect(executions.filter((e) => e.content.outcome === "suppressed").map((e) => e.content.error)).toEqual([
+      "operation_already_claimed",
+    ]);
   });
 
   it("fails closed when the consumption store is unavailable", async () => {
@@ -1063,7 +1156,7 @@ d("M5 transaction-assurance tier", () => {
         },
       },
     };
-    const { server, connectors, payments } = build({
+    const { server, connectors, payments, evidence } = build({
       challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
       txnTokenJwks: { keys: [asTxnPub] },
       asIssuer: AS_ISSUER,
@@ -1092,6 +1185,14 @@ d("M5 transaction-assurance tier", () => {
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("consumption_unavailable");
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
+    // @spec runtime-evidence#execution-evidence-object (#786): this exit used
+    // to advance the operation to `abandoned` and record nothing at all. It
+    // is post-permit, so it carries a suppressed disposition naming the
+    // unreachable consumption store.
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["suppressed", "consumption_unavailable"],
+    ]);
   });
 });
 
@@ -1146,7 +1247,7 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
   }
 
   it("resumes its own interrupted request instead of reporting a false duplicate", async () => {
-    const { server, connectors, stores, txnToken, txn, opKey } = await challenged();
+    const { server, connectors, evidence, stores, txnToken, txn, opKey } = await challenged();
 
     // The crash: the single use was taken and the effect landed, but the
     // process died before the consumption row could record that. The row says
@@ -1182,10 +1283,18 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
     );
     expect(again.ok).toBe(false);
     expect(again.refusal_reason).toBe("duplicate_suppressed");
+    // That last refusal is PRE-decision (`verifyChallengedOperation` settles
+    // it before any decision request), so it emits no Execution Evidence, and
+    // the completed record from the resumed request stands untouched. The
+    // pre-decision seam records nothing at all here: #594 W4-3's scope,
+    // flagged rather than fixed by #786.
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.filter((e) => e.content.outcome === "completed")).toHaveLength(1);
+    expect(executions.filter((e) => e.content.outcome === "suppressed")).toHaveLength(0);
   });
 
   it("refuses a DIFFERENT operation presented under an already-consumed txn", async () => {
-    const { server, connectors, stores, txnToken, txn } = await challenged();
+    const { server, connectors, evidence, stores, txnToken, txn } = await challenged();
     // Someone else's operation holds the single use for this txn.
     expect(stores.consumption.consume(CANONICAL_RESOURCE, txn, "op:msn_m5:some:other:sha-256:x").first).toBe(
       true,
@@ -1197,8 +1306,17 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
       await credentialFor(server, txnToken),
     );
     expect(res.ok).toBe(false);
+    // @spec txn-authorization#failure-semantics: `duplicate_suppressed` is the
+    // reason this refusal carries on the WIRE. It is not the signed error, and
+    // it is not the PDP denial reason of the same name: the signed record
+    // names a single-use identifier turned to a different operation identity
+    // (#786).
     expect(res.refusal_reason).toBe("duplicate_suppressed");
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["suppressed", "operation_identity_conflict"],
+    ]);
     // The stored consumption is untouched: the refusal does not adopt it.
     expect(stores.consumption.get(CANONICAL_RESOURCE, txn)?.state).toBe("consumed");
   });
