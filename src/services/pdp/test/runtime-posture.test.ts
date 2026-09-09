@@ -28,7 +28,23 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
     expect(published.remote_decision_channels).toEqual([]);
     expect(published.state_source.replication).toBe("none");
     expect(published.state_source.break_glass).toBe("absent");
-    expect(published.claims).toBeUndefined();
+    // @spec runtime#execution-reverification, runtime#runtime-conformance
+    // (#252 C) — this deployment now CLAIMS the transaction-assurance tier,
+    // because it publishes that tier's execution lease maximum and the
+    // executing PEP caps its own lease by the published number. The claim was
+    // previously absent, so this expectation moved with the declaration it
+    // describes rather than being relaxed: the statement asserts exactly the
+    // one tier whose declaration it carries.
+    expect(published.claims).toEqual(["transaction_assurance"]);
+    for (const declaration of published.extensions.transaction_assurance) {
+      expect(published.mediated_scope.action_classes).toContain(declaration.mediated_class_or_scope);
+      expect(published.mediated_scope.pep_locations).toContain(declaration.execution_lease_consumer);
+      expect(declaration.execution_lease_max_seconds).toBeGreaterThan(0);
+      // The idempotency claim domain names the component that HOLDS the claim
+      // and says the PDP claims none, so the statement cannot be read as
+      // asserting a PDP-side domain this deployment does not implement.
+      expect(declaration.idempotency_claim_domain).toContain("PDP claims no idempotency-key domain");
+    }
   });
 
   it("resolves every declared class to a window or to no active freshness, and an undeclared label to neither", () => {

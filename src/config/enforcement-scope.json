@@ -29,5 +29,22 @@
     "break_glass": "absent"
   },
   "remote_decision_channels": [],
-  "record_integrity_mechanism": "emitter-signed append-only runtime evidence; full Evidence capability not claimed"
+  "record_integrity_mechanism": "emitter-signed append-only runtime evidence; full Evidence capability not claimed",
+  "claims": ["transaction_assurance"],
+  "extensions": {
+    "transaction_assurance": [
+      {
+        "mediated_class_or_scope": "irreversible_action",
+        "idempotency_claim_domain": "resource-enforced by mcp-payments-pep, keyed on (mission, action, action_phase, parameter_digest); this deployment's PDP claims no idempotency-key domain",
+        "execution_lease_max_seconds": 30,
+        "execution_lease_consumer": "mcp-payments-pep"
+      },
+      {
+        "mediated_class_or_scope": "external_commitment",
+        "idempotency_claim_domain": "resource-enforced by mcp-payments-pep, keyed on (mission, action, action_phase, parameter_digest); this deployment's PDP claims no idempotency-key domain",
+        "execution_lease_max_seconds": 30,
+        "execution_lease_consumer": "mcp-payments-pep"
+      }
+    ]
+  }
 }
