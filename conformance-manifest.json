@@ -10851,15 +10851,9 @@
     "normative": "the PDP's idempotency-scope claim and the PEP's use-limited permit consumption are each a single linearizable operation; two replicas never both succeed in claiming or consuming the same key"
    },
    "level": "concurrency",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously",
-     "level": "concurrency",
-     "surface": "resource-operation"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously\", a PEP/resource-side test, which is not a witness for this row's PDP role. What that test establishes is single-winner consumption of a resource-issued txn across two replicas over one shared store; what this row demands, per its role, is the PDP's atomic claim of the (idempotency scope, `idempotency_key`) pair as a single linearizable operation before permit issuance. No PDP-side claim store exists: src/services/pdp has none, and enforcement-scope.ts:78's transaction_assurance/idempotency_claim_domain field is declared but never read. The misattribution arose because the quoted `text` is the sentence from the Permit replay prevention (PEP) paragraph while the row carries role PDP, and the observation conjoins both duties; the PEP conjunct is separately traced at runtime.single-use.store-durability-and-multi-instance-sharing (PEP, tested) and the resource-side conjunct at txn-authorization.consumption.linearizable-cross-replica and txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation moves nowhere: it already stands under the roles it proves. Nothing PDP-side is witnessed, so todo, not partial."
   },
   {
    "id": "runtime.idempotency.scope-published-and-no-volatile-members",
@@ -10900,15 +10894,9 @@
     "normative": "for the high-consequence classes, the deployment retains a durable consumed-key tombstone for at least its declared idempotency horizon, a claim against it inside that horizon is refused, never treated as fresh, and outside the high-consequence classes the deployment publishes which retention posture applies"
    },
    "level": "concurrency",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
-     "level": "concurrency",
-     "surface": "resource-operation"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn\", a PEP/resource-side test, which is not a witness for this row's PDP role. That test asserts that a different operation presented under an in-window consumed txn is refused with duplicate_suppressed and leaves the stored consumption record untouched. It witnesses no part of this row: there is no durable consumed-key tombstone retained for a declared idempotency horizon, no PDP claim evaluated against one, and no published retention posture for keys outside the high-consequence classes. The consumed-txn refusal it does prove is traced at txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation stays where it belongs and is not carried here. The PDP-side claim store this row presupposes is unbuilt (src/services/pdp has no claim store; enforcement-scope.ts:78's idempotency_claim_domain field is declared but never read)."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -10978,7 +10966,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "No Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against (grep -rln \"Enforcement Scope Statement\" src finds only comments referencing the concept), the same gap runtime.conformance.no-claim-outside-declared-scope already records. Nothing to assert without fabricating the artifact this row presupposes; not specific to #648."
+   "notes": "Corrected (#302): an Enforcement Scope Statement artifact does exist, src/config/enforcement-scope.json, loaded and validated by src/services/pdp/src/enforcement-scope.ts (validateEnforcementScopeStatement, tested in src/services/pdp/test/enforcement-scope.test.ts), and the claim-domain member is declared at enforcement-scope.ts:78 as transaction_assurance[].idempotency_claim_domain. The row stays todo because none of that names an Exact claim domain: the artifact declares no claims or extensions at all, so it carries no transaction_assurance entry, nothing reads the field, and no test asserts a declaration per mediated action class or idempotency scope. Not specific to #648."
   },
   {
    "id": "runtime.idempotency.reversible-write-pep-reserve-and-retain",
