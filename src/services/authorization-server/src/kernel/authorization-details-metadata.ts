@@ -11,7 +11,7 @@
  * endpoint actually publishes.
  */
 
-import type { JsonValue } from "@mission/core";
+import { SUPPORTED_CONSTRAINT_KEYS, type JsonValue } from "@mission/core";
 
 /** @spec mission#authorization-derivation — the sole type this AS derives. */
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
@@ -31,12 +31,17 @@ export interface AuthorizationDetailsTypeMetadata {
  * `mission_resource_access` authorization_details object (the type's
  * normative definition remains {{type-registration}}; this is its
  * machine-readable form). `constraints` covers the Common Constraints
- * structure (@spec mission#common-constraints): `max_amount`/`vendors` are
- * shaped explicitly (the two this derivation engine narrows, see derive.ts);
- * other registered Common Constraint keys are left open
- * (`additionalProperties: true`) since the schema describes wire SHAPE, not
- * which keys this engine implements narrowing for. draft-zehavi §5: the
- * schema "MUST restrict the `type` attribute" — done via `const` below.
+ * structure (@spec mission#common-constraints), its member set CLOSED
+ * (`additionalProperties: false`) to exactly {@link SUPPORTED_CONSTRAINT_KEYS}
+ * (issue #784): `max_amount`, `requires_action_approval` and `terminal_when`
+ * are the Common Constraints this derivation engine narrows (see derive.ts),
+ * and `vendors` is a deployment-defined key this engine also narrows though
+ * the common registry does not carry it. A `constraints` member outside that
+ * set is refused here rather than admitted and then silently dropped by
+ * derivation's fixed four-key rebuild: this schema describes exactly what the
+ * engine supports, not a superset of registered-but-unimplemented keys.
+ * draft-zehavi §5: the schema "MUST restrict the `type` attribute" — done via
+ * `const` below.
  */
 export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -58,6 +63,9 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           additionalProperties: false,
         },
         vendors: { type: "array", items: { type: "string" } },
+        // @spec txn-authorization#applicability — monotonic-OR gate; `false`
+        // is equivalent to omission (derive.ts).
+        requires_action_approval: { type: "boolean" },
         // @spec discharge#terminal-when — the completion-condition constraint. Its
         // member set is CLOSED (additionalProperties: false): condition identity
         // is byte equality of the canonical form, which `condition_digest`
@@ -73,7 +81,10 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           },
         },
       },
-      additionalProperties: true,
+      // @spec mission#derivation-policy (issue #784) — CLOSED to
+      // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,
+      // not admitted then dropped at derivation.
+      additionalProperties: false,
     },
     delegation: {
       type: "object",
@@ -181,6 +192,20 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       return "constraints must be an object";
     }
     const c = e.constraints as Record<string, unknown>;
+    // @spec mission#derivation-policy (issue #784) — the member set is CLOSED
+    // to SUPPORTED_CONSTRAINT_KEYS (the SAME declaration {@link
+    // isAuthorityEntry} enforces at the config-load boundary): an entry
+    // carrying a constraint this engine cannot compare is refused here,
+    // never admitted and then silently dropped by derivation's fixed
+    // four-key rebuild.
+    for (const key of Object.keys(c)) {
+      if (!(SUPPORTED_CONSTRAINT_KEYS as readonly string[]).includes(key)) {
+        return `constraints carries unsupported key '${key}'`;
+      }
+    }
+    if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean") {
+      return "constraints.requires_action_approval must be a boolean";
+    }
     if (c.max_amount !== undefined) {
       if (
         c.max_amount === null ||
