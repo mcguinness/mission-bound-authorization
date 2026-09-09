@@ -488,14 +488,14 @@ export interface MissionRecord {
 }
 
 /**
- * @spec status-list#status-list — the shared lifecycle-commit event. The kernel
- * fires it from its four real commit funnels (`setState`,
- * `supersedeOnRedemption`, `insertRecord`, `contain`) so subscribers observe
- * every committed transition exactly once: the Status List republisher today,
- * Mission Signals next. The activating insert carries `version: 1` and no
- * `prior_state`. A contain commit is metadata-only: `prior_state` EQUALS
- * `state` (the version still increments), so the fan-out propagates the
- * narrowed authority with no new channels.
+ * @spec status-list#status-list, control-plane#fanout — the shared
+ * lifecycle-commit event. Every commit funnel (`insertRecord`, `setState`,
+ * `supersedeInCallerTx`, `contain`, the discharge latch) enqueues one on the
+ * kernel's durable outbox inside its own state transaction, and publication
+ * delivers it after that commit, at least once. The activating insert carries
+ * `version: 1` and no `prior_state`. A contain commit is metadata-only:
+ * `prior_state` EQUALS `state` (the version still increments), so the fan-out
+ * propagates the narrowed authority with no new channels.
  */
 export interface LifecycleCommit {
   id: string;
@@ -507,11 +507,13 @@ export interface LifecycleCommit {
   expires_at: string;
   successor?: string;
   /**
-   * @spec signals#delivery — stable event identity for replayable emission:
-   * set when the commit is delivered from the durable finalization outbox,
-   * so a replay is a redelivery of the SAME event (the Signals SET reuses
-   * it as `jti`, per the same-`jti` redelivery rule), never a newly
-   * asserted one. Absent on ordinary direct commits.
+   * @spec signals#delivery, control-plane#fanout — stable event identity for
+   * replayable emission, assigned by the kernel INSIDE the state write's
+   * transaction for every commit kind, so a replay is a redelivery of the SAME
+   * event (the Signals SET reuses it as `jti`, per the same-`jti` redelivery
+   * rule), never a newly asserted one. Optional on this type only because a
+   * consumer-side fixture may build a commit by hand; the durable outbox
+   * requires it ({@link PersistedLifecycleCommit}).
    */
   event_id?: string;
   /**
@@ -552,6 +554,51 @@ export interface LifecycleCommit {
    * legible to a subscriber that only compares `state`.
    */
   containment_version?: number;
+  /**
+   * @spec control-plane#fanout — the Mission's own `created_at`, carried so a
+   * subscriber acting on the ACTIVATING commit consumes the payload instead of
+   * re-reading live state. A record read at delivery time can have advanced (or
+   * be gone) after a restart, which is what makes a live read replay-unsafe.
+   * Set by the kernel on every commit; not a wire member (the Signals SET
+   * builder copies an explicit member list).
+   */
+  created_at?: string;
+  /**
+   * @spec control-plane#fanout — the Mission's `client_id`, carried for the
+   * same reason as {@link LifecycleCommit.created_at}. Not a wire member.
+   */
+  client_id?: string;
+}
+
+/**
+ * @spec control-plane#fanout — a commit as the durable outbox holds it: the
+ * event identity is REQUIRED, minted inside the state write's transaction. It
+ * is what makes a redelivery the same event, so the Signals SET reuses one
+ * `jti` across attempts and its `UNIQUE(event_id, audience)` job key makes a
+ * replay a no-op.
+ */
+export type PersistedLifecycleCommit = LifecycleCommit & { event_id: string };
+
+/**
+ * @spec control-plane#fanout — an ACTIVATING commit whose payload carries the
+ * creation facts a rooting subscriber needs. The kernel sets both on every
+ * commit; the guard exists so a hand-built commit cannot silently root nothing.
+ */
+export type ActivatingLifecycleCommit = PersistedLifecycleCommit & {
+  created_at: string;
+  client_id: string;
+};
+
+export function isActivatingCommit(
+  commit: LifecycleCommit,
+): commit is ActivatingLifecycleCommit {
+  return (
+    commit.version === 1 &&
+    commit.prior_state === undefined &&
+    commit.state === "active" &&
+    typeof commit.created_at === "string" &&
+    typeof commit.client_id === "string"
+  );
 }
 
 /**

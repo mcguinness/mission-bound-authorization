@@ -12,7 +12,12 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { LifecycleCommit } from "@mission/authorization-server";
+import {
+  type LifecycleCommit,
+  MissionKernel,
+  validateMissionIntent,
+} from "@mission/authorization-server";
+import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import type { Database } from "@mission/store";
 import { decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, describe, expect, it, vi } from "vitest";
@@ -379,5 +384,81 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     });
     expect(emitter.pending()).toBe(0);
     emitter.close();
+  });
+  it("carries ONE jti across a kernel redelivery of an ordinary lifecycle commit", async () => {
+    // @spec control-plane#fanout — the kernel assigns the event identity inside
+    // the state write's transaction for EVERY commit kind, not only the
+    // expansion finalization outbox. Without it, a redelivered ordinary commit
+    // reached this emitter with no identity, got a fresh one, and became a NEW
+    // SET with a new `jti`, defeating both the same-event redelivery rule and
+    // the UNIQUE(event_id, audience) no-op.
+    const { privateKey, jwks } = await statusKeyPair();
+    const emitter = new MissionSignalEmitter({
+      key: privateKey,
+      kid: "as-status",
+      consumers: [{ audience: AUD }],
+    });
+    const receiver = makeReceiver(jwks);
+    const seen: string[] = [];
+    emitter.onDeliver(AUD, async (set) => {
+      seen.push(set);
+      await receiver.verifyAndApply(set);
+    });
+
+    const resource = "https://payments.test/mcp";
+    const policy = {
+      policy_version: "redelivery-test-v1",
+      ceiling: [{ type: "mission_resource_access", resource, actions: ["payments:invoice.read"] }],
+    };
+    const drop = { publish: true };
+    const kernel = new MissionKernel({
+      issuer: ISS,
+      policy: policy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: privateKey,
+      statusKid: "as-status",
+      now: () => new Date(T0),
+      onLifecycleCommit: (commit) => {
+        if (drop.publish) throw new Error("failpoint: publication lost");
+        emitter.onCommit(commit);
+      },
+    });
+    // Process loss between the state commit and its publication.
+    expect(() =>
+      kernel.approve({
+        intent: validateMissionIntent(
+          JSON.stringify({
+            goal: "Read approved invoices",
+            target_resources: [resource],
+            expires_at: "2027-01-01T00:00:00Z",
+          }),
+        ),
+        subject: { iss: ISS, sub: "alice" },
+        approver: { iss: ISS, sub: "bob" },
+        clientId: "ap-agent",
+        approvalEventId: "apev-redelivery-1",
+      }),
+    ).toThrow("publication lost");
+    const persistedEventId = (
+      kernel.db.prepare("SELECT event_id FROM lifecycle_events WHERE published = 0").get() as {
+        event_id: string;
+      }
+    ).event_id;
+    const missionId = (kernel.db.prepare("SELECT id FROM missions").get() as { id: string }).id;
+
+    drop.publish = false;
+    kernel.publishPendingCommits();
+    await emitter.drain();
+    // Force a second redelivery of the same committed event.
+    kernel.db.prepare("UPDATE lifecycle_events SET published = 0").run();
+    kernel.publishPendingCommits();
+    await emitter.drain();
+
+    expect(seen).toHaveLength(1);
+    expect(decodeJwt(seen[0] ?? "").jti).toBe(persistedEventId);
+    expect(receiver.viewState(missionId)?.state).toBe("active");
+    expect(emitter.pending()).toBe(0);
+    emitter.close();
+    kernel.db.close();
   });
 });
