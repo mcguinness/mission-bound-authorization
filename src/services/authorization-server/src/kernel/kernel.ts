@@ -72,6 +72,11 @@ import {
   DischargeEventStore,
   type DischargeEventKey,
 } from "./lifecycle-idempotency.js";
+import {
+  type DerivationReservation,
+  type DerivationReservationResult,
+  DerivationReservationStore,
+} from "./derivation-reservations.js";
 import { type DurableCommitSubscriber, LifecycleOutbox } from "./lifecycle-outbox.js";
 import {
   DEFAULT_AUDIT_RETENTION_S,
@@ -175,6 +180,13 @@ CREATE TABLE IF NOT EXISTS missions (
 `;
 
 export class LifecycleConflictError extends Error {}
+/**
+ * @spec control-plane#fresh-observation — raised only under the OPTIONAL
+ * `strictObservationWatermark` policy: state advanced between the observation
+ * point and delivery, and this deployment chose refusal over delivering a
+ * still-valid older observation.
+ */
+export class ObservationWatermarkError extends Error {}
 export class GateError extends Error {
   constructor(
     readonly reason:
@@ -227,6 +239,51 @@ export interface ApproveInput {
    * member absent.
    */
   capabilityResolution?: CapabilitySourceResolution[];
+}
+
+/**
+ * @spec control-plane#fresh-observation — the request-scoped inputs a signed
+ * state observation is taken for.
+ */
+export interface StatusObservationOptions {
+  audience?: string;
+  requester: string;
+  nonce?: string;
+  freshnessSeconds?: number;
+  /**
+   * @spec discharge#discharge-result — the `discharge_result` object a
+   * `discharge` delivery's response carries as a SIBLING of `mission` in
+   * this same envelope. Absent on every other request, so the Status
+   * response shape is unchanged for them.
+   */
+  dischargeResult?: DischargeResult;
+}
+
+/**
+ * @spec control-plane#fresh-observation — the committed point an observation
+ * was taken at: the Mission's state `version` and the kernel's durable
+ * lifecycle-commit sequence. Both are monotonic, so a later value means state
+ * moved after the observation, never that the observation moved.
+ */
+export interface ObservationWatermark {
+  version: number;
+  commit: number;
+}
+
+/**
+ * An authoritative state observation, complete except for its signature. Its
+ * timestamps belong to the observation point and are never restamped: {@link
+ * MissionKernel.signObservation} signs exactly these bytes, and a response
+ * recovered from a retained observation carries the same `iat` and `exp` as
+ * the original.
+ */
+export interface StatusObservation {
+  mission_id: string;
+  audience: string;
+  iat: number;
+  exp: number;
+  watermark: ObservationWatermark;
+  payload: Record<string, unknown>;
 }
 
 export interface KernelOptions {
@@ -326,6 +383,17 @@ export interface KernelOptions {
    * deliveries. Tests shorten it; production takes the defaults.
    */
   outboxRetry?: { baseMs?: number; capMs?: number; maxAttempts?: number };
+  /**
+   * @spec control-plane#fresh-observation — OPTIONAL stricter observation
+   * policy, default off. When set, a signed state observation is refused
+   * ({@link ObservationWatermarkError}) if any commit landed between its
+   * observation point and its delivery. The invariant itself permits
+   * delivering an authenticated authoritative observation inside its own
+   * validity, so this is a deployment choice, not a defect fix: it trades
+   * churn on a busy Mission, and reader starvation under sustained writes,
+   * for a narrower delivery window.
+   */
+  strictObservationWatermark?: boolean;
 }
 
 export class MissionKernel {
@@ -356,6 +424,13 @@ export class MissionKernel {
    * state write it describes.
    */
   readonly outbox: LifecycleOutbox;
+  /**
+   * @spec control-plane#serialization — the derivation counter's reservation
+   * ledger: durable operation and artifact identity for every counted
+   * derivation, with named recovery states for the window between the count
+   * and the artifact's acceptance.
+   */
+  readonly derivationReservations: DerivationReservationStore;
   /**
    * @spec control-plane#tombstones — the terminal-state tombstones, on this
    * kernel's database (rollback resistance and identifier nonreuse are issuer
@@ -425,6 +500,7 @@ export class MissionKernel {
       now: this.now,
       retentionSeconds: dischargeRetentionSeconds,
     });
+    this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
     this.dischargePins = new DischargeMappingPinStore(this.db);
   }
 
@@ -1992,6 +2068,20 @@ export class MissionKernel {
    * count on success.
    */
   gateDerivation(id: string): MissionRecord {
+    this.gateDerivable(id);
+    return this.countDerivationInCallerTx(id);
+  }
+
+  /**
+   * The state half of the derivation gate: the expiry clock, the lineage walk
+   * and the effective-set gate, with NO counter write.
+   *
+   * Deliberately NOT inside the counter's transaction. The expiry clock
+   * MATERIALIZES a narrowing transition, and a refusal must never roll that
+   * back: fail closed means an expiry the gate discovered stays committed even
+   * though the operation it refused did not.
+   */
+  private gateDerivable(id: string): MissionRecord {
     const record = this.gateActiveLineage(id);
     // Effective Authority Set gate (#589): token derivation draws on the
     // EFFECTIVE set, so a Mission with nothing left in its current effective
@@ -2016,9 +2106,21 @@ export class MissionKernel {
       }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
-    // @spec control-plane#serialization — count admission is conditional in
-    // the write. Callers still must couple it to artifact issuance; this CAS
-    // alone does not complete that broader atomic domain.
+    return record;
+  }
+
+  /**
+   * @spec control-plane#serialization — the counter write, conditional on the
+   * STORED count so a caller's stale snapshot can never overshoot the cap. Runs
+   * in the caller's transaction when there is one, so a reservation ({@link
+   * reserveDerivation}) commits with the count it pays for.
+   *
+   * A caller with a durable operation identity couples the count to its
+   * artifact through {@link reserveDerivation}; a caller without one (the
+   * synchronous provider token hook) leaves the count uncoupled, and this
+   * conditional write alone does not complete that broader atomic domain.
+   */
+  private countDerivationInCallerTx(id: string): MissionRecord {
     const changed = this.db
       .prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? AND (derivation_limit IS NULL OR derivation_count < derivation_limit)")
       .run(id);
@@ -2026,6 +2128,77 @@ export class MissionKernel {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
     return this.mustGet(id);
+  }
+
+  /**
+   * @spec control-plane#serialization — admit one derivation AGAINST A DURABLE
+   * OPERATION IDENTITY: the counter increment and the reservation that names
+   * the operation and its artifact commit in one transaction.
+   *
+   * A repeat of a recorded operation identity is recognized BEFORE the state
+   * and cap gates and replays that reservation, so a retry never counts twice
+   * and never converts a committed operation into a refusal. Callers release
+   * the reservation ({@link releaseDerivation}) when the artifact is accepted;
+   * an unreleased reservation is ambiguous, never refunded, and settled only by
+   * {@link reconcileDerivation}.
+   */
+  reserveDerivation(
+    id: string,
+    operation: { operationId: string; artifactId?: string },
+  ): { record: MissionRecord; reservation: DerivationReservationResult } {
+    const current = this.mustGet(id);
+    const recorded = this.derivationReservations.find(current.issuer, id, operation.operationId);
+    if (recorded) {
+      return { record: current, reservation: { kind: "replay", reservation: recorded } };
+    }
+    // The state gate runs BEFORE the transaction opens, for the same reason
+    // {@link gateDerivable} is not inside it: a refusal must not roll back an
+    // expiry the gate materialized.
+    this.gateDerivable(id);
+    return withTransaction(this.db, () => {
+      const record = this.countDerivationInCallerTx(id);
+      const reservation = this.derivationReservations.reserveInCallerTx({
+        issuer: record.issuer,
+        missionId: record.id,
+        operationId: operation.operationId,
+        ...(operation.artifactId ? { artifactId: operation.artifactId } : {}),
+      });
+      return { record, reservation };
+    });
+  }
+
+  /**
+   * @spec control-plane#serialization — the artifact was accepted: settle the
+   * reservation the count paid for.
+   */
+  releaseDerivation(
+    reservationId: string,
+    accepted: { artifactId: string; completion?: string },
+  ): void {
+    this.derivationReservations.release(reservationId, accepted);
+  }
+
+  /**
+   * @spec control-plane#serialization — settle an ambiguous reservation from an
+   * AUTHORITATIVE observation of the issuance outcome. Only an authoritative
+   * non-acceptance returns a counted derivation.
+   */
+  reconcileDerivation(
+    reservationId: string,
+    observation: { accepted: boolean; authority: string; artifactId?: string; completion?: string },
+  ): boolean {
+    return this.derivationReservations.reconcile(reservationId, observation);
+  }
+
+  /**
+   * @spec control-plane#serialization — boot recovery for the reservation
+   * ledger. Reservations this process left unreleased become `unacknowledged`
+   * and KEEP their count: a missing local acknowledgement is not evidence that
+   * no artifact was accepted. Returns the rows still owed an authoritative
+   * answer.
+   */
+  recoverDerivationReservations(): DerivationReservation[] {
+    return this.derivationReservations.recoverAtBoot();
   }
 
   /**
@@ -2194,20 +2367,39 @@ export class MissionKernel {
    */
   async signedStatus(
     id: string,
-    opts: {
-      audience?: string;
-      requester: string;
-      nonce?: string;
-      freshnessSeconds?: number;
-      /**
-       * @spec discharge#discharge-result — the `discharge_result` object a
-       * `discharge` delivery's response carries as a SIBLING of `mission` in
-       * this same envelope. Absent on every other request, so the Status
-       * response shape is unchanged for them.
-       */
-      dischargeResult?: DischargeResult;
-    },
+    opts: StatusObservationOptions,
   ): Promise<string> {
+    return this.signObservation(this.statusObservation(id, opts));
+  }
+
+  /**
+   * @spec control-plane#fresh-observation — the OBSERVATION POINT of a signed
+   * state observation: one authoritative transactional read of the stored row,
+   * the expiry clock materialized inside that same transaction, and the clock
+   * read once, before the payload is built. Everything the response asserts
+   * about state is fixed here, and {@link signObservation} adds only a
+   * signature.
+   *
+   * The captured `watermark` is the justification the invariant asks for: the
+   * `(version, commit)` pair the observation was taken at, where `commit` is
+   * the kernel's durable lifecycle-commit sequence. A later commit advances the
+   * watermark; it does NOT re-date this observation, whose `iat`, `exp` and
+   * `fresh_until` stay tied to the point they were taken at. That is what makes
+   * a delayed delivery an OLDER observation rather than a manufactured one, and
+   * it is why the strict policy below is a deployment choice rather than a
+   * correctness requirement.
+   */
+  statusObservation(id: string, opts: StatusObservationOptions): StatusObservation {
+    return withTransaction(this.db, () => this.observeInCallerTx(id, opts));
+  }
+
+  /**
+   * The observation body, for a caller that already holds the kernel
+   * transaction: the committed operation and its observation are then one
+   * atomic domain, so no response can report an outcome that did not commit
+   * and no committed outcome can be reported at a state it never had.
+   */
+  observeInCallerTx(id: string, opts: StatusObservationOptions): StatusObservation {
     const record = this.applyExpiry(this.mustGet(id));
     const nowS = Math.floor(this.now().getTime() / 1000);
     const freshness = Math.min(
@@ -2247,13 +2439,59 @@ export class MissionKernel {
     if (opts.nonce) payload.nonce = opts.nonce;
     if (scoped) payload.authorization_details = scoped;
     if (opts.dischargeResult) payload.discharge_result = opts.dischargeResult;
-    return new SignJWT(payload)
+    return {
+      mission_id: record.id,
+      audience: opts.audience ?? opts.requester,
+      iat: nowS,
+      exp: nowS + freshness,
+      watermark: { version: record.version, commit: this.outbox.commitSequence() },
+      payload,
+    };
+  }
+
+  /**
+   * The kernel's current observation watermark for a Mission: the committed
+   * `(version, commit)` pair an observation taken now would carry.
+   */
+  observationWatermark(id: string): ObservationWatermark {
+    return {
+      version: this.mustGet(id).version,
+      commit: this.outbox.commitSequence(),
+    };
+  }
+
+  /**
+   * @spec control-plane#fresh-observation — sign an observation WITHOUT
+   * re-dating it: `iat` and `exp` come from the observation point, never from
+   * the clock at signature time, so the envelope reports the moment its state
+   * was observed. Signature validity proves producer and integrity, not
+   * recency, and this method adds no recency it did not receive.
+   *
+   * OPTIONAL STRICTER POLICY (`strictObservationWatermark`, default off). A
+   * deployment may require that no commit landed between the observation point
+   * and delivery, and refuse rather than deliver a still-valid older
+   * observation. The invariant does not require it: an authenticated
+   * authoritative observation may be delivered inside its own validity. The
+   * cost is churn on a busy Mission and, under sustained writes, starvation of
+   * the reader, so it is a declared deployment choice.
+   */
+  async signObservation(observation: StatusObservation): Promise<string> {
+    const jws = await new SignJWT(observation.payload)
       .setProtectedHeader({ alg: "ES256", kid: this.opts.statusKid, typ: "mission-status-response+jwt" })
       .setIssuer(this.opts.issuer)
-      .setAudience(opts.audience ?? opts.requester)
-      .setIssuedAt(nowS)
-      .setExpirationTime(nowS + freshness)
+      .setAudience(observation.audience)
+      .setIssuedAt(observation.iat)
+      .setExpirationTime(observation.exp)
       .sign(this.opts.statusKey);
+    if (this.opts.strictObservationWatermark) {
+      const now = this.observationWatermark(observation.mission_id);
+      if (now.version !== observation.watermark.version || now.commit !== observation.watermark.commit) {
+        throw new ObservationWatermarkError(
+          `state advanced past the observation point for ${observation.mission_id}`,
+        );
+      }
+    }
+    return jws;
   }
 
   private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {
@@ -2347,18 +2585,26 @@ export class MissionKernel {
   }
 
   /**
-   * @spec control-plane#fanout, control-plane#tombstones — boot recovery. Marks
-   * every pending delivery whose subscriber is no longer registered with the
-   * terminal `subscriber_removed` disposition, replays committed-but-unpublished
+   * @spec control-plane#fanout, control-plane#tombstones,
+   * control-plane#serialization — boot recovery. Marks every pending delivery
+   * whose subscriber is no longer registered with the terminal
+   * `subscriber_removed` disposition, replays committed-but-unpublished
    * transitions, drains runnable deliveries, prunes settled outbox rows past
-   * the composed retention horizon, and prunes tombstone DETAIL past that same
-   * horizon while keeping each identity row as the permanent nonreuse marker.
+   * the composed retention horizon, prunes tombstone DETAIL past that same
+   * horizon while keeping each identity row as the permanent nonreuse marker,
+   * and moves every unreleased derivation reservation to `unacknowledged`
+   * WITHOUT refunding its count.
    */
   async recoverAtBoot(): Promise<void> {
     this.outbox.reconcileRemovedSubscribers();
     await this.outbox.drain();
     this.outbox.pruneSettled(this.tombstones.retentionSeconds);
     this.tombstones.pruneDetails();
+    // @spec control-plane#serialization — an unreleased reservation is
+    // ambiguous, not evidence that no artifact was accepted, so recovery
+    // records the ambiguity and leaves the count spent. Only an authoritative
+    // reconciliation ({@link reconcileDerivation}) can return it.
+    this.derivationReservations.recoverAtBoot();
   }
 
   /**
