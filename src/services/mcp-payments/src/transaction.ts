@@ -79,15 +79,21 @@ export class TransactionEngine {
     opKey: string;
     missionId: string;
     action: string;
-    leaseSeconds: number;
+    /**
+     * @spec runtime#execution-reverification — the ABSOLUTE instant this
+     * attempt's lease ends, derived by the caller from the deployment's
+     * PUBLISHED maximum capped by the permit's own validity
+     * (`executionLeaseMs`). Absolute, not an interval: an interval re-anchored
+     * to the slightly later instant this method reads its own clock at would
+     * end marginally AFTER the permit's `valid_until`, which is exactly the
+     * extension of authorization a local lease must never buy.
+     *
+     * A lease end at or before now means no usable lease could be derived, so
+     * no operation row is opened and no redemption is taken.
+     */
+    leaseExpiresAtMs: number;
   }): { ok: boolean; reason?: "permit_consumed" | "operation_already_claimed" | "lease_setup_failed" } {
-    // @spec runtime#execution-reverification — the lease is derived from the
-    // deployment's PUBLISHED maximum, capped by the permit's own validity
-    // (`executionLeaseMs`). A non-finite or non-positive interval means no
-    // usable lease could be derived, so no operation row is opened and no
-    // redemption is taken: an unbounded or already-elapsed lease is never
-    // substituted for one.
-    if (!Number.isFinite(input.leaseSeconds) || input.leaseSeconds <= 0) {
+    if (!Number.isFinite(input.leaseExpiresAtMs) || input.leaseExpiresAtMs <= this.now().getTime()) {
       return { ok: false, reason: "lease_setup_failed" };
     }
     const consumed = redeemOnce(this.db, "permit_redemptions", input.opKey, this.instanceEpoch);
@@ -100,7 +106,7 @@ export class TransactionEngine {
         reason: prior?.permit_id === input.permitId ? "permit_consumed" : "operation_already_claimed",
       };
     }
-    const leaseExpires = this.now().getTime() + input.leaseSeconds * 1000;
+    const leaseExpires = input.leaseExpiresAtMs;
     this.db
       .prepare(
         "INSERT INTO operations (op_key, permit_id, mission_id, action, epoch, state, lease_expires_at) VALUES (?, ?, ?, ?, ?, 'permit_consumed', ?)",

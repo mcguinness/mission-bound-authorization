@@ -151,7 +151,12 @@ export function executionLeaseMs(input: {
   if (publishedMaxSeconds !== undefined && Number.isFinite(publishedMaxSeconds) && publishedMaxSeconds > 0) {
     bounds.push(nowMs + publishedMaxSeconds * 1000);
   }
-  if (permitValidUntilMs !== undefined && Number.isFinite(permitValidUntilMs)) bounds.push(permitValidUntilMs);
+  if (permitValidUntilMs !== undefined) {
+    // Supplied but unparseable is not the same as absent: a permit whose
+    // validity cannot be established bounds nothing, so no lease is derived.
+    if (!Number.isFinite(permitValidUntilMs)) return 0;
+    bounds.push(permitValidUntilMs);
+  }
   // No published bound and no permit validity is not a licence to run
   // unbounded: the class that requires a lease has one published (refused at
   // config load otherwise), so this is the fail-closed remainder.

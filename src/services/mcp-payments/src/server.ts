@@ -1017,15 +1017,18 @@ export class McpPaymentsServer {
     // same object `protectedResourceMetadata()` publishes) and is capped by
     // the permit's own `valid_until`. A local lease never extends
     // authorization, and no bound at either end yields no lease at all.
-    const leaseMs = executionLeaseMs({
-      nowMs: tx.engine.nowMs(),
-      publishedMaxSeconds: executionLeaseMaxSeconds(
-        this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
-        profile?.actionClass,
-      ),
-      permitValidUntilMs:
-        typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : undefined,
-    });
+    const leaseStartMs = tx.engine.nowMs();
+    const leaseExpiresAtMs =
+      leaseStartMs +
+      executionLeaseMs({
+        nowMs: leaseStartMs,
+        publishedMaxSeconds: executionLeaseMaxSeconds(
+          this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
+          profile?.actionClass,
+        ),
+        permitValidUntilMs:
+          typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : undefined,
+      });
 
     // Single-use permit redemption (D28). @spec
     // runtime-evidence#execution-evidence-object (#786): the two failures are
@@ -1042,7 +1045,7 @@ export class McpPaymentsServer {
       opKey,
       missionId: resolvedMission.id,
       action: res.effective.action,
-      leaseSeconds: leaseMs / 1000,
+      leaseExpiresAtMs,
     });
     if (!redeem.ok) {
       // A lease that could not be set up took no redemption and opened no
