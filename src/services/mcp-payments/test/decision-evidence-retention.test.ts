@@ -292,6 +292,13 @@ describe("a permit the PDP did not evidence is refused, never executed (#741)", 
     expect(evidence.all().some((e) => e.kind === "decision")).toBe(false);
     const refusal = evidence.all().find((e) => e.kind === "refusal");
     expect(refusal).toBeDefined();
+    // @spec runtime-evidence#pre-decision-refusal (#786): "a response whose
+    // Decision Evidence the enforcing component could not verify is not a
+    // decision that component obtained", so this is a PRE-decision Refusal
+    // Record carrying the enumerated value, not a disposition of a permit
+    // that was never accepted.
+    expect(refusal?.kind === "refusal" && refusal.content.denial_reason).toBe("decision_evidence_unverifiable");
+    expect(evidence.all().some((e) => e.kind === "execution")).toBe(false);
   });
 
   it("permits and retains when the same decision IS evidenced: the refusal above is the missing record, not the fixture", async () => {

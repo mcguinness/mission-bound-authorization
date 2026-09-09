@@ -760,18 +760,34 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
+    // @spec runtime-evidence#execution-evidence-object (#786): the permit's
+    // own disposition context, built by the PEP after its Decision Evidence
+    // was retained. Absent on a permit is unreachable; fail closed.
+    const attempt = res.attempt;
+    if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
     beforeReverify?.();
-    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, TOOL_ACTIONS[tool]?.action ?? tool))) {
-      return { ok: false, refusal_reason: "capability_source_unresolvable" };
-    }
+    const capability = await this.deps.pep.reverifyCapability(
+      res.capabilitySnapshot,
+      token,
+      TOOL_ACTIONS[tool]?.action ?? tool,
+      attempt,
+    );
+    if (!capability.ok) return { ok: false, refusal_reason: capability.error };
     if (res.listEffective) {
       // @spec runtime#read-binding: reverify the bound list read's
       // normalized parameters immediately before execution, exactly as
       // callWriteTool/callTransactionTool already do for a write.
       const digest = permitConditions(res.decision)?.parameter_digest as string | undefined;
-      if (!digest || !(await this.deps.pep.reverifyList(res.listEffective, digest, token))) {
+      if (!digest) {
+        // A bound read whose permit carries no digest condition binds
+        // nothing, so the PEP cannot confirm the parameters it is about to
+        // use are the ones authorized: the same parameter-binding failure,
+        // refused rather than executed on an unbound scope.
+        await this.deps.pep.suppressExecution(attempt, "parameter_mismatch");
         return { ok: false, refusal_reason: "parameter_mismatch" };
       }
+      const bound = await this.deps.pep.reverifyList(res.listEffective, digest, token, attempt);
+      if (!bound.ok) return { ok: false, refusal_reason: bound.error };
     }
     return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
   }
@@ -804,16 +820,21 @@ export class McpPaymentsServer {
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
+    const attempt = res.attempt;
+    if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
     beforeReverify?.();
-    // A moved catalog snapshot is its own refusal, not a parameter mismatch:
-    // check it first so the caller-visible reason matches the Refusal Record.
-    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, res.effective.action))) {
-      return { ok: false, refusal_reason: "capability_source_unresolvable" };
-    }
+    // A moved catalog snapshot is its own error, not a parameter mismatch:
+    // check it first so the caller-visible reason matches the record.
+    const capability = await this.deps.pep.reverifyCapability(
+      res.capabilitySnapshot,
+      token,
+      res.effective.action,
+      attempt,
+    );
+    if (!capability.ok) return { ok: false, refusal_reason: capability.error };
     const digest = permitConditions(res.decision)?.parameter_digest as string;
-    if (!(await this.deps.pep.reverify(res.effective, digest, token))) {
-      return { ok: false, refusal_reason: "parameter_mismatch" };
-    }
+    const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
+    if (!bound.ok) return { ok: false, refusal_reason: bound.error };
     return { ok: true, result: this.execute(tool, args) };
   }
 
@@ -877,8 +898,19 @@ export class McpPaymentsServer {
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const permitId = res.decision.context.decision_id as string;
     const opKey = operationKey(resolvedMission.id, res.effective.action, digest);
+    const attempt = res.attempt;
+    if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
 
-    // Single-use permit redemption (D28): replay -> permit_consumed refusal.
+    // Single-use permit redemption (D28). @spec
+    // runtime-evidence#execution-evidence-object (#786): the two failures are
+    // distinct records. Re-presenting the SAME evaluation identifier is
+    // `permit_consumed`; a fresh permit for an operation identity already
+    // claimed is `operation_already_claimed`. The caller-visible diagnostic
+    // stays `permit_consumed` for both: the operation was already claimed
+    // either way, and only the signed record needs the distinction. No
+    // `advance` here, deliberately: the operation row under this key belongs
+    // to the EARLIER attempt, and abandoning it would rewrite that attempt's
+    // state.
     const redeem = tx.engine.redeemPermit({
       permitId,
       opKey,
@@ -886,19 +918,44 @@ export class McpPaymentsServer {
       action: res.effective.action,
       leaseSeconds: 30,
     });
-    if (!redeem.ok) return { ok: false, refusal_reason: redeem.reason ?? "permit_consumed" };
+    if (!redeem.ok) {
+      await this.deps.pep.suppressExecution(
+        attempt,
+        redeem.reason === "operation_already_claimed" ? "operation_already_claimed" : "permit_consumed",
+      );
+      return { ok: false, refusal_reason: "permit_consumed" };
+    }
 
     beforeCommit?.();
 
-    // A moved catalog snapshot is its own refusal, not a parameter mismatch.
-    if (!(await this.deps.pep.reverifyCapability(res.capabilitySnapshot, token, res.effective.action))) {
+    // A moved catalog snapshot is its own error, not a parameter mismatch.
+    const capability = await this.deps.pep.reverifyCapability(
+      res.capabilitySnapshot,
+      token,
+      res.effective.action,
+      attempt,
+    );
+    if (!capability.ok) {
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: "capability_source_unresolvable" };
+      return { ok: false, refusal_reason: capability.error };
+    }
+    // The execution lease is its OWN gate with its own error. It used to sit
+    // as an `||` operand ahead of reverification, so an expired lease
+    // short-circuited: nothing was recorded and the caller was told
+    // `parameter_mismatch`, which was false. The window this gate enforces is
+    // the 30-second local lease, a bound of this deployment's own; it is not
+    // a comparison against the permit's `conditions.valid_until`, which #252
+    // PR C adds on this same seam.
+    if (!tx.engine.leaseValid(opKey)) {
+      await this.deps.pep.suppressExecution(attempt, "permit_expired");
+      tx.engine.advance(opKey, "abandoned");
+      return { ok: false, refusal_reason: "permit_expired" };
     }
     // TOCTOU re-verify inside the lease, before commit.
-    if (!tx.engine.leaseValid(opKey) || !(await this.deps.pep.reverify(res.effective, digest, token))) {
+    const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
+    if (!bound.ok) {
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: "parameter_mismatch" };
+      return { ok: false, refusal_reason: bound.error };
     }
 
     // @spec txn-authorization#offline-verification — atomic first use of the
@@ -912,6 +969,7 @@ export class McpPaymentsServer {
       try {
         outcome = this.txnConsumption.consume(CANONICAL_RESOURCE, consumedTxn, opKey);
       } catch {
+        await this.deps.pep.suppressExecution(attempt, "consumption_unavailable");
         tx.engine.advance(opKey, "abandoned");
         return { ok: false, refusal_reason: "consumption_unavailable" };
       }
@@ -920,7 +978,22 @@ export class McpPaymentsServer {
         // A DIFFERENT operation under an already-consumed txn, or a txn whose
         // effect already committed, is a replay: refused, never executed as a
         // new attempt.
+        //
+        // @spec runtime-evidence#execution-evidence-object (#786): the record
+        // names which duplicate this is. A different operation identity under
+        // the same single-use identifier is `operation_identity_conflict`; the
+        // same operation whose effect already committed is a fresh permit for
+        // an operation identity already claimed, `operation_already_claimed`.
+        // Neither is `permit_consumed`, which is reserved for re-presenting
+        // one evaluation identifier. The caller-visible diagnostic stays
+        // `duplicate_suppressed`, the reason the transaction-authorization
+        // profile mandates on the wire for this refusal, and it is NOT the
+        // PDP denial reason of the same name.
         if (prior.state === "effect_committed" || prior.opKey !== opKey) {
+          await this.deps.pep.suppressExecution(
+            attempt,
+            prior.opKey !== opKey ? "operation_identity_conflict" : "operation_already_claimed",
+          );
           tx.engine.advance(opKey, "abandoned");
           return { ok: false, refusal_reason: "duplicate_suppressed" };
         }
@@ -984,6 +1057,10 @@ export class McpPaymentsServer {
     await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
       permitId,
       opKey,
+      // One execution identity per disposition attempt, the completed
+      // disposition included (#786): an emission retry reuses it and is
+      // deduplicated rather than retained twice.
+      execution_id: attempt.executionId,
       evaluation_id: permitId,
       mission_id: resolvedMission.id,
       audience: CANONICAL_RESOURCE,

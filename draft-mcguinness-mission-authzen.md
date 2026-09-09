@@ -439,7 +439,7 @@ Batch:
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 87 conformance rows in conformance-manifest.json (15 tested, 6 partial, 66 todo).
+Implementation: 89 conformance rows in conformance-manifest.json (17 tested, 7 partial, 65 todo).
 Adopt when: The PDP speaks AuthZEN and needs the decision-contract wire mapping.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected credentials are evaluated); Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set); Mission Runtime Evidence (when the deployment claims the Runtime Evidence feature profile, rather than the Decision Base alone).
@@ -2211,6 +2211,11 @@ carrier's extensibility rule.
 | PEP-PDP channel authentication or integrity fails | Refusal Record | `channel_failure` |
 | PDP unreachable | Refusal Record | `pdp_unreachable` |
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
+| Presented credential's own authority does not cover the request, established before any decision request | Refusal Record | `credential_authority_insufficient` |
+| Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
+| Named target object not resolvable at the enforcement surface | Refusal Record | `target_unresolvable` |
+| Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
+| Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
@@ -2237,6 +2242,11 @@ carrier's extensibility rule.
 | A claimed evaluation-context binding differs or cannot be established at use | Execution Evidence | `target_drift` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
+| Different evaluation identifier presented for an operation identity already claimed | Execution Evidence | `operation_already_claimed` |
+| Single-use authorization identifier turned to a different operation identity | Execution Evidence | `operation_identity_conflict` |
+| Permit carries a decision condition the executing PEP does not recognize | Execution Evidence | `condition_unrecognized` |
+| Store the executing PEP takes single use in is unreachable | Execution Evidence | `consumption_unavailable` |
+| Capability definition the permit was decided against not re-resolvable at use | Execution Evidence | `capability_source_unresolvable` |
 | Obligation attached to a permit could not be fulfilled | Execution Evidence | `obligation_unfulfilled` |
 | Operator or safety control suppressed execution | Execution Evidence | `kill_switch` |
 
@@ -2254,6 +2264,20 @@ same (idempotency scope, `idempotency_key`) claim
 ({{I-D.draft-mcguinness-mission-runtime}}); which one applies turns on
 whether the new request's operation identity ({{projections}}) equals
 the one the claim was made under.
+
+Those two rows are PDP denials, refused before a permit exists. Their
+post-permit counterparts are the `operation_already_claimed` and
+`operation_identity_conflict` rows above, reached at use under a
+permit the PEP already holds, and the same operation-identity
+equality decides between them. A duplicate detected at use is never
+carried as a PDP denial reason, and a duplicate refused before a
+decision is never carried as an Execution Evidence `error`. Both
+remain distinct from `permit_consumed`, which is the same evaluation
+identifier presented twice. `capability_source_unresolvable` appears
+on two carriers, and the carrier records whether the resolution
+failure happened before the decision request or at use; a resolution
+failure is never reported as `parameter_violation` or
+`parameter_mismatch`.
 
 ## Permit binding in split topologies {#permit-binding-split}
 
